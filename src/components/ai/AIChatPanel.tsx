@@ -285,9 +285,15 @@ export function AIChatPanel({
     setChatHistory(newHistory);
     setIsProcessing(true);
     setError(null);
+    
+    // Artificial delay for consistency
+    await new Promise(resolve => setTimeout(resolve, 600));
+
     setIsStreaming(aiConfig.enableStreaming);
     setStreamingContent('');
     setStreamingReasoning('');
+    setDisplayedContent('');
+    setDisplayedReasoning('');
 
     try {
       const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
@@ -417,9 +423,15 @@ export function AIChatPanel({
     setAskQuestion('');
     setIsProcessing(true);
     setError(null);
+    
+    // Artificial delay to prevent jarring UI updates and ensure "Thinking..." state is visible
+    await new Promise(resolve => setTimeout(resolve, 600));
+
     setIsStreaming(aiConfig.enableStreaming);
     setStreamingContent('');
     setStreamingReasoning('');
+    setDisplayedContent('');
+    setDisplayedReasoning('');
 
     try {
       const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
@@ -879,7 +891,7 @@ export function AIChatPanel({
           {/* Streaming indicator in chat */}
           {isStreaming && (displayedContent || displayedReasoning) && (
             <div className="flex justify-start">
-              <div className="max-w-[90%] bg-white dark:bg-vault-800 border border-vault-200 dark:border-vault-700 rounded-lg rounded-bl-none px-3 py-2">
+              <div className="max-w-[90%] bg-white dark:bg-vault-800 border border-vault-200 dark:border-vault-700 rounded-lg rounded-bl-none px-3 py-2 message-animate">
                 {/* Display streaming reasoning if available and showReasoning is not false */}
                 {displayedReasoning && aiConfig.showReasoning !== false && (
                   <div className="mb-2 border border-vault-300 dark:border-vault-600 rounded-md overflow-hidden">
@@ -911,9 +923,9 @@ export function AIChatPanel({
           )}
           
           {/* Loading indicator in chat */}
-          {isProcessing && !isStreaming && (
+          {isProcessing && (!isStreaming || (!displayedContent && !displayedReasoning)) && (
             <div className="flex justify-start">
-              <div className="bg-white dark:bg-vault-800 border border-vault-200 dark:border-vault-700 rounded-lg rounded-bl-none px-3 py-2 flex items-center gap-2">
+              <div className="bg-white dark:bg-vault-800 border border-vault-200 dark:border-vault-700 rounded-lg rounded-bl-none px-3 py-2 flex items-center gap-2 message-animate">
                 <Loader2 className="w-4 h-4 animate-spin text-vault-600 dark:text-vault-400" />
                 <span className="text-sm text-vault-600 dark:text-vault-400">AI is thinking...</span>
               </div>
