@@ -51,7 +51,7 @@ Visit the hosted version and start using **Character Vault** immediately in your
 ### Option 2: Run Locally
 
 1.  **Install Node.js**: Get the LTS version from [nodejs.org](https://nodejs.org/).
-2.  **Clone or Download**: `git clone https://github.com/your-repo/character-vault.git`
+2.  **Clone or Download**: `git clone https://github.com/spaceman2408/CharacterVault`
 3.  **Install Dependencies**: `npm install`
 4.  **Start the Engine**: `npm run dev`
 5.  **Open in Browser**: The terminal will show a local address (like `http://localhost:3000`).
