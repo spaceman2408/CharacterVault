@@ -1,0 +1,727 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================================
+   THEME CONFIGURATION - Single Source of Truth
+   All colors and theme values are defined here for consistency.
+   ============================================================================ */
+
+@theme {
+  --color-vault-50: #fafafa;
+  --color-vault-100: #f5f5f5;
+  --color-vault-200: #e5e5e5;
+  --color-vault-300: #d4d4d4;
+  --color-vault-400: #a3a3a3;
+  --color-vault-500: #737373;
+  --color-vault-600: #525252;
+  --color-vault-700: #404040;
+  --color-vault-800: #262626;
+  --color-vault-900: #1a1a1a;
+  --color-vault-950: #0a0a0a;
+
+  --color-accent-primary: #3b82f6;
+  --color-accent-primary-dark: #60a5fa;
+  --color-accent-secondary: #8b5cf6;
+  --color-accent-secondary-dark: #a78bfa;
+  --color-accent-success: #059669;
+  --color-accent-success-dark: #10b981;
+  --color-accent-warning: #d97706;
+  --color-accent-warning-dark: #f59e0b;
+  --color-accent-error: #ef4444;
+  --color-accent-error-dark: #f87171;
+  --color-accent-info: #0891b2;
+  --color-accent-info-dark: #22d3ee;
+  --color-accent-pink: #db2777;
+  --color-accent-pink-dark: #f472b6;
+  --color-accent-rose: #e11d48;
+  --color-accent-rose-dark: #fb7185;
+
+  --color-search-match: rgba(253, 224, 71, 0.4);
+  --color-search-match-dark: rgba(250, 204, 21, 0.3);
+  --color-search-match-selected: rgba(253, 224, 71, 0.8);
+  --color-search-match-selected-dark: rgba(250, 204, 21, 0.6);
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  --editor-font-size: 16px;
+}
+
+/* ============================================================================
+   CSS CUSTOM PROPERTIES - For JavaScript/TypeScript access
+   These mirror the @theme values and enable runtime theme switching.
+   ============================================================================ */
+
+:root {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  color-scheme: light;
+  --theme-text: #0f172a;
+  --theme-text-secondary: #64748b;
+  --theme-text-muted: #94a3b8;
+  --theme-bg: #f8fafc;
+  --theme-bg-secondary: #f1f5f9;
+  --theme-border: #e2e8f0;
+  --theme-border-strong: #cbd5e1;
+
+  --editor-bg: transparent;
+  --editor-text: #0f172a;
+  --editor-text-secondary: #64748b;
+  --editor-caret: #475569;
+  --editor-selection: rgba(148, 163, 184, 0.3);
+  --editor-gutter: #94a3b8;
+  --editor-active-line-gutter: rgba(226, 232, 240, 0.5);
+  --editor-active-line: rgba(241, 245, 249, 0.5);
+  --editor-fold-bg: #e2e8f0;
+  --editor-fold-text: #475569;
+
+  --ai-toolbar-bg: #f8fafc;
+  --ai-toolbar-border: #e2e8f0;
+  --ai-toolbar-input-bg: #ffffff;
+  --ai-toolbar-input-border: #cbd5e1;
+  --ai-toolbar-text: #0f172a;
+  --ai-toolbar-text-secondary: #64748b;
+  --ai-toolbar-text-muted: #94a3b8;
+  --ai-toolbar-btn-hover: #f1f5f9;
+  --ai-toolbar-result-bg: #ffffff;
+  --ai-toolbar-reasoning-bg: #f1f5f9;
+  --ai-toolbar-error-bg: rgba(239, 68, 68, 0.1);
+  --ai-toolbar-error-border: rgba(239, 68, 68, 0.3);
+  --ai-toolbar-error-text: #ef4444;
+  --ai-toolbar-accent-primary: #7c3aed;
+  --ai-toolbar-accent-secondary: #2563eb;
+  --ai-toolbar-accent-success: #059669;
+  --ai-toolbar-accent-warning: #d97706;
+  --ai-toolbar-accent-info: #0891b2;
+  --ai-toolbar-accent-pink: #db2777;
+  --ai-toolbar-accent-rose: #e11d48;
+  --ai-toolbar-accent-neutral: #475569;
+  --ai-toolbar-accept-bg: #16a34a;
+
+  --vault-search-bg: #f8fafc;
+  --vault-search-border: #e2e8f0;
+  --vault-search-input-bg: #ffffff;
+  --vault-search-input-border: #cbd5e1;
+  --vault-search-text: #1e293b;
+  --vault-search-text-secondary: #64748b;
+  --vault-search-btn-bg: #ffffff;
+  --vault-search-btn-hover: #f1f5f9;
+  --vault-search-primary: #3b82f6;
+  --vault-search-match-bg: rgba(253, 224, 71, 0.4);
+  --vault-search-match-selected: rgba(253, 224, 71, 0.8);
+  --vault-search-focus-shadow: rgba(59, 130, 246, 0.2);
+
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #e2e8f0;
+  --tooltip-text: #0f172a;
+  --tooltip-muted: #64748b;
+  --tooltip-accent: #3b82f6;
+  --tooltip-entry-hover: rgba(59, 130, 246, 0.05);
+
+  --category-ref-color: #8b5cf6;
+  --category-ref-hover-bg: rgba(139, 92, 246, 0.1);
+
+  --focus-ring: #64748b;
+  --focus-ring-offset: 2px;
+}
+
+.dark {
+  color-scheme: dark;
+  --theme-text: #e5e5e5;
+  --theme-text-secondary: #a3a3a3;
+  --theme-text-muted: #737373;
+  --theme-bg: #1a1a1a;
+  --theme-bg-secondary: #262626;
+  --theme-border: #404040;
+  --theme-border-strong: #525252;
+
+  --editor-text: #e5e5e5;
+  --editor-text-secondary: #a3a3a3;
+  --editor-caret: #a3a3a3;
+  --editor-selection: rgba(82, 82, 82, 0.4);
+  --editor-gutter: #737373;
+  --editor-active-line-gutter: rgba(64, 64, 64, 0.5);
+  --editor-active-line: rgba(64, 64, 64, 0.3);
+  --editor-fold-bg: #404040;
+  --editor-fold-text: #a3a3a3;
+
+  --ai-toolbar-bg: #282c34;
+  --ai-toolbar-border: #404040;
+  --ai-toolbar-input-bg: #1a1a1a;
+  --ai-toolbar-input-border: #525252;
+  --ai-toolbar-text: #e5e5e5;
+  --ai-toolbar-text-secondary: #a3a3a3;
+  --ai-toolbar-text-muted: #737373;
+  --ai-toolbar-btn-hover: #404040;
+  --ai-toolbar-result-bg: #1a1a1a;
+  --ai-toolbar-reasoning-bg: #262626;
+  --ai-toolbar-error-bg: rgba(239, 68, 68, 0.1);
+  --ai-toolbar-error-border: rgba(239, 68, 68, 0.3);
+  --ai-toolbar-error-text: #ef4444;
+  --ai-toolbar-accent-primary: #a78bfa;
+  --ai-toolbar-accent-secondary: #60a5fa;
+  --ai-toolbar-accent-success: #10b981;
+  --ai-toolbar-accent-warning: #f59e0b;
+  --ai-toolbar-accent-info: #22d3ee;
+  --ai-toolbar-accent-pink: #f472b6;
+  --ai-toolbar-accent-rose: #fb7185;
+  --ai-toolbar-accent-neutral: #a3a3a3;
+  --ai-toolbar-accept-bg: #22c55e;
+
+  --vault-search-bg: #262626;
+  --vault-search-border: #404040;
+  --vault-search-input-bg: #1a1a1a;
+  --vault-search-input-border: #525252;
+  --vault-search-text: #e5e5e5;
+  --vault-search-text-secondary: #a3a3a3;
+  --vault-search-btn-bg: #404040;
+  --vault-search-btn-hover: #525252;
+  --vault-search-primary: #60a5fa;
+  --vault-search-match-bg: rgba(250, 204, 21, 0.3);
+  --vault-search-match-selected: rgba(250, 204, 21, 0.6);
+  --vault-search-focus-shadow: rgba(96, 165, 250, 0.2);
+
+  --tooltip-bg: #262626;
+  --tooltip-border: #404040;
+  --tooltip-text: #e5e5e5;
+  --tooltip-muted: #a3a3a3;
+  --tooltip-accent: #60a5fa;
+  --tooltip-entry-hover: rgba(96, 165, 250, 0.1);
+
+  --category-ref-color: #a78bfa;
+  --category-ref-hover-bg: rgba(167, 139, 250, 0.2);
+
+  --focus-ring: #a3a3a3;
+}
+
+/* Apply theme colors to root elements */
+:root {
+  color: var(--theme-text);
+  background-color: var(--theme-bg);
+}
+
+.dark {
+  color: var(--theme-text);
+  background-color: var(--theme-bg);
+}
+
+/* Layout reset */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ============================================================================
+   FOCUS MANAGEMENT STYLES
+   ============================================================================ */
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+button,
+input,
+select,
+textarea {
+  transition:
+    outline-offset 0.15s ease,
+    outline-color 0.15s ease;
+}
+
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================================================
+   ANIMATION UTILITIES
+   ============================================================================ */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-fast {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.animate-fade-in-fast {
+  animation: fade-in-fast 180ms ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-fade-in-slow {
+  animation: fade-in 0.8s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+.animate-bounce-soft {
+  animation: bounce 0.5s ease-in-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================================
+   PANEL TRANSITIONS
+   ============================================================================ */
+
+.sidebar-transition {
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-backdrop {
+  transition: opacity 0.2s ease-out;
+}
+
+.modal-content {
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.2s ease-out;
+}
+
+.theme-transition {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* ============================================================================
+   LOADING SKELETON STYLES
+   ============================================================================ */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-vault-200) 25%,
+    var(--color-vault-300) 50%,
+    var(--color-vault-200) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+.dark .skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-vault-700) 25%,
+    var(--color-vault-600) 50%,
+    var(--color-vault-700) 75%
+  );
+  background-size: 200% 100%;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ============================================================================
+   EMPTY STATE STYLES
+   ============================================================================ */
+
+.empty-state-icon {
+  opacity: 0.5;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.empty-state:hover .empty-state-icon {
+  opacity: 0.7;
+  transform: scale(1.05);
+}
+
+/* ============================================================================
+   SCROLLBAR STYLES
+   ============================================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-vault-400);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-vault-500);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-vault-600);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-vault-500);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-vault-400) transparent;
+}
+
+.dark * {
+  scrollbar-color: var(--color-vault-600) transparent;
+}
+
+/* ============================================================================
+    TOOLBAR SEARCH PANEL STYLES
+    ============================================================================ */
+
+.cm-toolbar-search-panel {
+  padding: 8px 16px;
+  background-color: var(--vault-search-bg);
+  border-bottom: 1px solid var(--vault-search-border);
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+}
+
+.search-match-count {
+  font-size: 12px;
+  color: var(--vault-search-text-secondary);
+  margin: 0 4px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.cm-toolbar-search-panel .search-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: inherit;
+}
+
+.cm-toolbar-search-panel .search-row,
+.cm-toolbar-search-panel .replace-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cm-toolbar-search-panel .input-group {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 4px;
+}
+
+.cm-toolbar-search-panel input[type="text"] {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--vault-search-input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: var(--vault-search-input-bg);
+  color: var(--vault-search-text);
+  outline: none;
+}
+
+.cm-toolbar-search-panel input[type="text"]:focus {
+  border-color: var(--vault-search-primary);
+  box-shadow: 0 0 0 2px var(--vault-search-focus-shadow);
+}
+
+.cm-toolbar-search-panel .search-btn {
+  padding: 6px 10px;
+  border: 1px solid var(--vault-search-input-border);
+  border-radius: 6px;
+  background-color: var(--vault-search-btn-bg);
+  color: var(--vault-search-text);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.cm-toolbar-search-panel .search-btn:hover {
+  background-color: var(--vault-search-btn-hover);
+}
+
+.cm-toolbar-search-panel .search-btn.close {
+  padding: 6px 12px;
+  font-size: 18px;
+  line-height: 1;
+  margin-left: auto;
+}
+
+.cm-toolbar-search-panel .search-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--vault-search-text-secondary);
+  user-select: none;
+}
+
+.cm-toolbar-search-panel .search-option:hover {
+  background-color: var(--vault-search-btn-hover);
+}
+
+.cm-toolbar-search-panel .search-option input[type="checkbox"] {
+  display: none;
+}
+
+.cm-toolbar-search-panel .search-option input[type="checkbox"]:checked + span {
+  color: var(--vault-search-primary);
+  font-weight: bold;
+}
+
+.cm-searchMatch {
+  background-color: var(--vault-search-match-bg) !important;
+  border-radius: 2px;
+}
+
+.cm-searchMatch-selected {
+  background-color: var(--vault-search-match-selected) !important;
+  border-radius: 2px;
+}
+
+/* ============================================================================
+   AI TOOLBAR PANEL STYLES
+   ============================================================================ */
+
+.ai-toolbar-panel {
+  background-color: var(--ai-toolbar-bg) !important;
+}
+
+.ai-toolbar-panel .ai-result-container {
+  background-color: var(--ai-toolbar-result-bg);
+}
+
+/* Fix CodeMirror panels border - override CodeMirror's default black border */
+.cm-panels.cm-panels-top {
+  border-bottom: 1px solid var(--ai-toolbar-border) !important;
+  background-color: var(--ai-toolbar-bg) !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* Higher specificity for dark mode to override scoped CodeMirror styles */
+.dark .cm-panels.cm-panels-top,
+.dark div.cm-panels.cm-panels-top,
+.cm-panels.cm-panels-top[data-theme="dark"] {
+  border-bottom: 1px solid var(--ai-toolbar-border) !important;
+  background-color: var(--ai-toolbar-bg) !important;
+}
+
+/* ============================================================================
+   AI TOOLBAR PANEL - MOBILE RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 640px) {
+  /* Hide the "Select text to use AI" / char count info on mobile, UNLESS it's a warning */
+  .ai-toolbar-panel .ai-toolbar-info:not(.warning) {
+    display: none !important;
+  }
+
+  /* Hide separator on mobile */
+  .ai-toolbar-panel .ai-toolbar-info ~ div,
+  .ai-toolbar-panel div[style*="width: 1px"][style*="height: 24px"] {
+    display: none !important;
+  }
+
+  /* Shrink button padding and font size on mobile */
+  .ai-toolbar-panel button.ai-toolbar-btn-expand,
+  .ai-toolbar-panel button.ai-toolbar-btn-rewrite,
+  .ai-toolbar-panel button.ai-toolbar-btn-instruct,
+  .ai-toolbar-panel button.ai-toolbar-btn-more {
+    padding: 5px 8px !important;
+    font-size: 12px !important;
+  }
+
+  /* Reduce result container max height on mobile */
+  .ai-toolbar-panel .ai-result-container {
+    max-height: 300px !important;
+  }
+}
+
+/* ============================================================================
+   TOOLBAR SEARCH PANEL - MOBILE RESPONSIVE
+   ============================================================================ */
+
+@media (max-width: 640px) {
+  .cm-toolbar-search-panel .search-row,
+  .cm-toolbar-search-panel .replace-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-right: 30px; /* Space for close button */
+  }
+
+  /* Make inputs full width */
+  .cm-toolbar-search-panel input[type="text"] {
+    min-width: 100%;
+    order: 1;
+  }
+
+  /* Position close button absolutely at top-right */
+  .cm-toolbar-search-panel .search-btn.close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    margin: 0;
+    padding: 8px;
+    background: transparent;
+    border: none;
+    z-index: 10;
+  }
+
+  /* Navigation buttons group */
+  .cm-toolbar-search-panel .search-btn.prev,
+  .cm-toolbar-search-panel .search-btn.next {
+    flex-grow: 1;
+    justify-content: center;
+    order: 2;
+    padding: 8px;
+  }
+
+  /* Match count */
+  .search-match-count {
+    order: 3;
+    width: 100%;
+    margin: 4px 0;
+  }
+
+  /* Options row */
+  .cm-toolbar-search-panel .search-option {
+    order: 4;
+    flex-grow: 1;
+    justify-content: center;
+    background-color: var(--vault-search-bg);
+    border: 1px solid var(--vault-search-border);
+  }
+
+  /* Replace buttons */
+  .cm-toolbar-search-panel .search-btn.replace,
+  .cm-toolbar-search-panel .search-btn.replace-all {
+    flex-grow: 1;
+    justify-content: center;
+    padding: 8px;
+    order: 2;
+  }
+}
