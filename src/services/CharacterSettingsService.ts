@@ -245,6 +245,26 @@ export class CharacterSettingsService {
     await characterDb.settings.put(defaultSettings);
     return defaultSettings;
   }
+
+  /**
+   * Clear only AI-related settings while preserving characters and other data.
+   * This removes the API key and other sensitive AI configuration from storage.
+   */
+  async clearAISettings(): Promise<void> {
+    const settings = await this.getSettings();
+    
+    const updatedSettings: CharacterVaultSettings = {
+      ...settings,
+      // Reset AI config to defaults (clears apiKey, baseUrl, modelId)
+      ai: DEFAULT_SETTINGS.ai,
+      // Keep sampler settings as they're not sensitive
+      sampler: settings.sampler ?? DEFAULT_SETTINGS.sampler,
+      // Keep prompts as they're not sensitive
+      prompts: settings.prompts ?? DEFAULT_SETTINGS.prompts,
+    };
+    
+    await characterDb.settings.put(updatedSettings);
+  }
 }
 
 /**

@@ -30,6 +30,8 @@ import {
   Sliders,
   Wand2,
   Search,
+  Shield,
+  Trash2,
 } from 'lucide-react';
 import type { AIConfig, SamplerSettings, PromptSettings } from '../../db/types';
 import { DEFAULT_SETTINGS } from '../../db/types';
@@ -334,10 +336,29 @@ const ModelSelect: React.FC<ModelSelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Focus input when opening
+  // Focus input when opening and scroll into view
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
+      
+      // Scroll the dropdown into view so all options are visible
+      const scrollableParent = containerRef.current?.closest('.overflow-y-auto');
+      if (scrollableParent && containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const parentRect = scrollableParent.getBoundingClientRect();
+        const dropdownHeight = 256; // max-h-64 = 16rem = 256px
+        
+        // Check if dropdown would extend beyond visible area
+        const spaceBelow = parentRect.bottom - containerRect.bottom;
+        if (spaceBelow < dropdownHeight) {
+          // Calculate how much we need to scroll to show the full dropdown
+          const scrollNeeded = dropdownHeight - spaceBelow + 16; // 16px padding
+          scrollableParent.scrollTo({
+            top: scrollableParent.scrollTop + scrollNeeded,
+            behavior: 'smooth'
+          });
+        }
+      }
     }
   }, [isOpen]);
 
@@ -516,6 +537,8 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const [activeTab, setActiveTab] = useState<'ai' | 'sampler' | 'prompts'>('ai');
   const [expandedPrompts, setExpandedPrompts] = useState<Record<string, boolean>>({});
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Add toast notification
@@ -724,6 +747,33 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     }
   };
 
+  // Clear AI settings
+  const handleClearAISettings = async () => {
+    setIsClearing(true);
+    try {
+      await characterSettingsService.clearAISettings();
+      
+      // Reset local state to defaults
+      setLocalAIConfig({
+        baseUrl: 'https://nano-gpt.com/api/v1',
+        apiKey: '',
+        modelId: '',
+        availableModels: [],
+        enableStreaming: false,
+        enableReasoning: false,
+        showReasoning: false,
+      });
+      
+      await reloadSettings();
+      addToast('success', 'AI settings cleared. Your characters are safe.');
+      setShowClearConfirm(false);
+    } catch {
+      addToast('error', 'Failed to clear AI settings');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   // Don't render if not yet visible (allows fade-in animation)
   if (!isRendered) return null;
 
@@ -808,6 +858,78 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
             {/* AI Config Tab */}
             {activeTab === 'ai' && !isLoading && (
               <div className="space-y-5">
+                {/* Security Warning Banner */}
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-start gap-3">
+                    <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-800/50 text-amber-600 dark:text-amber-400 shrink-0">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
+                        Security Notice
+                      </h4>
+                      <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                        Your API key is stored locally in your browser's IndexedDB.
+                        This is convenient but means the key could be accessed by malicious
+                        browser extensions or if someone gains physical access to your unlocked computer.
+                      </p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          onClick={() => setShowClearConfirm(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-800/50 hover:bg-amber-200 dark:hover:bg-amber-800 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Clear AI Settings
+                        </button>
+                        <span className="text-xs text-amber-600 dark:text-amber-500">
+                          (Your characters will not be affected)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Clear Confirmation Dialog */}
+                {showClearConfirm && (
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+                    <div className="flex items-start gap-3">
+                      <div className="p-1.5 rounded-md bg-red-100 dark:bg-red-800/50 text-red-600 dark:text-red-400 shrink-0">
+                        <AlertCircle className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">
+                          Clear AI Settings?
+                        </h4>
+                        <p className="text-xs text-red-700 dark:text-red-400 mb-3">
+                          This will remove your API key, base URL, and model selection.
+                          Your characters and other data will remain untouched.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={handleClearAISettings}
+                            disabled={isClearing}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                          >
+                            {isClearing ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                            {isClearing ? 'Clearing...' : 'Yes, Clear Settings'}
+                          </button>
+                          <button
+                            onClick={() => setShowClearConfirm(false)}
+                            disabled={isClearing}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-white dark:bg-vault-800/50 rounded-xl p-5 border border-vault-200 dark:border-vault-700 shadow-sm">
                   <div className="space-y-4">
                     <div>
