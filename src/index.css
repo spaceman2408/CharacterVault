@@ -614,6 +614,57 @@ textarea:focus:not(:focus-visible) {
   background-color: var(--ai-toolbar-result-bg);
 }
 
+.ai-toolbar-panel .ai-toolbar-controls {
+  row-gap: 8px;
+}
+
+.ai-toolbar-panel .ai-toolbar-primary,
+.ai-toolbar-panel .ai-toolbar-instruct {
+  min-width: 0;
+}
+
+.ai-toolbar-panel .ai-toolbar-instruct-input {
+  min-width: 0;
+}
+
+.ai-toolbar-panel .ai-toolbar-instruct-send,
+.ai-toolbar-panel .ai-toolbar-instruct-cancel {
+  white-space: nowrap;
+}
+
+.ai-toolbar-panel .ai-toolbar-controls.ai-toolbar-instruct-mode .ai-toolbar-instruct {
+  flex: 1 1 100% !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 1100px) {
+  .ai-toolbar-panel .ai-toolbar-controls {
+    gap: 6px !important;
+  }
+
+  .ai-toolbar-panel .ai-toolbar-primary {
+    flex: 1 1 auto;
+  }
+
+  .ai-toolbar-panel .ai-toolbar-instruct {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+  }
+
+  .ai-toolbar-panel .ai-toolbar-instruct-input {
+    width: 100%;
+  }
+
+  .ai-toolbar-panel .ai-toolbar-info {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  .ai-toolbar-panel .ai-toolbar-separator {
+    display: none !important;
+  }
+}
+
 /* Fix CodeMirror panels border - override CodeMirror's default black border */
 .cm-panels.cm-panels-top {
   border-bottom: 1px solid var(--ai-toolbar-border) !important;

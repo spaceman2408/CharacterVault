@@ -105,6 +105,7 @@ function createToolbarPanel(
   const SAFETY_MARGIN = 100; // Match AIService.SAFETY_MARGIN
 
   const toolbarContainer = document.createElement('div');
+  toolbarContainer.className = 'ai-toolbar-controls';
   toolbarContainer.style.cssText = `
     display: flex;
     flex-wrap: wrap;
@@ -193,9 +194,11 @@ function createToolbarPanel(
 
   // Custom instruction input (hidden by default)
   const instructContainer = document.createElement('div');
+  instructContainer.className = 'ai-toolbar-instruct';
   instructContainer.style.cssText = 'display: none; align-items: center; gap: 6px; flex: 1; min-width: 200px;';
 
   const instructInput = document.createElement('input');
+  instructInput.className = 'ai-toolbar-instruct-input';
   instructInput.type = 'text';
   instructInput.placeholder = 'What would you like me to do?';
   instructInput.style.cssText = `
@@ -210,6 +213,7 @@ function createToolbarPanel(
   `;
 
   const instructSendBtn = document.createElement('button');
+  instructSendBtn.className = 'ai-toolbar-instruct-send';
   instructSendBtn.innerHTML = 'Send';
   instructSendBtn.style.cssText = `
     padding: 6px 12px;
@@ -223,6 +227,7 @@ function createToolbarPanel(
   `;
 
   const instructCancelBtn = document.createElement('button');
+  instructCancelBtn.className = 'ai-toolbar-instruct-cancel';
   instructCancelBtn.innerHTML = 'Cancel';
   instructCancelBtn.style.cssText = `
     padding: 6px 10px;
@@ -242,6 +247,7 @@ function createToolbarPanel(
 
   // Add primary buttons
   const primaryContainer = document.createElement('div');
+  primaryContainer.className = 'ai-toolbar-primary';
   primaryContainer.style.cssText = 'display: flex; flex-wrap: wrap; gap: 6px;';
 
   const primaryButtons = new Map<AIOperation, HTMLButtonElement>();
@@ -362,6 +368,7 @@ function createToolbarPanel(
   }
 
   const moreContainer = document.createElement('div');
+  moreContainer.className = 'ai-toolbar-more';
   moreContainer.style.cssText = 'position: relative;';
   moreContainer.appendChild(moreBtn);
   moreContainer.appendChild(dropdown);
@@ -440,6 +447,7 @@ function createToolbarPanel(
 
   // Separator
   const separator = document.createElement('div');
+  separator.className = 'ai-toolbar-separator';
   separator.style.cssText = 'width: 1px; height: 24px; background: var(--ai-toolbar-border); margin: 0 4px;';
   toolbarContainer.appendChild(separator);
 
@@ -883,6 +891,10 @@ function createToolbarPanel(
       separator.style.display = 'block';
       infoText.style.display = 'block';
     }
+
+    const isCompactCustomLayout = !state.isProcessing && isInstructMode;
+    toolbarContainer.classList.toggle('ai-toolbar-instruct-mode', isCompactCustomLayout);
+    searchBtn.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
 
     // Update all buttons
     const opacity = hasSelection ? '1' : '0.5';
