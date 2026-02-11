@@ -46,7 +46,7 @@
 
 ### Option 1: Use Online (Recommended)
 
-Visit the hosted version and start using **Character Vault** immediately in your browser. (Will set up in github pages soon)
+You can try it out at **[https://spaceman2408.github.io/CharacterVault](https://spaceman2408.github.io/CharacterVault)** and start using **Character Vault** immediately in your browser.
 
 ### Option 2: Run Locally
 
