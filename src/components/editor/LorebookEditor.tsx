@@ -4,7 +4,7 @@
  * @module components/editor/LorebookEditor
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Plus, Trash2, ChevronDown, ChevronUp, Book } from 'lucide-react';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
 import type { CharacterSection, LorebookEntry, CharacterBook } from '../../db/characterTypes';
@@ -322,15 +322,8 @@ export function LorebookEditor({
   getContextContent,
   activeSection,
 }: LorebookEditorProps): React.ReactElement {
-  // Use a stable key that only changes when the lorebook reference changes
-  // This prevents remounting when only the content changes
-  const lorebookKey = lorebook 
-    ? `lb-${lorebook.name ?? 'unnamed'}-${lorebook.entries.length}`
-    : 'no-lorebook';
-
   return (
     <LorebookEditorInner
-      key={lorebookKey}
       lorebook={lorebook}
       onChange={onChange}
       setSelectedText={setSelectedText}
@@ -360,6 +353,8 @@ function LorebookEditorInner({
   getContextContent,
 }: LorebookEditorInnerProps): React.ReactElement {
   const [openCards, setOpenCards] = useState<Set<number>>(new Set([0]));
+  const pendingScrollEntryIdRef = useRef<number | null>(null);
+  const entryRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   
   // Use props directly as source of truth - memoized to prevent unnecessary re-renders
   const entries = useMemo(() => lorebook?.entries || [], [lorebook?.entries]);
@@ -415,9 +410,33 @@ function LorebookEditorInner({
     };
     const newEntries = [...entries, newEntry];
     const newIndex = newEntries.length - 1;
+    pendingScrollEntryIdRef.current = newId;
     setOpenCards(prev => new Set([...prev, newIndex]));
     notifyChange(newEntries, bookName, bookDescription);
   }, [entries, bookName, bookDescription, notifyChange, getNextAvailableId]);
+
+  useEffect(() => {
+    const pendingEntryId = pendingScrollEntryIdRef.current;
+    if (pendingEntryId == null) return;
+
+    const scrollToEntry = () => {
+      const entryEl = entryRefs.current.get(pendingEntryId);
+      if (!entryEl) return false;
+      entryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pendingScrollEntryIdRef.current = null;
+      return true;
+    };
+
+    if (scrollToEntry()) return;
+
+    const rafId = window.requestAnimationFrame(() => {
+      scrollToEntry();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [entries.length, openCards]);
 
   // Handle delete entry
   const handleDeleteEntry = useCallback((index: number) => {
@@ -524,21 +543,31 @@ function LorebookEditorInner({
           </div>
         ) : (
           entries.map((entry, index) => (
-            <LorebookEntryCard
+            <div
               key={entry.id}
-              entry={entry}
-              index={index}
-              isOpen={openCards.has(index)}
-              onToggle={() => handleToggleCard(index)}
-              onUpdate={(updatedEntry) => handleEntryUpdate(index, updatedEntry)}
-              onDelete={() => handleDeleteEntry(index)}
-              aiConfig={aiConfig}
-              samplerSettings={samplerSettings}
-              promptSettings={promptSettings}
-              getContextContent={getContextContent}
-              contextSectionIds={contextSectionIds}
-              setSelectedText={setSelectedText}
-            />
+              ref={(el) => {
+                if (el) {
+                  entryRefs.current.set(entry.id, el);
+                } else {
+                  entryRefs.current.delete(entry.id);
+                }
+              }}
+            >
+              <LorebookEntryCard
+                entry={entry}
+                index={index}
+                isOpen={openCards.has(index)}
+                onToggle={() => handleToggleCard(index)}
+                onUpdate={(updatedEntry) => handleEntryUpdate(index, updatedEntry)}
+                onDelete={() => handleDeleteEntry(index)}
+                aiConfig={aiConfig}
+                samplerSettings={samplerSettings}
+                promptSettings={promptSettings}
+                getContextContent={getContextContent}
+                contextSectionIds={contextSectionIds}
+                setSelectedText={setSelectedText}
+              />
+            </div>
           ))
         )}
       </div>
