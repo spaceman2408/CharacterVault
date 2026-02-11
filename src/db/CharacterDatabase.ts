@@ -226,6 +226,13 @@ export class CharacterDatabase extends Dexie {
       ...character,
       id: newId,
       name: newName,
+      data: {
+        ...character.data,
+        spec: {
+          ...character.data.spec,
+          name: newName,
+        },
+      },
       createdAt: timestamp,
       updatedAt: timestamp,
       lastOpenedAt: timestamp,
