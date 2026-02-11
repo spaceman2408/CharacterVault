@@ -53,11 +53,13 @@ export interface UseAutoScrollReturn {
  * );
  * ```
  */
+/** Threshold in pixels for considering user "near the bottom" */
+const NEAR_BOTTOM_THRESHOLD = 150;
+
 export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScrollReturn {
   const { isStreaming, isTyping = false, dependencies = [] } = options;
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const userScrolledUpRef = useRef(false);
 
   /**
    * Scroll to the bottom of the container
@@ -76,11 +78,11 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScrollRetur
     if (containerRef.current) {
       const container = containerRef.current;
 
-      // During streaming or typing, always scroll to bottom aggressively
-      // When not streaming/typing, only scroll if user is near the bottom
-      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      // Only auto-scroll if user is near the bottom (within threshold)
+      // This allows users to scroll up and read earlier messages without being forced back down
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < NEAR_BOTTOM_THRESHOLD;
 
-      if (isStreaming || isTyping || (!userScrolledUpRef.current && isNearBottom)) {
+      if (isNearBottom) {
         container.scrollTo({
           top: container.scrollHeight,
           behavior: 'smooth',
@@ -89,20 +91,6 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScrollRetur
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStreaming, isTyping, ...dependencies]);
-
-  // Detect when user scrolls up to disable auto-scroll
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-      userScrolledUpRef.current = !isNearBottom;
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
 
   return {
     containerRef,

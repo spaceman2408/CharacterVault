@@ -29,9 +29,14 @@ export const ReasoningSection: React.FC<ReasoningSectionProps> = memo(({
   const reasoningContentRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll reasoning to bottom when content updates
+  // Only scrolls if user is near the bottom (respects user scroll position)
   useEffect(() => {
     if (reasoningContentRef.current && reasoning) {
-      reasoningContentRef.current.scrollTop = reasoningContentRef.current.scrollHeight;
+      const container = reasoningContentRef.current;
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+      if (isNearBottom) {
+        container.scrollTop = container.scrollHeight;
+      }
     }
   }, [reasoning]);
   
