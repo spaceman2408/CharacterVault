@@ -78,6 +78,20 @@ function SectionTabs({ activeSection, onSectionChange }: SectionTabsProps): Reac
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   const portalRef = React.useRef<HTMLDivElement>(null);
+  const desktopTabsRef = React.useRef<HTMLDivElement>(null);
+
+  const handleDesktopTabsWheel = React.useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    const container = desktopTabsRef.current;
+    if (!container) return;
+
+    if (container.scrollWidth <= container.clientWidth) return;
+
+    const horizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (horizontalDelta === 0) return;
+
+    event.preventDefault();
+    container.scrollLeft += horizontalDelta;
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -104,7 +118,11 @@ function SectionTabs({ activeSection, onSectionChange }: SectionTabsProps): Reac
   return (
     <div className="border-b border-vault-200 dark:border-vault-800 bg-white/60 dark:bg-vault-900/60 backdrop-blur-xl shrink-0">
       {/* Desktop: Horizontal tabs */}
-      <div className="hidden md:flex items-center gap-1 px-4 py-2 overflow-x-auto scrollbar-thin">
+      <div
+        ref={desktopTabsRef}
+        onWheel={handleDesktopTabsWheel}
+        className="hidden md:flex items-center gap-1 px-4 py-2 overflow-x-auto scrollbar-thin"
+      >
         {CHARACTER_SECTIONS.map((section) => {
           const Icon = iconMap[section.icon] || FileText;
           const isActive = activeSection === section.id;

@@ -56,7 +56,8 @@ export class CharacterExportService {
   }
 
   /**
-   * Export character as PNG with embedded character data (V3 format)
+   * Export character as PNG with embedded character data.
+   * Writes `chara` as wrapped V2 (`spec/spec_version/data`) for broad parser compatibility.
    */
   async exportAsPNG(character: Character): Promise<ExportCharacterResult> {
     try {
@@ -67,9 +68,11 @@ export class CharacterExportService {
         };
       }
 
-      // Convert character data to base64 (Unicode-safe) - use V3 format for PNG
-      const cardV3 = this.characterToV3(character);
-      const charaData = this.unicodeToBase64(JSON.stringify(cardV3));
+      // Convert character data to base64 (Unicode-safe).
+      // Keep PNG metadata shape aligned with common card parsers:
+      // { spec: "chara_card_v2", spec_version: "2.0", data: { ... } }
+      const cardV2 = this.characterToV2Full(character);
+      const charaData = this.unicodeToBase64(JSON.stringify(cardV2));
 
       // Load the image
       const imageBlob = await this.dataURLToBlob(character.imageData);
@@ -160,9 +163,10 @@ export class CharacterExportService {
    */
   private characterDataToV2(character: Character): CharacterCardV2 {
     const spec = character.data.spec;
+    const normalizedName = this.normalizeCardName(spec.name || character.name);
     
     return {
-      name: spec.name || character.name,
+      name: normalizedName,
       description: spec.description,
       personality: spec.personality,
       scenario: spec.scenario,
@@ -180,6 +184,21 @@ export class CharacterExportService {
       creator_notes: spec.creator_notes || '',
       avatar: spec.avatar || '',
     };
+  }
+
+  /**
+   * Normalize card name for broad importer compatibility.
+   * Strips control characters/newlines and trims surrounding whitespace.
+   */
+  private normalizeCardName(name: string): string {
+    const withoutControls = Array.from(name)
+      .map((char) => {
+        const code = char.charCodeAt(0);
+        return code < 32 || code === 127 ? ' ' : char;
+      })
+      .join('');
+    const cleaned = withoutControls.replace(/\s+/g, ' ').trim();
+    return cleaned || 'Character';
   }
 
   /**
@@ -203,8 +222,8 @@ export class CharacterExportService {
     // Create output chunks
     const chunks: Uint8Array[] = [new Uint8Array(signature)];
 
-    // Create tEXt chunk with chara data
-    const textChunk = this.createTextChunk('chara', charaData);
+    // Create tEXt chunk with character data
+    const metadataChunk = this.createTextChunk('chara', charaData);
 
     // Insert tEXt chunk after IHDR
     let inserted = false;
@@ -212,14 +231,21 @@ export class CharacterExportService {
     while (offset < imageBuffer.byteLength) {
       const length = dataView.getUint32(offset);
       const type = dataView.getUint32(offset + 4);
+      const chunkPayload = new Uint8Array(imageBuffer, offset + 8, length);
       const chunkData = new Uint8Array(imageBuffer, offset, 12 + length);
+
+      // Drop existing card metadata so importers don't pick stale data.
+      if (this.isCardMetadataChunk(type, chunkPayload)) {
+        offset += 12 + length;
+        continue;
+      }
 
       // Add the chunk
       chunks.push(chunkData);
 
-      // Insert tEXt chunk after IHDR
+      // Insert metadata chunk after IHDR
       if (type === 0x49484452 && !inserted) { // IHDR
-        chunks.push(textChunk);
+        chunks.push(metadataChunk);
         inserted = true;
       }
 
@@ -242,6 +268,47 @@ export class CharacterExportService {
     }
 
     return result.buffer;
+  }
+
+  /**
+   * Check whether a PNG text chunk contains character card metadata keys.
+   */
+  private isCardMetadataChunk(type: number, payload: Uint8Array): boolean {
+    // tEXt
+    if (type === 0x74455874) {
+      return this.isCardKeyword(this.readKeyword(payload));
+    }
+    // iTXt
+    if (type === 0x69545874) {
+      return this.isCardKeyword(this.readKeyword(payload));
+    }
+    // zTXt
+    if (type === 0x7a545874) {
+      return this.isCardKeyword(this.readKeyword(payload));
+    }
+    return false;
+  }
+
+  /**
+   * Check whether a metadata keyword is used for character card payloads.
+   */
+  private isCardKeyword(keyword: string): boolean {
+    const key = keyword.toLowerCase();
+    return key === 'chara' || key === 'ccv3';
+  }
+
+  /**
+   * Read chunk keyword up to first null byte.
+   */
+  private readKeyword(payload: Uint8Array): string {
+    let end = payload.length;
+    for (let i = 0; i < payload.length; i++) {
+      if (payload[i] === 0) {
+        end = i;
+        break;
+      }
+    }
+    return new TextDecoder('utf-8').decode(payload.slice(0, end));
   }
 
   /**
