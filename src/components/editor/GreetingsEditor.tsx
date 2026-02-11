@@ -64,7 +64,8 @@ function GreetingCard({
     promptSettings,
     getContextContent,
     contextSectionIds,
-    minHeight: '100px',
+    minHeight: 'clamp(84px, 18vh, 140px)',
+    maxHeight: 'clamp(180px, 36vh, 300px)',
     isActive: isOpen,
   });
 
@@ -101,7 +102,7 @@ function GreetingCard({
         </div>
       </div>
       {isOpen && (
-        <div ref={editorRef} className="min-h-25" />
+        <div ref={editorRef} className="min-h-[clamp(84px,18vh,140px)]" />
       )}
       {!isOpen && (
         <div className="px-4 py-3 text-sm text-vault-600 dark:text-vault-400 italic truncate">

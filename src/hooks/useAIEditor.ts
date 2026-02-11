@@ -37,6 +37,8 @@ export interface UseAIEditorOptions {
   contextSectionIds: CharacterSection[];
   /** Minimum height for the editor content area */
   minHeight?: string;
+  /** Optional max height for the editor scroller (useful for nested/mobile cards) */
+  maxHeight?: string;
   /** Additional CSS styles for the editor */
   editorStyles?: Record<string, string>;
   /** Whether the editor is currently active/visible */
@@ -87,6 +89,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     getContextContent,
     contextSectionIds,
     minHeight = '100px',
+    maxHeight,
     editorStyles = {},
     isActive = true,
   } = options;
@@ -401,18 +404,23 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         EditorView.contentAttributes.of({ spellcheck: 'true' }),
         EditorView.theme({
           '&': {
-            fontSize: '16px',
+            fontSize: 'clamp(14px, 2.6vw, 16px)',
             height: '100%',
             overflow: 'hidden',
             ...editorStyles,
           },
           '.cm-scroller': {
-            height: '100%',
-            overflow: 'auto',
+            height: maxHeight ? 'auto' : '100%',
+            maxHeight: maxHeight ?? '100%',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            overscrollBehaviorY: 'contain',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y',
           },
           '.cm-content': {
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-            padding: '12px',
+            padding: 'clamp(8px, 2vw, 12px)',
             minHeight,
           },
           '.cm-gutters': {
@@ -423,7 +431,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
             backgroundColor: 'transparent',
           },
           '.cm-line': {
-            padding: '0 4px',
+            padding: '0 clamp(2px, 0.8vw, 4px)',
           },
         }),
         EditorView.updateListener.of((update: ViewUpdate) => {
@@ -485,7 +493,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       panelUpdateRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, isActive, minHeight, JSON.stringify(editorStyles)]);
+  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles)]);
 
   // Update editor content when value changes externally
   useEffect(() => {

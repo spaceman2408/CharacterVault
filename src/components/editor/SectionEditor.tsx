@@ -110,8 +110,8 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     promptSettings,
     getContextContent,
     contextSectionIds,
-    minHeight: '400px',
-    editorStyles: { padding: '16px' },
+    minHeight: 'clamp(180px, 40vh, 400px)',
+    editorStyles: { padding: 'clamp(8px, 2vw, 16px)' },
     isActive: section !== 'image' && section !== 'alternate_greetings' && section !== 'lorebook' && !!currentCharacter,
   });
 

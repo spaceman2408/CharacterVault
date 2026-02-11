@@ -71,7 +71,8 @@ function LorebookEntryCard({
     promptSettings,
     getContextContent,
     contextSectionIds,
-    minHeight: '150px',
+    minHeight: 'clamp(110px, 22vh, 180px)',
+    maxHeight: 'clamp(220px, 40vh, 360px)',
     isActive: isOpen,
   });
 
@@ -269,7 +270,7 @@ function LorebookEntryCard({
             </label>
             <div
               ref={editorRef}
-              className="border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden min-h-50"
+              className="border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden min-h-[clamp(110px,22vh,180px)]"
             />
           </div>
 
