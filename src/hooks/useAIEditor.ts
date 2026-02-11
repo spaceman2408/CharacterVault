@@ -401,7 +401,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         EditorView.contentAttributes.of({ spellcheck: 'true' }),
         EditorView.theme({
           '&': {
-            fontSize: '18px',
+            fontSize: '16px',
             height: '100%',
             overflow: 'hidden',
             ...editorStyles,
@@ -511,8 +511,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
     // We can't easily get the panel instance back from CodeMirror
     // but we can find it in the DOM or use the same hack we use for updateAIState
-    // Actually, I added getPanelUpdateFunction, I should add getPanelSamplerUpdate too
-    const panel = view.dom.querySelector('.ai-toolbar-panel') as any;
+    const panel = view.dom.querySelector('.ai-toolbar-panel') as unknown as { __panel?: { updateSampler?: (s: SamplerSettings) => void } } | null;
     if (panel?.__panel?.updateSampler) {
        panel.__panel.updateSampler(samplerSettings);
     } else {

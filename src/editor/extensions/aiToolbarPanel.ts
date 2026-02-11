@@ -935,7 +935,7 @@ function createToolbarPanel(
   };
 
   // Store panel instance on DOM for useAIEditor to access
-  (dom as any).__panel = panelInstance;
+  (dom as unknown as { __panel: typeof panelInstance }).__panel = panelInstance;
 
   return panelInstance;
 }

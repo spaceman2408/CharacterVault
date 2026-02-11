@@ -6,7 +6,7 @@
 import React, { useRef, useState, useMemo, useCallback, useEffect } from 'react';
 import { CharacterProvider, useCharacterContext } from './context';
 import { CharacterWorkspace } from './components/workspace';
-import { WelcomeTutorial, isTutorialCompleted, resetTutorial } from './components/WelcomeTutorial';
+import { WelcomeTutorial } from './components/WelcomeTutorial';
 import { characterImportService } from './services/CharacterImportService';
 import type { Character } from './db';
 import {
@@ -540,14 +540,14 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
  */
 function AppContent(): React.ReactElement {
   const { isCharacterOpen } = useCharacterContext();
-  const [showTutorial, setShowTutorial] = useState(() => !isTutorialCompleted());
+  const [showTutorial, setShowTutorial] = useState(() => !(WelcomeTutorial.isCompleted?.() ?? false));
 
   const handleTutorialComplete = useCallback(() => {
     setShowTutorial(false);
   }, []);
 
   const handleReplayTutorial = useCallback(() => {
-    resetTutorial();
+    WelcomeTutorial.reset?.();
     setShowTutorial(true);
   }, []);
 

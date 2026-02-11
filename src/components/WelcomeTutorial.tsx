@@ -354,16 +354,12 @@ export function WelcomeTutorial({ onComplete }: WelcomeTutorialProps): React.Rea
   );
 }
 
-/**
- * Check if the tutorial has been completed before.
- */
-export function isTutorialCompleted(): boolean {
+// Tutorial utility functions are attached to the component
+// to avoid breaking React Fast Refresh (no non-component exports allowed)
+WelcomeTutorial.isCompleted = (): boolean => {
   return localStorage.getItem(STORAGE_KEY) === 'true';
-}
+};
 
-/**
- * Reset the tutorial so it shows again.
- */
-export function resetTutorial(): void {
+WelcomeTutorial.reset = (): void => {
   localStorage.removeItem(STORAGE_KEY);
-}
+};
