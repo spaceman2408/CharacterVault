@@ -167,6 +167,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   const [isCreating, setIsCreating] = useState(false);
   const [newCharacterName, setNewCharacterName] = useState('');
   const [deleteConfirmState, setDeleteConfirmState] = useState<{ id: string; name: string } | null>(null);
+  const [copyConfirmState, setCopyConfirmState] = useState<{ id: string; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pagination
@@ -175,7 +176,10 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
   // Reset pagination when search changes
   useEffect(() => {
-    setVisibleCount(getPageSize());
+    const timeoutId = setTimeout(() => {
+      setVisibleCount(getPageSize());
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
   // Theme Management
@@ -250,6 +254,22 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
   const handleDeleteCancel = () => {
     setDeleteConfirmState(null);
+  };
+
+  // Copy confirmation handlers
+  const handleCopyClick = (id: string, name: string) => {
+    setCopyConfirmState({ id, name });
+  };
+
+  const handleCopyConfirm = async () => {
+    if (copyConfirmState) {
+      await duplicateCharacter(copyConfirmState.id, `${copyConfirmState.name} (Copy)`);
+      setCopyConfirmState(null);
+    }
+  };
+
+  const handleCopyCancel = () => {
+    setCopyConfirmState(null);
   };
 
   return (
@@ -426,7 +446,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                   key={char.id}
                   character={char}
                   onOpen={openCharacter}
-                  onDuplicate={duplicateCharacter}
+                  onDuplicate={handleCopyClick}
                   onDelete={handleDeleteClick}
                 />
               ))}
@@ -475,6 +495,37 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Copy Confirmation Modal */}
+      {copyConfirmState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-vault-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                <Copy className="w-6 h-6 text-blue-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Copy Character?</h3>
+            </div>
+            <p className="text-vault-600 dark:text-vault-400 mb-6">
+              Are you sure you want to create a copy of <span className="font-medium text-vault-900 dark:text-vault-100">{copyConfirmState.name}</span>?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleCopyCancel}
+                className="px-4 py-2 text-sm font-medium text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCopyConfirm}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+              >
+                Copy
               </button>
             </div>
           </div>
