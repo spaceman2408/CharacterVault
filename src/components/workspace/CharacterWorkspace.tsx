@@ -595,7 +595,9 @@ function CharacterWorkspaceInner({
 
   const toggleContext = () => setIsContextOpen(!isContextOpen);
   const toggleChat = () => setIsChatOpen(!isChatOpen);
-  const isTightLayout = !isMobile && isContextOpen && isChatOpen;
+  const isDesktop = !isMobile;
+  const isTightLayout = isDesktop && isContextOpen && isChatOpen;
+  const isEdgeToEdgeLayout = isDesktop && (!isContextOpen || !isChatOpen);
   
   // Close panels when clicking backdrop on mobile
   const closePanels = () => {
@@ -655,10 +657,16 @@ function CharacterWorkspaceInner({
 
         {/* Center: Main Editor - Always visible, spans available space */}
         <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden">
-          <div className={`flex-1 min-h-0 ${isTightLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'}`}>
+          <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'}`}>
             <div className={`h-full w-full bg-white/60 dark:bg-vault-900/60 backdrop-blur-xl
               border border-vault-200/60 dark:border-vault-800/50 shadow-lg overflow-hidden
-              ${isTightLayout ? 'rounded-none p-2 md:p-3 border-l-0 border-r-0' : 'rounded-2xl p-4 md:p-6'}`}>
+              ${
+                isTightLayout
+                  ? 'rounded-none p-2 md:p-3 border-l-0 border-r-0'
+                  : isEdgeToEdgeLayout
+                  ? `rounded-none p-3 md:p-4 ${!isContextOpen ? 'border-l-0' : ''} ${!isChatOpen ? 'border-r-0' : ''}`
+                  : 'rounded-2xl p-4 md:p-6'
+              }`}>
               {activeSection === 'image' ? (
                 <ImageEditor />
               ) : (
