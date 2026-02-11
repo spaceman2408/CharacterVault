@@ -5,8 +5,9 @@
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { EditorView, keymap, ViewUpdate } from '@codemirror/view';
-import { EditorState } from '@codemirror/state';
+import { Decoration, EditorView, drawSelection, keymap, ViewUpdate } from '@codemirror/view';
+import type { DecorationSet } from '@codemirror/view';
+import { EditorState, StateEffect, StateField } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import type { AIOperation } from '../components/ai/AIToolbar';
@@ -15,6 +16,33 @@ import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
 import { aiToolbarPanel, getPanelUpdateFunction } from '../editor/extensions/aiToolbarPanel';
 import { toolbarSearch, toolbarSearchTheme } from '../editor/extensions/toolbarSearch';
 import { AIService, AIError } from '../services/AIService';
+
+const setAcceptedEditHighlight = StateEffect.define<{ from: number; to: number } | null>();
+
+const acceptedEditHighlightField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+  update(decorations, transaction) {
+    let nextDecorations = decorations.map(transaction.changes);
+
+    for (const effect of transaction.effects) {
+      if (!effect.is(setAcceptedEditHighlight)) continue;
+
+      const range = effect.value;
+      if (!range || range.from >= range.to) {
+        nextDecorations = Decoration.none;
+      } else {
+        nextDecorations = Decoration.set([
+          Decoration.mark({ class: 'cm-ai-accepted-highlight' }).range(range.from, range.to),
+        ]);
+      }
+    }
+
+    return nextDecorations;
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
 
 export interface UseAIEditorOptions {
   /** Key to force re-initialization when changed (e.g., section ID) */
@@ -127,6 +155,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const aiResultRef = useRef<string | null>(null);
   const selectionRef = useRef<{ from: number; to: number; text: string } | null>(null);
   const contextSectionIdsRef = useRef<CharacterSection[]>(contextSectionIds);
+  const clearHighlightTimeoutRef = useRef<number | null>(null);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -305,15 +334,31 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
     if (!view || !currentAiResult || !currentSelection) return;
 
+    const acceptedFrom = currentSelection.from;
+    const acceptedTo = acceptedFrom + currentAiResult.length;
+
     // Replace the selected text using the exact CodeMirror positions
     view.dispatch({
       changes: {
-        from: currentSelection.from,
+        from: acceptedFrom,
         to: currentSelection.to,
         insert: currentAiResult,
       },
-      selection: { anchor: currentSelection.from, head: currentSelection.from + currentAiResult.length },
+      selection: { anchor: acceptedFrom, head: acceptedTo },
+      effects: setAcceptedEditHighlight.of({ from: acceptedFrom, to: acceptedTo }),
     });
+
+    if (clearHighlightTimeoutRef.current !== null) {
+      window.clearTimeout(clearHighlightTimeoutRef.current);
+    }
+    clearHighlightTimeoutRef.current = window.setTimeout(() => {
+      const currentView = viewRef.current;
+      if (!currentView) return;
+      currentView.dispatch({
+        effects: setAcceptedEditHighlight.of(null),
+      });
+      clearHighlightTimeoutRef.current = null;
+    }, 4000);
 
     // Clear AI state
     setAiResult(null);
@@ -399,6 +444,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         keymap.of(historyKeymap),
         history(),
         oneDark,
+        drawSelection(),
         EditorView.lineWrapping,
         // Enable native browser spellcheck
         EditorView.contentAttributes.of({ spellcheck: 'true' }),
@@ -434,6 +480,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
             padding: '0 clamp(2px, 0.8vw, 4px)',
           },
         }),
+        EditorView.baseTheme({
+          '.cm-ai-accepted-highlight': {
+            backgroundColor: 'rgba(22, 163, 74, 0.28)',
+            outline: '1px solid rgba(22, 163, 74, 0.5)',
+            borderRadius: '2px',
+          },
+        }),
+        acceptedEditHighlightField,
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged) {
             // Use ref to get the latest onChange callback
@@ -488,6 +542,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     }, 100);
 
     return () => {
+      if (clearHighlightTimeoutRef.current !== null) {
+        window.clearTimeout(clearHighlightTimeoutRef.current);
+        clearHighlightTimeoutRef.current = null;
+      }
       view.destroy();
       viewRef.current = null;
       panelUpdateRef.current = null;

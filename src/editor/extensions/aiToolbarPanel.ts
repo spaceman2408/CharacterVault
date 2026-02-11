@@ -148,6 +148,7 @@ function createToolbarPanel(
   let hasSelection = false;
   let currentSelection: SelectionRange | null = null;
   let selectedText = '';
+  let isInstructMode = false;
 
   // Create button helper
   function createButton(
@@ -276,12 +277,8 @@ function createToolbarPanel(
   });
   instructBtn.addEventListener('click', () => {
     if (!hasSelection) return;
-    // Hide primary buttons, show instruct input
-    primaryContainer.style.display = 'none';
-    moreContainer.style.display = 'none';
-    separator.style.display = 'none';
-    infoText.style.display = 'none';
-    instructContainer.style.display = 'flex';
+    isInstructMode = true;
+    updateState();
     instructInput.focus();
   });
   primaryButtons.set('instruct', instructBtn);
@@ -294,39 +291,30 @@ function createToolbarPanel(
     const prompt = instructInput.value.trim();
     if (!prompt || !hasSelection || !currentSelection) return;
 
+    isInstructMode = false;
     // Call the action with instruct operation and custom prompt
     onAction('instruct', selectedText, currentSelection, prompt);
 
     // Reset UI
     instructInput.value = '';
-    instructContainer.style.display = 'none';
-    primaryContainer.style.display = 'flex';
-    moreContainer.style.display = 'block';
-    separator.style.display = 'block';
-    infoText.style.display = 'block';
+    updateState();
   };
 
   instructSendBtn.addEventListener('click', sendInstruct);
   instructInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendInstruct();
     if (e.key === 'Escape') {
+      isInstructMode = false;
       instructInput.value = '';
-      instructContainer.style.display = 'none';
-      primaryContainer.style.display = 'flex';
-      moreContainer.style.display = 'block';
-      separator.style.display = 'block';
-      infoText.style.display = 'block';
+      updateState();
     }
   });
 
   // Handle instruct cancel
   instructCancelBtn.addEventListener('click', () => {
+    isInstructMode = false;
     instructInput.value = '';
-    instructContainer.style.display = 'none';
-    primaryContainer.style.display = 'flex';
-    moreContainer.style.display = 'block';
-    separator.style.display = 'block';
-    infoText.style.display = 'block';
+    updateState();
   });
 
   // Add "More" dropdown
@@ -676,6 +664,9 @@ function createToolbarPanel(
   acceptBtn.addEventListener('click', () => {
     onAccept();
   });
+  acceptBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+  });
   actionButtons.appendChild(acceptBtn);
 
   const rejectBtn = document.createElement('button');
@@ -694,6 +685,9 @@ function createToolbarPanel(
   `;
   rejectBtn.addEventListener('click', () => {
     onReject();
+  });
+  rejectBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
   });
   actionButtons.appendChild(rejectBtn);
 
@@ -858,6 +852,8 @@ function createToolbarPanel(
     } else {
       currentSelection = null;
       selectedText = '';
+      isInstructMode = false;
+      instructInput.value = '';
       infoText.textContent = 'Select text to use AI';
       infoText.style.color = 'var(--ai-toolbar-text-muted)';
       infoText.classList.remove('warning');
@@ -867,14 +863,25 @@ function createToolbarPanel(
     // Show/hide abort button based on processing state
     if (state.isProcessing) {
       abortBtn.style.display = 'flex';
+      instructContainer.style.display = 'none';
       primaryContainer.style.display = 'none';
       moreContainer.style.display = 'none';
       separator.style.display = 'none';
+      infoText.style.display = 'none';
+    } else if (isInstructMode) {
+      abortBtn.style.display = 'none';
+      instructContainer.style.display = 'flex';
+      primaryContainer.style.display = 'none';
+      moreContainer.style.display = 'none';
+      separator.style.display = 'none';
+      infoText.style.display = 'none';
     } else {
       abortBtn.style.display = 'none';
+      instructContainer.style.display = 'none';
       primaryContainer.style.display = 'flex';
       moreContainer.style.display = 'block';
       separator.style.display = 'block';
+      infoText.style.display = 'block';
     }
 
     // Update all buttons
