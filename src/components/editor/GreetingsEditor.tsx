@@ -154,6 +154,11 @@ export function GreetingsEditor({
 
   // Handle delete greeting
   const handleDeleteGreeting = useCallback((index: number) => {
+    const shouldDelete = window.confirm(`Delete greeting ${index + 1}?`);
+    if (!shouldDelete) {
+      return;
+    }
+
     const newList = greetingsList.filter((_, i) => i !== index);
     const newOpenCards = new Set(openCards);
     newOpenCards.delete(index);

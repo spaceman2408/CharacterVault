@@ -421,6 +421,11 @@ function LorebookEditorInner({
 
   // Handle delete entry
   const handleDeleteEntry = useCallback((index: number) => {
+    const shouldDelete = window.confirm(`Delete lorebook entry ${index + 1}?`);
+    if (!shouldDelete) {
+      return;
+    }
+
     const newEntries = entries.filter((_, i) => i !== index);
     const newOpenCards = new Set<number>();
     openCards.forEach(i => {
