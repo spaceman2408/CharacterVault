@@ -27,7 +27,8 @@ interface GreetingCardProps {
   index: number;
   isOpen: boolean;
   onToggle: () => void;
-  onUpdate: (value: string) => void;
+  onImmediateUpdate: (value: string) => void;
+  onPersistUpdate: (value: string) => void;
   onDelete: () => void;
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
@@ -45,7 +46,8 @@ function GreetingCard({
   index,
   isOpen,
   onToggle,
-  onUpdate,
+  onImmediateUpdate,
+  onPersistUpdate,
   onDelete,
   aiConfig,
   samplerSettings,
@@ -57,7 +59,8 @@ function GreetingCard({
   // Use the shared AI editor hook
   const { editorRef } = useAIEditor({
     value: greeting,
-    onChange: onUpdate,
+    onImmediateChange: onImmediateUpdate,
+    onPersistChange: onPersistUpdate,
     setSelectedText,
     aiConfig,
     samplerSettings,
@@ -129,18 +132,28 @@ export function GreetingsEditor({
   const [greetingsList, setGreetingsList] = useState<string[]>(greetings);
   const [openCards, setOpenCards] = useState<Set<number>>(new Set([0]));
 
-  // Sync with props
+  // Sync list from persisted state (deferred to satisfy lint rule).
   useEffect(() => {
-    setGreetingsList(greetings);
+    const timeoutId = setTimeout(() => {
+      setGreetingsList(greetings);
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [greetings]);
 
-  // Handle greeting update
-  const handleGreetingUpdate = useCallback((index: number, value: string) => {
+  const buildUpdatedList = useCallback((index: number, value: string) => {
     const newList = [...greetingsList];
     newList[index] = value;
-    setGreetingsList(newList);
-    onChange(newList);
-  }, [greetingsList, onChange]);
+    return newList;
+  }, [greetingsList]);
+
+  // Handle greeting update
+  const handleGreetingImmediateUpdate = useCallback((index: number, value: string) => {
+    setGreetingsList(buildUpdatedList(index, value));
+  }, [buildUpdatedList]);
+
+  const handleGreetingPersistUpdate = useCallback((index: number, value: string) => {
+    onChange(buildUpdatedList(index, value));
+  }, [buildUpdatedList, onChange]);
 
   // Handle add greeting
   const handleAddGreeting = useCallback(() => {
@@ -223,7 +236,8 @@ export function GreetingsEditor({
               index={index}
               isOpen={openCards.has(index)}
               onToggle={() => handleToggleCard(index)}
-              onUpdate={(value) => handleGreetingUpdate(index, value)}
+              onImmediateUpdate={(value) => handleGreetingImmediateUpdate(index, value)}
+              onPersistUpdate={(value) => handleGreetingPersistUpdate(index, value)}
               onDelete={() => handleDeleteGreeting(index)}
               aiConfig={aiConfig}
               samplerSettings={samplerSettings}

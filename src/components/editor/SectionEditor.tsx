@@ -85,7 +85,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
   }, [currentCharacter, section]);
 
   // Handle value change
-  const handleChange = useCallback((value: string) => {
+  const handlePersistChange = useCallback((value: string) => {
     if (section === 'image' || section === 'extensions' || section === 'lorebook') return;
 
     if (section === 'alternate_greetings') {
@@ -103,7 +103,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
   const { editorRef } = useAIEditor({
     key: section,
     value: currentValue,
-    onChange: handleChange,
+    onPersistChange: handlePersistChange,
     setSelectedText,
     aiConfig,
     samplerSettings,

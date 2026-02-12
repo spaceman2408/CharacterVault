@@ -11,6 +11,8 @@ import { useCharacterContext } from './useCharacterContext';
 import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation } from './characterEditorContextTypes';
 import { characterSettingsService } from '../services/CharacterSettingsService';
 
+const CENTRAL_SAVE_DEBOUNCE_MS = 500;
+
 /**
  * Props for the CharacterEditorProvider component
  */
@@ -45,6 +47,20 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [aiConfig, setAIConfig] = useState<AIConfig>(DEFAULT_SETTINGS.ai);
   const [samplerSettings, setSamplerSettings] = useState<SamplerSettings>(DEFAULT_SETTINGS.sampler);
   const [promptSettings, setPromptSettings] = useState<PromptSettings>(DEFAULT_SETTINGS.prompts);
+  const specFieldRequestVersionRef = useRef<Map<string, number>>(new Map());
+  const specSaveTimerRef = useRef<Map<string, number>>(new Map());
+  const specPendingValueRef = useRef<Map<string, string | string[]>>(new Map());
+  const specPendingResolversRef = useRef<Map<string, {
+    resolve: Array<(value: Character) => void>;
+    reject: Array<(reason?: unknown) => void>;
+  }>>(new Map());
+  const updateCharacterRequestVersionRef = useRef<Map<string, number>>(new Map());
+  const updateCharacterSaveTimerRef = useRef<Map<string, number>>(new Map());
+  const updateCharacterPendingInputRef = useRef<Map<string, Partial<Character>>>(new Map());
+  const updateCharacterPendingResolversRef = useRef<Map<string, {
+    resolve: Array<(value: Character) => void>;
+    reject: Array<(reason?: unknown) => void>;
+  }>>(new Map());
 
   // Context sections = active section (unless removed) + user-added sections
   const contextSectionIds = React.useMemo<CharacterSection[]>(() => {
@@ -113,10 +129,65 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       throw new Error('No character is currently open');
     }
 
-    const updated = await updateCharacterBase(currentCharacter.id, input);
-    setIsDirty(false);
-    setSaveStatus('saved');
-    return updated;
+    const characterId = currentCharacter.id;
+    const requestKey = `${characterId}:updateCharacter`;
+    setIsDirty(true);
+    setSaveStatus('saving');
+
+    const previousInput = updateCharacterPendingInputRef.current.get(requestKey);
+    const nextInput: Partial<Character> = {
+      ...previousInput,
+      ...input,
+      data: input.data ?? previousInput?.data,
+    };
+    updateCharacterPendingInputRef.current.set(requestKey, nextInput);
+
+    if (updateCharacterSaveTimerRef.current.has(requestKey)) {
+      window.clearTimeout(updateCharacterSaveTimerRef.current.get(requestKey));
+    }
+
+    return new Promise<Character>((resolve, reject) => {
+      const pendingResolvers = updateCharacterPendingResolversRef.current.get(requestKey) ?? { resolve: [], reject: [] };
+      pendingResolvers.resolve.push(resolve);
+      pendingResolvers.reject.push(reject);
+      updateCharacterPendingResolversRef.current.set(requestKey, pendingResolvers);
+
+      const timerId = window.setTimeout(async () => {
+        updateCharacterSaveTimerRef.current.delete(requestKey);
+        const queuedInput = updateCharacterPendingInputRef.current.get(requestKey);
+        if (!queuedInput) {
+          return;
+        }
+
+        const nextVersion = (updateCharacterRequestVersionRef.current.get(requestKey) ?? 0) + 1;
+        updateCharacterRequestVersionRef.current.set(requestKey, nextVersion);
+        try {
+          const updated = await updateCharacterBase(characterId, queuedInput);
+          const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
+          updateCharacterPendingInputRef.current.delete(requestKey);
+          updateCharacterPendingResolversRef.current.delete(requestKey);
+
+          if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
+            setIsDirty(false);
+            setSaveStatus('saved');
+          }
+
+          currentResolvers?.resolve.forEach(fn => fn(updated));
+        } catch (error) {
+          const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
+          updateCharacterPendingInputRef.current.delete(requestKey);
+          updateCharacterPendingResolversRef.current.delete(requestKey);
+
+          if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
+            setSaveStatus('error');
+          }
+
+          currentResolvers?.reject.forEach(fn => fn(error));
+        }
+      }, CENTRAL_SAVE_DEBOUNCE_MS);
+
+      updateCharacterSaveTimerRef.current.set(requestKey, timerId);
+    });
   }, [currentCharacter, updateCharacterBase]);
 
   /**
@@ -130,27 +201,58 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       throw new Error('No character is currently open');
     }
 
-    // Mark as dirty immediately
+    const requestKey = `${currentCharacter.id}:${String(field)}`;
+    const characterId = currentCharacter.id;
+    specPendingValueRef.current.set(requestKey, value);
     setIsDirty(true);
     setSaveStatus('saving');
 
-    try {
-      // Save immediately to database
-      const updated = await updateSpecFieldBase(
-        currentCharacter.id,
-        field,
-        value
-      );
-      
-      setIsDirty(false);
-      setSaveStatus('saved');
-      
-      return updated;
-    } catch (error) {
-      console.error('Failed to save spec field:', error);
-      setSaveStatus('error');
-      throw error;
+    if (specSaveTimerRef.current.has(requestKey)) {
+      window.clearTimeout(specSaveTimerRef.current.get(requestKey));
     }
+
+    return new Promise<Character>((resolve, reject) => {
+      const pendingResolvers = specPendingResolversRef.current.get(requestKey) ?? { resolve: [], reject: [] };
+      pendingResolvers.resolve.push(resolve);
+      pendingResolvers.reject.push(reject);
+      specPendingResolversRef.current.set(requestKey, pendingResolvers);
+
+      const timerId = window.setTimeout(async () => {
+        specSaveTimerRef.current.delete(requestKey);
+        const queuedValue = specPendingValueRef.current.get(requestKey);
+        if (queuedValue === undefined) {
+          return;
+        }
+
+        const nextVersion = (specFieldRequestVersionRef.current.get(requestKey) ?? 0) + 1;
+        specFieldRequestVersionRef.current.set(requestKey, nextVersion);
+        try {
+          const updated = await updateSpecFieldBase(characterId, field, queuedValue);
+          const currentResolvers = specPendingResolversRef.current.get(requestKey);
+          specPendingValueRef.current.delete(requestKey);
+          specPendingResolversRef.current.delete(requestKey);
+
+          if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
+            setIsDirty(false);
+            setSaveStatus('saved');
+          }
+
+          currentResolvers?.resolve.forEach(fn => fn(updated));
+        } catch (error) {
+          const currentResolvers = specPendingResolversRef.current.get(requestKey);
+          specPendingValueRef.current.delete(requestKey);
+          specPendingResolversRef.current.delete(requestKey);
+
+          if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
+            console.error('Failed to save spec field:', error);
+            setSaveStatus('error');
+          }
+          currentResolvers?.reject.forEach(fn => fn(error));
+        }
+      }, CENTRAL_SAVE_DEBOUNCE_MS);
+
+      specSaveTimerRef.current.set(requestKey, timerId);
+    });
   }, [currentCharacter, updateSpecFieldBase]);
 
   /**

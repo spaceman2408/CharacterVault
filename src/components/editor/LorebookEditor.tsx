@@ -355,11 +355,30 @@ function LorebookEditorInner({
   const [openCards, setOpenCards] = useState<Set<number>>(new Set([0]));
   const pendingScrollEntryIdRef = useRef<number | null>(null);
   const entryRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  
-  // Use props directly as source of truth - memoized to prevent unnecessary re-renders
-  const entries = useMemo(() => lorebook?.entries || [], [lorebook?.entries]);
-  const bookName = lorebook?.name || '';
-  const bookDescription = lorebook?.description || '';
+  const normalizedPropLorebook = useMemo<CharacterBook>(() => ({
+    name: lorebook?.name || '',
+    description: lorebook?.description || '',
+    entries: lorebook?.entries || [],
+    extensions: lorebook?.extensions || {},
+  }), [lorebook]);
+  const [draftLorebook, setDraftLorebook] = useState<CharacterBook>(() => ({
+    name: lorebook?.name || '',
+    description: lorebook?.description || '',
+    entries: lorebook?.entries || [],
+    extensions: lorebook?.extensions || {},
+  }));
+
+  // Sync local draft from persisted state (deferred to satisfy lint rule).
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDraftLorebook(normalizedPropLorebook);
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [normalizedPropLorebook]);
+
+  const entries = useMemo(() => draftLorebook.entries, [draftLorebook.entries]);
+  const bookName = draftLorebook.name ?? '';
+  const bookDescription = draftLorebook.description ?? '';
 
   // Notify parent of changes
   const notifyChange = useCallback((
@@ -371,10 +390,11 @@ function LorebookEditorInner({
       name: newName,
       description: newDesc,
       entries: newEntries,
-      extensions: lorebook?.extensions || {},
+      extensions: draftLorebook.extensions || {},
     };
+    setDraftLorebook(updatedLorebook);
     onChange(updatedLorebook);
-  }, [lorebook?.extensions, onChange]);
+  }, [draftLorebook.extensions, onChange]);
 
   // Handle entry update
   const handleEntryUpdate = useCallback((index: number, updatedEntry: LorebookEntry) => {

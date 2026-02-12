@@ -3,7 +3,7 @@
  * @module @hooks/useCharacter
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { characterDb } from '../db/CharacterDatabase';
 import type {
   Character,
@@ -48,6 +48,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [settings, setSettings] = useState<CharacterVaultSettings | null>(null);
+  const specUpdateSequenceRef = useRef<Map<string, number>>(new Map());
 
   /**
    * Load all characters and settings on mount
@@ -194,20 +195,29 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     field: keyof Character['data']['spec'],
     value: string | string[]
   ): Promise<Character> => {
+    const sequenceKey = `${characterId}:${String(field)}`;
+    const nextSequence = (specUpdateSequenceRef.current.get(sequenceKey) ?? 0) + 1;
+    specUpdateSequenceRef.current.set(sequenceKey, nextSequence);
+
     try {
       const updated = await characterDb.updateSpecField(characterId, field, value);
+      if (specUpdateSequenceRef.current.get(sequenceKey) !== nextSequence) {
+        return updated;
+      }
+
       setCharacters(prev =>
         prev.map(c => (c.id === characterId ? updated : c))
       );
-      if (currentCharacter?.id === characterId) {
-        setCurrentCharacter(updated);
-      }
+      setCurrentCharacter(prev => (prev?.id === characterId ? updated : prev));
       return updated;
     } catch (err) {
+      if (specUpdateSequenceRef.current.get(sequenceKey) !== nextSequence) {
+        throw err;
+      }
       setError(err instanceof Error ? err : new Error('Failed to update spec field'));
       throw err;
     }
-  }, [currentCharacter]);
+  }, []);
 
   /**
    * Duplicate a character

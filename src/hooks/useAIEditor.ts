@@ -49,8 +49,16 @@ export interface UseAIEditorOptions {
   key?: string;
   /** Initial document content */
   value: string;
-  /** Callback when document changes */
-  onChange: (value: string) => void;
+  /** Callback when document changes (backward-compatible persist callback) */
+  onChange?: (value: string) => void;
+  /** Callback for immediate local updates while typing */
+  onImmediateChange?: (value: string) => void;
+  /** Callback for persisted updates (debounced by default) */
+  onPersistChange?: (value: string) => Promise<void> | void;
+  /** Save strategy for persist callback */
+  saveMode?: 'immediate' | 'debounced';
+  /** Debounce interval for persist callback when saveMode is debounced */
+  saveDebounceMs?: number;
   /** Callback when text is selected */
   setSelectedText: (text: string) => void;
   /** AI configuration */
@@ -110,6 +118,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     key,
     value,
     onChange,
+    onImmediateChange,
+    onPersistChange,
+    saveMode = 'immediate',
+    saveDebounceMs = 250,
     setSelectedText,
     aiConfig,
     samplerSettings,
@@ -156,6 +168,11 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const selectionRef = useRef<{ from: number; to: number; text: string } | null>(null);
   const contextSectionIdsRef = useRef<CharacterSection[]>(contextSectionIds);
   const clearHighlightTimeoutRef = useRef<number | null>(null);
+  const persistTimeoutRef = useRef<number | null>(null);
+  const pendingPersistValueRef = useRef<string | null>(null);
+  const isApplyingExternalSyncRef = useRef(false);
+  const isFocusedRef = useRef(false);
+  const isLocallyDirtyRef = useRef(false);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -176,11 +193,71 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     aiConfigRef.current = aiConfig;
   }, [aiConfig]);
 
-  // Use a ref to always have access to the latest onChange callback
-  const onChangeRef = useRef(onChange);
+  // Use refs to always have access to the latest callbacks/options
+  const onImmediateChangeRef = useRef(onImmediateChange);
+  const onPersistChangeRef = useRef(onPersistChange ?? onChange);
+  const saveModeRef = useRef(saveMode);
+  const saveDebounceMsRef = useRef(saveDebounceMs);
   useEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
+    onImmediateChangeRef.current = onImmediateChange;
+  }, [onImmediateChange]);
+
+  useEffect(() => {
+    onPersistChangeRef.current = onPersistChange ?? onChange;
+  }, [onPersistChange, onChange]);
+
+  useEffect(() => {
+    saveModeRef.current = saveMode;
+  }, [saveMode]);
+
+  useEffect(() => {
+    saveDebounceMsRef.current = saveDebounceMs;
+  }, [saveDebounceMs]);
+
+  const runPersist = useCallback((nextValue: string) => {
+    const persistFn = onPersistChangeRef.current;
+    if (!persistFn) return;
+    void Promise.resolve(persistFn(nextValue));
+  }, []);
+
+  const flushPendingPersist = useCallback(() => {
+    if (persistTimeoutRef.current !== null) {
+      window.clearTimeout(persistTimeoutRef.current);
+      persistTimeoutRef.current = null;
+    }
+
+    const pendingValue = pendingPersistValueRef.current;
+    if (pendingValue === null) return;
+
+    pendingPersistValueRef.current = null;
+    runPersist(pendingValue);
+  }, [runPersist]);
+
+  const schedulePersist = useCallback((nextValue: string) => {
+    if (!onPersistChangeRef.current) return;
+
+    if (saveModeRef.current === 'immediate') {
+      pendingPersistValueRef.current = null;
+      if (persistTimeoutRef.current !== null) {
+        window.clearTimeout(persistTimeoutRef.current);
+        persistTimeoutRef.current = null;
+      }
+      runPersist(nextValue);
+      return;
+    }
+
+    pendingPersistValueRef.current = nextValue;
+    if (persistTimeoutRef.current !== null) {
+      window.clearTimeout(persistTimeoutRef.current);
+    }
+    persistTimeoutRef.current = window.setTimeout(() => {
+      persistTimeoutRef.current = null;
+      const latestValue = pendingPersistValueRef.current;
+      if (latestValue === null) return;
+      pendingPersistValueRef.current = null;
+      runPersist(latestValue);
+    }, saveDebounceMsRef.current);
+  }, [runPersist]);
 
   // Handle AI operation from toolbar panel
   const handleAIOperation = useCallback(async (
@@ -490,8 +567,21 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         acceptedEditHighlightField,
         EditorView.updateListener.of((update: ViewUpdate) => {
           if (update.docChanged) {
-            // Use ref to get the latest onChange callback
-            onChangeRef.current(update.state.doc.toString());
+            const nextValue = update.state.doc.toString();
+            if (!isApplyingExternalSyncRef.current) {
+              isLocallyDirtyRef.current = true;
+            }
+            onImmediateChangeRef.current?.(nextValue);
+            if (!isApplyingExternalSyncRef.current) {
+              schedulePersist(nextValue);
+            }
+          }
+
+          if (update.focusChanged) {
+            isFocusedRef.current = update.view.hasFocus;
+            if (!isFocusedRef.current) {
+              flushPendingPersist();
+            }
           }
 
           // Track selection changes
@@ -546,12 +636,17 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         window.clearTimeout(clearHighlightTimeoutRef.current);
         clearHighlightTimeoutRef.current = null;
       }
+      flushPendingPersist();
+      if (persistTimeoutRef.current !== null) {
+        window.clearTimeout(persistTimeoutRef.current);
+        persistTimeoutRef.current = null;
+      }
       view.destroy();
       viewRef.current = null;
       panelUpdateRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles)]);
+  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles), flushPendingPersist, schedulePersist]);
 
   // Update editor content when value changes externally
   useEffect(() => {
@@ -559,15 +654,34 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     if (!view) return;
 
     const editorValue = view.state.doc.toString();
-    if (value !== editorValue) {
-      view.dispatch({
-        changes: {
-          from: 0,
-          to: editorValue.length,
-          insert: value,
-        },
-      });
+    if (value === editorValue) {
+      isLocallyDirtyRef.current = false;
+      return;
     }
+
+    // Don't stomp in-progress local edits while editor is focused.
+    if (isFocusedRef.current && isLocallyDirtyRef.current) {
+      return;
+    }
+
+    const currentSelection = view.state.selection.main;
+    const clampedAnchor = Math.min(currentSelection.anchor, value.length);
+    const clampedHead = Math.min(currentSelection.head, value.length);
+
+    isApplyingExternalSyncRef.current = true;
+    view.dispatch({
+      changes: {
+        from: 0,
+        to: editorValue.length,
+        insert: value,
+      },
+      selection: {
+        anchor: clampedAnchor,
+        head: clampedHead,
+      },
+    });
+    isApplyingExternalSyncRef.current = false;
+    isLocallyDirtyRef.current = false;
   }, [value]);
 
   // Update panel sampler when settings change
