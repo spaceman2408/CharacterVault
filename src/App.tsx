@@ -29,6 +29,8 @@ import {
 
 import type { LucideIcon } from 'lucide-react';
 
+const logoSrc = `${import.meta.env.BASE_URL}CharacterVaultLogo.svg`;
+
 const IconButton = ({ 
   icon: Icon, 
   onClick, 
@@ -281,9 +283,9 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
           
           <div className="flex items-center gap-2">
             <img
-              src="/CharacterVaultLogo.svg"
+              src={logoSrc}
               alt="Character Vault Logo"
-              className="shrink-0 h-8 w-auto sm:h-10 md:h-12 lg:h-14"
+              className="shrink-0 h-8 w-auto sm:h-10 md:h-12 lg:h-14 transition-[filter] dark:grayscale"
             />
           </div>
 
