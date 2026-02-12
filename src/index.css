@@ -115,8 +115,9 @@
   --vault-search-btn-bg: #ffffff;
   --vault-search-btn-hover: #f1f5f9;
   --vault-search-primary: #3b82f6;
-  --vault-search-match-bg: rgba(253, 224, 71, 0.4);
-  --vault-search-match-selected: rgba(253, 224, 71, 0.8);
+  --vault-search-match-bg: rgba(250, 204, 21, 0.32);
+  --vault-search-match-selected: rgba(250, 204, 21, 0.72);
+  --vault-search-match-selected-ring: rgba(180, 83, 9, 0.62);
   --vault-search-focus-shadow: rgba(59, 130, 246, 0.2);
 
   --tooltip-bg: #ffffff;
@@ -185,8 +186,9 @@
   --vault-search-btn-bg: #404040;
   --vault-search-btn-hover: #525252;
   --vault-search-primary: #60a5fa;
-  --vault-search-match-bg: rgba(250, 204, 21, 0.3);
-  --vault-search-match-selected: rgba(250, 204, 21, 0.6);
+  --vault-search-match-bg: rgba(251, 191, 36, 0.26);
+  --vault-search-match-selected: rgba(251, 191, 36, 0.5);
+  --vault-search-match-selected-ring: rgba(253, 186, 116, 0.7);
   --vault-search-focus-shadow: rgba(96, 165, 250, 0.2);
 
   --tooltip-bg: #262626;
@@ -595,11 +597,14 @@ textarea:focus:not(:focus-visible) {
 .cm-searchMatch {
   background-color: var(--vault-search-match-bg) !important;
   border-radius: 2px;
+  box-shadow: inset 0 -1px 0 rgba(146, 64, 14, 0.2);
 }
 
 .cm-searchMatch-selected {
   background-color: var(--vault-search-match-selected) !important;
   border-radius: 2px;
+  outline: 1px solid var(--vault-search-match-selected-ring);
+  box-shadow: 0 0 0 1px var(--vault-search-match-selected-ring);
 }
 
 /* ============================================================================

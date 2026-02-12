@@ -31,6 +31,17 @@ export const searchPanelOpen = StateField.define<boolean>({
 
 export const setSearchPanelOpen = StateEffect.define<boolean>();
 
+interface SearchPanelControls {
+  dom: HTMLElement;
+  searchInput: HTMLInputElement;
+  replaceInput: HTMLInputElement;
+  caseCb: HTMLInputElement;
+  wordCb: HTMLInputElement;
+  regexpCb: HTMLInputElement;
+  countEl: HTMLSpanElement;
+  refreshCount: () => void;
+}
+
 // Get selected text from editor (single selection only, not multiple selections)
 function getSelectedText(view: EditorView): string | null {
   const selection = view.state.selection.main;
@@ -77,100 +88,233 @@ export function toggleToolbarSearch(view: EditorView): boolean {
   return isOpen ? closeToolbarSearch(view) : openToolbarSearch(view);
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildSearchRegex(query: SearchQuery): RegExp | null {
+  if (!query.search) return null;
+
+  let source = query.regexp ? query.search : escapeRegExp(query.search);
+  if (query.wholeWord) {
+    source = `\\b(?:${source})\\b`;
+  }
+
+  try {
+    return new RegExp(source, query.caseSensitive ? 'g' : 'gi');
+  } catch {
+    return null;
+  }
+}
+
 // Count matches in entire document
 function countMatches(view: EditorView, query: SearchQuery): number {
   if (!query.search) return 0;
-  
+
   const text = view.state.doc.toString();
+  const regex = buildSearchRegex(query);
+  if (!regex) return 0;
+
   let count = 0;
-  
-  try {
-    const escaped = query.regexp ? query.search : query.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const flags = query.caseSensitive ? 'g' : 'gi';
-    const regex = new RegExp(escaped, flags);
-    
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      count++;
-      if (match[0].length === 0) regex.lastIndex++;
-    }
-  } catch {
-    return 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    count++;
+    if (match[0].length === 0) regex.lastIndex++;
   }
-  
+
   return count;
 }
 
 // Get current match index (1-based)
 function getCurrentMatchIndex(view: EditorView, query: SearchQuery): number {
   if (!query.search) return 0;
-  
+
   const selection = view.state.selection.main;
   const text = view.state.doc.toString();
   const cursorPos = selection.from;
-  
-  try {
-    const escaped = query.regexp ? query.search : query.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const flags = query.caseSensitive ? 'g' : 'gi';
-    const regex = new RegExp(escaped, flags);
-    
-    let count = 0;
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      count++;
-      if (match.index <= cursorPos && cursorPos < match.index + match[0].length) {
-        return count;
-      }
-      if (match[0].length === 0) regex.lastIndex++;
+
+  const regex = buildSearchRegex(query);
+  if (!regex) return 0;
+
+  let count = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    count++;
+    if (match.index <= cursorPos && cursorPos < match.index + match[0].length) {
+      return count;
     }
-  } catch {
-    return 0;
+    if (match[0].length === 0) regex.lastIndex++;
   }
-  
+
   return 0;
 }
 
+function renderMatchCount(view: EditorView, countEl: HTMLSpanElement): void {
+  const query = getSearchQuery(view.state);
+  if (!query.search) {
+    countEl.style.display = 'none';
+    countEl.textContent = '';
+    return;
+  }
+
+  const total = countMatches(view, query);
+  if (total <= 0) {
+    countEl.textContent = '0/0';
+    countEl.style.display = 'inline';
+    return;
+  }
+
+  const current = getCurrentMatchIndex(view, query);
+  countEl.textContent = `${current || 1}/${total}`;
+  countEl.style.display = 'inline';
+}
+
+function queryEquals(a: SearchQuery, b: SearchQuery): boolean {
+  return (
+    a.search === b.search &&
+    a.replace === b.replace &&
+    a.caseSensitive === b.caseSensitive &&
+    a.wholeWord === b.wholeWord &&
+    a.regexp === b.regexp
+  );
+}
+
+function applyQueryToControls(query: SearchQuery, controls: SearchPanelControls): void {
+  controls.searchInput.value = query.search || '';
+  controls.replaceInput.value = query.replace || '';
+  controls.caseCb.checked = query.caseSensitive;
+  controls.wordCb.checked = query.wholeWord;
+  controls.regexpCb.checked = query.regexp;
+}
+
 // Create search panel DOM
-function createSearchPanel(view: EditorView): HTMLElement {
+function createSearchPanel(view: EditorView): SearchPanelControls {
   const dom = document.createElement('div');
   dom.className = 'cm-toolbar-search-panel';
-  
-  const query = getSearchQuery(view.state);
-  
-  dom.innerHTML = `
-    <div class="search-container">
-      <div class="search-row">
-        <input type="text" class="search-input" placeholder="Find..." value="${query.search || ''}" />
-        <button class="search-btn prev" title="Previous">↑</button>
-        <button class="search-btn next" title="Next">↓</button>
-        <span class="search-match-count"></span>
-        <label class="search-option"><input type="checkbox" class="case-sensitive" ${query.caseSensitive ? 'checked' : ''} /><span>Aa</span></label>
-        <label class="search-option"><input type="checkbox" class="whole-word" ${query.wholeWord ? 'checked' : ''} /><span>ab</span></label>
-        <label class="search-option"><input type="checkbox" class="regexp" ${query.regexp ? 'checked' : ''} /><span>.*</span></label>
-        <button class="search-btn close">×</button>
-      </div>
-      <div class="replace-row">
-        <input type="text" class="replace-input" placeholder="Replace..." value="${query.replace || ''}" />
-        <button class="search-btn replace">Replace</button>
-        <button class="search-btn replace-all">Replace All</button>
-      </div>
-    </div>
-  `;
-  
-  const searchInput = dom.querySelector('.search-input') as HTMLInputElement;
-  const replaceInput = dom.querySelector('.replace-input') as HTMLInputElement;
-  const caseCb = dom.querySelector('.case-sensitive') as HTMLInputElement;
-  const wordCb = dom.querySelector('.whole-word') as HTMLInputElement;
-  const regexpCb = dom.querySelector('.regexp') as HTMLInputElement;
-  const prevBtn = dom.querySelector('.prev') as HTMLButtonElement;
-  const nextBtn = dom.querySelector('.next') as HTMLButtonElement;
-  const replaceBtn = dom.querySelector('.replace') as HTMLButtonElement;
-  const replaceAllBtn = dom.querySelector('.replace-all') as HTMLButtonElement;
-  const closeBtn = dom.querySelector('.close') as HTMLButtonElement;
-  const countEl = dom.querySelector('.search-match-count') as HTMLSpanElement;
-  
+
+  const container = document.createElement('div');
+  container.className = 'search-container';
+  dom.appendChild(container);
+
+  const searchRow = document.createElement('div');
+  searchRow.className = 'search-row';
+  container.appendChild(searchRow);
+
+  const replaceRow = document.createElement('div');
+  replaceRow.className = 'replace-row';
+  container.appendChild(replaceRow);
+
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'search-input';
+  searchInput.placeholder = 'Find...';
+  searchRow.appendChild(searchInput);
+
+  const prevBtn = document.createElement('button');
+  prevBtn.type = 'button';
+  prevBtn.className = 'search-btn prev';
+  prevBtn.textContent = '^';
+  prevBtn.title = 'Previous match (Shift+Enter)';
+  prevBtn.setAttribute('aria-label', 'Previous match');
+  searchRow.appendChild(prevBtn);
+
+  const nextBtn = document.createElement('button');
+  nextBtn.type = 'button';
+  nextBtn.className = 'search-btn next';
+  nextBtn.textContent = 'v';
+  nextBtn.title = 'Next match (Enter)';
+  nextBtn.setAttribute('aria-label', 'Next match');
+  searchRow.appendChild(nextBtn);
+
+  const countEl = document.createElement('span');
+  countEl.className = 'search-match-count';
+  searchRow.appendChild(countEl);
+
+  const createOption = (
+    cssClass: string,
+    text: string,
+    tooltip: string,
+    ariaLabel: string
+  ): { label: HTMLLabelElement; input: HTMLInputElement } => {
+    const label = document.createElement('label');
+    label.className = 'search-option';
+    label.title = tooltip;
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.className = cssClass;
+    input.setAttribute('aria-label', ariaLabel);
+    input.title = tooltip;
+
+    const span = document.createElement('span');
+    span.textContent = text;
+
+    label.appendChild(input);
+    label.appendChild(span);
+    return { label, input };
+  };
+
+  const caseOption = createOption('case-sensitive', 'Aa', 'Match case', 'Match case');
+  const wordOption = createOption('whole-word', 'ab', 'Whole word only', 'Whole word only');
+  const regexOption = createOption('regexp', '.*', 'Use regular expression', 'Use regular expression');
+  searchRow.appendChild(caseOption.label);
+  searchRow.appendChild(wordOption.label);
+  searchRow.appendChild(regexOption.label);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'search-btn close';
+  closeBtn.textContent = 'x';
+  closeBtn.title = 'Close search (Escape)';
+  closeBtn.setAttribute('aria-label', 'Close search');
+  searchRow.appendChild(closeBtn);
+
+  const replaceInput = document.createElement('input');
+  replaceInput.type = 'text';
+  replaceInput.className = 'replace-input';
+  replaceInput.placeholder = 'Replace...';
+  replaceRow.appendChild(replaceInput);
+
+  const replaceBtn = document.createElement('button');
+  replaceBtn.type = 'button';
+  replaceBtn.className = 'search-btn replace';
+  replaceBtn.textContent = 'Replace';
+  replaceBtn.title = 'Replace current match';
+  replaceBtn.setAttribute('aria-label', 'Replace current match');
+  replaceRow.appendChild(replaceBtn);
+
+  const replaceAllBtn = document.createElement('button');
+  replaceAllBtn.type = 'button';
+  replaceAllBtn.className = 'search-btn replace-all';
+  replaceAllBtn.textContent = 'Replace All';
+  replaceAllBtn.title = 'Replace all matches';
+  replaceAllBtn.setAttribute('aria-label', 'Replace all matches');
+  replaceRow.appendChild(replaceAllBtn);
+
+  const caseCb = caseOption.input;
+  const wordCb = wordOption.input;
+  const regexpCb = regexOption.input;
+
+  const refreshCount = () => {
+    renderMatchCount(view, countEl);
+  };
+
+  const syncControlsFromState = () => {
+    applyQueryToControls(getSearchQuery(view.state), {
+      dom,
+      searchInput,
+      replaceInput,
+      caseCb,
+      wordCb,
+      regexpCb,
+      countEl,
+      refreshCount,
+    });
+  };
+
+  syncControlsFromState();
   setTimeout(() => searchInput.focus(), 0);
-  
+
   const updateQuery = () => {
     const newQuery = new SearchQuery({
       search: searchInput.value,
@@ -180,25 +324,12 @@ function createSearchPanel(view: EditorView): HTMLElement {
       replace: replaceInput.value,
     });
     view.dispatch({ effects: setSearchQuery.of(newQuery) });
-    updateCount();
+    refreshCount();
   };
-  
-  const updateCount = () => {
-    const q = getSearchQuery(view.state);
-    const total = countMatches(view, q);
-    const current = total > 0 ? getCurrentMatchIndex(view, q) : 0;
-    
-    if (q.search) {
-      countEl.textContent = total > 0 ? `${current || 0}/${total}` : '0/0';
-      countEl.style.display = 'inline';
-    } else {
-      countEl.style.display = 'none';
-    }
-  };
-  
+
   [searchInput, replaceInput].forEach(el => el.addEventListener('input', updateQuery));
   [caseCb, wordCb, regexpCb].forEach(el => el.addEventListener('change', updateQuery));
-  
+
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -207,7 +338,7 @@ function createSearchPanel(view: EditorView): HTMLElement {
       } else {
         findNext(view);
       }
-      setTimeout(updateCount, 10);
+      refreshCount();
     } else if (e.key === 'Escape') {
       closeToolbarSearch(view);
       view.focus();
@@ -220,40 +351,65 @@ function createSearchPanel(view: EditorView): HTMLElement {
       view.focus();
     }
   });
-  
-  prevBtn.addEventListener('click', () => { findPrevious(view); setTimeout(updateCount, 10); });
-  nextBtn.addEventListener('click', () => { findNext(view); setTimeout(updateCount, 10); });
+
+  prevBtn.addEventListener('click', () => {
+    findPrevious(view);
+    refreshCount();
+  });
+  nextBtn.addEventListener('click', () => {
+    findNext(view);
+    refreshCount();
+  });
   closeBtn.addEventListener('click', () => { closeToolbarSearch(view); view.focus(); });
-  
+
   // Replace current match and move to next
   replaceBtn.addEventListener('click', () => {
     replaceNext(view);
-    setTimeout(() => {
-      findNext(view);
-      updateCount();
-    }, 10);
+    findNext(view);
+    refreshCount();
   });
-  
+
   // Replace all matches
   replaceAllBtn.addEventListener('click', () => {
     replaceAll(view);
     // Clear search to prevent re-replacing
-    view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: '' })) });
-    searchInput.value = '';
-    updateCount();
+    const currentQuery = getSearchQuery(view.state);
+    view.dispatch({
+      effects: setSearchQuery.of(
+        new SearchQuery({
+          search: '',
+          replace: currentQuery.replace,
+          caseSensitive: currentQuery.caseSensitive,
+          wholeWord: currentQuery.wholeWord,
+          regexp: currentQuery.regexp,
+        })
+      )
+    });
+    syncControlsFromState();
+    refreshCount();
   });
-  
-  updateCount();
-  return dom;
+
+  refreshCount();
+
+  return {
+    dom,
+    searchInput,
+    replaceInput,
+    caseCb,
+    wordCb,
+    regexpCb,
+    countEl,
+    refreshCount,
+  };
 }
 
 // View plugin to manage search panel
 const searchPlugin = ViewPlugin.fromClass(
   class {
     panel: HTMLElement | null = null;
+    controls: SearchPanelControls | null = null;
     parent: HTMLElement | null = null;
-    searchInput: HTMLInputElement | null = null;
-    
+
     constructor(view: EditorView) {
       this.parent = view.dom.parentElement;
       if (view.state.field(searchPanelOpen)) {
@@ -269,44 +425,36 @@ const searchPlugin = ViewPlugin.fromClass(
         this.openPanel(update.view);
       } else if (!isOpen && wasOpen) {
         this.closePanel();
-      } else if (isOpen && this.panel) {
-        // Panel is already open - check if search query changed
+      } else if (isOpen && this.controls) {
         const prevQuery = getSearchQuery(update.startState);
         const currentQuery = getSearchQuery(update.state);
-        
-        if (prevQuery.search !== currentQuery.search && this.searchInput) {
-          this.searchInput.value = currentQuery.search || '';
-          // Update match count display
-          const countEl = this.panel.querySelector('.search-match-count') as HTMLSpanElement;
-          if (countEl) {
-            const total = countMatches(update.view, currentQuery);
-            const current = total > 0 ? getCurrentMatchIndex(update.view, currentQuery) : 0;
-            if (currentQuery.search) {
-              countEl.textContent = total > 0 ? `${current || 0}/${total}` : '0/0';
-              countEl.style.display = 'inline';
-            } else {
-              countEl.style.display = 'none';
-            }
-          }
+        const queryChanged = !queryEquals(prevQuery, currentQuery);
+
+        if (queryChanged) {
+          applyQueryToControls(currentQuery, this.controls);
+        }
+
+        if (queryChanged || update.docChanged || update.selectionSet) {
+          this.controls.refreshCount();
         }
       }
     }
-    
+
     openPanel(view: EditorView) {
       if (this.panel) return;
-      this.panel = createSearchPanel(view);
-      this.searchInput = this.panel.querySelector('.search-input') as HTMLInputElement;
+      this.controls = createSearchPanel(view);
+      this.panel = this.controls.dom;
       if (this.parent?.firstChild) {
         this.parent.insertBefore(this.panel, this.parent.firstChild);
       }
     }
-    
+
     closePanel() {
       this.panel?.remove();
       this.panel = null;
-      this.searchInput = null;
+      this.controls = null;
     }
-    
+
     destroy() {
       this.closePanel();
     }
@@ -331,10 +479,13 @@ export function toolbarSearchTheme() {
     '& .cm-searchMatch': {
       backgroundColor: 'var(--vault-search-match-bg, rgba(253, 224, 71, 0.4))',
       borderRadius: '2px',
+      boxShadow: 'inset 0 -1px 0 rgba(146, 64, 14, 0.2)',
     },
     '& .cm-searchMatch-selected': {
       backgroundColor: 'var(--vault-search-match-selected, rgba(253, 224, 71, 0.8))',
       borderRadius: '2px',
+      outline: '1px solid var(--vault-search-match-selected-ring, rgba(180, 83, 9, 0.65))',
+      boxShadow: '0 0 0 1px var(--vault-search-match-selected-ring, rgba(180, 83, 9, 0.65))',
     },
   });
 }
