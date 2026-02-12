@@ -63,14 +63,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
         ]);
         setCharacters(chars);
         setSettings(prefs);
-
-        // Restore last active character if available
-        if (prefs.lastActiveCharacterId) {
-          const lastChar = chars.find(c => c.id === prefs.lastActiveCharacterId);
-          if (lastChar) {
-            setCurrentCharacter(lastChar);
-          }
-        }
+        // Don't restore last active character - always start at character selection
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to load characters'));
       } finally {
