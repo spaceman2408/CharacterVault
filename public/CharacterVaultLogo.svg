@@ -1,3 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250" aria-label="CharacterVault logo"><defs><filter id="c" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".2"/></filter><filter id="b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><linearGradient id="a" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7ad8e2"/><stop offset="100%" stop-color="#1abc9c"/></linearGradient></defs><path d="M75 5 10 40c0 50 25 75 65 95 40-20 65-45 65-95z" fill="url(#a)" stroke="#138f79" stroke-width="2" transform="translate(75 30)" filter="url(#b)"/><path d="M150 65c-10 0-17 7-17 17s7 18 17 18 17-8 17-18-7-17-17-17m-25 60c0-10 10-17 25-17s25 7 25 17v5h-50Z" fill="#29484b"/><text x="150" y="215" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="28" font-weight="700" text-anchor="middle" fill="url(#a)" letter-spacing=".6" filter="url(#c)" style="paint-order:stroke;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility">
-    CharacterVault
-  </text></svg>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="568" height="130" viewBox="12 34 568 130">
+<defs>
+</defs>
+<g transform="matrix(1.5901 -0.1671 0.1671 1.5901 63.9954 101.7942)">
+<rect transform="translate(0,0)" style="fill: rgb(224,231,255)" x="-28" y="-36" rx="6" ry="6" width="56" height="72"/>
+</g>
+<g transform="matrix(1.5966 -0.0836 0.0836 1.5966 60.9294 98.0495)">
+<rect transform="translate(0,0)" style="fill: rgb(199,210,254)" x="-28" y="-36" rx="6" ry="6" width="56" height="72"/>
+</g>
+<g transform="matrix(1.5988 0 0 1.5988 58.6611 92.2713)">
+<linearGradient id="SVGID_SVGID_102_111" gradientUnits="objectBoundingBox" gradientTransform="matrix(1 0 0 1 0 0)" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0%" style="stop-color:rgb(255,255,255);stop-opacity: 1"/>
+<stop offset="100%" style="stop-color:rgb(243,244,246);stop-opacity: 1"/>
+</linearGradient>
+<rect transform="translate(0,0)" style="stroke: rgb(99,102,241); stroke-width: 1.5; fill: url(#SVGID_SVGID_102_111)" x="-28" y="-36" rx="6" ry="6" width="56" height="72"/>
+</g>
+<g transform="matrix(2.3158 0 0 2.3158 41.3405 65.3578)">
+<linearGradient id="SVGID_SVGID_103_112" gradientUnits="objectBoundingBox" gradientTransform="matrix(1 0 0 1 0 0)" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0%" style="stop-color:rgb(99,102,241);stop-opacity: 1"/>
+<stop offset="100%" style="stop-color:rgb(139,92,246);stop-opacity: 1"/>
+</linearGradient>
+<circle transform="translate(0,0)" style="fill: url(#SVGID_SVGID_103_112)" cx="0" cy="0" r="10"/>
+</g>
+<path transform="translate(0,0)" style="stroke-linecap: round; fill: rgb(255,255,255)" stroke-linecap="round" d="M41.3405 50.8844C44.8141 50.8844 48.2876 54.3579 48.2876 57.8315 48.2876 61.3051 44.8141 64.7786 41.3405 64.7786 37.8669 64.7786 34.3934 61.3051 34.3934 57.8315 34.3934 54.3579 37.8669 50.8844 41.3405 50.8844Z"/>
+<path transform="translate(0,0)" style="stroke-linecap: round; fill: rgb(255,255,255)" stroke-linecap="round" d="M27.4463 78.6733C27.4463 71.7261 33.2355 67.0947 41.3405 67.0947 49.4455 67.0947 55.2347 71.7261 55.2347 78.6733"/>
+<rect transform="translate(0,0)" style="fill: rgb(99,102,241); opacity: 0.6" x="67.6445" y="63.4934" rx="1.5" ry="1.5" width="31.6383" height="5.9322"/>
+<rect transform="translate(0,0)" style="fill: rgb(165,180,252); opacity: 0.8" x="67.2447" y="75.158" rx="1.5" ry="1.5" width="23.7288" height="5.9322"/>
+<rect transform="translate(0,0)" style="fill: rgb(203,213,225)" x="21.0585" y="100.2715" rx="1.5" ry="1.5" width="77.4715" height="5.8104"/>
+<rect transform="translate(0,0)" style="fill: rgb(203,213,225)" x="21.0582" y="115.7656" rx="1.5" ry="1.5" width="58.1036" height="5.8104"/>
+<rect transform="translate(0,0)" style="fill: rgb(203,213,225)" x="21.0583" y="131.2597" rx="1.5" ry="1.5" width="65.8507" height="5.8104"/>
+<path transform="translate(0,0)" style="stroke-linecap: round; fill: rgb(244,114,182)" stroke-linecap="round" d="M84.0497 39.3092L87.0455 47.2981 95.0344 49.2953 87.0455 51.2925 84.0497 59.2814 81.0539 51.2925 73.065 49.2953 81.0539 47.2981 84.0497 39.3092Z"/>
+<text transform="matrix(1.7591 -0.0155 0.0155 1.7591 269.7784 99.741)" style="fill: rgb(183,178,240); text-decoration-thickness: 11.7275%; white-space: pre" x="-85.5835" y="11.9373" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="38" font-style="normal" font-weight="700"><tspan x="-85.5835" y="11.9373">Character</tspan></text>
+<g transform="matrix(1.7591 -0.0155 0.0155 1.7591 501.1999 98.6799)" style="">
+<linearGradient id="SVGID_SVGID_104_113" gradientUnits="objectBoundingBox" gradientTransform="matrix(1 0 0 1 0 0)" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0%" style="stop-color:rgb(99,102,241);stop-opacity: 1"/>
+<stop offset="100%" style="stop-color:rgb(139,92,246);stop-opacity: 1"/>
+</linearGradient>
+<text transform="translate(0,0)" style="fill: url(#SVGID_SVGID_104_113); text-decoration-thickness: 11.7275%; white-space: pre" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="38" font-style="normal" font-weight="700"><tspan x="-45.7559" y="11.9373">Vault</tspan></text>
+</g>
+</svg>

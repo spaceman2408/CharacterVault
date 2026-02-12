@@ -280,10 +280,11 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-vault-900 dark:bg-vault-700 rounded-lg">
-              <Users className="w-5 h-5 text-white dark:text-vault-100" />
-            </div>
-            <h1 className="font-bold text-lg tracking-tight hidden sm:block text-vault-900 dark:text-vault-100">Character Vault</h1>
+            <img
+              src="/CharacterVaultLogo.svg"
+              alt="Character Vault Logo"
+              className="shrink-0 h-8 w-auto sm:h-10 md:h-12 lg:h-14"
+            />
           </div>
 
           <div className="flex-1 max-w-md hidden sm:block">

@@ -1,7 +1,5 @@
-# 🗃️ Character Vault
-
 <p align="center">
-  <img src="public/CharacterVaultLogo.svg" alt="Character Vault Logo" width="160" height="160">
+  <img src="public/CharacterVaultLogo.svg" alt="Character Vault Logo" width="400" height="200">
 </p>
 
 <p align="center">
