@@ -80,17 +80,24 @@ function SectionTabs({ activeSection, onSectionChange }: SectionTabsProps): Reac
   const portalRef = React.useRef<HTMLDivElement>(null);
   const desktopTabsRef = React.useRef<HTMLDivElement>(null);
 
-  const handleDesktopTabsWheel = React.useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+  useEffect(() => {
     const container = desktopTabsRef.current;
     if (!container) return;
 
-    if (container.scrollWidth <= container.clientWidth) return;
+    const handleDesktopTabsWheel = (event: WheelEvent) => {
+      if (container.scrollWidth <= container.clientWidth) return;
 
-    const horizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-    if (horizontalDelta === 0) return;
+      const horizontalDelta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (horizontalDelta === 0) return;
 
-    event.preventDefault();
-    container.scrollLeft += horizontalDelta;
+      event.preventDefault();
+      container.scrollLeft += horizontalDelta;
+    };
+
+    // React's wheel event can be passive depending on runtime/build; attach native listener so preventDefault is legal.
+    container.addEventListener('wheel', handleDesktopTabsWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleDesktopTabsWheel);
   }, []);
 
   // Close dropdown when clicking outside
@@ -120,7 +127,6 @@ function SectionTabs({ activeSection, onSectionChange }: SectionTabsProps): Reac
       {/* Desktop: Horizontal tabs */}
       <div
         ref={desktopTabsRef}
-        onWheel={handleDesktopTabsWheel}
         className="hidden md:flex items-center gap-1 px-4 py-2 overflow-x-auto scrollbar-thin"
       >
         {CHARACTER_SECTIONS.map((section) => {
