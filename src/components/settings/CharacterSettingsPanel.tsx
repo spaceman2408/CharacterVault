@@ -540,19 +540,38 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const toastTimeoutsRef = useRef<number[]>([]);
 
   // Add toast notification
   const addToast = useCallback((type: ToastNotification['type'], message: string) => {
     const id = Math.random().toString(36).substring(7);
     setToasts(prev => [...prev, { id, type, message }]);
-    setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 5000);
+    toastTimeoutsRef.current.push(timeoutId);
   }, []);
 
   // Remove toast
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // Reset transient toast UI when panel closes.
+  useEffect(() => {
+    if (isOpen) return;
+
+    setToasts([]);
+    toastTimeoutsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
+    toastTimeoutsRef.current = [];
+  }, [isOpen]);
+
+  // Cleanup timeouts on unmount.
+  useEffect(() => {
+    return () => {
+      toastTimeoutsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
+      toastTimeoutsRef.current = [];
+    };
   }, []);
 
   // Load settings when panel opens
