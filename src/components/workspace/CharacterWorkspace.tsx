@@ -529,11 +529,14 @@ function CharacterHeader({
 
         <button
           onClick={onOpenHistory}
-          className="p-2 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium
+            text-vault-700 dark:text-vault-300
+            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+            transition-colors duration-200"
           title="Snapshot History"
         >
           <History className="w-5 h-5" />
+          <span className="hidden md:inline">Snapshot History</span>
         </button>
 
         <button

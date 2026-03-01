@@ -282,6 +282,7 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
     [getSnapshotDiff, selectedSnapshot],
   );
   const activeSectionDiff = diffEntries.find(entry => entry.section === activeSection);
+  const hasDiff = diffEntries.length > 0;
 
   if (!isOpen || !currentCharacter) {
     return <></>;
@@ -437,7 +438,7 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
               <button
                 type="button"
                 onClick={() => void handleRestore('whole')}
-                disabled={!selectedSnapshot || isRestoring}
+                disabled={!selectedSnapshot || !hasDiff || isRestoring}
                 className="inline-flex items-center gap-2 rounded-xl bg-vault-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-vault-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
               >
                 <RotateCcw className="h-4 w-4" />
