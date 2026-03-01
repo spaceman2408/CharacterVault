@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Clock3, History, RotateCcw, X } from 'lucide-react';
+import { ChevronDown, Clock3, History, RotateCcw, X } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { characterSnapshotService } from '../../services';
 import type { SnapshotDiffEntry } from '../../db/characterTypes';
@@ -215,15 +215,63 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
   } = useCharacterEditorContext();
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [mobileView, setMobileView] = useState<'history' | 'diff'>('history');
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedSnapshotId(null);
+      setMobileView('history');
+      setCollapsedSections({});
       return;
     }
 
-    setSelectedSnapshotId(snapshots[0]?.id ?? null);
+    setSelectedSnapshotId(currentSelectedSnapshotId => {
+      if (currentSelectedSnapshotId && snapshots.some(snapshot => snapshot.id === currentSelectedSnapshotId)) {
+        return currentSelectedSnapshotId;
+      }
+
+      return snapshots[0]?.id ?? null;
+    });
   }, [isOpen, snapshots]);
+
+  useEffect(() => {
+    setCollapsedSections({});
+  }, [selectedSnapshotId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 639px)');
+    const syncMobileView = () => {
+      if (!mediaQuery.matches) {
+        setMobileView('diff');
+      } else if (!selectedSnapshotId) {
+        setMobileView('history');
+      }
+    };
+
+    syncMobileView();
+    mediaQuery.addEventListener('change', syncMobileView);
+    return () => mediaQuery.removeEventListener('change', syncMobileView);
+  }, [isOpen, selectedSnapshotId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const selectedSnapshot = useMemo(
     () => snapshots.find(snapshot => snapshot.id === selectedSnapshotId) ?? null,
@@ -262,10 +310,55 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
     }
   };
 
+  const handleSelectSnapshot = (snapshotId: string) => {
+    setSelectedSnapshotId(snapshotId);
+    if (window.matchMedia('(max-width: 639px)').matches) {
+      setMobileView('diff');
+    }
+  };
+
+  const toggleSectionCollapsed = (section: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex h-[min(85vh,720px)] w-full max-w-7xl overflow-hidden rounded-3xl border border-vault-200 bg-white shadow-2xl dark:border-vault-800 dark:bg-vault-900">
-        <aside className="flex w-full max-w-sm flex-col border-r border-vault-200 bg-vault-50/80 dark:border-vault-800 dark:bg-vault-950/70">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="flex h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-vault-200 bg-white shadow-2xl dark:border-vault-800 dark:bg-vault-900 sm:h-[min(85vh,720px)] sm:max-w-7xl sm:rounded-3xl lg:flex-row"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="grid grid-cols-2 gap-2 border-b border-vault-200 px-4 py-3 dark:border-vault-800 sm:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileView('history')}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+              mobileView === 'history'
+                ? 'bg-vault-700 text-white'
+                : 'bg-vault-100 text-vault-700 dark:bg-vault-800 dark:text-vault-200'
+            }`}
+          >
+            History
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileView('diff')}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+              mobileView === 'diff'
+                ? 'bg-vault-700 text-white'
+                : 'bg-vault-100 text-vault-700 dark:bg-vault-800 dark:text-vault-200'
+            }`}
+          >
+            Diff
+          </button>
+        </div>
+
+        <aside className={`${mobileView === 'history' ? 'flex' : 'hidden'} min-h-0 w-full flex-col border-b border-vault-200 bg-vault-50/80 dark:border-vault-800 dark:bg-vault-950/70 sm:flex sm:max-h-[38vh] lg:max-h-none lg:max-w-sm lg:border-b-0 lg:border-r`}>
           <div className="flex items-center justify-between border-b border-vault-200 px-5 py-4 dark:border-vault-800">
             <div>
               <h2 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Snapshot History</h2>
@@ -287,14 +380,14 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
             ) : snapshots.length === 0 ? (
               <div className="px-3 py-6 text-sm text-vault-500 dark:text-vault-400">No snapshots available.</div>
             ) : (
-              <div className="space-y-2">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
                 {snapshots.map(snapshot => {
                   const isSelected = snapshot.id === selectedSnapshotId;
                   return (
                     <button
                       key={snapshot.id}
                       type="button"
-                      onClick={() => setSelectedSnapshotId(snapshot.id)}
+                      onClick={() => handleSelectSnapshot(snapshot.id)}
                       className={`w-full rounded-2xl border p-3 text-left transition-colors ${
                         isSelected
                           ? 'border-vault-500 bg-white shadow-sm dark:border-vault-400 dark:bg-vault-900'
@@ -324,15 +417,15 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
           </div>
         </aside>
 
-        <section className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center justify-between border-b border-vault-200 px-5 py-4 dark:border-vault-800">
+        <section className={`${mobileView === 'diff' ? 'flex' : 'hidden'} min-h-0 min-w-0 flex-1 flex-col sm:flex`}>
+          <div className="flex flex-col gap-3 border-b border-vault-200 px-4 py-4 dark:border-vault-800 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Snapshot Diff</h3>
               <p className="text-sm text-vault-500 dark:text-vault-400">
                 Comparing selected snapshot against the current card
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex">
               <button
                 type="button"
                 onClick={() => void handleRestore('section')}
@@ -353,7 +446,7 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5">
             {!selectedSnapshot ? (
               <div className="text-sm text-vault-500 dark:text-vault-400">Select a snapshot to inspect changes.</div>
             ) : diffEntries.length === 0 ? (
@@ -366,18 +459,29 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
                     className="rounded-2xl border border-vault-200 bg-white/80 p-4 dark:border-vault-800 dark:bg-vault-950/40"
                   >
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <div>
-                        <h4 className="font-semibold text-vault-900 dark:text-vault-100">{entry.label}</h4>
-                        <p className="text-xs text-vault-500 dark:text-vault-400">
-                          {entry.section === activeSection ? 'Current editor section' : 'Changed section'}
-                        </p>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggleSectionCollapsed(entry.section)}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 shrink-0 text-vault-500 transition-transform ${
+                            collapsedSections[entry.section] ? '-rotate-90' : 'rotate-0'
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <h4 className="font-semibold text-vault-900 dark:text-vault-100">{entry.label}</h4>
+                          <p className="text-xs text-vault-500 dark:text-vault-400">
+                            {entry.section === activeSection ? 'Current editor section' : 'Changed section'}
+                          </p>
+                        </div>
+                      </button>
                       <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                        Changed
+                        {collapsedSections[entry.section] ? 'Collapsed' : 'Changed'}
                       </span>
                     </div>
 
-                    {isImageEntry(entry) ? (
+                    {!collapsedSections[entry.section] && (isImageEntry(entry) ? (
                       <div className="grid gap-4 lg:grid-cols-2">
                         <div className="space-y-2">
                           <p className="text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">Snapshot</p>
@@ -415,7 +519,7 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
                           tone="current"
                         />
                       </div>
-                    )}
+                    ))}
                   </div>
                 ))}
               </div>
