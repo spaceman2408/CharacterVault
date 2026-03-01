@@ -47,6 +47,7 @@ import {
   ChevronDown,
   Book,
   AlertCircle,
+  X,
 } from 'lucide-react';
 
 interface ToastNotification {
@@ -63,24 +64,33 @@ function ToastContainer({
   onRemove: (id: string) => void;
 }): React.ReactElement {
   return (
-    <div className="fixed top-4 right-4 z-100 space-y-2">
+    <div className="pointer-events-none fixed right-4 bottom-4 z-100 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2">
       {toasts.map(toast => (
         <div
           key={toast.id}
-          className={`flex items-center gap-2 rounded-lg border px-4 py-3 shadow-lg transition-all duration-300 animate-in slide-in-from-right ${
+          className={`pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-xl ring-1 ring-black/5 transition-all duration-300 animate-in slide-in-from-right backdrop-blur-sm ${
             toast.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400'
-              : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+              ? 'border-green-300 bg-green-100/95 text-green-950 dark:border-green-700 dark:bg-green-950/95 dark:text-green-100'
+              : 'border-amber-300 bg-amber-100/95 text-amber-950 dark:border-amber-700 dark:bg-amber-950/95 dark:text-amber-100'
           }`}
         >
-          {toast.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-          <span className="text-sm font-medium">{toast.message}</span>
+          <div className={`mt-0.5 rounded-full p-1 ${
+            toast.type === 'success'
+              ? 'bg-green-200/90 text-green-800 dark:bg-green-900/80 dark:text-green-200'
+              : 'bg-amber-200/90 text-amber-800 dark:bg-amber-900/80 dark:text-amber-200'
+          }`}>
+            {toast.type === 'success' ? <Check className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">{toast.type === 'success' ? 'Snapshot' : 'Snapshot unchanged'}</p>
+            <p className="text-sm opacity-90">{toast.message}</p>
+          </div>
           <button
             type="button"
             onClick={() => onRemove(toast.id)}
-            className="ml-1 rounded p-1 hover:bg-black/5 dark:hover:bg-white/10"
+            className="rounded p-1 hover:bg-black/5 dark:hover:bg-white/10"
           >
-            <Trash2 className="h-3 w-3" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
       ))}

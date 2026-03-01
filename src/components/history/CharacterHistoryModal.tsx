@@ -9,6 +9,17 @@ interface CharacterHistoryModalProps {
   onClose: () => void;
 }
 
+interface DiffSegment {
+  text: string;
+  changed: boolean;
+}
+
+interface LineDiff {
+  value: string;
+  compareValue: string;
+  changed: boolean;
+}
+
 function formatValue(value: unknown): string {
   if (typeof value === 'string') {
     return value;
@@ -29,53 +40,73 @@ function isImageEntry(entry: SnapshotDiffEntry): boolean {
   return entry.section === 'image';
 }
 
-interface DiffSegment {
-  text: string;
-  changed: boolean;
-}
+function splitChangedSegments(value: string, compareValue: string): DiffSegment[] {
+  if (value === compareValue) {
+    return value ? [{ text: value, changed: false }] : [];
+  }
 
-function splitChangedSegments(left: string, right: string): { left: DiffSegment[]; right: DiffSegment[] } {
-  if (left === right) {
-    return {
-      left: [{ text: left, changed: false }],
-      right: [{ text: right, changed: false }],
-    };
+  if (!value) {
+    return [];
+  }
+
+  if (!compareValue) {
+    return [{ text: value, changed: true }];
   }
 
   let prefixLength = 0;
   while (
-    prefixLength < left.length &&
-    prefixLength < right.length &&
-    left[prefixLength] === right[prefixLength]
+    prefixLength < value.length &&
+    prefixLength < compareValue.length &&
+    value[prefixLength] === compareValue[prefixLength]
   ) {
     prefixLength += 1;
   }
 
   let suffixLength = 0;
   while (
-    suffixLength < left.length - prefixLength &&
-    suffixLength < right.length - prefixLength &&
-    left[left.length - 1 - suffixLength] === right[right.length - 1 - suffixLength]
+    suffixLength < value.length - prefixLength &&
+    suffixLength < compareValue.length - prefixLength &&
+    value[value.length - 1 - suffixLength] === compareValue[compareValue.length - 1 - suffixLength]
   ) {
     suffixLength += 1;
   }
 
-  const buildSegments = (value: string): DiffSegment[] => {
-    const prefix = value.slice(0, prefixLength);
-    const changed = value.slice(prefixLength, value.length - suffixLength);
-    const suffix = suffixLength > 0 ? value.slice(value.length - suffixLength) : '';
+  const prefix = value.slice(0, prefixLength);
+  const changed = value.slice(prefixLength, value.length - suffixLength);
+  const suffix = suffixLength > 0 ? value.slice(value.length - suffixLength) : '';
 
-    return [
-      ...(prefix ? [{ text: prefix, changed: false }] : []),
-      ...(changed ? [{ text: changed, changed: true }] : []),
-      ...(suffix ? [{ text: suffix, changed: false }] : []),
-    ];
-  };
+  return [
+    ...(prefix ? [{ text: prefix, changed: false }] : []),
+    ...(changed ? [{ text: changed, changed: true }] : []),
+    ...(suffix ? [{ text: suffix, changed: false }] : []),
+  ];
+}
 
-  return {
-    left: buildSegments(left),
-    right: buildSegments(right),
-  };
+function createLineDiffs(value: string, compareValue: string): LineDiff[] {
+  const valueLines = value.split('\n');
+  const compareLines = compareValue.split('\n');
+  const maxLines = Math.max(valueLines.length, compareLines.length);
+  const diffs: LineDiff[] = [];
+
+  for (let index = 0; index < maxLines; index += 1) {
+    const currentLine = valueLines[index] ?? '';
+    const otherLine = compareLines[index] ?? '';
+    diffs.push({
+      value: currentLine,
+      compareValue: otherLine,
+      changed: currentLine !== otherLine,
+    });
+  }
+
+  return diffs;
+}
+
+function countChangedLines(value: string, compareValue: string): number {
+  return createLineDiffs(value, compareValue).filter(line => line.changed).length;
+}
+
+function formatLineNumber(index: number): string {
+  return String(index + 1).padStart(2, '0');
 }
 
 function HighlightedContent({
@@ -87,23 +118,42 @@ function HighlightedContent({
   compareValue: string;
   tone: 'snapshot' | 'current';
 }): React.ReactElement {
-  const { left, right } = useMemo(() => splitChangedSegments(value, compareValue), [compareValue, value]);
-  const segments = tone === 'snapshot' ? left : right;
-  const changedClassName = tone === 'snapshot'
-    ? 'bg-rose-100 text-rose-900 dark:bg-rose-900/40 dark:text-rose-100'
-    : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100';
+  const lineDiffs = useMemo(() => createLineDiffs(value, compareValue), [compareValue, value]);
+  const changedSpanClassName = tone === 'snapshot'
+    ? 'bg-rose-200/90 text-rose-950 dark:bg-rose-700/50 dark:text-rose-50'
+    : 'bg-emerald-200/90 text-emerald-950 dark:bg-emerald-700/50 dark:text-emerald-50';
+  const changedLineClassName = tone === 'snapshot'
+    ? 'border-l-2 border-rose-500 bg-rose-50/70 dark:bg-rose-950/20'
+    : 'border-l-2 border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/20';
 
   return (
-    <pre className="whitespace-pre-wrap break-words text-sm text-vault-800 dark:text-vault-200 font-mono">
-      {segments.length > 0 ? segments.map((segment, index) => (
-        <span
-          key={`${tone}-${index}`}
-          className={segment.changed ? `rounded px-0.5 ${changedClassName}` : undefined}
-        >
-          {segment.text}
-        </span>
-      )) : 'Empty'}
-    </pre>
+    <div className="space-y-1 font-mono text-sm">
+      {lineDiffs.length > 0 ? lineDiffs.map((line, index) => {
+        const segments = splitChangedSegments(line.value, line.compareValue);
+        return (
+          <div
+            key={`${tone}-${index}`}
+            className={`grid grid-cols-[auto_1fr] gap-3 rounded-md px-2 py-1 ${line.changed ? changedLineClassName : ''}`}
+          >
+            <span className="select-none text-[11px] font-semibold tracking-wide text-vault-400 dark:text-vault-500">
+              {formatLineNumber(index)}
+            </span>
+            <pre className="whitespace-pre-wrap break-words text-sm text-vault-800 dark:text-vault-200">
+              {segments.length > 0 ? segments.map((segment, segmentIndex) => (
+                <span
+                  key={`${tone}-${index}-${segmentIndex}`}
+                  className={segment.changed ? `rounded px-0.5 ${changedSpanClassName}` : undefined}
+                >
+                  {segment.text || ' '}
+                </span>
+              )) : <span className="text-vault-400 dark:text-vault-500"> </span>}
+            </pre>
+          </div>
+        );
+      }) : (
+        <pre className="text-sm text-vault-800 dark:text-vault-200">Empty</pre>
+      )}
+    </div>
   );
 }
 
@@ -121,18 +171,24 @@ function DiffBlock({
   const content = formatValue(value);
   const compareContent = formatValue(compareValue);
   const [expanded, setExpanded] = useState(false);
-  const isLong = content.length > 600;
-  const displayValue = expanded || !isLong ? content : `${content.slice(0, 600)}...`;
-  const displayCompareValue = expanded || !isLong ? compareContent : `${compareContent.slice(0, 600)}...`;
+  const isLong = content.length > 900 || content.split('\n').length > 18;
+  const lineDiffCount = useMemo(() => countChangedLines(content, compareContent), [compareContent, content]);
+  const displayValue = expanded || !isLong ? content : content.split('\n').slice(0, 18).join('\n');
+  const displayCompareValue = expanded || !isLong ? compareContent : compareContent.split('\n').slice(0, 18).join('\n');
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">{title}</p>
-      <div className={`rounded-xl border p-3 ${
-        tone === 'snapshot'
-          ? 'border-rose-200 bg-rose-50/70 dark:border-rose-900/60 dark:bg-rose-950/30'
-          : 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30'
-      }`}>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">{title}</p>
+        <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
+          tone === 'snapshot'
+            ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200'
+            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
+        }`}>
+          {lineDiffCount} {lineDiffCount === 1 ? 'line changed' : 'lines changed'}
+        </span>
+      </div>
+      <div className="rounded-xl border border-vault-200 bg-white/90 p-3 dark:border-vault-700 dark:bg-vault-950/60">
         <HighlightedContent value={displayValue} compareValue={displayCompareValue} tone={tone} />
       </div>
       {isLong && (
