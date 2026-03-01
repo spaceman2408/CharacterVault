@@ -4,7 +4,7 @@
  */
 
 import { createContext } from 'react';
-import type { Character, CharacterSection } from '../db/characterTypes';
+import type { Character, CharacterSection, CharacterSnapshot, SnapshotDiffEntry } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
 
 /**
@@ -35,6 +35,8 @@ export interface ContextSection {
   content: string;
 }
 
+export type ManualSnapshotResult = 'created' | 'skipped';
+
 /**
  * Character editor context value interface
  */
@@ -62,6 +64,12 @@ export interface CharacterEditorContextValue {
   samplerSettings: SamplerSettings;
   /** Prompt settings */
   promptSettings: PromptSettings;
+  /** Whether the history modal is open */
+  isHistoryOpen: boolean;
+  /** Persisted snapshots for the current character */
+  snapshots: CharacterSnapshot[];
+  /** Snapshot loading state */
+  isSnapshotsLoading: boolean;
   
   /** Set the active section */
   setActiveSection: (section: CharacterSection) => void;
@@ -87,6 +95,16 @@ export interface CharacterEditorContextValue {
   updateSamplerSettings: (settings: Partial<SamplerSettings>) => void;
   /** Update prompt settings */
   updatePromptSettings: (settings: Partial<PromptSettings>) => void;
+  /** Toggle history modal */
+  setIsHistoryOpen: (open: boolean) => void;
+  /** Create a manual snapshot */
+  createManualSnapshot: () => Promise<ManualSnapshotResult>;
+  /** Refresh snapshots for current character */
+  refreshSnapshots: () => Promise<void>;
+  /** Restore a snapshot */
+  restoreSnapshot: (snapshotId: string, scope: 'whole' | 'section') => Promise<void>;
+  /** Get diff entries for a snapshot */
+  getSnapshotDiff: (snapshotId: string) => SnapshotDiffEntry[];
   /** Handle AI operation result */
   handleAIOperation: (result: string, operation: AIOperation, originalSelectedText?: string) => void;
   /** Get context content for AI */

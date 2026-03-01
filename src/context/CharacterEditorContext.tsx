@@ -4,14 +4,16 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import type { Character, CharacterSection } from '../db/characterTypes';
+import type { Character, CharacterSection, CharacterSnapshot, SnapshotDiffEntry } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
 import { DEFAULT_SETTINGS } from '../db/types';
 import { useCharacterContext } from './useCharacterContext';
-import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation } from './characterEditorContextTypes';
+import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation, type ManualSnapshotResult } from './characterEditorContextTypes';
 import { characterSettingsService } from '../services/CharacterSettingsService';
+import { characterSnapshotService } from '../services/CharacterSnapshotService';
 
 const CENTRAL_SAVE_DEBOUNCE_MS = 500;
+const AUTO_SNAPSHOT_IDLE_MS = 30000;
 
 /**
  * Props for the CharacterEditorProvider component
@@ -34,6 +36,7 @@ interface CharacterEditorProviderProps {
  */
 export default function CharacterEditorProvider({ children }: CharacterEditorProviderProps): React.ReactElement {
   const { currentCharacter, updateCharacter: updateCharacterBase, updateSpecField: updateSpecFieldBase } = useCharacterContext();
+  const currentCharacterId = currentCharacter?.id ?? null;
   
   const [activeSection, setActiveSection] = useState<CharacterSection>('name');
   const [isDirty, setIsDirty] = useState(false);
@@ -47,6 +50,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [aiConfig, setAIConfig] = useState<AIConfig>(DEFAULT_SETTINGS.ai);
   const [samplerSettings, setSamplerSettings] = useState<SamplerSettings>(DEFAULT_SETTINGS.sampler);
   const [promptSettings, setPromptSettings] = useState<PromptSettings>(DEFAULT_SETTINGS.prompts);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [snapshots, setSnapshots] = useState<CharacterSnapshot[]>([]);
+  const [isSnapshotsLoading, setIsSnapshotsLoading] = useState(false);
   const specFieldRequestVersionRef = useRef<Map<string, number>>(new Map());
   const specSaveTimerRef = useRef<Map<string, number>>(new Map());
   const specPendingValueRef = useRef<Map<string, string | string[]>>(new Map());
@@ -61,6 +67,172 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     resolve: Array<(value: Character) => void>;
     reject: Array<(reason?: unknown) => void>;
   }>>(new Map());
+  const autoSnapshotTimerRef = useRef<number | null>(null);
+  const pendingAutoSnapshotCharacterRef = useRef<Character | null>(null);
+  const openedCharacterIdRef = useRef<string | null>(null);
+
+  const clearAutoSnapshotTimer = useCallback(() => {
+    if (autoSnapshotTimerRef.current !== null) {
+      window.clearTimeout(autoSnapshotTimerRef.current);
+      autoSnapshotTimerRef.current = null;
+    }
+  }, []);
+
+  const refreshSnapshots = useCallback(async () => {
+    if (!currentCharacterId) {
+      setSnapshots([]);
+      return;
+    }
+
+    setIsSnapshotsLoading(true);
+    try {
+      const nextSnapshots = await characterSnapshotService.listSnapshots(currentCharacterId);
+      setSnapshots(nextSnapshots);
+    } catch (error) {
+      console.error('Failed to load snapshots:', error);
+    } finally {
+      setIsSnapshotsLoading(false);
+    }
+  }, [currentCharacterId]);
+
+  const createSnapshotFromCharacter = useCallback(async (character: Character, source: 'open' | 'auto' | 'manual' | 'rollback') => {
+    try {
+      const snapshot = await characterSnapshotService.createSnapshot(character, source);
+      await refreshSnapshots();
+      return snapshot;
+    } catch (error) {
+      console.error(`Failed to create ${source} snapshot:`, error);
+      return null;
+    }
+  }, [refreshSnapshots]);
+
+  const scheduleAutoSnapshot = useCallback((character: Character) => {
+    pendingAutoSnapshotCharacterRef.current = character;
+    clearAutoSnapshotTimer();
+    autoSnapshotTimerRef.current = window.setTimeout(() => {
+      const pendingCharacter = pendingAutoSnapshotCharacterRef.current;
+      pendingAutoSnapshotCharacterRef.current = null;
+      autoSnapshotTimerRef.current = null;
+
+      if (!pendingCharacter) {
+        return;
+      }
+
+      void createSnapshotFromCharacter(pendingCharacter, 'auto');
+    }, AUTO_SNAPSHOT_IDLE_MS);
+  }, [clearAutoSnapshotTimer, createSnapshotFromCharacter]);
+
+  const commitQueuedCharacterUpdate = useCallback(async (requestKey: string, characterId: string): Promise<Character | null> => {
+    const queuedInput = updateCharacterPendingInputRef.current.get(requestKey);
+    if (!queuedInput) {
+      return null;
+    }
+
+    const nextVersion = (updateCharacterRequestVersionRef.current.get(requestKey) ?? 0) + 1;
+    updateCharacterRequestVersionRef.current.set(requestKey, nextVersion);
+
+    try {
+      const updated = await updateCharacterBase(characterId, queuedInput);
+      const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
+      updateCharacterPendingInputRef.current.delete(requestKey);
+      updateCharacterPendingResolversRef.current.delete(requestKey);
+
+      if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
+        setIsDirty(false);
+        setSaveStatus('saved');
+        scheduleAutoSnapshot(updated);
+      }
+
+      currentResolvers?.resolve.forEach(fn => fn(updated));
+      return updated;
+    } catch (error) {
+      const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
+      updateCharacterPendingInputRef.current.delete(requestKey);
+      updateCharacterPendingResolversRef.current.delete(requestKey);
+
+      if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
+        setSaveStatus('error');
+      }
+
+      currentResolvers?.reject.forEach(fn => fn(error));
+      throw error;
+    }
+  }, [scheduleAutoSnapshot, updateCharacterBase]);
+
+  const commitQueuedSpecFieldUpdate = useCallback(async (
+    requestKey: string,
+    characterId: string,
+    field: keyof Character['data']['spec'],
+  ): Promise<Character | null> => {
+    const queuedValue = specPendingValueRef.current.get(requestKey);
+    if (queuedValue === undefined) {
+      return null;
+    }
+
+    const nextVersion = (specFieldRequestVersionRef.current.get(requestKey) ?? 0) + 1;
+    specFieldRequestVersionRef.current.set(requestKey, nextVersion);
+
+    try {
+      const updated = await updateSpecFieldBase(characterId, field, queuedValue);
+      const currentResolvers = specPendingResolversRef.current.get(requestKey);
+      specPendingValueRef.current.delete(requestKey);
+      specPendingResolversRef.current.delete(requestKey);
+
+      if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
+        setIsDirty(false);
+        setSaveStatus('saved');
+        scheduleAutoSnapshot(updated);
+      }
+
+      currentResolvers?.resolve.forEach(fn => fn(updated));
+      return updated;
+    } catch (error) {
+      const currentResolvers = specPendingResolversRef.current.get(requestKey);
+      specPendingValueRef.current.delete(requestKey);
+      specPendingResolversRef.current.delete(requestKey);
+
+      if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
+        console.error('Failed to save spec field:', error);
+        setSaveStatus('error');
+      }
+      currentResolvers?.reject.forEach(fn => fn(error));
+      throw error;
+    }
+  }, [scheduleAutoSnapshot, updateSpecFieldBase]);
+
+  const flushPendingSaves = useCallback(async (): Promise<Character | null> => {
+    if (!currentCharacter) {
+      return null;
+    }
+
+    const characterId = currentCharacter.id;
+    const updates: Array<Promise<Character | null>> = [];
+    const characterRequestKey = `${characterId}:updateCharacter`;
+
+    if (updateCharacterSaveTimerRef.current.has(characterRequestKey)) {
+      window.clearTimeout(updateCharacterSaveTimerRef.current.get(characterRequestKey));
+      updateCharacterSaveTimerRef.current.delete(characterRequestKey);
+      updates.push(commitQueuedCharacterUpdate(characterRequestKey, characterId));
+    }
+
+    for (const [requestKey, timerId] of specSaveTimerRef.current.entries()) {
+      if (!requestKey.startsWith(`${characterId}:`)) {
+        continue;
+      }
+
+      window.clearTimeout(timerId);
+      specSaveTimerRef.current.delete(requestKey);
+      const field = requestKey.slice(characterId.length + 1) as keyof Character['data']['spec'];
+      updates.push(commitQueuedSpecFieldUpdate(requestKey, characterId, field));
+    }
+
+    if (updates.length === 0) {
+      return currentCharacter;
+    }
+
+    const results = await Promise.all(updates);
+    return results.filter((result): result is Character => result !== null).at(-1) ?? currentCharacter;
+  }, [commitQueuedCharacterUpdate, commitQueuedSpecFieldUpdate, currentCharacter]);
 
   // Context sections = active section (unless removed) + user-added sections
   const contextSectionIds = React.useMemo<CharacterSection[]>(() => {
@@ -105,6 +277,30 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   useEffect(() => {
     document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
   }, [fontSize]);
+
+  useEffect(() => {
+    if (!currentCharacter || !currentCharacterId) {
+      openedCharacterIdRef.current = null;
+      setSnapshots([]);
+      setIsHistoryOpen(false);
+      pendingAutoSnapshotCharacterRef.current = null;
+      clearAutoSnapshotTimer();
+      return;
+    }
+
+    if (openedCharacterIdRef.current === currentCharacterId) {
+      return;
+    }
+
+    openedCharacterIdRef.current = currentCharacterId;
+    pendingAutoSnapshotCharacterRef.current = null;
+    clearAutoSnapshotTimer();
+    void refreshSnapshots();
+  }, [clearAutoSnapshotTimer, currentCharacter, currentCharacterId, refreshSnapshots]);
+
+  useEffect(() => () => {
+    clearAutoSnapshotTimer();
+  }, [clearAutoSnapshotTimer]);
 
   // Clear removed sections when navigating so they can be auto-added again
   // Using a ref to track previous active section to avoid cascading renders
@@ -154,41 +350,16 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
       const timerId = window.setTimeout(async () => {
         updateCharacterSaveTimerRef.current.delete(requestKey);
-        const queuedInput = updateCharacterPendingInputRef.current.get(requestKey);
-        if (!queuedInput) {
-          return;
-        }
-
-        const nextVersion = (updateCharacterRequestVersionRef.current.get(requestKey) ?? 0) + 1;
-        updateCharacterRequestVersionRef.current.set(requestKey, nextVersion);
         try {
-          const updated = await updateCharacterBase(characterId, queuedInput);
-          const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
-          updateCharacterPendingInputRef.current.delete(requestKey);
-          updateCharacterPendingResolversRef.current.delete(requestKey);
-
-          if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
-            setIsDirty(false);
-            setSaveStatus('saved');
-          }
-
-          currentResolvers?.resolve.forEach(fn => fn(updated));
-        } catch (error) {
-          const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
-          updateCharacterPendingInputRef.current.delete(requestKey);
-          updateCharacterPendingResolversRef.current.delete(requestKey);
-
-          if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
-            setSaveStatus('error');
-          }
-
-          currentResolvers?.reject.forEach(fn => fn(error));
+          await commitQueuedCharacterUpdate(requestKey, characterId);
+        } catch {
+          // Errors are forwarded to pending resolvers by commitQueuedCharacterUpdate.
         }
       }, CENTRAL_SAVE_DEBOUNCE_MS);
 
       updateCharacterSaveTimerRef.current.set(requestKey, timerId);
     });
-  }, [currentCharacter, updateCharacterBase]);
+  }, [commitQueuedCharacterUpdate, currentCharacter]);
 
   /**
    * Update a specific spec field
@@ -219,41 +390,16 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
       const timerId = window.setTimeout(async () => {
         specSaveTimerRef.current.delete(requestKey);
-        const queuedValue = specPendingValueRef.current.get(requestKey);
-        if (queuedValue === undefined) {
-          return;
-        }
-
-        const nextVersion = (specFieldRequestVersionRef.current.get(requestKey) ?? 0) + 1;
-        specFieldRequestVersionRef.current.set(requestKey, nextVersion);
         try {
-          const updated = await updateSpecFieldBase(characterId, field, queuedValue);
-          const currentResolvers = specPendingResolversRef.current.get(requestKey);
-          specPendingValueRef.current.delete(requestKey);
-          specPendingResolversRef.current.delete(requestKey);
-
-          if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
-            setIsDirty(false);
-            setSaveStatus('saved');
-          }
-
-          currentResolvers?.resolve.forEach(fn => fn(updated));
-        } catch (error) {
-          const currentResolvers = specPendingResolversRef.current.get(requestKey);
-          specPendingValueRef.current.delete(requestKey);
-          specPendingResolversRef.current.delete(requestKey);
-
-          if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
-            console.error('Failed to save spec field:', error);
-            setSaveStatus('error');
-          }
-          currentResolvers?.reject.forEach(fn => fn(error));
+          await commitQueuedSpecFieldUpdate(requestKey, characterId, field);
+        } catch {
+          // Errors are forwarded to pending resolvers by commitQueuedSpecFieldUpdate.
         }
       }, CENTRAL_SAVE_DEBOUNCE_MS);
 
       specSaveTimerRef.current.set(requestKey, timerId);
     });
-  }, [currentCharacter, updateSpecFieldBase]);
+  }, [commitQueuedSpecFieldUpdate, currentCharacter]);
 
   /**
    * Set font size
@@ -355,6 +501,84 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       return newSettings;
     });
   }, []);
+
+  const createManualSnapshot = useCallback(async (): Promise<ManualSnapshotResult> => {
+    if (!currentCharacter) {
+      return 'skipped';
+    }
+
+    const latestCharacter = await flushPendingSaves();
+    clearAutoSnapshotTimer();
+    pendingAutoSnapshotCharacterRef.current = null;
+    const snapshot = await createSnapshotFromCharacter(latestCharacter ?? currentCharacter, 'manual');
+    return snapshot ? 'created' : 'skipped';
+  }, [clearAutoSnapshotTimer, createSnapshotFromCharacter, currentCharacter, flushPendingSaves]);
+
+  const getSnapshotDiff = useCallback((snapshotId: string): SnapshotDiffEntry[] => {
+    if (!currentCharacter) {
+      return [];
+    }
+
+    const snapshot = snapshots.find(entry => entry.id === snapshotId);
+    if (!snapshot) {
+      return [];
+    }
+
+    return characterSnapshotService.diffSnapshotAgainstCharacter(snapshot, currentCharacter);
+  }, [currentCharacter, snapshots]);
+
+  const restoreSnapshot = useCallback(async (snapshotId: string, scope: 'whole' | 'section') => {
+    if (!currentCharacter) {
+      return;
+    }
+
+    const snapshot = snapshots.find(entry => entry.id === snapshotId);
+    if (!snapshot) {
+      return;
+    }
+
+    clearAutoSnapshotTimer();
+    pendingAutoSnapshotCharacterRef.current = null;
+    setSaveStatus('saving');
+
+    try {
+      let restoredCharacter: Character;
+
+      if (scope === 'whole') {
+        const input = characterSnapshotService.restoreWholeCharacter(currentCharacter, snapshot);
+        restoredCharacter = await updateCharacterBase(currentCharacter.id, input);
+      } else {
+        const action = characterSnapshotService.restoreSection(currentCharacter, snapshot, activeSection);
+        if (!action) {
+          setSaveStatus('saved');
+          return;
+        }
+
+        if (action.kind === 'image') {
+          restoredCharacter = await updateCharacterBase(currentCharacter.id, { imageData: action.value });
+        } else if (action.kind === 'spec') {
+          restoredCharacter = await updateSpecFieldBase(currentCharacter.id, action.field, action.value);
+        } else {
+          restoredCharacter = await updateCharacterBase(currentCharacter.id, action.input);
+        }
+      }
+
+      setIsDirty(false);
+      setSaveStatus('saved');
+      await createSnapshotFromCharacter(restoredCharacter, 'rollback');
+    } catch (error) {
+      console.error('Failed to restore snapshot:', error);
+      setSaveStatus('error');
+    }
+  }, [
+    activeSection,
+    clearAutoSnapshotTimer,
+    createSnapshotFromCharacter,
+    currentCharacter,
+    snapshots,
+    updateCharacterBase,
+    updateSpecFieldBase,
+  ]);
 
   /**
    * Get context content for AI from selected sections
@@ -561,6 +785,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     aiConfig,
     samplerSettings,
     promptSettings,
+    isHistoryOpen,
+    snapshots,
+    isSnapshotsLoading,
     setActiveSection,
     updateCharacter,
     updateSpecField,
@@ -572,6 +799,11 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     updateAIConfig,
     updateSamplerSettings,
     updatePromptSettings,
+    setIsHistoryOpen,
+    createManualSnapshot,
+    refreshSnapshots,
+    restoreSnapshot,
+    getSnapshotDiff,
     handleAIOperation,
     getContextContent,
     reloadSettings,

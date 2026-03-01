@@ -121,6 +121,38 @@ export interface Character {
   lastOpenedAt?: Timestamp;
 }
 
+export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback';
+
+export interface CharacterSnapshotPayload {
+  name: string;
+  imageData: string;
+  data: Character['data'];
+}
+
+export interface CharacterSnapshot {
+  id: UUID;
+  characterId: UUID;
+  source: SnapshotSource;
+  createdAt: Timestamp;
+  payload: CharacterSnapshotPayload;
+  payloadHash: string;
+}
+
+export interface CreateSnapshotInput {
+  characterId: UUID;
+  source: SnapshotSource;
+  payload: CharacterSnapshotPayload;
+  payloadHash: string;
+}
+
+export interface SnapshotDiffEntry {
+  section: CharacterSection | 'image' | 'extensions' | 'lorebook';
+  label: string;
+  changed: boolean;
+  snapshotValue: unknown;
+  currentValue: unknown;
+}
+
 /**
  * Input for creating a new character
  */

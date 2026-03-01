@@ -7,7 +7,9 @@
 import Dexie, { type Table } from 'dexie';
 import type {
   Character,
+  CharacterSnapshot,
   CharacterVaultSettings,
+  CreateSnapshotInput,
   CreateCharacterInput,
   UpdateCharacterInput,
 } from './characterTypes';
@@ -22,6 +24,9 @@ export class CharacterDatabase extends Dexie {
   /** Table storing characters */
   characters!: Table<Character, string>;
 
+  /** Table storing snapshots */
+  snapshots!: Table<CharacterSnapshot, string>;
+
   /** Table storing settings */
   settings!: Table<CharacterVaultSettings, string>;
 
@@ -34,6 +39,12 @@ export class CharacterDatabase extends Dexie {
 
       // Single settings record
       settings: 'id',
+    });
+
+    this.version(2).stores({
+      characters: 'id, name, updatedAt, createdAt',
+      settings: 'id',
+      snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
     });
   }
 
@@ -174,6 +185,7 @@ export class CharacterDatabase extends Dexie {
 
     const updatedCharacter: Character = {
       ...character,
+      name: field === 'name' && typeof value === 'string' ? value : character.name,
       data: {
         ...character.data,
         spec: {
@@ -204,7 +216,10 @@ export class CharacterDatabase extends Dexie {
    * @returns {Promise<void>}
    */
   async deleteCharacter(id: string): Promise<void> {
-    await this.characters.delete(id);
+    await this.transaction('rw', this.characters, this.snapshots, async () => {
+      await this.characters.delete(id);
+      await this.snapshots.where('characterId').equals(id).delete();
+    });
   }
 
   /**
@@ -342,6 +357,67 @@ export class CharacterDatabase extends Dexie {
 
     await this.characters.add(character);
     return character;
+  }
+
+  // ============================================================================
+  // Snapshot Operations
+  // ============================================================================
+
+  async createSnapshot(input: CreateSnapshotInput): Promise<CharacterSnapshot | null> {
+    const latestSnapshot = await this.getLatestSnapshot(input.characterId);
+    if (latestSnapshot?.payloadHash === input.payloadHash) {
+      return null;
+    }
+
+    const snapshot: CharacterSnapshot = {
+      id: uuidv4(),
+      characterId: input.characterId,
+      source: input.source,
+      createdAt: new Date().toISOString(),
+      payload: input.payload,
+      payloadHash: input.payloadHash,
+    };
+
+    await this.transaction('rw', this.snapshots, async () => {
+      await this.snapshots.add(snapshot);
+      await this.pruneSnapshotsForCharacter(input.characterId, 25);
+    });
+
+    return snapshot;
+  }
+
+  async getSnapshotsForCharacter(characterId: string): Promise<CharacterSnapshot[]> {
+    const snapshots = await this.snapshots
+      .where('characterId')
+      .equals(characterId)
+      .sortBy('createdAt');
+    return snapshots.reverse();
+  }
+
+  async getLatestSnapshot(characterId: string): Promise<CharacterSnapshot | undefined> {
+    const snapshots = await this.snapshots
+      .where('characterId')
+      .equals(characterId)
+      .sortBy('createdAt');
+    return snapshots.at(-1);
+  }
+
+  async deleteSnapshot(snapshotId: string): Promise<void> {
+    await this.snapshots.delete(snapshotId);
+  }
+
+  async pruneSnapshotsForCharacter(characterId: string, limit: number): Promise<void> {
+    const snapshots = await this.snapshots
+      .where('characterId')
+      .equals(characterId)
+      .sortBy('createdAt');
+
+    if (snapshots.length <= limit) {
+      return;
+    }
+
+    const snapshotsToDelete = snapshots.slice(0, snapshots.length - limit);
+    await Promise.all(snapshotsToDelete.map(snapshot => this.snapshots.delete(snapshot.id)));
   }
 }
 

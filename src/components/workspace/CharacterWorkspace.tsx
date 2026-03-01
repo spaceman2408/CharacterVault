@@ -13,9 +13,11 @@ import { SectionEditor } from '../editor/SectionEditor';
 import { ContextPanel } from '../ai/ContextPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
+import { CharacterHistoryModal } from '../history/CharacterHistoryModal';
 import { characterExportService } from '../../services/CharacterExportService';
 import {
   ArrowLeft,
+  Check,
   Image,
   Type,
   FileText,
@@ -30,6 +32,7 @@ import {
   Download,
   Save,
   Trash2,
+  Camera,
   Upload,
   Settings,
   Link,
@@ -43,7 +46,47 @@ import {
   MessageSquare,
   ChevronDown,
   Book,
+  AlertCircle,
 } from 'lucide-react';
+
+interface ToastNotification {
+  id: string;
+  type: 'success' | 'info';
+  message: string;
+}
+
+function ToastContainer({
+  toasts,
+  onRemove,
+}: {
+  toasts: ToastNotification[];
+  onRemove: (id: string) => void;
+}): React.ReactElement {
+  return (
+    <div className="fixed top-4 right-4 z-100 space-y-2">
+      {toasts.map(toast => (
+        <div
+          key={toast.id}
+          className={`flex items-center gap-2 rounded-lg border px-4 py-3 shadow-lg transition-all duration-300 animate-in slide-in-from-right ${
+            toast.type === 'success'
+              ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400'
+              : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+          }`}
+        >
+          {toast.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          <span className="text-sm font-medium">{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => onRemove(toast.id)}
+            className="ml-1 rounded p-1 hover:bg-black/5 dark:hover:bg-white/10"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // Icon mapping
 const iconMap: Record<string, React.ElementType> = {
@@ -207,7 +250,7 @@ function SectionTabs({ activeSection, onSectionChange }: SectionTabsProps): Reac
  * ImageEditor component - For image section
  */
 function ImageEditor(): React.ReactElement {
-  const { currentCharacter, updateCharacter } = useCharacterContext();
+  const { currentCharacter, updateCharacter } = useCharacterEditorContext();
   const [isDragging, setIsDragging] = React.useState(false);
 
   const handleFileSelect = async (file: File) => {
@@ -220,7 +263,7 @@ function ImageEditor(): React.ReactElement {
     reader.onload = (e) => {
       const result = e.target?.result as string;
       if (currentCharacter && result) {
-        void updateCharacter(currentCharacter.id, { imageData: result });
+        void updateCharacter({ imageData: result });
       }
     };
     reader.readAsDataURL(file);
@@ -266,7 +309,7 @@ function ImageEditor(): React.ReactElement {
               className="w-96 h-96 max-w-full max-h-[60vh] object-contain rounded-2xl border-2 border-vault-200 dark:border-vault-700 shadow-lg"
             />
             <button
-              onClick={() => currentCharacter && void updateCharacter(currentCharacter.id, { imageData: '' })}
+              onClick={() => currentCharacter && void updateCharacter({ imageData: '' })}
               className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg
                 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
             >
@@ -318,6 +361,8 @@ function ImageEditor(): React.ReactElement {
  */
 interface CharacterHeaderProps {
   onOpenSettings: () => void;
+  onOpenHistory: () => void;
+  onCreateSnapshot: () => void;
   isContextOpen: boolean;
   isChatOpen: boolean;
   onToggleContext: () => void;
@@ -327,6 +372,8 @@ interface CharacterHeaderProps {
 
 function CharacterHeader({ 
   onOpenSettings, 
+  onOpenHistory,
+  onCreateSnapshot,
   isContextOpen, 
   isChatOpen, 
   onToggleContext, 
@@ -471,6 +518,35 @@ function CharacterHeader({
         <div className="h-6 w-px bg-vault-200 dark:bg-vault-800 mx-1 hidden sm:block" />
 
         <button
+          onClick={onOpenHistory}
+          className="p-2 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200
+            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl transition-colors"
+          title="Snapshot History"
+        >
+          <History className="w-5 h-5" />
+        </button>
+
+        <button
+          onClick={onCreateSnapshot}
+          className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+            text-vault-700 dark:text-vault-300
+            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+            transition-colors duration-200"
+        >
+          <Camera className="w-4 h-4" />
+          <span className="hidden md:inline">Create Snapshot</span>
+        </button>
+
+        <button
+          onClick={onCreateSnapshot}
+          className="p-2 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200
+            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl transition-colors sm:hidden"
+          title="Create Snapshot"
+        >
+          <Camera className="w-5 h-5" />
+        </button>
+
+        <button
           onClick={onOpenSettings}
           className="p-2 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200
             hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl transition-colors"
@@ -613,12 +689,17 @@ function CharacterWorkspaceInner({
     aiConfig,
     samplerSettings,
     promptSettings,
+    isHistoryOpen,
+    setIsHistoryOpen,
+    createManualSnapshot,
     handleAIOperation,
     getContextContent,
   } = useCharacterEditorContext();
 
   const toggleContext = () => setIsContextOpen(!isContextOpen);
   const toggleChat = () => setIsChatOpen(!isChatOpen);
+  const [toasts, setToasts] = useState<ToastNotification[]>([]);
+  const toastTimeoutsRef = React.useRef<number[]>([]);
   const isDesktop = !isMobile;
   const isTightLayout = isDesktop && isContextOpen && isChatOpen;
   const isEdgeToEdgeLayout = isDesktop && (!isContextOpen || !isChatOpen);
@@ -631,12 +712,44 @@ function CharacterWorkspaceInner({
     }
   };
 
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  const addToast = (type: ToastNotification['type'], message: string) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts(prev => [...prev, { id, type, message }]);
+    const timeoutId = window.setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 3500);
+    toastTimeoutsRef.current.push(timeoutId);
+  };
+
+  useEffect(() => {
+    return () => {
+      toastTimeoutsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
+      toastTimeoutsRef.current = [];
+    };
+  }, []);
+
+  const handleCreateSnapshot = async () => {
+    const result = await createManualSnapshot();
+    if (result === 'created') {
+      addToast('success', 'Manual snapshot created.');
+      return;
+    }
+
+    addToast('info', 'No changes since the latest snapshot.');
+  };
+
   return (
     <div className="h-screen w-full flex flex-col bg-linear-to-br from-vault-50 via-vault-50 to-vault-100/50 
       dark:from-vault-950 dark:via-vault-950 dark:to-vault-900/50 overflow-hidden">
       
       <CharacterHeader 
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        onCreateSnapshot={() => void handleCreateSnapshot()}
         isContextOpen={isContextOpen}
         isChatOpen={isChatOpen}
         onToggleContext={toggleContext}
@@ -734,6 +847,13 @@ function CharacterWorkspaceInner({
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
       />
+
+      <CharacterHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+      />
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

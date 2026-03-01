@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { characterDb } from '../db/CharacterDatabase';
+import { characterSnapshotService } from '../services/CharacterSnapshotService';
 import type {
   Character,
   CreateCharacterInput,
@@ -110,6 +111,9 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
       const character = await characterDb.getCharacter(characterId);
       if (character) {
         await characterDb.updateLastOpened(characterId);
+        await characterSnapshotService.createSnapshot(character, 'open').catch(error => {
+          console.error('Failed to create baseline snapshot:', error);
+        });
         setCurrentCharacter(character);
 
         // Update last active character in settings
