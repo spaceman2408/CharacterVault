@@ -20,7 +20,8 @@
   <a href="#installation">Installation</a> •
   <a href="#guide-creating--editing">Guide</a> •
   <a href="#editor--ai-toolkit">Editor</a> •
-  <a href="#troubleshooting">Troubleshooting</a>
+  <a href="#troubleshooting-context-warnings">Troubleshooting</a> •
+  <a href="#license">License</a>
 </p>
 
 ---
@@ -35,6 +36,8 @@
 - **AI Tools** — Use AI to enhance and rephrase your text, apply stylistic filters, and more.
 - **Image Support** — Upload and manage character avatar images or change existing ones.
 - **Import & Export** — Bring in existing character cards (PNG or JSON) and export your creations.
+- **Snapshot History & Rollback** — Automatic open and idle snapshots plus manual snapshots let you compare revisions and restore whole cards or individual sections.
+- **Diff Viewer** — Inspect snapshot changes with a dedicated history modal, section-level collapse controls, and highlighted before/after diffs.
 - **Offline Support** — All your data is stored locally in your browser via IndexedDB.
   - Online ai tools require an internet connection.
 
@@ -85,6 +88,18 @@ Manage every aspect of your character through a tabbed interface:
 | **Creator Notes** | Notes for other users (supports styling)                |
 | **Tags**          | Keywords to categorize your character                   |
 
+### Snapshot History & Rollback
+
+Character Vault now keeps a local revision history for every card you open:
+
+- **Baseline snapshots** are created when you open a card.
+- **Idle snapshots** are created automatically after saved changes have been idle for a short period.
+- **Manual snapshots** can be created at any time from the workspace header.
+- **Rollback** can restore either the whole card or just the currently selected section.
+- **Diff review** shows what changed before you restore.
+
+Open **Snapshot History** from the editor header to browse revisions, compare them against the current card, and roll back safely.
+
 ---
 
 ## Editor & AI Toolkit
@@ -126,6 +141,8 @@ The AI panel on the right is your creative partner:
 - **Delete**: Remove characters you no longer need.
 - **Quick Resume**: The "Continue" button jumps back to your most recent edit.
 - **Auto-save**: Your data is saved automatically as you type.
+- **Snapshot History**: Review previous revisions from the editor header without leaving the card.
+- **Section Rollback**: Restore only the part you are working on, such as Name, Description, or First Message.
 - **Backup**: Export regularly as PNG files to stay safe.
 
 ---
@@ -155,6 +172,12 @@ AI models have a limit on how much text they can process at once.
 
 1.  **In Chat**: We prioritize persona and the current question. Old messages are "forgotten" first.
 2.  **In Editor**: We prioritize the text you have selected. Context entries are dropped first if space is tight.
+
+---
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) for the full text.
 
 ---
 
