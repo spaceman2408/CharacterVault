@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Clock3, History, RotateCcw, X } from 'lucide-react';
+import { ChevronDown, Clock3, History, RotateCcw, Trash2, X } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { characterSnapshotService } from '../../services';
 import type { SnapshotDiffEntry } from '../../db/characterTypes';
@@ -7,6 +7,7 @@ import type { SnapshotDiffEntry } from '../../db/characterTypes';
 interface CharacterHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onToast: (type: 'success' | 'info', title: string, message: string) => void;
 }
 
 interface DiffSegment {
@@ -204,12 +205,14 @@ function DiffBlock({
   );
 }
 
-export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModalProps): React.ReactElement {
+export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHistoryModalProps): React.ReactElement {
   const {
     currentCharacter,
     activeSection,
     snapshots,
     isSnapshotsLoading,
+    refreshSnapshots,
+    deleteSnapshot,
     restoreSnapshot,
     getSnapshotDiff,
   } = useCharacterEditorContext();
@@ -238,6 +241,14 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
   useEffect(() => {
     setCollapsedSections({});
   }, [selectedSnapshotId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    void refreshSnapshots();
+  }, [isOpen, refreshSnapshots]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -281,31 +292,46 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
     () => (selectedSnapshot ? getSnapshotDiff(selectedSnapshot.id).filter(entry => entry.changed) : []),
     [getSnapshotDiff, selectedSnapshot],
   );
-  const activeSectionDiff = diffEntries.find(entry => entry.section === activeSection);
   const hasDiff = diffEntries.length > 0;
 
   if (!isOpen || !currentCharacter) {
     return <></>;
   }
 
-  const handleRestore = async (scope: 'whole' | 'section') => {
+  const handleRestoreWholeCard = async () => {
     if (!selectedSnapshot) {
       return;
     }
 
-    const confirmed = window.confirm(
-      scope === 'whole'
-        ? 'Restore the entire card from this snapshot?'
-        : 'Restore the current section from this snapshot?',
-    );
+    const confirmed = window.confirm('Restore the entire card from this snapshot?');
     if (!confirmed) {
       return;
     }
 
     setIsRestoring(true);
     try {
-      await restoreSnapshot(selectedSnapshot.id, scope);
+      await restoreSnapshot(selectedSnapshot.id, 'whole');
+      onToast('success', 'Rollback complete', 'Whole card restored from the selected snapshot.');
       onClose();
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  const handleRestoreSection = async (entry: SnapshotDiffEntry) => {
+    if (!selectedSnapshot) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Restore ${entry.label} from this snapshot?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setIsRestoring(true);
+    try {
+      await restoreSnapshot(selectedSnapshot.id, 'section', entry.section);
+      onToast('success', 'Section restored', `${entry.label} was restored from the selected snapshot.`);
     } finally {
       setIsRestoring(false);
     }
@@ -325,13 +351,27 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
     }));
   };
 
+  const handleDeleteSnapshot = async (snapshotId: string) => {
+    const snapshot = snapshots.find(entry => entry.id === snapshotId);
+    if (!snapshot || characterSnapshotService.isBaselineSnapshot(snapshot)) {
+      return;
+    }
+
+    const confirmed = window.confirm('Delete this snapshot?');
+    if (!confirmed) {
+      return;
+    }
+
+    await deleteSnapshot(snapshotId);
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="flex h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-vault-200 bg-white shadow-2xl dark:border-vault-800 dark:bg-vault-900 sm:h-[min(85vh,720px)] sm:max-w-7xl sm:rounded-3xl lg:flex-row"
+        className="flex h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-vault-200 bg-white shadow-2xl animate-in slide-in-from-bottom-4 duration-250 dark:border-vault-800 dark:bg-vault-900 sm:h-[min(85vh,720px)] sm:max-w-7xl sm:rounded-3xl sm:slide-in-from-bottom-0 sm:zoom-in-95 lg:flex-row"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="grid grid-cols-2 gap-2 border-b border-vault-200 px-4 py-3 dark:border-vault-800 sm:hidden">
@@ -404,7 +444,22 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
                             {characterSnapshotService.describeSnapshotSource(snapshot.source)}
                           </p>
                         </div>
-                        <History className="h-4 w-4 shrink-0 text-vault-400" />
+                        <div className="flex items-center gap-1">
+                          {!characterSnapshotService.isBaselineSnapshot(snapshot) && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleDeleteSnapshot(snapshot.id);
+                              }}
+                              className="rounded-lg p-1.5 text-vault-400 transition-colors hover:bg-vault-100 hover:text-red-600 dark:hover:bg-vault-800"
+                              title="Delete snapshot"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                          <History className="h-4 w-4 shrink-0 text-vault-400" />
+                        </div>
                       </div>
                       <div className="mt-3 flex items-center gap-2 text-xs text-vault-500 dark:text-vault-400">
                         <Clock3 className="h-3.5 w-3.5" />
@@ -426,18 +481,10 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
                 Comparing selected snapshot against the current card
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-1 lg:flex">
               <button
                 type="button"
-                onClick={() => void handleRestore('section')}
-                disabled={!selectedSnapshot || !activeSectionDiff || isRestoring}
-                className="rounded-xl border border-vault-300 px-4 py-2 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
-              >
-                Restore This Section
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleRestore('whole')}
+                onClick={() => void handleRestoreWholeCard()}
                 disabled={!selectedSnapshot || !hasDiff || isRestoring}
                 className="inline-flex items-center gap-2 rounded-xl bg-vault-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-vault-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
               >
@@ -480,6 +527,21 @@ export function CharacterHistoryModal({ isOpen, onClose }: CharacterHistoryModal
                       <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
                         {collapsedSections[entry.section] ? 'Collapsed' : 'Changed'}
                       </span>
+                    </div>
+
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <p className="text-xs text-vault-500 dark:text-vault-400">
+                        {entry.section === activeSection ? 'Current editor section' : 'Restore this section directly from the diff'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void handleRestoreSection(entry)}
+                        disabled={isRestoring}
+                        className="inline-flex items-center gap-2 rounded-xl border border-vault-300 px-3 py-2 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Restore {entry.label}
+                      </button>
                     </div>
 
                     {!collapsedSections[entry.section] && (isImageEntry(entry) ? (

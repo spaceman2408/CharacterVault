@@ -53,6 +53,7 @@ import {
 interface ToastNotification {
   id: string;
   type: 'success' | 'info';
+  title: string;
   message: string;
 }
 
@@ -82,7 +83,7 @@ function ToastContainer({
             {toast.type === 'success' ? <Check className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">{toast.type === 'success' ? 'Snapshot' : 'Snapshot unchanged'}</p>
+            <p className="text-sm font-semibold">{toast.title}</p>
             <p className="text-sm opacity-90">{toast.message}</p>
           </div>
           <button
@@ -729,9 +730,9 @@ function CharacterWorkspaceInner({
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  const addToast = (type: ToastNotification['type'], message: string) => {
+  const addToast = (type: ToastNotification['type'], title: string, message: string) => {
     const id = Math.random().toString(36).slice(2);
-    setToasts(prev => [...prev, { id, type, message }]);
+    setToasts(prev => [...prev, { id, type, title, message }]);
     const timeoutId = window.setTimeout(() => {
       setToasts(prev => prev.filter(toast => toast.id !== id));
     }, 3500);
@@ -748,11 +749,11 @@ function CharacterWorkspaceInner({
   const handleCreateSnapshot = async () => {
     const result = await createManualSnapshot();
     if (result === 'created') {
-      addToast('success', 'Manual snapshot created.');
+      addToast('success', 'Snapshot', 'Manual snapshot created.');
       return;
     }
 
-    addToast('info', 'No changes since the latest snapshot.');
+    addToast('info', 'Snapshot unchanged', 'No changes since the latest snapshot.');
   };
 
   return (
@@ -864,6 +865,7 @@ function CharacterWorkspaceInner({
       <CharacterHistoryModal
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
+        onToast={(type, title, message) => addToast(type, title, message)}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

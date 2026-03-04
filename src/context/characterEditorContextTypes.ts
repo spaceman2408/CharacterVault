@@ -101,8 +101,10 @@ export interface CharacterEditorContextValue {
   createManualSnapshot: () => Promise<ManualSnapshotResult>;
   /** Refresh snapshots for current character */
   refreshSnapshots: () => Promise<void>;
+  /** Delete a snapshot if allowed */
+  deleteSnapshot: (snapshotId: string) => Promise<void>;
   /** Restore a snapshot */
-  restoreSnapshot: (snapshotId: string, scope: 'whole' | 'section') => Promise<void>;
+  restoreSnapshot: (snapshotId: string, scope: 'whole' | 'section', targetSection?: CharacterSection) => Promise<void>;
   /** Get diff entries for a snapshot */
   getSnapshotDiff: (snapshotId: string) => SnapshotDiffEntry[];
   /** Handle AI operation result */

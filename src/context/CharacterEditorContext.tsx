@@ -78,33 +78,37 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
   }, []);
 
-  const refreshSnapshots = useCallback(async () => {
-    if (!currentCharacterId) {
-      setSnapshots([]);
-      return;
-    }
-
+  const refreshSnapshotsForCharacter = useCallback(async (characterId: string) => {
     setIsSnapshotsLoading(true);
     try {
-      const nextSnapshots = await characterSnapshotService.listSnapshots(currentCharacterId);
+      const nextSnapshots = await characterSnapshotService.listSnapshots(characterId);
       setSnapshots(nextSnapshots);
     } catch (error) {
       console.error('Failed to load snapshots:', error);
     } finally {
       setIsSnapshotsLoading(false);
     }
-  }, [currentCharacterId]);
+  }, []);
+
+  const refreshSnapshots = useCallback(async () => {
+    if (!currentCharacterId) {
+      setSnapshots([]);
+      return;
+    }
+
+    await refreshSnapshotsForCharacter(currentCharacterId);
+  }, [currentCharacterId, refreshSnapshotsForCharacter]);
 
   const createSnapshotFromCharacter = useCallback(async (character: Character, source: 'open' | 'auto' | 'manual' | 'rollback') => {
     try {
       const snapshot = await characterSnapshotService.createSnapshot(character, source);
-      await refreshSnapshots();
+      await refreshSnapshotsForCharacter(character.id);
       return snapshot;
     } catch (error) {
       console.error(`Failed to create ${source} snapshot:`, error);
       return null;
     }
-  }, [refreshSnapshots]);
+  }, [refreshSnapshotsForCharacter]);
 
   const scheduleAutoSnapshot = useCallback((character: Character) => {
     pendingAutoSnapshotCharacterRef.current = character;
@@ -527,7 +531,26 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     return characterSnapshotService.diffSnapshotAgainstCharacter(snapshot, currentCharacter);
   }, [currentCharacter, snapshots]);
 
-  const restoreSnapshot = useCallback(async (snapshotId: string, scope: 'whole' | 'section') => {
+  const deleteSnapshot = useCallback(async (snapshotId: string) => {
+    const snapshot = snapshots.find(entry => entry.id === snapshotId);
+    if (!snapshot) {
+      return;
+    }
+
+    try {
+      await characterSnapshotService.deleteSnapshot(snapshot);
+      await refreshSnapshotsForCharacter(snapshot.characterId);
+    } catch (error) {
+      console.error('Failed to delete snapshot:', error);
+      throw error;
+    }
+  }, [refreshSnapshotsForCharacter, snapshots]);
+
+  const restoreSnapshot = useCallback(async (
+    snapshotId: string,
+    scope: 'whole' | 'section',
+    targetSection?: CharacterSection,
+  ) => {
     if (!currentCharacter) {
       return;
     }
@@ -548,7 +571,13 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
         const input = characterSnapshotService.restoreWholeCharacter(currentCharacter, snapshot);
         restoredCharacter = await updateCharacterBase(currentCharacter.id, input);
       } else {
-        const action = characterSnapshotService.restoreSection(currentCharacter, snapshot, activeSection);
+        const sectionToRestore = targetSection;
+        if (!sectionToRestore) {
+          setSaveStatus('saved');
+          return;
+        }
+
+        const action = characterSnapshotService.restoreSection(currentCharacter, snapshot, sectionToRestore);
         if (!action) {
           setSaveStatus('saved');
           return;
@@ -571,7 +600,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setSaveStatus('error');
     }
   }, [
-    activeSection,
     clearAutoSnapshotTimer,
     createSnapshotFromCharacter,
     currentCharacter,
@@ -802,6 +830,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     setIsHistoryOpen,
     createManualSnapshot,
     refreshSnapshots,
+    deleteSnapshot,
     restoreSnapshot,
     getSnapshotDiff,
     handleAIOperation,

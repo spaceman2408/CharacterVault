@@ -129,6 +129,14 @@ class CharacterSnapshotService {
     return [...snapshots].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
+  async deleteSnapshot(snapshot: CharacterSnapshot): Promise<void> {
+    if (this.isBaselineSnapshot(snapshot)) {
+      throw new Error('Baseline snapshots cannot be deleted.');
+    }
+
+    await characterDb.deleteSnapshot(snapshot.id);
+  }
+
   diffSnapshotAgainstCharacter(snapshot: CharacterSnapshot, character: Character): SnapshotDiffEntry[] {
     const currentPayload = this.buildPayload(character);
 
@@ -197,6 +205,10 @@ class CharacterSnapshotService {
 
   describeSnapshotSource(source: SnapshotSource): string {
     return SNAPSHOT_SOURCE_DESCRIPTIONS[source];
+  }
+
+  isBaselineSnapshot(snapshot: CharacterSnapshot): boolean {
+    return snapshot.source === 'open';
   }
 }
 
