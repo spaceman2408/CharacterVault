@@ -52,7 +52,7 @@ import {
 
 interface ToastNotification {
   id: string;
-  type: 'success' | 'info';
+  type: 'success' | 'info' | 'error';
   title: string;
   message: string;
 }
@@ -72,13 +72,17 @@ function ToastContainer({
           className={`pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-xl ring-1 ring-black/5 transition-all duration-300 animate-in slide-in-from-right backdrop-blur-sm ${
             toast.type === 'success'
               ? 'border-green-300 bg-green-100/95 text-green-950 dark:border-green-700 dark:bg-green-950/95 dark:text-green-100'
-              : 'border-amber-300 bg-amber-100/95 text-amber-950 dark:border-amber-700 dark:bg-amber-950/95 dark:text-amber-100'
+              : toast.type === 'error'
+                ? 'border-red-300 bg-red-100/95 text-red-950 dark:border-red-700 dark:bg-red-950/95 dark:text-red-100'
+                : 'border-amber-300 bg-amber-100/95 text-amber-950 dark:border-amber-700 dark:bg-amber-950/95 dark:text-amber-100'
           }`}
         >
           <div className={`mt-0.5 rounded-full p-1 ${
             toast.type === 'success'
               ? 'bg-green-200/90 text-green-800 dark:bg-green-900/80 dark:text-green-200'
-              : 'bg-amber-200/90 text-amber-800 dark:bg-amber-900/80 dark:text-amber-200'
+              : toast.type === 'error'
+                ? 'bg-red-200/90 text-red-800 dark:bg-red-900/80 dark:text-red-200'
+                : 'bg-amber-200/90 text-amber-800 dark:bg-amber-900/80 dark:text-amber-200'
           }`}>
             {toast.type === 'success' ? <Check className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
           </div>

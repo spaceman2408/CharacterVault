@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Clock3, History, RotateCcw, Trash2, X } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { characterSnapshotService } from '../../services';
@@ -7,7 +7,7 @@ import type { SnapshotDiffEntry } from '../../db/characterTypes';
 interface CharacterHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onToast: (type: 'success' | 'info', title: string, message: string) => void;
+  onToast: (type: 'success' | 'info' | 'error', title: string, message: string) => void;
 }
 
 interface DiffSegment {
@@ -20,6 +20,16 @@ interface LineDiff {
   compareValue: string;
   changed: boolean;
 }
+
+interface ResolvedSectionEntry {
+  entry: SnapshotDiffEntry;
+  state: 'settled' | 'exiting';
+}
+
+const RESOLVED_SECTION_SETTLE_MS = 900;
+const RESOLVED_SECTION_EXIT_MS = 260;
+const NEW_SNAPSHOT_HIGHLIGHT_MS = 1800;
+const MODAL_CLOSE_MS = 220;
 
 function formatValue(value: unknown): string {
   if (typeof value === 'string') {
@@ -218,14 +228,65 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
   } = useCharacterEditorContext();
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isVisible, setIsVisible] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
   const [mobileView, setMobileView] = useState<'history' | 'diff'>('history');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [resolvedSections, setResolvedSections] = useState<Record<string, ResolvedSectionEntry>>({});
+  const [highlightedSnapshotIds, setHighlightedSnapshotIds] = useState<string[]>([]);
+  const resolvedSectionTimeoutsRef = useRef<number[]>([]);
+  const snapshotHighlightTimeoutsRef = useRef<number[]>([]);
+  const snapshotListRef = useRef<HTMLDivElement | null>(null);
+  const snapshotItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const previousSnapshotIdsRef = useRef<string[]>([]);
+  const pendingInsertedSnapshotIdsRef = useRef<string[]>([]);
+
+  const clearResolvedSectionTimeouts = useCallback(() => {
+    resolvedSectionTimeoutsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
+    resolvedSectionTimeoutsRef.current = [];
+  }, []);
+
+  const clearSnapshotHighlightTimeouts = useCallback(() => {
+    snapshotHighlightTimeoutsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
+    snapshotHighlightTimeoutsRef.current = [];
+  }, []);
+
+  const resetModalState = useCallback(() => {
+    setSelectedSnapshotId(null);
+    setMobileView('history');
+    setCollapsedSections({});
+    setResolvedSections({});
+    setHighlightedSnapshotIds([]);
+    clearResolvedSectionTimeouts();
+    clearSnapshotHighlightTimeouts();
+    previousSnapshotIdsRef.current = [];
+    pendingInsertedSnapshotIdsRef.current = [];
+  }, [clearResolvedSectionTimeouts, clearSnapshotHighlightTimeouts]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setSelectedSnapshotId(null);
-      setMobileView('history');
-      setCollapsedSections({});
+    if (isOpen) {
+      setIsVisible(true);
+      setIsClosing(false);
+      return;
+    }
+
+    if (!isVisible) {
+      resetModalState();
+      return;
+    }
+
+    setIsClosing(true);
+    const timeoutId = window.setTimeout(() => {
+      setIsVisible(false);
+      setIsClosing(false);
+      resetModalState();
+    }, MODAL_CLOSE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isOpen, isVisible, resetModalState]);
+
+  useEffect(() => {
+    if (!isVisible) {
       return;
     }
 
@@ -236,22 +297,32 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
 
       return snapshots[0]?.id ?? null;
     });
-  }, [isOpen, snapshots]);
+  }, [isVisible, snapshots]);
 
   useEffect(() => {
     setCollapsedSections({});
-  }, [selectedSnapshotId]);
+    setResolvedSections({});
+    clearResolvedSectionTimeouts();
+  }, [clearResolvedSectionTimeouts, selectedSnapshotId]);
+
+  useEffect(() => () => {
+    clearResolvedSectionTimeouts();
+  }, [clearResolvedSectionTimeouts]);
+
+  useEffect(() => () => {
+    clearSnapshotHighlightTimeouts();
+  }, [clearSnapshotHighlightTimeouts]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isVisible) {
       return;
     }
 
     void refreshSnapshots();
-  }, [isOpen, refreshSnapshots]);
+  }, [isVisible, refreshSnapshots]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isVisible) {
       return;
     }
 
@@ -267,22 +338,7 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
     syncMobileView();
     mediaQuery.addEventListener('change', syncMobileView);
     return () => mediaQuery.removeEventListener('change', syncMobileView);
-  }, [isOpen, selectedSnapshotId]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isVisible, selectedSnapshotId]);
 
   const selectedSnapshot = useMemo(
     () => snapshots.find(snapshot => snapshot.id === selectedSnapshotId) ?? null,
@@ -292,9 +348,104 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
     () => (selectedSnapshot ? getSnapshotDiff(selectedSnapshot.id).filter(entry => entry.changed) : []),
     [getSnapshotDiff, selectedSnapshot],
   );
+  const visibleDiffEntries = useMemo(() => {
+    const orderedEntries = [...diffEntries];
+
+    for (const resolvedSection of Object.values(resolvedSections)) {
+      if (!orderedEntries.some(entry => entry.section === resolvedSection.entry.section)) {
+        orderedEntries.push(resolvedSection.entry);
+      }
+    }
+
+    return orderedEntries;
+  }, [diffEntries, resolvedSections]);
   const hasDiff = diffEntries.length > 0;
 
-  if (!isOpen || !currentCharacter) {
+  useEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+
+    const previousSnapshotIds = previousSnapshotIdsRef.current;
+    const nextSnapshotIds = snapshots.map(snapshot => snapshot.id);
+
+    if (previousSnapshotIds.length > 0 && nextSnapshotIds.length > 0 && previousSnapshotIds[0] && nextSnapshotIds[0] !== previousSnapshotIds[0]) {
+      const previousTopSnapshotId = previousSnapshotIds[0];
+      const insertedSnapshotIds: string[] = [];
+
+      for (const snapshotId of nextSnapshotIds) {
+        if (snapshotId === previousTopSnapshotId) {
+          break;
+        }
+        insertedSnapshotIds.push(snapshotId);
+      }
+
+      if (insertedSnapshotIds.length > 0) {
+        pendingInsertedSnapshotIdsRef.current = insertedSnapshotIds;
+        setHighlightedSnapshotIds(prev => [...new Set([...prev, ...insertedSnapshotIds])]);
+        const timeoutId = window.setTimeout(() => {
+          setHighlightedSnapshotIds(prev => prev.filter(snapshotId => !insertedSnapshotIds.includes(snapshotId)));
+        }, NEW_SNAPSHOT_HIGHLIGHT_MS);
+        snapshotHighlightTimeoutsRef.current.push(timeoutId);
+      }
+    }
+
+    previousSnapshotIdsRef.current = nextSnapshotIds;
+  }, [isVisible, snapshots]);
+
+  useLayoutEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+
+    const snapshotListElement = snapshotListRef.current;
+    const insertedSnapshotIds = pendingInsertedSnapshotIdsRef.current;
+    if (!snapshotListElement || insertedSnapshotIds.length === 0) {
+      return;
+    }
+
+    const scrollAdjustment = insertedSnapshotIds.reduce((total, snapshotId) => {
+      const snapshotElement = snapshotItemRefs.current[snapshotId];
+      return total + (snapshotElement?.offsetHeight ?? 0);
+    }, 0);
+
+    if (scrollAdjustment > 0) {
+      snapshotListElement.scrollTop += scrollAdjustment + (insertedSnapshotIds.length * 8);
+    }
+
+    pendingInsertedSnapshotIdsRef.current = [];
+  }, [isVisible, snapshots]);
+
+  const requestClose = useCallback(() => {
+    if (isClosing) {
+      return;
+    }
+
+    setIsClosing(true);
+    window.setTimeout(() => {
+      setIsVisible(false);
+      setIsClosing(false);
+      resetModalState();
+      onClose();
+    }, MODAL_CLOSE_MS);
+  }, [isClosing, onClose, resetModalState]);
+
+  useEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        requestClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isVisible, requestClose]);
+
+  if (!isVisible || !currentCharacter) {
     return <></>;
   }
 
@@ -309,10 +460,13 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
     }
 
     setIsRestoring(true);
+    requestClose();
+
     try {
       await restoreSnapshot(selectedSnapshot.id, 'whole');
       onToast('success', 'Rollback complete', 'Whole card restored from the selected snapshot.');
-      onClose();
+    } catch {
+      onToast('error', 'Rollback failed', 'The whole card could not be restored from this snapshot.');
     } finally {
       setIsRestoring(false);
     }
@@ -331,7 +485,37 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
     setIsRestoring(true);
     try {
       await restoreSnapshot(selectedSnapshot.id, 'section', entry.section);
+      setResolvedSections(prev => ({
+        ...prev,
+        [entry.section]: { entry, state: 'settled' },
+      }));
+      const settleTimeoutId = window.setTimeout(() => {
+        setResolvedSections(prev => {
+          const resolvedEntry = prev[entry.section];
+          if (!resolvedEntry) {
+            return prev;
+          }
+
+          return {
+            ...prev,
+            [entry.section]: {
+              ...resolvedEntry,
+              state: 'exiting',
+            },
+          };
+        });
+      }, RESOLVED_SECTION_SETTLE_MS);
+      const exitTimeoutId = window.setTimeout(() => {
+        setResolvedSections(prev => {
+          const nextSections = { ...prev };
+          delete nextSections[entry.section];
+          return nextSections;
+        });
+      }, RESOLVED_SECTION_SETTLE_MS + RESOLVED_SECTION_EXIT_MS);
+      resolvedSectionTimeoutsRef.current.push(settleTimeoutId, exitTimeoutId);
       onToast('success', 'Section restored', `${entry.label} was restored from the selected snapshot.`);
+    } catch {
+      onToast('error', 'Restore failed', `${entry.label} could not be restored from this snapshot.`);
     } finally {
       setIsRestoring(false);
     }
@@ -368,10 +552,14 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4"
-      onClick={onClose}
+      onClick={requestClose}
     >
       <div
-        className="flex h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-vault-200 bg-white shadow-2xl animate-in slide-in-from-bottom-4 duration-250 dark:border-vault-800 dark:bg-vault-900 sm:h-[min(85vh,720px)] sm:max-w-7xl sm:rounded-3xl sm:slide-in-from-bottom-0 sm:zoom-in-95 lg:flex-row"
+        className={`flex h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-vault-200 bg-white shadow-2xl transition-all duration-200 dark:border-vault-800 dark:bg-vault-900 sm:h-[min(85vh,720px)] sm:max-w-7xl sm:rounded-3xl lg:flex-row ${
+          isClosing
+            ? 'translate-y-4 scale-[0.98] opacity-0 sm:translate-y-0 sm:scale-95'
+            : 'translate-y-0 scale-100 opacity-100'
+        }`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="grid grid-cols-2 gap-2 border-b border-vault-200 px-4 py-3 dark:border-vault-800 sm:hidden">
@@ -415,7 +603,7 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3">
+          <div ref={snapshotListRef} className="flex-1 overflow-y-auto p-3">
             {isSnapshotsLoading ? (
               <div className="px-3 py-6 text-sm text-vault-500 dark:text-vault-400">Loading snapshots...</div>
             ) : snapshots.length === 0 ? (
@@ -424,12 +612,20 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
                 {snapshots.map(snapshot => {
                   const isSelected = snapshot.id === selectedSnapshotId;
+                  const isHighlighted = highlightedSnapshotIds.includes(snapshot.id);
                   return (
                     <button
                       key={snapshot.id}
+                      ref={(element) => {
+                        snapshotItemRefs.current[snapshot.id] = element;
+                      }}
                       type="button"
                       onClick={() => handleSelectSnapshot(snapshot.id)}
-                      className={`w-full rounded-2xl border p-3 text-left transition-colors ${
+                      className={`w-full rounded-2xl border p-3 text-left transition-all duration-500 ${
+                        isHighlighted
+                          ? 'scale-[1.01] border-emerald-300 bg-emerald-50 shadow-sm dark:border-emerald-700 dark:bg-emerald-950/30'
+                          : ''
+                      } ${
                         isSelected
                           ? 'border-vault-500 bg-white shadow-sm dark:border-vault-400 dark:bg-vault-900'
                           : 'border-vault-200 bg-white/70 hover:border-vault-300 dark:border-vault-800 dark:bg-vault-900/50 dark:hover:border-vault-700'
@@ -497,15 +693,24 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
           <div className="flex-1 overflow-y-auto p-4 sm:p-5">
             {!selectedSnapshot ? (
               <div className="text-sm text-vault-500 dark:text-vault-400">Select a snapshot to inspect changes.</div>
-            ) : diffEntries.length === 0 ? (
+            ) : visibleDiffEntries.length === 0 ? (
               <div className="text-sm text-vault-500 dark:text-vault-400">This snapshot matches the current card.</div>
             ) : (
               <div className="space-y-4">
-                {diffEntries.map(entry => (
-                  <div
-                    key={entry.section}
-                    className="rounded-2xl border border-vault-200 bg-white/80 p-4 dark:border-vault-800 dark:bg-vault-950/40"
-                  >
+                {visibleDiffEntries.map(entry => {
+                  const resolvedSection = resolvedSections[entry.section];
+                  const isResolved = Boolean(resolvedSection);
+                  const isExiting = resolvedSection?.state === 'exiting';
+
+                  return (
+                    <div
+                      key={entry.section}
+                      className={`rounded-2xl border p-4 transition-all duration-300 ease-out ${
+                        isResolved
+                          ? 'border-emerald-300 bg-emerald-50/80 dark:border-emerald-700 dark:bg-emerald-950/20'
+                          : 'border-vault-200 bg-white/80 dark:border-vault-800 dark:bg-vault-950/40'
+                      } ${isExiting ? 'translate-y-1 scale-[0.99] opacity-0' : 'translate-y-0 scale-100 opacity-100'}`}
+                    >
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <button
                         type="button"
@@ -524,23 +729,31 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
                           </p>
                         </div>
                       </button>
-                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                        {collapsedSections[entry.section] ? 'Collapsed' : 'Changed'}
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        isResolved
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+                      }`}>
+                        {isResolved ? 'Restored' : collapsedSections[entry.section] ? 'Collapsed' : 'Changed'}
                       </span>
                     </div>
 
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <p className="text-xs text-vault-500 dark:text-vault-400">
-                        {entry.section === activeSection ? 'Current editor section' : 'Restore this section directly from the diff'}
+                        {isResolved
+                          ? 'This section now matches the current card.'
+                          : entry.section === activeSection
+                            ? 'Current editor section'
+                            : 'Restore this section directly from the diff'}
                       </p>
                       <button
                         type="button"
                         onClick={() => void handleRestoreSection(entry)}
-                        disabled={isRestoring}
+                        disabled={isRestoring || isResolved}
                         className="inline-flex items-center gap-2 rounded-xl border border-vault-300 px-3 py-2 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
                       >
                         <RotateCcw className="h-4 w-4" />
-                        Restore {entry.label}
+                        {isResolved ? `${entry.label} restored` : `Restore ${entry.label}`}
                       </button>
                     </div>
 
@@ -583,8 +796,9 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
                         />
                       </div>
                     ))}
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

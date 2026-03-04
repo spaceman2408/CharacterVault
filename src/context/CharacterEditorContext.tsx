@@ -598,6 +598,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     } catch (error) {
       console.error('Failed to restore snapshot:', error);
       setSaveStatus('error');
+      throw error;
     }
   }, [
     clearAutoSnapshotTimer,
