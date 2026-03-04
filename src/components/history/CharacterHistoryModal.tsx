@@ -149,7 +149,7 @@ function HighlightedContent({
             <span className="select-none text-[11px] font-semibold tracking-wide text-vault-400 dark:text-vault-500">
               {formatLineNumber(index)}
             </span>
-            <pre className="whitespace-pre-wrap break-words text-sm text-vault-800 dark:text-vault-200">
+            <pre className="whitespace-pre-wrap wrap-break-word text-sm text-vault-800 dark:text-vault-200">
               {segments.length > 0 ? segments.map((segment, segmentIndex) => (
                 <span
                   key={`${tone}-${index}-${segmentIndex}`}
