@@ -24,12 +24,16 @@ interface LineDiff {
 interface ResolvedSectionEntry {
   entry: SnapshotDiffEntry;
   state: 'settled' | 'exiting';
+  reason: 'restored' | 'synced';
 }
 
 const RESOLVED_SECTION_SETTLE_MS = 900;
 const RESOLVED_SECTION_EXIT_MS = 260;
+const SYNCED_SECTION_SETTLE_MS = 80;
+const SYNCED_SECTION_EXIT_MS = 220;
 const NEW_SNAPSHOT_HIGHLIGHT_MS = 1800;
 const MODAL_CLOSE_MS = 220;
+const SNAPSHOT_LIST_FADE_MS = 220;
 
 function formatValue(value: unknown): string {
   if (typeof value === 'string') {
@@ -215,6 +219,25 @@ function DiffBlock({
   );
 }
 
+function SnapshotLoadingSkeleton(): React.ReactElement {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+      {[0, 1, 2, 3].map(index => (
+        <div
+          key={`snapshot-skeleton-${index}`}
+          className="rounded-2xl border border-vault-200 bg-white/70 p-3 dark:border-vault-800 dark:bg-vault-900/50"
+        >
+          <div className="animate-pulse space-y-3">
+            <div className="h-4 w-24 rounded bg-vault-200 dark:bg-vault-700" />
+            <div className="h-3 w-32 rounded bg-vault-150 dark:bg-vault-800" />
+            <div className="h-3 w-40 rounded bg-vault-150 dark:bg-vault-800" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHistoryModalProps): React.ReactElement {
   const {
     currentCharacter,
@@ -234,12 +257,14 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [resolvedSections, setResolvedSections] = useState<Record<string, ResolvedSectionEntry>>({});
   const [highlightedSnapshotIds, setHighlightedSnapshotIds] = useState<string[]>([]);
+  const [isSnapshotListReady, setIsSnapshotListReady] = useState(false);
   const resolvedSectionTimeoutsRef = useRef<number[]>([]);
   const snapshotHighlightTimeoutsRef = useRef<number[]>([]);
   const snapshotListRef = useRef<HTMLDivElement | null>(null);
   const snapshotItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const previousSnapshotIdsRef = useRef<string[]>([]);
   const pendingInsertedSnapshotIdsRef = useRef<string[]>([]);
+  const previousDiffEntriesRef = useRef<SnapshotDiffEntry[]>([]);
 
   const clearResolvedSectionTimeouts = useCallback(() => {
     resolvedSectionTimeoutsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
@@ -257,10 +282,12 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
     setCollapsedSections({});
     setResolvedSections({});
     setHighlightedSnapshotIds([]);
+    setIsSnapshotListReady(false);
     clearResolvedSectionTimeouts();
     clearSnapshotHighlightTimeouts();
     previousSnapshotIdsRef.current = [];
     pendingInsertedSnapshotIdsRef.current = [];
+    previousDiffEntriesRef.current = [];
   }, [clearResolvedSectionTimeouts, clearSnapshotHighlightTimeouts]);
 
   useEffect(() => {
@@ -302,6 +329,7 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
   useEffect(() => {
     setCollapsedSections({});
     setResolvedSections({});
+    previousDiffEntriesRef.current = [];
     clearResolvedSectionTimeouts();
   }, [clearResolvedSectionTimeouts, selectedSnapshotId]);
 
@@ -320,6 +348,22 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
 
     void refreshSnapshots();
   }, [isVisible, refreshSnapshots]);
+
+  useEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+
+    if (isSnapshotsLoading) {
+      setIsSnapshotListReady(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsSnapshotListReady(true);
+    }, 16);
+    return () => window.clearTimeout(timeoutId);
+  }, [isSnapshotsLoading, isVisible, snapshots.length]);
 
   useEffect(() => {
     if (!isVisible) {
@@ -360,6 +404,66 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
     return orderedEntries;
   }, [diffEntries, resolvedSections]);
   const hasDiff = diffEntries.length > 0;
+
+  useEffect(() => {
+    if (!isVisible) {
+      previousDiffEntriesRef.current = [];
+      return;
+    }
+
+    const previousEntries = previousDiffEntriesRef.current;
+    const removedEntries = previousEntries.filter(previousEntry =>
+      !diffEntries.some(entry => entry.section === previousEntry.section),
+    );
+    const syncedEntriesToAnimate = removedEntries.filter(entry => !resolvedSections[entry.section]);
+
+    if (syncedEntriesToAnimate.length > 0) {
+      setResolvedSections(prev => {
+        const next = { ...prev };
+        syncedEntriesToAnimate.forEach(entry => {
+          if (!next[entry.section]) {
+            next[entry.section] = {
+              entry,
+              state: 'settled',
+              reason: 'synced',
+            };
+          }
+        });
+        return next;
+      });
+
+      const syncedSectionKeys = syncedEntriesToAnimate.map(entry => entry.section);
+      const settleTimeoutId = window.setTimeout(() => {
+        setResolvedSections(prev => {
+          const next = { ...prev };
+          syncedSectionKeys.forEach(section => {
+            const existing = next[section];
+            if (existing && existing.reason === 'synced') {
+              next[section] = {
+                ...existing,
+                state: 'exiting',
+              };
+            }
+          });
+          return next;
+        });
+      }, SYNCED_SECTION_SETTLE_MS);
+      const exitTimeoutId = window.setTimeout(() => {
+        setResolvedSections(prev => {
+          const next = { ...prev };
+          syncedSectionKeys.forEach(section => {
+            if (next[section]?.reason === 'synced') {
+              delete next[section];
+            }
+          });
+          return next;
+        });
+      }, SYNCED_SECTION_SETTLE_MS + SYNCED_SECTION_EXIT_MS);
+      resolvedSectionTimeoutsRef.current.push(settleTimeoutId, exitTimeoutId);
+    }
+
+    previousDiffEntriesRef.current = diffEntries;
+  }, [diffEntries, isVisible, resolvedSections]);
 
   useEffect(() => {
     if (!isVisible) {
@@ -487,7 +591,7 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
       await restoreSnapshot(selectedSnapshot.id, 'section', entry.section);
       setResolvedSections(prev => ({
         ...prev,
-        [entry.section]: { entry, state: 'settled' },
+        [entry.section]: { entry, state: 'settled', reason: 'restored' },
       }));
       const settleTimeoutId = window.setTimeout(() => {
         setResolvedSections(prev => {
@@ -604,66 +708,73 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
           </div>
 
           <div ref={snapshotListRef} className="flex-1 overflow-y-auto p-3">
-            {isSnapshotsLoading ? (
-              <div className="px-3 py-6 text-sm text-vault-500 dark:text-vault-400">Loading snapshots...</div>
-            ) : snapshots.length === 0 ? (
-              <div className="px-3 py-6 text-sm text-vault-500 dark:text-vault-400">No snapshots available.</div>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                {snapshots.map(snapshot => {
-                  const isSelected = snapshot.id === selectedSnapshotId;
-                  const isHighlighted = highlightedSnapshotIds.includes(snapshot.id);
-                  return (
-                    <button
-                      key={snapshot.id}
-                      ref={(element) => {
-                        snapshotItemRefs.current[snapshot.id] = element;
-                      }}
-                      type="button"
-                      onClick={() => handleSelectSnapshot(snapshot.id)}
-                      className={`w-full rounded-2xl border p-3 text-left transition-all duration-500 ${
-                        isHighlighted
-                          ? 'scale-[1.01] border-emerald-300 bg-emerald-50 shadow-sm dark:border-emerald-700 dark:bg-emerald-950/30'
-                          : ''
-                      } ${
-                        isSelected
-                          ? 'border-vault-500 bg-white shadow-sm dark:border-vault-400 dark:bg-vault-900'
-                          : 'border-vault-200 bg-white/70 hover:border-vault-300 dark:border-vault-800 dark:bg-vault-900/50 dark:hover:border-vault-700'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
-                            {characterSnapshotService.formatSnapshotSource(snapshot.source)}
-                          </p>
-                          <p className="text-xs text-vault-500 dark:text-vault-400">
-                            {characterSnapshotService.describeSnapshotSource(snapshot.source)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {!characterSnapshotService.isBaselineSnapshot(snapshot) && (
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                void handleDeleteSnapshot(snapshot.id);
-                              }}
-                              className="rounded-lg p-1.5 text-vault-400 transition-colors hover:bg-vault-100 hover:text-red-600 dark:hover:bg-vault-800"
-                              title="Delete snapshot"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                          <History className="h-4 w-4 shrink-0 text-vault-400" />
-                        </div>
-                      </div>
-                      <div className="mt-3 flex items-center gap-2 text-xs text-vault-500 dark:text-vault-400">
-                        <Clock3 className="h-3.5 w-3.5" />
-                        {new Date(snapshot.createdAt).toLocaleString()}
-                      </div>
-                    </button>
-                  );
-                })}
+            {isSnapshotsLoading && snapshots.length === 0 ? <SnapshotLoadingSkeleton /> : (
+              <div
+                className={`transition-opacity ${
+                  isSnapshotListReady ? 'opacity-100' : 'opacity-0'
+                }`}
+                style={{ transitionDuration: `${SNAPSHOT_LIST_FADE_MS}ms` }}
+              >
+                {snapshots.length === 0 ? (
+                  <div className="px-3 py-6 text-sm text-vault-500 dark:text-vault-400">No snapshots available.</div>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+                    {snapshots.map(snapshot => {
+                      const isSelected = snapshot.id === selectedSnapshotId;
+                      const isHighlighted = highlightedSnapshotIds.includes(snapshot.id);
+                      return (
+                        <button
+                          key={snapshot.id}
+                          ref={(element) => {
+                            snapshotItemRefs.current[snapshot.id] = element;
+                          }}
+                          type="button"
+                          onClick={() => handleSelectSnapshot(snapshot.id)}
+                          className={`w-full rounded-2xl border p-3 text-left transition-all duration-500 ${
+                            isHighlighted
+                              ? 'scale-[1.01] border-emerald-300 bg-emerald-50 shadow-sm dark:border-emerald-700 dark:bg-emerald-950/30'
+                              : ''
+                          } ${
+                            isSelected
+                              ? 'border-vault-500 bg-white shadow-sm dark:border-vault-400 dark:bg-vault-900'
+                              : 'border-vault-200 bg-white/70 hover:border-vault-300 dark:border-vault-800 dark:bg-vault-900/50 dark:hover:border-vault-700'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
+                                {characterSnapshotService.formatSnapshotSource(snapshot.source)}
+                              </p>
+                              <p className="text-xs text-vault-500 dark:text-vault-400">
+                                {characterSnapshotService.describeSnapshotSource(snapshot.source)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {!characterSnapshotService.isBaselineSnapshot(snapshot) && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void handleDeleteSnapshot(snapshot.id);
+                                  }}
+                                  className="rounded-lg p-1.5 text-vault-400 transition-colors hover:bg-vault-100 hover:text-red-600 dark:hover:bg-vault-800"
+                                  title="Delete snapshot"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                              <History className="h-4 w-4 shrink-0 text-vault-400" />
+                            </div>
+                          </div>
+                          <div className="mt-3 flex items-center gap-2 text-xs text-vault-500 dark:text-vault-400">
+                            <Clock3 className="h-3.5 w-3.5" />
+                            {new Date(snapshot.createdAt).toLocaleString()}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -701,6 +812,7 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
                   const resolvedSection = resolvedSections[entry.section];
                   const isResolved = Boolean(resolvedSection);
                   const isExiting = resolvedSection?.state === 'exiting';
+                  const isSynced = resolvedSection?.reason === 'synced';
 
                   return (
                     <div
@@ -734,14 +846,14 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
                           ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
                           : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
                       }`}>
-                        {isResolved ? 'Restored' : collapsedSections[entry.section] ? 'Collapsed' : 'Changed'}
+                        {isResolved ? (isSynced ? 'Synced' : 'Restored') : collapsedSections[entry.section] ? 'Collapsed' : 'Changed'}
                       </span>
                     </div>
 
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <p className="text-xs text-vault-500 dark:text-vault-400">
                         {isResolved
-                          ? 'This section now matches the current card.'
+                          ? (isSynced ? 'This section now matches after recent edits.' : 'This section now matches the current card.')
                           : entry.section === activeSection
                             ? 'Current editor section'
                             : 'Restore this section directly from the diff'}
@@ -753,7 +865,7 @@ export function CharacterHistoryModal({ isOpen, onClose, onToast }: CharacterHis
                         className="inline-flex items-center gap-2 rounded-xl border border-vault-300 px-3 py-2 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
                       >
                         <RotateCcw className="h-4 w-4" />
-                        {isResolved ? `${entry.label} restored` : `Restore ${entry.label}`}
+                        {isResolved ? `${entry.label} synced` : `Restore ${entry.label}`}
                       </button>
                     </div>
 
