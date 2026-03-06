@@ -77,6 +77,18 @@ interface CharacterCardProps {
   onDelete: (id: string, name: string) => void;
 }
 
+function CharacterCardSkeleton(): React.ReactElement {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-xl border border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900 shadow-xs">
+      <div className="aspect-3/4 w-full skeleton" />
+      <div className="flex flex-col gap-3 p-4">
+        <div className="h-4 w-3/4 rounded-md skeleton" />
+        <div className="h-3 w-1/2 rounded-md skeleton" />
+      </div>
+    </div>
+  );
+}
+
 function CharacterCard({ character, onOpen, onDuplicate, onDelete }: CharacterCardProps): React.ReactElement {
   const formatRelativeTime = (timestamp?: string) => {
     if (!timestamp) return 'New';
@@ -211,6 +223,60 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   }, [characters, searchQuery]);
 
   const lastActive = sortedCharacters[0];
+  const visibleCharacters = useMemo(
+    () => sortedCharacters.slice(0, visibleCount),
+    [sortedCharacters, visibleCount]
+  );
+  const [areVisibleCardsReady, setAreVisibleCardsReady] = useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const preloadVisibleCards = async () => {
+      setAreVisibleCardsReady(false);
+
+      const imagesToPreload = visibleCharacters
+        .filter((character) => Boolean(character.imageData))
+        .map(
+          (character) =>
+            new Promise<void>((resolve) => {
+              const image = new Image();
+
+              const finalize = () => resolve();
+              image.onload = finalize;
+              image.onerror = finalize;
+              image.src = character.imageData!;
+
+              if (image.complete) {
+                finalize();
+                return;
+              }
+
+              if (typeof image.decode === 'function') {
+                image.decode().then(finalize).catch(finalize);
+              }
+            })
+        );
+
+      if (imagesToPreload.length > 0) {
+        await Promise.all(imagesToPreload);
+      }
+
+      if (!isCancelled) {
+        requestAnimationFrame(() => {
+          if (!isCancelled) {
+            setAreVisibleCardsReady(true);
+          }
+        });
+      }
+    };
+
+    void preloadVisibleCards();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [visibleCharacters]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -420,7 +486,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
              {[...Array(5)].map((_, i) => (
-                <div key={i} className="aspect-3/4 rounded-xl bg-vault-100 dark:bg-vault-800/50 animate-pulse" />
+                <CharacterCardSkeleton key={i} />
              ))}
           </div>
         ) : sortedCharacters.length === 0 ? (
@@ -443,16 +509,18 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-              {sortedCharacters.slice(0, visibleCount).map((char) => (
-                <CharacterCard
-                  key={char.id}
-                  character={char}
-                  onOpen={openCharacter}
-                  onDuplicate={handleCopyClick}
-                  onDelete={handleDeleteClick}
-                />
-              ))}
+            <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 ${areVisibleCardsReady ? 'animate-fade-in' : ''}`}>
+              {areVisibleCardsReady
+                ? visibleCharacters.map((char) => (
+                    <CharacterCard
+                      key={char.id}
+                      character={char}
+                      onOpen={openCharacter}
+                      onDuplicate={handleCopyClick}
+                      onDelete={handleDeleteClick}
+                    />
+                  ))
+                : visibleCharacters.map((char) => <CharacterCardSkeleton key={char.id} />)}
             </div>
             {visibleCount < sortedCharacters.length && (
               <div className="flex justify-center pt-8 pb-20">
