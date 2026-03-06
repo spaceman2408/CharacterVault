@@ -186,15 +186,25 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
   // Pagination
   const getPageSize = () => (typeof window !== 'undefined' && window.innerWidth < 640 ? 12 : 18);
-  const [visibleCount, setVisibleCount] = useState(getPageSize);
+  const [pageSize, setPageSize] = useState(getPageSize);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Reset pagination when search changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      setVisibleCount(getPageSize());
+      setCurrentPage(1);
     }, 0);
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setPageSize(getPageSize());
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Theme Management
   const [isDark, setIsDark] = React.useState(() => {
@@ -223,29 +233,47 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   }, [characters, searchQuery]);
 
   const lastActive = sortedCharacters[0];
+  const totalPages = Math.max(1, Math.ceil(sortedCharacters.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStart = (safeCurrentPage - 1) * pageSize;
   const visibleCharacters = useMemo(
-    () => sortedCharacters.slice(0, visibleCount),
-    [sortedCharacters, visibleCount]
+    () => sortedCharacters.slice(pageStart, pageStart + pageSize),
+    [sortedCharacters, pageStart, pageSize]
   );
   const [areVisibleCardsReady, setAreVisibleCardsReady] = useState(false);
+  const preloadedImageSourcesRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (currentPage !== safeCurrentPage) {
+      setCurrentPage(safeCurrentPage);
+    }
+  }, [currentPage, safeCurrentPage]);
 
   useEffect(() => {
     let isCancelled = false;
 
     const preloadVisibleCards = async () => {
-      setAreVisibleCardsReady(false);
-
       const imagesToPreload = visibleCharacters
-        .filter((character) => Boolean(character.imageData))
+        .filter((character) => {
+          if (!character.imageData) {
+            return false;
+          }
+
+          return !preloadedImageSourcesRef.current.has(character.imageData);
+        })
         .map(
           (character) =>
             new Promise<void>((resolve) => {
               const image = new Image();
+              const imageSource = character.imageData!;
 
-              const finalize = () => resolve();
+              const finalize = () => {
+                preloadedImageSourcesRef.current.add(imageSource);
+                resolve();
+              };
               image.onload = finalize;
               image.onerror = finalize;
-              image.src = character.imageData!;
+              image.src = imageSource;
 
               if (image.complete) {
                 finalize();
@@ -258,9 +286,15 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             })
         );
 
-      if (imagesToPreload.length > 0) {
-        await Promise.all(imagesToPreload);
+      if (imagesToPreload.length === 0) {
+        if (!isCancelled) {
+          setAreVisibleCardsReady(true);
+        }
+        return;
       }
+
+      setAreVisibleCardsReady(false);
+      await Promise.all(imagesToPreload);
 
       if (!isCancelled) {
         requestAnimationFrame(() => {
@@ -485,7 +519,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
         {/* Character Grid */}
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-             {[...Array(5)].map((_, i) => (
+             {[...Array(pageSize)].map((_, i) => (
                 <CharacterCardSkeleton key={i} />
              ))}
           </div>
@@ -522,20 +556,29 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                   ))
                 : visibleCharacters.map((char) => <CharacterCardSkeleton key={char.id} />)}
             </div>
-            {visibleCount < sortedCharacters.length && (
-              <div className="flex justify-center pt-8 pb-20">
-                <button
-                  onClick={() => setVisibleCount(prev => prev + getPageSize())}
-                  className="group flex items-center gap-2 px-8 py-3 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-400 dark:hover:border-vault-600 hover:shadow-md transition-all text-sm font-medium text-vault-600 dark:text-vault-300"
-                >
-                  Load More
-                  <span className="text-xs text-vault-400 dark:text-vault-500">
-                    ({sortedCharacters.length - visibleCount} remaining)
-                  </span>
-                </button>
+            {sortedCharacters.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 pb-20">
+                <p className="text-sm text-vault-500 dark:text-vault-400">
+                  Page {safeCurrentPage} of {totalPages}
+                </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={safeCurrentPage === 1}
+                    className="px-4 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-400 dark:hover:border-vault-600 hover:shadow-md transition-all text-sm font-medium text-vault-600 dark:text-vault-300 disabled:opacity-50 disabled:hover:border-vault-200 dark:disabled:hover:border-vault-800 disabled:hover:shadow-none"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={safeCurrentPage === totalPages}
+                    className="px-4 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-400 dark:hover:border-vault-600 hover:shadow-md transition-all text-sm font-medium text-vault-600 dark:text-vault-300 disabled:opacity-50 disabled:hover:border-vault-200 dark:disabled:hover:border-vault-800 disabled:hover:shadow-none"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             )}
-            {visibleCount >= sortedCharacters.length && <div className="pb-20" />}
           </>
         )}
       </main>
