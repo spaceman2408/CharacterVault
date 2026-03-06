@@ -220,19 +220,32 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   };
 
   // Logic
-  const sortedCharacters = useMemo(() => {
+  const filteredCharacters = useMemo(() => {
     let result = [...characters];
     if (searchQuery) {
       result = result.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
     }
-    return result.sort((a, b) => {
-      const dateA = a.lastOpenedAt ? new Date(a.lastOpenedAt).getTime() : 0;
-      const dateB = b.lastOpenedAt ? new Date(b.lastOpenedAt).getTime() : 0;
-      return dateB - dateA;
-    });
+    return result;
   }, [characters, searchQuery]);
 
-  const lastActive = sortedCharacters[0];
+  const sortedCharacters = useMemo(() => {
+    return [...filteredCharacters].sort((a, b) => {
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
+    });
+  }, [filteredCharacters]);
+
+  const lastActive = useMemo(() => {
+    return [...characters].sort((a, b) => {
+      const dateA = a.lastOpenedAt ? new Date(a.lastOpenedAt).getTime() : 0;
+      const dateB = b.lastOpenedAt ? new Date(b.lastOpenedAt).getTime() : 0;
+
+      if (dateB !== dateA) {
+        return dateB - dateA;
+      }
+
+      return b.updatedAt.localeCompare(a.updatedAt);
+    })[0];
+  }, [characters]);
   const totalPages = Math.max(1, Math.ceil(sortedCharacters.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const pageStart = (safeCurrentPage - 1) * pageSize;
@@ -242,12 +255,6 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   );
   const [areVisibleCardsReady, setAreVisibleCardsReady] = useState(false);
   const preloadedImageSourcesRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (currentPage !== safeCurrentPage) {
-      setCurrentPage(safeCurrentPage);
-    }
-  }, [currentPage, safeCurrentPage]);
 
   useEffect(() => {
     let isCancelled = false;
