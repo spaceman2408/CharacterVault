@@ -32,7 +32,6 @@ import {
   Download,
   Save,
   Trash2,
-  Camera,
   Upload,
   Settings,
   Link,
@@ -376,8 +375,7 @@ function ImageEditor(): React.ReactElement {
  */
 interface CharacterHeaderProps {
   onOpenSettings: () => void;
-  onOpenHistory: () => void;
-  onCreateSnapshot: () => void;
+  onOpenRevisions: () => void;
   isContextOpen: boolean;
   isChatOpen: boolean;
   onToggleContext: () => void;
@@ -387,8 +385,7 @@ interface CharacterHeaderProps {
 
 function CharacterHeader({ 
   onOpenSettings, 
-  onOpenHistory,
-  onCreateSnapshot,
+  onOpenRevisions,
   isContextOpen, 
   isChatOpen, 
   onToggleContext, 
@@ -533,35 +530,13 @@ function CharacterHeader({
         <div className="h-6 w-px bg-vault-200 dark:bg-vault-800 mx-1 hidden sm:block" />
 
         <button
-          onClick={onOpenHistory}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium
-            text-vault-700 dark:text-vault-300
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
-            transition-colors duration-200"
-          title="Snapshot History"
+          onClick={onOpenRevisions}
+          className="flex items-center gap-2 rounded-xl border border-vault-200/80 bg-white/70 px-3 py-2 text-sm font-medium
+            text-vault-700 transition-colors duration-200 hover:bg-vault-100 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-200 dark:hover:bg-vault-800/70"
+          title="Open revisions"
         >
-          <History className="w-5 h-5" />
-          <span className="hidden md:inline">Snapshot History</span>
-        </button>
-
-        <button
-          onClick={onCreateSnapshot}
-          className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
-            text-vault-700 dark:text-vault-300
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
-            transition-colors duration-200"
-        >
-          <Camera className="w-4 h-4" />
-          <span className="hidden md:inline">Create Snapshot</span>
-        </button>
-
-        <button
-          onClick={onCreateSnapshot}
-          className="p-2 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl transition-colors sm:hidden"
-          title="Create Snapshot"
-        >
-          <Camera className="w-5 h-5" />
+          <History className="w-4 h-4" />
+          <span>Revisions</span>
         </button>
 
         <button
@@ -709,7 +684,6 @@ function CharacterWorkspaceInner({
     promptSettings,
     isHistoryOpen,
     setIsHistoryOpen,
-    createManualSnapshot,
     handleAIOperation,
     getContextContent,
   } = useCharacterEditorContext();
@@ -750,24 +724,13 @@ function CharacterWorkspaceInner({
     };
   }, []);
 
-  const handleCreateSnapshot = async () => {
-    const result = await createManualSnapshot();
-    if (result === 'created') {
-      addToast('success', 'Snapshot', 'Manual snapshot created.');
-      return;
-    }
-
-    addToast('info', 'Snapshot unchanged', 'No changes since the latest snapshot.');
-  };
-
   return (
     <div className="h-screen w-full flex flex-col bg-linear-to-br from-vault-50 via-vault-50 to-vault-100/50 
       dark:from-vault-950 dark:via-vault-950 dark:to-vault-900/50 overflow-hidden">
       
       <CharacterHeader 
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenHistory={() => setIsHistoryOpen(true)}
-        onCreateSnapshot={() => void handleCreateSnapshot()}
+        onOpenRevisions={() => setIsHistoryOpen(true)}
         isContextOpen={isContextOpen}
         isChatOpen={isChatOpen}
         onToggleContext={toggleContext}
