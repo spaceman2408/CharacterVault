@@ -785,7 +785,7 @@ export function CharacterHistoryModal({
       onClick={requestClose}
     >
       <div
-        className={`relative flex h-[100dvh] w-full flex-col overflow-hidden bg-white transition-all duration-200 dark:bg-vault-950 sm:h-[min(88vh,860px)] sm:max-w-7xl sm:rounded-[2rem] sm:border sm:border-vault-200 sm:shadow-2xl dark:sm:border-vault-800 ${
+        className={`relative flex h-dvh w-full flex-col overflow-hidden bg-white transition-all duration-200 dark:bg-vault-950 sm:h-[min(88vh,860px)] sm:max-w-7xl sm:rounded-4xl sm:border sm:border-vault-200 sm:shadow-2xl dark:sm:border-vault-800 ${
           isClosing ? 'translate-y-3 opacity-0 sm:translate-y-0 sm:scale-[0.98]' : 'translate-y-0 opacity-100 sm:scale-100'
         }`}
         onClick={(event) => event.stopPropagation()}
@@ -889,7 +889,7 @@ export function CharacterHistoryModal({
 
             <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4 sm:px-6">
               {!selectedSnapshot ? (
-                <div className="flex min-h-full items-center justify-center rounded-[2rem] border border-dashed border-vault-300 bg-vault-50/70 p-8 text-center dark:border-vault-700 dark:bg-vault-900/40">
+                <div className="flex min-h-full items-center justify-center rounded-4xl border border-dashed border-vault-300 bg-vault-50/70 p-8 text-center dark:border-vault-700 dark:bg-vault-900/40">
                   <div className="max-w-md">
                     <h3 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Select a revision</h3>
                     <p className="mt-2 text-sm leading-6 text-vault-500 dark:text-vault-400">
@@ -899,7 +899,7 @@ export function CharacterHistoryModal({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="rounded-[2rem] border border-vault-200 bg-linear-to-br from-white via-white to-vault-50/70 p-5 dark:border-vault-800 dark:from-vault-950 dark:via-vault-950 dark:to-vault-900/60">
+                  <div className="rounded-4xl border border-vault-200 bg-linear-to-br from-white via-white to-vault-50/70 p-5 dark:border-vault-800 dark:from-vault-950 dark:via-vault-950 dark:to-vault-900/60">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0">
                         <SnapshotSourceBadge snapshot={selectedSnapshot} />
@@ -952,7 +952,7 @@ export function CharacterHistoryModal({
                   </div>
 
                   {changedSectionCount === 0 ? (
-                    <div className="rounded-[2rem] border border-vault-200 bg-white/80 p-6 dark:border-vault-800 dark:bg-vault-950/60">
+                    <div className="rounded-4xl border border-vault-200 bg-white/80 p-6 dark:border-vault-800 dark:bg-vault-950/60">
                       <p className="text-sm text-vault-500 dark:text-vault-400">
                         This revision already matches the current draft. No restore action is needed.
                       </p>
@@ -962,7 +962,7 @@ export function CharacterHistoryModal({
                       {diffEntries.map(entry => (
                         <div
                           key={entry.section}
-                          className="rounded-[1.75rem] border border-vault-200 bg-white/85 p-4 shadow-sm dark:border-vault-800 dark:bg-vault-950/55 sm:p-5"
+                          className="rounded-4xl border border-vault-200 bg-white/85 p-4 shadow-sm dark:border-vault-800 dark:bg-vault-950/55 sm:p-5"
                         >
                           <div className="flex flex-col gap-3 border-b border-vault-200 pb-4 dark:border-vault-800 sm:flex-row sm:items-start sm:justify-between">
                             <button
