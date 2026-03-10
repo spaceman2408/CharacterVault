@@ -6,21 +6,41 @@
  * across StreamingText and AIChatPanel components.
  */
 
+import React, { type ReactNode } from 'react';
 import type { Components } from 'react-markdown';
+import { CodeBlockCopyButton } from '../components/CodeBlockCopyButton';
+
+/**
+ * Recursively extracts text from markdown AST-rendered React nodes.
+ * Used for copying only the code content from fenced code blocks.
+ */
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(extractText).join('');
+  }
+  if (React.isValidElement(node)) {
+    const element = node as React.ReactElement<{ children?: ReactNode }>;
+    return extractText(element.props.children ?? '');
+  }
+  return '';
+}
 
 /**
  * Shared markdown components for consistent styling
  * across StreamingText and AIChatPanel
  */
 export const markdownComponents: Components = {
-  // Style code blocks with dark background
+  // Style inline code only. Fenced code blocks are wrapped by `pre` below.
   code({ className, children, ...props }) {
     const isInline = !className?.includes('language-');
     return (
       <code
         className={`${className || ''} ${isInline
           ? 'bg-vault-100 dark:bg-vault-700 px-1 py-0.5 rounded text-vault-800 dark:text-vault-200'
-          : 'block bg-vault-900 text-vault-100 p-3 rounded-lg overflow-x-auto'} font-mono text-sm`}
+          : ''} font-mono text-sm`}
         {...props}
       >
         {children}
@@ -28,12 +48,17 @@ export const markdownComponents: Components = {
     );
   },
 
-  // Style pre blocks
+  // Style fenced code blocks with a copy button for code-only content
   pre({ children }) {
+    const codeContent = extractText(children).replace(/\n$/, '');
+
     return (
-      <pre className="bg-vault-900 text-vault-100 p-3 rounded-lg overflow-x-auto my-2">
-        {children}
-      </pre>
+      <div className="relative my-2 group">
+        <CodeBlockCopyButton content={codeContent} />
+        <pre className="bg-vault-900 text-vault-100 p-3 pr-12 rounded-lg overflow-x-auto">
+          {children}
+        </pre>
+      </div>
     );
   },
 
