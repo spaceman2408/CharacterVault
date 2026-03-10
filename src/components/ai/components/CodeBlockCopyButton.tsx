@@ -9,10 +9,13 @@ import { Check, Copy } from 'lucide-react';
 export interface CodeBlockCopyButtonProps {
   /** The code block content to copy */
   content: string;
+  /** Optional positioning/styling overrides */
+  className?: string;
 }
 
 export function CodeBlockCopyButton({
   content,
+  className = '',
 }: CodeBlockCopyButtonProps): React.ReactElement {
   const [copied, setCopied] = useState(false);
 
@@ -30,7 +33,7 @@ export function CodeBlockCopyButton({
     <button
       type="button"
       onClick={() => void handleCopy()}
-      className={`absolute top-2 right-2 z-10 p-1.5 rounded-md transition-colors ${
+      className={`${className} p-1.5 rounded-md transition-colors ${
         copied
           ? 'bg-green-600/90 text-white'
           : 'bg-vault-800/90 text-vault-300 hover:text-vault-100 hover:bg-vault-700'

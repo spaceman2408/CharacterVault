@@ -35,11 +35,12 @@ function extractText(node: ReactNode): string {
 export const markdownComponents: Components = {
   // Style inline code only. Fenced code blocks are wrapped by `pre` below.
   code({ className, children, ...props }) {
-    const isInline = !className?.includes('language-');
+    const textContent = extractText(children);
+    const isInline = !className?.includes('language-') && !textContent.includes('\n');
     return (
       <code
         className={`${className || ''} ${isInline
-          ? 'bg-vault-100 dark:bg-vault-700 px-1 py-0.5 rounded text-vault-800 dark:text-vault-200'
+          ? 'bg-vault-100 dark:bg-vault-700 px-1.5 py-0.5 rounded-md text-vault-800 dark:text-vault-200'
           : ''} font-mono text-sm`}
         {...props}
       >
@@ -53,9 +54,17 @@ export const markdownComponents: Components = {
     const codeContent = extractText(children).replace(/\n$/, '');
 
     return (
-      <div className="relative my-2 group">
-        <CodeBlockCopyButton content={codeContent} />
-        <pre className="bg-vault-900 text-vault-100 p-3 pr-12 rounded-lg overflow-x-auto">
+      <div className="my-3 overflow-hidden rounded-xl border border-vault-700/70 bg-vault-950 shadow-sm">
+        <div className="flex items-center justify-between border-b border-vault-800 bg-vault-900/90 px-3 py-2">
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-vault-400">
+            Code
+          </span>
+          <CodeBlockCopyButton
+            content={codeContent}
+            className="shrink-0"
+          />
+        </div>
+        <pre className="overflow-x-auto bg-vault-950 px-4 py-3 text-[13px] leading-6 text-vault-100">
           {children}
         </pre>
       </div>
