@@ -285,6 +285,9 @@ export interface AIConfig {
   /** Selected model ID */
   modelId: string;
 
+  /** Saved model selections per base URL */
+  modelIdsByBaseUrl?: Record<string, string>;
+
   /** Available models (cached from API) */
   availableModels?: AIModelInfo[];
 
@@ -414,6 +417,7 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'id'> = {
     apiKey: '',
     apiKeysByBaseUrl: {},
     modelId: '',
+    modelIdsByBaseUrl: {},
     availableModels: [],
     enableStreaming: false,
     enableReasoning: false,

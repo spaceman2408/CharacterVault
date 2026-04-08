@@ -338,7 +338,10 @@ const ModelSelect: React.FC<ModelSelectProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const selectedModel = models.find(m => m.id === selectedModelId);
+  const selectedModel = models.find(m => m.id === selectedModelId)
+    ?? (selectedModelId
+      ? { id: selectedModelId, name: selectedModelId }
+      : undefined);
 
   const filteredModels = models.filter(model =>
     model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -535,6 +538,14 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
 
     return config.apiKeysByBaseUrl?.[normalizedBaseUrl] ?? '';
   };
+  const getStoredModelId = (config: AIConfig, baseUrl: string): string => {
+    const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+    if (!normalizedBaseUrl) {
+      return '';
+    }
+
+    return config.modelIdsByBaseUrl?.[normalizedBaseUrl] ?? '';
+  };
 
   // Animation state for smooth fade in/out
   const [isVisible, setIsVisible] = useState(false);
@@ -546,6 +557,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     apiKey: '',
     apiKeysByBaseUrl: {},
     modelId: '',
+    modelIdsByBaseUrl: {},
     availableModels: [],
     enableStreaming: false,
     enableReasoning: false,
@@ -629,6 +641,9 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
             apiKeysByBaseUrl: {
               ...(config.apiKeysByBaseUrl ?? {}),
             },
+            modelIdsByBaseUrl: {
+              ...(config.modelIdsByBaseUrl ?? {}),
+            },
           };
           const normalizedBaseUrl = normalizeBaseUrl(mergedConfig.baseUrl);
 
@@ -636,6 +651,13 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
             mergedConfig.apiKeysByBaseUrl = {
               ...mergedConfig.apiKeysByBaseUrl,
               [normalizedBaseUrl]: mergedConfig.apiKey,
+            };
+          }
+
+          if (normalizedBaseUrl && mergedConfig.modelId) {
+            mergedConfig.modelIdsByBaseUrl = {
+              ...mergedConfig.modelIdsByBaseUrl,
+              [normalizedBaseUrl]: mergedConfig.modelId,
             };
           }
 
@@ -757,12 +779,12 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     }
   };
 
-  const handleBaseUrlChange = (baseUrl: string, loadStoredKey: boolean) => {
+  const handleBaseUrlChange = (baseUrl: string, loadStoredProfile: boolean) => {
     setLocalAIConfig(prev => ({
       ...prev,
       baseUrl,
-      modelId: '',
-      apiKey: loadStoredKey ? getStoredApiKey(prev, baseUrl) : prev.apiKey,
+      modelId: loadStoredProfile ? getStoredModelId(prev, baseUrl) : prev.modelId,
+      apiKey: loadStoredProfile ? getStoredApiKey(prev, baseUrl) : prev.apiKey,
       availableModels: [],
     }));
   };
@@ -784,6 +806,27 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
         ...prev,
         apiKey,
         apiKeysByBaseUrl,
+      };
+    });
+  };
+
+  const handleModelChange = (modelId: string) => {
+    setLocalAIConfig(prev => {
+      const normalizedBaseUrl = normalizeBaseUrl(prev.baseUrl);
+      const modelIdsByBaseUrl = { ...(prev.modelIdsByBaseUrl ?? {}) };
+
+      if (normalizedBaseUrl) {
+        if (modelId) {
+          modelIdsByBaseUrl[normalizedBaseUrl] = modelId;
+        } else {
+          delete modelIdsByBaseUrl[normalizedBaseUrl];
+        }
+      }
+
+      return {
+        ...prev,
+        modelId,
+        modelIdsByBaseUrl,
       };
     });
   };
@@ -843,6 +886,12 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
               ? { [normalizeBaseUrl(localAIConfig.baseUrl)]: localAIConfig.apiKey }
               : {}),
           },
+          modelIdsByBaseUrl: {
+            ...(localAIConfig.modelIdsByBaseUrl ?? {}),
+            ...(normalizeBaseUrl(localAIConfig.baseUrl) && localAIConfig.modelId
+              ? { [normalizeBaseUrl(localAIConfig.baseUrl)]: localAIConfig.modelId }
+              : {}),
+          },
         },
         clampedSampler,
         localPrompts
@@ -870,6 +919,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
         apiKey: '',
         apiKeysByBaseUrl: {},
         modelId: '',
+        modelIdsByBaseUrl: {},
         availableModels: [],
         enableStreaming: false,
         enableReasoning: false,
@@ -1103,7 +1153,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                     <ModelSelect
                       models={localAIConfig.availableModels || []}
                       selectedModelId={localAIConfig.modelId}
-                      onSelect={(modelId) => setLocalAIConfig(prev => ({ ...prev, modelId }))}
+                      onSelect={handleModelChange}
                       onFetch={fetchModels}
                       isFetching={isFetchingModels}
                       disabled={false}
