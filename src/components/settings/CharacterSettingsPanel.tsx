@@ -527,6 +527,14 @@ const ToastContainer: React.FC<{
 export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPanelProps): React.ReactElement | null {
   const { reloadSettings } = useCharacterEditorContext();
   const normalizeBaseUrl = (value: string): string => value.trim().replace(/\/$/, '');
+  const getStoredApiKey = (config: AIConfig, baseUrl: string): string => {
+    const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+    if (!normalizedBaseUrl) {
+      return '';
+    }
+
+    return config.apiKeysByBaseUrl?.[normalizedBaseUrl] ?? '';
+  };
 
   // Animation state for smooth fade in/out
   const [isVisible, setIsVisible] = useState(false);
@@ -536,6 +544,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
   const [localAIConfig, setLocalAIConfig] = useState<AIConfig>({
     baseUrl: 'https://nano-gpt.com/api/v1',
     apiKey: '',
+    apiKeysByBaseUrl: {},
     modelId: '',
     availableModels: [],
     enableStreaming: false,
@@ -613,7 +622,25 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
           characterSettingsService.getPromptSettings(),
         ]);
         
-        setLocalAIConfig(prev => ({ ...prev, ...config }));
+        setLocalAIConfig(prev => {
+          const mergedConfig = {
+            ...prev,
+            ...config,
+            apiKeysByBaseUrl: {
+              ...(config.apiKeysByBaseUrl ?? {}),
+            },
+          };
+          const normalizedBaseUrl = normalizeBaseUrl(mergedConfig.baseUrl);
+
+          if (normalizedBaseUrl && mergedConfig.apiKey) {
+            mergedConfig.apiKeysByBaseUrl = {
+              ...mergedConfig.apiKeysByBaseUrl,
+              [normalizedBaseUrl]: mergedConfig.apiKey,
+            };
+          }
+
+          return mergedConfig;
+        });
         setLocalSampler({
           temperature: sampler?.temperature ?? 0.7,
           minP: sampler?.minP ?? 0.05,
@@ -730,13 +757,35 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     }
   };
 
-  const handleBaseUrlChange = (baseUrl: string) => {
+  const handleBaseUrlChange = (baseUrl: string, loadStoredKey: boolean) => {
     setLocalAIConfig(prev => ({
       ...prev,
       baseUrl,
-      availableModels: [],
       modelId: '',
+      apiKey: loadStoredKey ? getStoredApiKey(prev, baseUrl) : prev.apiKey,
+      availableModels: [],
     }));
+  };
+
+  const handleApiKeyChange = (apiKey: string) => {
+    setLocalAIConfig(prev => {
+      const normalizedBaseUrl = normalizeBaseUrl(prev.baseUrl);
+      const apiKeysByBaseUrl = { ...(prev.apiKeysByBaseUrl ?? {}) };
+
+      if (normalizedBaseUrl) {
+        if (apiKey) {
+          apiKeysByBaseUrl[normalizedBaseUrl] = apiKey;
+        } else {
+          delete apiKeysByBaseUrl[normalizedBaseUrl];
+        }
+      }
+
+      return {
+        ...prev,
+        apiKey,
+        apiKeysByBaseUrl,
+      };
+    });
   };
 
   // Validate prompts
@@ -786,7 +835,15 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
       };
 
       await characterSettingsService.saveAllAISettings(
-        localAIConfig,
+        {
+          ...localAIConfig,
+          apiKeysByBaseUrl: {
+            ...(localAIConfig.apiKeysByBaseUrl ?? {}),
+            ...(normalizeBaseUrl(localAIConfig.baseUrl) && localAIConfig.apiKey
+              ? { [normalizeBaseUrl(localAIConfig.baseUrl)]: localAIConfig.apiKey }
+              : {}),
+          },
+        },
         clampedSampler,
         localPrompts
       );
@@ -811,6 +868,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
       setLocalAIConfig({
         baseUrl: 'https://nano-gpt.com/api/v1',
         apiKey: '',
+        apiKeysByBaseUrl: {},
         modelId: '',
         availableModels: [],
         enableStreaming: false,
@@ -999,7 +1057,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                           onChange={(e) => {
                             const selectedPreset = AI_BASE_URL_PRESETS.find((preset) => preset.id === e.target.value);
                             if (selectedPreset) {
-                              handleBaseUrlChange(selectedPreset.baseUrl);
+                              handleBaseUrlChange(selectedPreset.baseUrl, true);
                             }
                           }}
                           className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
@@ -1014,7 +1072,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                         <input
                           type="text"
                           value={localAIConfig.baseUrl}
-                          onChange={(e) => handleBaseUrlChange(e.target.value)}
+                          onChange={(e) => handleBaseUrlChange(e.target.value, false)}
                           className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
                           placeholder="https://nano-gpt.com/api/v1"
                         />
@@ -1036,7 +1094,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                       <input
                         type="password"
                         value={localAIConfig.apiKey}
-                        onChange={(e) => setLocalAIConfig(prev => ({ ...prev, apiKey: e.target.value }))}
+                        onChange={(e) => handleApiKeyChange(e.target.value)}
                         className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
                         placeholder="Enter your API key"
                       />
