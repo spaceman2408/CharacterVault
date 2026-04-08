@@ -50,6 +50,27 @@ interface ToastNotification {
   message: string;
 }
 
+const AI_BASE_URL_PRESETS = [
+  {
+    id: 'nano-gpt',
+    label: 'Nano-GPT',
+    baseUrl: 'https://nano-gpt.com/api/v1',
+    helper: 'Hosted OpenAI-compatible endpoint.',
+  },
+  {
+    id: 'openrouter',
+    label: 'OpenRouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    helper: 'Use the /api/v1 path for OpenRouter.',
+  },
+  {
+    id: 'lmstudio',
+    label: 'LM Studio / localhost',
+    baseUrl: 'http://127.0.0.1:1234/v1',
+    helper: 'Default local endpoint for LM Studio.',
+  },
+] as const;
+
 // Slider control component with value display
 interface SliderControlProps {
   id: string;
@@ -505,6 +526,7 @@ const ToastContainer: React.FC<{
 
 export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPanelProps): React.ReactElement | null {
   const { reloadSettings } = useCharacterEditorContext();
+  const normalizeBaseUrl = (value: string): string => value.trim().replace(/\/$/, '');
 
   // Animation state for smooth fade in/out
   const [isVisible, setIsVisible] = useState(false);
@@ -541,6 +563,10 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
   const [isClearing, setIsClearing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const toastTimeoutsRef = useRef<number[]>([]);
+
+  const selectedBaseUrlPreset = AI_BASE_URL_PRESETS.find(
+    (preset) => normalizeBaseUrl(preset.baseUrl) === normalizeBaseUrl(localAIConfig.baseUrl)
+  )?.id ?? 'custom';
 
   // Add toast notification
   const addToast = useCallback((type: ToastNotification['type'], message: string) => {
@@ -702,6 +728,15 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     } finally {
       setIsFetchingModels(false);
     }
+  };
+
+  const handleBaseUrlChange = (baseUrl: string) => {
+    setLocalAIConfig(prev => ({
+      ...prev,
+      baseUrl,
+      availableModels: [],
+      modelId: '',
+    }));
   };
 
   // Validate prompts
@@ -958,13 +993,37 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                         </span>
                         API Base URL
                       </label>
-                      <input
-                        type="text"
-                        value={localAIConfig.baseUrl}
-                        onChange={(e) => setLocalAIConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
-                        className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
-                        placeholder="https://nano-gpt.com/api/v1"
-                      />
+                      <div className="space-y-3">
+                        <select
+                          value={selectedBaseUrlPreset}
+                          onChange={(e) => {
+                            const selectedPreset = AI_BASE_URL_PRESETS.find((preset) => preset.id === e.target.value);
+                            if (selectedPreset) {
+                              handleBaseUrlChange(selectedPreset.baseUrl);
+                            }
+                          }}
+                          className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+                        >
+                          {AI_BASE_URL_PRESETS.map((preset) => (
+                            <option key={preset.id} value={preset.id}>
+                              {preset.label}
+                            </option>
+                          ))}
+                          <option value="custom">Custom URL</option>
+                        </select>
+                        <input
+                          type="text"
+                          value={localAIConfig.baseUrl}
+                          onChange={(e) => handleBaseUrlChange(e.target.value)}
+                          className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+                          placeholder="https://nano-gpt.com/api/v1"
+                        />
+                        <p className="text-xs text-vault-500">
+                          {selectedBaseUrlPreset === 'custom'
+                            ? 'Pick a preset above or enter a custom OpenAI-compatible endpoint.'
+                            : AI_BASE_URL_PRESETS.find((preset) => preset.id === selectedBaseUrlPreset)?.helper}
+                        </p>
+                      </div>
                     </div>
 
                     <div>
