@@ -302,6 +302,36 @@ export class AIService {
   }
 
   /**
+   * Detect the common OpenAI-compatible base URL mistake where `/v1` is omitted.
+   */
+  private getMissingV1Hint(): string | null {
+    const baseUrl = this.getBaseUrl();
+
+    try {
+      const url = new URL(baseUrl);
+      const normalizedPath = url.pathname.replace(/\/+$/, '');
+
+      if (normalizedPath.endsWith('/v1')) {
+        return null;
+      }
+
+      return `The API Base URL appears to be missing /v1. Use ${baseUrl}/v1 instead.`;
+    } catch {
+      return baseUrl.endsWith('/v1')
+        ? null
+        : `The API Base URL appears to be missing /v1. Use ${baseUrl}/v1 instead.`;
+    }
+  }
+
+  /**
+   * Append a targeted base URL hint when the configured endpoint looks incomplete.
+   */
+  private withBaseUrlHint(message: string): string {
+    const missingV1Hint = this.getMissingV1Hint();
+    return missingV1Hint ? `${message} ${missingV1Hint}` : message;
+  }
+
+  /**
    * Get headers for API requests
    */
   private getHeaders(): Record<string, string> {
@@ -326,12 +356,15 @@ export class AIService {
 
     if (error instanceof Error) {
       if (error.message.includes('fetch')) {
-        throw new AIError('Network error. Please check your connection.', 'network');
+        throw new AIError(
+          this.withBaseUrlHint('Network error. Please check your connection.'),
+          'network'
+        );
       }
-      throw new AIError(error.message, 'unknown');
+      throw new AIError(this.withBaseUrlHint(error.message), 'unknown');
     }
 
-    throw new AIError('An unknown error occurred', 'unknown');
+    throw new AIError(this.withBaseUrlHint('An unknown error occurred'), 'unknown');
   }
 
   /**
@@ -352,13 +385,21 @@ export class AIService {
           throw new AIError('Rate limit exceeded', 'rate_limit', 429);
         }
         throw new AIError(
-          `Failed to fetch models: ${response.statusText}`,
+          this.withBaseUrlHint(`Failed to fetch models: ${response.statusText || `HTTP ${response.status}`}`),
           'server',
           response.status
         );
       }
 
       const data = await response.json() as ModelsResponse;
+
+      if (!Array.isArray(data.data)) {
+        throw new AIError(
+          this.withBaseUrlHint('Failed to fetch models: the API response did not include a valid model list.'),
+          'invalid_request',
+          response.status
+        );
+      }
       
       const models = data.data.map(model => ({
         id: model.id,
@@ -457,7 +498,7 @@ export class AIService {
           // If we can't parse JSON, use the status text we already have
         }
         throw new AIError(
-          `API error: ${errorMessage}`,
+          this.withBaseUrlHint(`API error: ${errorMessage}`),
           'server',
           response.status
         );

@@ -6,21 +6,42 @@
  * across StreamingText and AIChatPanel components.
  */
 
+import React, { type ReactNode } from 'react';
 import type { Components } from 'react-markdown';
+import { CodeBlockCopyButton } from '../components/CodeBlockCopyButton';
+
+/**
+ * Recursively extracts text from markdown AST-rendered React nodes.
+ * Used for copying only the code content from fenced code blocks.
+ */
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(extractText).join('');
+  }
+  if (React.isValidElement(node)) {
+    const element = node as React.ReactElement<{ children?: ReactNode }>;
+    return extractText(element.props.children ?? '');
+  }
+  return '';
+}
 
 /**
  * Shared markdown components for consistent styling
  * across StreamingText and AIChatPanel
  */
 export const markdownComponents: Components = {
-  // Style code blocks with dark background
+  // Style inline code only. Fenced code blocks are wrapped by `pre` below.
   code({ className, children, ...props }) {
-    const isInline = !className?.includes('language-');
+    const textContent = extractText(children);
+    const isInline = !className?.includes('language-') && !textContent.includes('\n');
     return (
       <code
         className={`${className || ''} ${isInline
-          ? 'bg-vault-100 dark:bg-vault-700 px-1 py-0.5 rounded text-vault-800 dark:text-vault-200'
-          : 'block bg-vault-900 text-vault-100 p-3 rounded-lg overflow-x-auto'} font-mono text-sm`}
+          ? 'bg-vault-100 dark:bg-vault-700 px-1.5 py-0.5 rounded-md text-vault-800 dark:text-vault-200'
+          : ''} font-mono text-sm`}
         {...props}
       >
         {children}
@@ -28,12 +49,25 @@ export const markdownComponents: Components = {
     );
   },
 
-  // Style pre blocks
+  // Style fenced code blocks with a copy button for code-only content
   pre({ children }) {
+    const codeContent = extractText(children).replace(/\n$/, '');
+
     return (
-      <pre className="bg-vault-900 text-vault-100 p-3 rounded-lg overflow-x-auto my-2">
-        {children}
-      </pre>
+      <div className="my-3 overflow-hidden rounded-xl border border-vault-700/70 bg-vault-950 shadow-sm">
+        <div className="flex items-center justify-between border-b border-vault-800 bg-vault-900/90 px-3 py-2">
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-vault-400">
+            Code
+          </span>
+          <CodeBlockCopyButton
+            content={codeContent}
+            className="shrink-0"
+          />
+        </div>
+        <pre className="overflow-x-auto bg-vault-950 px-4 py-3 text-[13px] leading-6 text-vault-100">
+          {children}
+        </pre>
+      </div>
     );
   },
 

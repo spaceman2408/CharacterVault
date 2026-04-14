@@ -279,8 +279,14 @@ export interface AIConfig {
   /** API key (encrypted at rest in production) */
   apiKey: string;
 
+  /** Saved API keys per base URL */
+  apiKeysByBaseUrl?: Record<string, string>;
+
   /** Selected model ID */
   modelId: string;
+
+  /** Saved model selections per base URL */
+  modelIdsByBaseUrl?: Record<string, string>;
 
   /** Available models (cached from API) */
   availableModels?: AIModelInfo[];
@@ -409,7 +415,9 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'id'> = {
   ai: {
     baseUrl: 'https://nano-gpt.com/api/v1',
     apiKey: '',
+    apiKeysByBaseUrl: {},
     modelId: '',
+    modelIdsByBaseUrl: {},
     availableModels: [],
     enableStreaming: false,
     enableReasoning: false,
