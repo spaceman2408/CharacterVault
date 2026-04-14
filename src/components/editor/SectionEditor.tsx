@@ -10,6 +10,8 @@ import type { CharacterSection } from '../../db/characterTypes';
 import { CHARACTER_SECTIONS } from '../../db/characterTypes';
 import { GreetingsEditor } from './GreetingsEditor';
 import { LorebookEditor } from './LorebookEditor';
+import { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
+import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { useAIEditor } from '../../hooks';
 
 interface SectionEditorProps {
@@ -77,12 +79,26 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     getContextContent,
     activeSection,
   } = useCharacterEditorContext();
+  const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+  const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
 
   // Get current value based on section
   const currentValue = React.useMemo(() => {
     if (!currentCharacter) return '';
     return getSectionValue(currentCharacter, section);
   }, [currentCharacter, section]);
+  const [livePreviewValue, setLivePreviewValue] = React.useState(currentValue);
+
+  React.useEffect(() => {
+    setLivePreviewValue(currentValue);
+  }, [currentValue]);
+
+  React.useEffect(() => {
+    if (section !== 'creator_notes') {
+      setIsPreviewOpen(false);
+      setIsSplitPreviewOpen(false);
+    }
+  }, [section]);
 
   // Handle value change
   const handlePersistChange = useCallback((value: string) => {
@@ -103,6 +119,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
   const { editorRef } = useAIEditor({
     key: section,
     value: currentValue,
+    onImmediateChange: section === 'creator_notes' ? setLivePreviewValue : undefined,
     onPersistChange: handlePersistChange,
     setSelectedText,
     aiConfig,
@@ -121,6 +138,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
   }
 
   const sectionMeta = CHARACTER_SECTIONS.find(s => s.id === section);
+  const isCreatorNotesSection = section === 'creator_notes';
 
   // Handle image section specially
   if (section === 'image') {
@@ -199,19 +217,77 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
 
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden animate-fade-in-slow">
-      <div className="mb-4 shrink-0">
-        <h2 className="text-xl font-bold text-vault-900 dark:text-vault-50">
-          {sectionMeta?.label}
-        </h2>
-        <p className="text-sm text-vault-500 dark:text-vault-400">
-          {sectionMeta?.description}
-        </p>
+      <div className="mb-4 shrink-0 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-vault-900 dark:text-vault-50">
+              {sectionMeta?.label}
+            </h2>
+            <p className="text-sm text-vault-500 dark:text-vault-400">
+              {sectionMeta?.description}
+            </p>
+          </div>
+
+          {section === 'creator_notes' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (isSplitPreviewOpen) {
+                  setIsSplitPreviewOpen(false);
+                  return;
+                }
+                setIsPreviewOpen(prev => !prev);
+              }}
+              className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                isPreviewOpen || isSplitPreviewOpen
+                  ? 'border-vault-500 bg-vault-600 text-white hover:bg-vault-700 dark:border-vault-500 dark:bg-vault-600 dark:hover:bg-vault-500'
+                  : 'border-vault-200 bg-white text-vault-700 hover:bg-vault-100 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-200 dark:hover:bg-vault-800/70'
+              }`}
+            >
+              {isSplitPreviewOpen ? 'Stop Previewing CSS' : 'Preview CSS'}
+            </button>
+          )}
+        </div>
       </div>
 
-      <div
-        ref={editorRef}
-        className="flex-1 min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
-      />
+      {isCreatorNotesSection && isSplitPreviewOpen ? (
+        <div className="flex-1 min-h-0 grid gap-4 lg:grid-cols-2">
+          <div className="min-h-0 overflow-hidden rounded-xl border border-vault-200 bg-vault-950 shadow-inner dark:border-vault-700">
+            <div className="flex items-center justify-between border-b border-vault-200/80 bg-vault-900/80 px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-vault-200 dark:border-vault-700">
+              <span>Rendered Preview</span>
+              <span className="text-[11px] tracking-[0.12em] text-vault-400">Sandboxed</span>
+            </div>
+            <CreatorNotesPreviewPane
+              content={livePreviewValue}
+              className="h-[calc(100%-41px)]"
+              frameClassName="block h-full w-full bg-vault-950"
+              emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-vault-300"
+            />
+          </div>
+
+          <div
+            ref={editorRef}
+            className="min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+          />
+        </div>
+      ) : (
+        <div
+          ref={editorRef}
+          className="flex-1 min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+        />
+      )}
+
+      {section === 'creator_notes' && (
+        <CreatorNotesPreviewModal
+          content={livePreviewValue}
+          isOpen={isPreviewOpen}
+          onClose={() => setIsPreviewOpen(false)}
+          onAddToEditor={() => {
+            setIsSplitPreviewOpen(true);
+            setIsPreviewOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
