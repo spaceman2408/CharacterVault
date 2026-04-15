@@ -13,10 +13,10 @@ import {
   Sparkles,
   X,
   AlertCircle,
-  RefreshCw,
   Info,
   ChevronDown,
   ChevronUp,
+  BrushCleaning,
 } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { CHARACTER_SECTIONS } from '../../db/characterTypes';
@@ -193,7 +193,7 @@ export function ContextPanel({
             title="Clear all context"
             disabled={contextSectionIds.length === 0}
           >
-            <RefreshCw className="w-4 h-4" />
+            <BrushCleaning className="w-4 h-4" />
           </button>
           {isMobile && onClose && (
             <button
