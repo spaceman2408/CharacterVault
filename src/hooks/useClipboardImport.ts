@@ -136,6 +136,42 @@ export function useClipboardImport(): UseClipboardImportReturn {
   const autoReadAttempted = useRef(false);
 
   /**
+   * Parse manually pasted text
+   */
+  const parseManualInput = useCallback((text: string) => {
+    setErrorMessage(null);
+
+    try {
+      // Parse JSON
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        setImportState('error');
+        setErrorMessage('Invalid JSON. Please paste valid character data.');
+        return;
+      }
+
+      // Validate the data
+      const validation = validateClipboardData(parsed);
+
+      if (!validation.success) {
+        setImportState('error');
+        setErrorMessage(validation.error || 'Invalid character data');
+        return;
+      }
+
+      // Store preview data
+      setPreviewData(validation.characterData || null);
+      setAvatarData(validation.avatarData || null);
+      setImportState('preview');
+    } catch (err) {
+      setImportState('error');
+      setErrorMessage(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }, []);
+
+  /**
    * Attempt to read from clipboard automatically
    */
   const readClipboard = useCallback(async () => {
@@ -172,43 +208,7 @@ export function useClipboardImport(): UseClipboardImportReturn {
           : 'Could not read clipboard. Please paste manually.'
       );
     }
-  }, []);
-
-  /**
-   * Parse manually pasted text
-   */
-  const parseManualInput = useCallback((text: string) => {
-    setErrorMessage(null);
-
-    try {
-      // Parse JSON
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        setImportState('error');
-        setErrorMessage('Invalid JSON. Please paste valid character data.');
-        return;
-      }
-
-      // Validate the data
-      const validation = validateClipboardData(parsed);
-
-      if (!validation.success) {
-        setImportState('error');
-        setErrorMessage(validation.error || 'Invalid character data');
-        return;
-      }
-
-      // Store preview data
-      setPreviewData(validation.characterData || null);
-      setAvatarData(validation.avatarData || null);
-      setImportState('preview');
-    } catch (err) {
-      setImportState('error');
-      setErrorMessage(err instanceof Error ? err.message : 'Unknown error');
-    }
-  }, []);
+  }, [parseManualInput]);
 
   /**
    * Import the character to the database
@@ -257,7 +257,7 @@ export function useClipboardImport(): UseClipboardImportReturn {
   const goToLibrary = useCallback(() => {
     // Navigate to home using HashRouter format (/#/)
     // This works for both localhost and GitHub Pages
-    window.location.href = `${import.meta.env.BASE_URL}#/`)`;
+    window.location.href = `${import.meta.env.BASE_URL}#/`;
   }, []);
 
   /**
@@ -273,7 +273,11 @@ export function useClipboardImport(): UseClipboardImportReturn {
 
   // Auto-read on mount (once)
   useEffect(() => {
-    readClipboard();
+    // Use async IIFE to avoid synchronous setState warning
+    const init = async (): Promise<void> => {
+      await readClipboard();
+    };
+    void init();
   }, [readClipboard]);
 
   return {
