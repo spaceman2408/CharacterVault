@@ -255,9 +255,9 @@ export function useClipboardImport(): UseClipboardImportReturn {
    * Navigate to the library (home)
    */
   const goToLibrary = useCallback(() => {
-    // Navigate to home using HashRouter format (/#/)
-    // This works for both localhost and GitHub Pages
-    window.location.href = `${import.meta.env.BASE_URL}#/`;
+    // Navigate to home with cache-busting query param to force reload
+    const timestamp = Date.now();
+    window.location.href = `${import.meta.env.BASE_URL}#/?_=${timestamp}`;
   }, []);
 
   /**
