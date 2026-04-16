@@ -299,6 +299,12 @@ export interface AIConfig {
 
   /** Whether to show reasoning content in the UI (when enabled by the model) */
   showReasoning?: boolean;
+
+  /** Reasoning effort level for OpenAI o1/o3/o4-mini and OpenRouter models */
+  reasoningEffort?: 'low' | 'medium' | 'high';
+
+  /** Last custom base URL entered by the user (preserved when switching to/from presets) */
+  lastCustomBaseUrl?: string;
 }
 
 /**
@@ -435,6 +441,7 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'id'> = {
     enableStreaming: false,
     enableReasoning: false,
     showReasoning: false,
+    reasoningEffort: 'medium',
   },
   sampler: {
     temperature: 0.7,

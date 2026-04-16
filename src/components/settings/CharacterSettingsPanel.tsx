@@ -562,6 +562,8 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     enableStreaming: false,
     enableReasoning: false,
     showReasoning: false,
+    reasoningEffort: 'medium',
+    lastCustomBaseUrl: '',
   });
   const [localSampler, setLocalSampler] = useState<SamplerSettings>({
     temperature: 0.7,
@@ -779,14 +781,41 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     }
   };
 
+  const isPresetUrl = (url: string): boolean => {
+    return AI_BASE_URL_PRESETS.some(preset => normalizeBaseUrl(preset.baseUrl) === normalizeBaseUrl(url));
+  };
+
   const handleBaseUrlChange = (baseUrl: string, loadStoredProfile: boolean) => {
-    setLocalAIConfig(prev => ({
-      ...prev,
-      baseUrl,
-      modelId: loadStoredProfile ? getStoredModelId(prev, baseUrl) : prev.modelId,
-      apiKey: loadStoredProfile ? getStoredApiKey(prev, baseUrl) : prev.apiKey,
-      availableModels: [],
-    }));
+    setLocalAIConfig(prev => {
+      // If switching to a preset URL, save current URL as lastCustomBaseUrl (if it was a custom URL)
+      const shouldSaveAsCustom = prev.baseUrl && !isPresetUrl(prev.baseUrl) && baseUrl !== prev.baseUrl;
+
+      return {
+        ...prev,
+        baseUrl,
+        // Save the last custom URL when switching away from a custom URL to a preset
+        lastCustomBaseUrl: shouldSaveAsCustom ? normalizeBaseUrl(prev.baseUrl) : prev.lastCustomBaseUrl,
+        modelId: loadStoredProfile ? getStoredModelId(prev, baseUrl) : prev.modelId,
+        apiKey: loadStoredProfile ? getStoredApiKey(prev, baseUrl) : prev.apiKey,
+        availableModels: [],
+      };
+    });
+  };
+
+  const handleCustomUrlChange = (baseUrl: string) => {
+    setLocalAIConfig(prev => {
+      const normalizedUrl = normalizeBaseUrl(baseUrl);
+
+      return {
+        ...prev,
+        baseUrl,
+        // Always save the custom URL being typed
+        lastCustomBaseUrl: normalizedUrl,
+        modelId: normalizedUrl ? getStoredModelId(prev, normalizedUrl) : prev.modelId,
+        apiKey: normalizedUrl ? getStoredApiKey(prev, normalizedUrl) : prev.apiKey,
+        availableModels: [],
+      };
+    });
   };
 
   const handleApiKeyChange = (apiKey: string) => {
@@ -924,6 +953,8 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
         enableStreaming: false,
         enableReasoning: false,
         showReasoning: false,
+        reasoningEffort: 'medium',
+        lastCustomBaseUrl: '',
       });
       
       await reloadSettings();
@@ -1108,6 +1139,15 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                             const selectedPreset = AI_BASE_URL_PRESETS.find((preset) => preset.id === e.target.value);
                             if (selectedPreset) {
                               handleBaseUrlChange(selectedPreset.baseUrl, true);
+                            } else if (e.target.value === 'custom') {
+                              // When selecting "Custom URL", restore the last custom URL if we have one
+                              setLocalAIConfig(prev => ({
+                                ...prev,
+                                baseUrl: prev.lastCustomBaseUrl ?? '',
+                                modelId: prev.lastCustomBaseUrl ? getStoredModelId(prev, prev.lastCustomBaseUrl) : prev.modelId,
+                                apiKey: prev.lastCustomBaseUrl ? getStoredApiKey(prev, prev.lastCustomBaseUrl) : prev.apiKey,
+                                availableModels: [],
+                              }));
                             }
                           }}
                           className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
@@ -1122,7 +1162,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                         <input
                           type="text"
                           value={localAIConfig.baseUrl}
-                          onChange={(e) => handleBaseUrlChange(e.target.value, false)}
+                          onChange={(e) => handleCustomUrlChange(e.target.value)}
                           className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
                           placeholder="https://nano-gpt.com/api/v1"
                         />
@@ -1145,6 +1185,9 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                         type="password"
                         value={localAIConfig.apiKey}
                         onChange={(e) => handleApiKeyChange(e.target.value)}
+                        autoComplete="off"
+                        data-lpignore="true"
+                        data-form-type="other"
                         className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
                         placeholder="Enter your API key"
                       />
@@ -1186,7 +1229,12 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                         <input
                           type="checkbox"
                           checked={localAIConfig.enableReasoning}
-                          onChange={(e) => setLocalAIConfig(prev => ({ ...prev, enableReasoning: e.target.checked }))}
+                          onChange={(e) => setLocalAIConfig(prev => ({
+                            ...prev,
+                            enableReasoning: e.target.checked,
+                            // Reset to medium when toggled off, keep current when toggled on
+                            reasoningEffort: e.target.checked ? (prev.reasoningEffort ?? 'medium') : 'medium',
+                          }))}
                           className="peer sr-only"
                         />
                         <div className="w-10 h-6 bg-vault-300 dark:bg-vault-700 rounded-full peer-checked:bg-vault-600 dark:peer-checked:bg-vault-500 transition-colors duration-200" />
@@ -1208,6 +1256,33 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                       <span className="group-hover:text-vault-900 dark:group-hover:text-vault-100 transition-colors">Show reasoning</span>
                     </label>
                   </div>
+
+                  {/* Reasoning Effort Dropdown - only shown when reasoning is enabled */}
+                  {localAIConfig.enableReasoning && (
+                    <div className="mt-4 pt-4 border-t border-vault-200 dark:border-vault-700">
+                      <label className="flex items-center gap-2 text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+                        <span className="p-1.5 rounded-md bg-vault-100 dark:bg-vault-800 text-vault-600 dark:text-vault-400">
+                          <Brain className="w-4 h-4" />
+                        </span>
+                        Reasoning Effort
+                      </label>
+                      <select
+                        value={localAIConfig.reasoningEffort ?? 'medium'}
+                        onChange={(e) => setLocalAIConfig(prev => ({
+                          ...prev,
+                          reasoningEffort: e.target.value as 'low' | 'medium' | 'high',
+                        }))}
+                        className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+                      >
+                        <option value="low">Low - Faster responses, less reasoning</option>
+                        <option value="medium">Medium - Balanced reasoning (default)</option>
+                        <option value="high">High - More thorough reasoning</option>
+                      </select>
+                      <p className="mt-2 text-xs text-vault-500">
+                        Controls reasoning depth for OpenAI o1/o3/o4-mini and OpenRouter models.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

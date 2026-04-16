@@ -103,8 +103,10 @@ interface ChatCompletionRequest {
   max_tokens?: number;
   /** Enable reasoning/thinking mode for supported models (DeepSeek, etc.) */
   include_reasoning?: boolean;
-  /** OpenRouter reasoning parameter - can be boolean or { enabled: boolean } */
-  reasoning?: boolean | { enabled: boolean };
+  /** OpenRouter reasoning parameter - can be boolean or { enabled: boolean; effort?: 'low' | 'medium' | 'high' } */
+  reasoning?: boolean | { enabled: boolean; effort?: 'low' | 'medium' | 'high' };
+  /** OpenAI o1/o3/o4-mini reasoning effort level */
+  reasoning_effort?: 'low' | 'medium' | 'high';
 }
 
 /**
@@ -450,11 +452,17 @@ export class AIService {
       repetition_penalty: sampler.repetitionPenalty,
       stream: !!useStreaming,
       max_tokens: sampler.maxTokens,
-      // Support both formats:
+      // Support multiple formats:
       // - include_reasoning for DeepSeek and other APIs
       // - reasoning for OpenRouter format
+      // - reasoning_effort for OpenAI o1/o3/o4-mini models
       include_reasoning: this.config.enableReasoning ?? false,
-      reasoning: this.config.enableReasoning ? { enabled: true } : { enabled: false },
+      reasoning: this.config.enableReasoning
+        ? { enabled: true, effort: this.config.reasoningEffort ?? 'medium' }
+        : { enabled: false },
+      reasoning_effort: this.config.enableReasoning
+        ? (this.config.reasoningEffort ?? 'medium')
+        : undefined,
     };
 
     try {
