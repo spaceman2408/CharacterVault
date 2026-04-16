@@ -255,8 +255,9 @@ export function useClipboardImport(): UseClipboardImportReturn {
    * Navigate to the library (home)
    */
   const goToLibrary = useCallback(() => {
-    // Use window.location for a full page reload to ensure proper routing
-    window.location.href = '/';
+    // Navigate to home using HashRouter format (/#/)
+    // This works for both localhost and GitHub Pages
+    window.location.href = `${import.meta.env.BASE_URL}#/`)`;
   }, []);
 
   /**
@@ -264,9 +265,9 @@ export function useClipboardImport(): UseClipboardImportReturn {
    */
   const openImportedCharacter = useCallback(() => {
     if (importedCharacter) {
-      // Navigate to home with state for opening the character
-      // Use window.location with hash for HashRouter compatibility
-      window.location.href = `/?char=${importedCharacter.id}`;
+      // Navigate to home with query param for opening the character
+      // Use BASE_URL for GitHub Pages compatibility
+      window.location.href = `${import.meta.env.BASE_URL}#/?char=${importedCharacter.id}`;
     }
   }, [importedCharacter]);
 
