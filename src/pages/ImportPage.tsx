@@ -268,7 +268,6 @@ export const ImportPage: React.FC = () => {
     importedCharacter,
     parseManualInput,
     importCharacter,
-    reset,
     goToLibrary,
     openImportedCharacter,
   } = useClipboardImport();
@@ -278,7 +277,7 @@ export const ImportPage: React.FC = () => {
   return (
     <div className="h-screen flex flex-col bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 overflow-hidden">
       {/* Header */}
-      <header className="flex-shrink-0 w-full backdrop-blur-xl bg-white/80 dark:bg-vault-950/80 border-b border-vault-200 dark:border-vault-800">
+      <header className="shrink-0 w-full backdrop-blur-xl bg-white/80 dark:bg-vault-950/80 border-b border-vault-200 dark:border-vault-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <IconButton icon={ArrowLeft} onClick={goToLibrary} title="Back to Library" />
@@ -312,7 +311,7 @@ export const ImportPage: React.FC = () => {
         {importState === 'clipboard-unavailable' && (
           <div className="space-y-6 animate-fade-in">
             <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <h3 className="font-medium text-amber-900 dark:text-amber-100">
                   Could not read clipboard automatically
@@ -332,7 +331,7 @@ export const ImportPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Character Preview</h2>
               <button
-                onClick={reset}
+                onClick={goToLibrary}
                 className="flex items-center gap-1.5 text-sm text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200"
               >
                 <X className="w-4 h-4" />
