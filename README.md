@@ -49,6 +49,10 @@
 
 You can try it out at **[https://spaceman2408.github.io/CharacterVault](https://spaceman2408.github.io/CharacterVault)** and start using **Character Vault** immediately in your browser.
 
+### SillyTavern Integration
+
+Export characters directly from SillyTavern to CharacterVault using the **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)**. This companion extension adds a "Export to CharacterVault" option in the main export menu.
+
 ### Option 2: Run Locally
 
 1.  **Install Node.js**: Get the LTS version from [nodejs.org](https://nodejs.org/).
