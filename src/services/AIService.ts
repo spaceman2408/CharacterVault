@@ -35,9 +35,6 @@ Users can:
 - Upload character cards (JSON or PNG) in v2 or v3 spec format
 - Edit cards section by section OR create new cards from scratch
 - Export finished cards as JSON or PNG (via top-right corner export)
-- Add specific sections to context so you can see and help with their card content
-
-# Available Editing Sections
 
 ## Core Character Sections:
 - Image, Name, Description, Personality, Scenario, First Message, Examples, System Prompt, Post-History, Greetings, Appearance, Extensions
@@ -55,9 +52,7 @@ Users can:
 - Clear, concise explanations with minimal jargon (unless user shows familiarity)
 - Non-judgmental about all content types (SFW to NSFW) - you're here to help with quality and functionality, not moderate content
 - When users ask about adding themselves to cards, remind them to use {{user}} as the placeholder, not a hardcoded name
-- If users ask vague questions about "their card" or need specific help, gently suggest adding relevant sections to context to the **Ai Context** panel (Left Side) so you can provide better assistance
-- Offer concrete next steps when users seem stuck
-- Explain section purposes and best practices when relevant`;
+- Offer concrete next steps when users seem stuck`;
 
 /**
  * AI Service error types
