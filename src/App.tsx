@@ -666,14 +666,20 @@ function AppContent(): React.ReactElement {
   const [showTutorial, setShowTutorial] = useState(() => !(WelcomeTutorial.isCompleted?.() ?? false));
 
   // Handle opening character when redirected from import page via query param
+  // Note: With HashRouter, query params are in window.location.hash (after #/)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash;
+    const queryIndex = hash.indexOf('?');
+    if (queryIndex === -1) return;
+
+    const queryString = hash.slice(queryIndex + 1);
+    const params = new URLSearchParams(queryString);
     const charId = params.get('char');
     if (charId) {
       openCharacter(charId);
       // Remove the query param from URL without reloading
-      const newUrl = window.location.pathname + window.location.hash;
-      window.history.replaceState({}, document.title, newUrl);
+      const newHash = hash.slice(0, queryIndex);
+      window.history.replaceState({}, document.title, window.location.pathname + newHash);
     }
   }, [openCharacter]);
 
