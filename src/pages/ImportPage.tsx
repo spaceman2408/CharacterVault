@@ -231,10 +231,16 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => {
-              navigator.clipboard.readText().then(setText).catch(() => {
-                // Ignore errors, user can paste manually
-              });
+            onClick={async () => {
+              try {
+                const clipboardText = await navigator.clipboard.readText();
+                if (clipboardText.trim()) {
+                  onPaste(clipboardText.trim());
+                }
+              } catch {
+                // If clipboard read fails, focus the textarea for manual paste
+                // This can happen if permission is denied
+              }
             }}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
           >
@@ -316,7 +322,7 @@ export const ImportPage: React.FC = () => {
                 <h3 className="font-medium text-amber-900 dark:text-amber-100">
                   Could not read clipboard automatically
                 </h3>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1 whitespace-pre-line">
                   {errorMessage || 'Please paste the character data manually below.'}
                 </p>
               </div>

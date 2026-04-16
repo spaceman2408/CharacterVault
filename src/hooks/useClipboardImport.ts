@@ -202,11 +202,15 @@ export function useClipboardImport(): UseClipboardImportReturn {
     } catch (err) {
       // Permission denied or other clipboard errors
       setImportState('clipboard-unavailable');
-      setErrorMessage(
-        err instanceof Error
-          ? err.message
-          : 'Could not read clipboard. Please paste manually.'
-      );
+      
+      const baseMessage = 'Automatic clipboard read was blocked due to browser permissions. Please paste the character data manually.';
+      const permissionHint = 'Some browsers (like Chromium-based browsers) allow automatic clipboard access if you grant permission when prompted.';
+      
+      if (err instanceof Error && err.message.includes('user activation')) {
+        setErrorMessage(`${baseMessage}\n\n${permissionHint}`);
+      } else {
+        setErrorMessage(err instanceof Error ? err.message : baseMessage);
+      }
     }
   }, [parseManualInput]);
 
