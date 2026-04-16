@@ -288,6 +288,29 @@ export interface ExportCharacterResult {
 }
 
 // ============================================================================
+// Clipboard Import Types
+// ============================================================================
+
+/**
+ * SillyTavern clipboard payload structure
+ */
+export interface SillyTavernClipboardPayload {
+  source: 'st';
+  character: CharacterCardV2;
+  avatar: string | null;
+}
+
+/**
+ * Result of validating clipboard data
+ */
+export interface ClipboardValidationResult {
+  success: boolean;
+  characterData?: CharacterCardV2;
+  avatarData?: string;
+  error?: string;
+}
+
+// ============================================================================
 // Settings Types
 // ============================================================================
 

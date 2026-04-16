@@ -24,6 +24,8 @@ export type {
   UpdateCharacterInput,
   CharacterExtensions,
   CharacterVaultSettings,
+  SillyTavernClipboardPayload,
+  ClipboardValidationResult,
 } from './characterTypes';
 export { CHARACTER_SECTIONS, DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
 export { CharacterDatabase, characterDb } from './CharacterDatabase';

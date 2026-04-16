@@ -4,9 +4,11 @@
  */
 
 import React, { useRef, useState, useMemo, useCallback, useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { CharacterProvider, useCharacterContext } from './context';
 import { CharacterWorkspace } from './components/workspace';
 import { WelcomeTutorial } from './components/WelcomeTutorial';
+import { ImportPage } from './pages/ImportPage';
 import { characterImportService } from './services/CharacterImportService';
 import type { Character } from './db';
 import {
@@ -657,11 +659,23 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 }
 
 /**
- * Main app content component
+ * Main app content component (home route)
  */
 function AppContent(): React.ReactElement {
-  const { isCharacterOpen } = useCharacterContext();
+  const { isCharacterOpen, openCharacter } = useCharacterContext();
   const [showTutorial, setShowTutorial] = useState(() => !(WelcomeTutorial.isCompleted?.() ?? false));
+
+  // Handle opening character when redirected from import page via query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const charId = params.get('char');
+    if (charId) {
+      openCharacter(charId);
+      // Remove the query param from URL without reloading
+      const newUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [openCharacter]);
 
   const handleTutorialComplete = useCallback(() => {
     setShowTutorial(false);
@@ -686,7 +700,10 @@ function AppContent(): React.ReactElement {
 function App(): React.ReactElement {
   return (
     <CharacterProvider>
-      <AppContent />
+      <Routes>
+        <Route path="/" element={<AppContent />} />
+        <Route path="/import" element={<ImportPage />} />
+      </Routes>
     </CharacterProvider>
   );
 }

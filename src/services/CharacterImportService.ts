@@ -577,6 +577,150 @@ export class CharacterImportService {
 
     return character;
   }
+
+  /**
+   * Import a character from parsed clipboard data (JSON object)
+   * This is used for clipboard-based imports (e.g., from SillyTavern)
+   */
+  async importFromClipboardData(data: unknown, imageData?: string): Promise<ImportCharacterResult> {
+    try {
+      // Check if it's a wrapped SillyTavern clipboard payload
+      if (this.isSillyTavernPayload(data)) {
+        const payload = data as { source: 'st'; character: unknown; avatar?: string | null };
+        const characterData = payload.character;
+        const avatarData = payload.avatar || imageData || '';
+        return this.processCharacterData(characterData, avatarData);
+      }
+
+      // Process as raw character data
+      return this.processCharacterData(data, imageData || '');
+    } catch (error) {
+      console.error('Clipboard import error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error during import',
+      };
+    }
+  }
+
+  /**
+   * Process character data after parsing/unwrapping
+   */
+  private async processCharacterData(data: unknown, imageData: string): Promise<ImportCharacterResult> {
+    // Check if it's a CharacterVault export first (has id, name, data structure)
+    if (this.isCharacterVaultExport(data)) {
+      const character = await this.createCharacterFromExport(data as Character);
+      return {
+        success: true,
+        character,
+      };
+    }
+
+    // Check if it's a V2 spec wrapped format (spec: "chara_card_v2", data: {...})
+    if (this.isV2SpecWrapped(data)) {
+      const wrapped = data as { spec: string; spec_version: string; data: Record<string, unknown> };
+      const card = this.extractV2DataFromSpec(wrapped.data);
+      if (card) {
+        const character = await this.createCharacterFromV2(card, imageData);
+        return {
+          success: true,
+          character,
+        };
+      }
+    }
+
+    // Handle v3 spec format (spec: "chara_card_v3", spec_version: "3.0", data: {...})
+    const v3Data = this.extractV3Data(data);
+    if (v3Data) {
+      const character = await this.createCharacterFromV2(v3Data, imageData);
+      return {
+        success: true,
+        character,
+      };
+    }
+
+    // Check if it's a character card v2 (flat structure)
+    if (this.isCharacterCardV2(data)) {
+      // Properly extract all fields including v3 fields that may be present
+      const cardData = data as unknown as Record<string, unknown>;
+      const card: CharacterCardV2 = {
+        name: String(cardData.name || ''),
+        description: String(cardData.description || ''),
+        personality: String(cardData.personality || ''),
+        scenario: String(cardData.scenario || ''),
+        first_mes: String(cardData.first_mes || ''),
+        mes_example: String(cardData.mes_example || ''),
+        system_prompt: String(cardData.system_prompt || ''),
+        post_history_instructions: String(cardData.post_history_instructions || ''),
+        alternate_greetings: Array.isArray(cardData.alternate_greetings) ? cardData.alternate_greetings : [],
+        extensions: (cardData.extensions as CharacterExtensions) || {},
+        character_book: cardData.character_book as import('../db/characterTypes').CharacterBook | undefined,
+        // V3 fields - may be present in v2 files too
+        creator: typeof cardData.creator === 'string' ? cardData.creator : undefined,
+        character_version: typeof cardData.character_version === 'string' ? cardData.character_version : undefined,
+        tags: Array.isArray(cardData.tags) ? cardData.tags : undefined,
+        creator_notes: typeof cardData.creator_notes === 'string' ? cardData.creator_notes : undefined,
+        avatar: typeof cardData.avatar === 'string' ? cardData.avatar : undefined,
+      };
+      const character = await this.createCharacterFromV2(card, imageData);
+      return {
+        success: true,
+        character,
+      };
+    }
+
+    return {
+      success: false,
+      error: 'Unrecognized JSON format. Expected Character Card V2, V3, or CharacterVault export.',
+    };
+  }
+
+  /**
+   * Check if data is a V2 spec wrapped format (spec: "chara_card_v2", data: {...})
+   */
+  private isV2SpecWrapped(data: unknown): data is { spec: string; spec_version: string; data: Record<string, unknown> } {
+    if (!data || typeof data !== 'object') return false;
+    const d = data as Record<string, unknown>;
+    return d.spec === 'chara_card_v2' && d.data !== undefined && typeof d.data === 'object';
+  }
+
+  /**
+   * Extract V2 data from the wrapped spec format
+   */
+  private extractV2DataFromSpec(data: Record<string, unknown>): CharacterCardV2 | null {
+    if (typeof data.name !== 'string') {
+      return null;
+    }
+
+    return {
+      name: data.name || '',
+      description: String(data.description || ''),
+      personality: String(data.personality || ''),
+      scenario: String(data.scenario || ''),
+      first_mes: String(data.first_mes || ''),
+      mes_example: String(data.mes_example || ''),
+      system_prompt: String(data.system_prompt || ''),
+      post_history_instructions: String(data.post_history_instructions || ''),
+      alternate_greetings: Array.isArray(data.alternate_greetings) ? data.alternate_greetings : [],
+      extensions: (data.extensions as CharacterExtensions) || {},
+      character_book: data.character_book as import('../db/characterTypes').CharacterBook | undefined,
+      // V3 fields
+      creator: typeof data.creator === 'string' ? data.creator : undefined,
+      character_version: typeof data.character_version === 'string' ? data.character_version : undefined,
+      tags: Array.isArray(data.tags) ? data.tags : undefined,
+      creator_notes: typeof data.creator_notes === 'string' ? data.creator_notes : undefined,
+      avatar: typeof data.avatar === 'string' ? data.avatar : undefined,
+    };
+  }
+
+  /**
+   * Check if data is a SillyTavern clipboard payload
+   */
+  private isSillyTavernPayload(data: unknown): data is { source: 'st'; character: unknown; avatar?: string | null } {
+    if (!data || typeof data !== 'object') return false;
+    const d = data as Record<string, unknown>;
+    return d.source === 'st' && d.character !== undefined;
+  }
 }
 
 /**
