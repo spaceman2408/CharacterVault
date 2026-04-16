@@ -255,9 +255,9 @@ export function useClipboardImport(): UseClipboardImportReturn {
    * Navigate to the library (home)
    */
   const goToLibrary = useCallback(() => {
-    // Navigate to home with cache-busting query param to force reload
-    const timestamp = Date.now();
-    window.location.href = `${import.meta.env.BASE_URL}#/?_=${timestamp}`;
+    // Force full page reload to ensure fresh character data
+    // Go to base URL to force reload, HashRouter will redirect to #/
+    window.location.href = import.meta.env.BASE_URL;
   }, []);
 
   /**
