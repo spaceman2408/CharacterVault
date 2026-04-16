@@ -500,6 +500,7 @@ textarea:focus:not(:focus-visible) {
   position: sticky;
   top: 0;
   z-index: 9999;
+  grid-column: 1 / -1;
 }
 
 .search-match-count {
