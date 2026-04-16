@@ -254,29 +254,35 @@ function HighlightedText({
   changedToneClassName: string;
 }): React.ReactElement {
   const previewLines = useMemo(() => {
-    return alignLines(value, compareValue).map(line => ({
-      ...line,
-      segments: splitChangedSegments(line.value, line.compareValue),
-    })).slice(0, 10);
+    return alignLines(value, compareValue)
+      .filter(line => line.value || line.compareValue)
+      .map(line => ({
+        ...line,
+        segments: splitChangedSegments(line.value, line.compareValue),
+      }));
   }, [compareValue, value]);
 
   return (
-    <div className="space-y-1">
+    <div className="max-h-96 space-y-1 overflow-y-auto">
       {previewLines.length > 0 ? previewLines.map((line) => (
         <div
           key={line.key}
-          className={`rounded-lg px-2 py-1 text-sm leading-6 text-vault-700 dark:text-vault-200 ${
+          className={`break-words rounded-lg px-2 py-1 text-sm leading-6 text-vault-700 dark:text-vault-200 ${
             line.changed ? 'bg-vault-100/90 dark:bg-vault-800/70' : ''
           }`}
         >
           {line.segments.length > 0 ? line.segments.map((segment, segmentIndex) => (
             <span
               key={`${line.key}-${segmentIndex}`}
-              className={segment.changed ? `rounded px-0.5 ${changedToneClassName}` : undefined}
+              className={segment.changed ? `break-words rounded px-0.5 ${changedToneClassName}` : undefined}
             >
               {segment.text || ' '}
             </span>
-          )) : <span className="text-vault-400"> </span>}
+          )) : line.value ? (
+            <span className="break-words">{line.value}</span>
+          ) : (
+            <span className={`break-words rounded px-0.5 ${changedToneClassName}`}>{line.compareValue || ' '}</span>
+          )}
         </div>
       )) : (
         <div className="rounded-lg px-2 py-1 text-sm text-vault-400 dark:text-vault-500">Empty</div>
@@ -302,7 +308,7 @@ function TextPreviewCard({
     : 'bg-emerald-200/90 text-emerald-950 dark:bg-emerald-700/50 dark:text-emerald-50';
 
   return (
-    <div className="rounded-2xl border border-vault-200/90 bg-white/90 p-3 dark:border-vault-800 dark:bg-vault-950/60">
+    <div className="overflow-hidden rounded-2xl border border-vault-200/90 bg-white/90 p-3 dark:border-vault-800 dark:bg-vault-950/60">
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-vault-500 dark:text-vault-400">{heading}</p>
         <span className="text-xs text-vault-500 dark:text-vault-400">
