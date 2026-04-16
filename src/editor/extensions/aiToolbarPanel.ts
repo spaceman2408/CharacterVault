@@ -7,7 +7,7 @@
 
 import { EditorView, showPanel, type Panel, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { SelectionRange } from '@codemirror/state';
-import { type AIOperation } from '../../components/ai/AIToolbar';
+import type { AIOperation } from '../../db/types';
 import { toggleToolbarSearch } from './toolbarSearch';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings } from '../../db/types';
@@ -714,9 +714,7 @@ function createToolbarPanel(
   // Detect user scroll in reasoning content
   reasoningContent.addEventListener('scroll', () => {
     const isAtBottom = reasoningContent.scrollTop + reasoningContent.clientHeight >= reasoningContent.scrollHeight - 5;
-    if (!isAtBottom) {
-      userScrolled = true;
-    }
+    userScrolled = !isAtBottom;
   });
 
   // Update result display based on state

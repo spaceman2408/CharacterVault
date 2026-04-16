@@ -9,9 +9,8 @@ import { Decoration, EditorView, drawSelection, keymap, ViewUpdate } from '@code
 import type { DecorationSet } from '@codemirror/view';
 import { EditorState, StateEffect, StateField } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import type { AIOperation } from '../components/ai/AIToolbar';
 import type { CharacterSection } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
+import type { SamplerSettings, AIConfig, PromptSettings, AIOperation } from '../db/types';
 import { aiToolbarPanel, getPanelUpdateFunction } from '../editor/extensions/aiToolbarPanel';
 import { toolbarSearch, toolbarSearchTheme } from '../editor/extensions/toolbarSearch';
 import { themeSync } from '../editor/extensions/themeSync';

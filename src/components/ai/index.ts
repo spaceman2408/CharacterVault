@@ -4,7 +4,6 @@
  */
 
 export { ContextPanel } from './ContextPanel';
-export { AIToolbar, type AIOperation } from './AIToolbar';
 export { AIChatPanel, type AIChatPanelProps, type ChatMessage } from './AIChatPanel';
 export { StreamingText, StreamingMarkdown, type StreamingTextProps } from './StreamingText';
 
@@ -16,6 +15,9 @@ export type {
   StreamingChunk,
   ConversationMessage,
 } from './types';
+
+// Re-export AIOperation from db/types for convenience
+export type { AIOperation } from '../../db/types';
 
 // Utils
 export { formatTime, generateMessageId } from './utils';

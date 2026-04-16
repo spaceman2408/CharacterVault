@@ -302,6 +302,19 @@ export interface AIConfig {
 }
 
 /**
+ * AI Operation types for toolbar actions
+ */
+export type AIOperation =
+  | 'expand'
+  | 'rewrite'
+  | 'instruct'
+  | 'shorten'
+  | 'lengthen'
+  | 'vivid'
+  | 'emotion'
+  | 'grammar';
+
+/**
  * Sampler preset for quick switching
  */
 export interface SamplerPreset {
