@@ -1,11 +1,20 @@
 /**
  * @fileoverview Lorebook Editor component for managing character lore entries.
- * Uses CodeMirror with AI toolbar for entry content editing.
+ * Uses a two-panel layout: entry list sidebar on left, detail editor on right.
  * @module components/editor/LorebookEditor
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, ChevronDown, ChevronUp, Book, Sparkles, Square } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  ChevronUp,
+  Book,
+  Sparkles,
+  Square,
+  Settings,
+  ChevronDown,
+} from 'lucide-react';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
 import type { CharacterSection, LorebookEntry, CharacterBook } from '../../db/characterTypes';
@@ -24,13 +33,17 @@ interface LorebookEditorProps {
   activeSection: string;
 }
 
-interface LorebookEntryCardProps {
+interface LorebookEntryListItemProps {
   entry: LorebookEntry;
   index: number;
-  isOpen: boolean;
-  onToggle: () => void;
-  onUpdate: (entry: LorebookEntry) => void;
+  isSelected: boolean;
+  onSelect: () => void;
   onDelete: () => void;
+}
+
+interface LorebookEntryDetailProps {
+  entry: LorebookEntry;
+  onUpdate: (entry: LorebookEntry) => void;
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
@@ -47,23 +60,83 @@ const POSITION_OPTIONS: { value: LorebookEntry['position']; label: string }[] = 
 ];
 
 /**
- * Individual lorebook entry card with CodeMirror editor for content
+ * Compact entry card for the sidebar list
  */
-function LorebookEntryCard({
+function LorebookEntryListItem({
   entry,
   index,
-  isOpen,
-  onToggle,
-  onUpdate,
+  isSelected,
+  onSelect,
   onDelete,
+}: LorebookEntryListItemProps): React.ReactElement {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete();
+  };
+
+  const tokenCount = estimateTokens(entry.content);
+
+  return (
+    <div
+      onClick={onSelect}
+      className={`
+        relative group cursor-pointer p-3 rounded-lg border transition-all duration-150
+        ${isSelected
+          ? 'bg-vault-100 dark:bg-vault-700/50 border-vault-500 ring-1 ring-vault-500'
+          : 'bg-white dark:bg-vault-800 border-vault-200 dark:border-vault-700 hover:border-vault-300 dark:hover:border-vault-600 hover:bg-vault-50 dark:hover:bg-vault-750'
+        }
+      `}
+    >
+      <div className="flex items-start gap-2">
+        <div className="mt-0.5 shrink-0">
+          {entry.enabled ? (
+            <div className="w-2 h-2 rounded-full bg-green-500" title="Enabled" />
+          ) : (
+            <div className="w-2 h-2 rounded-full bg-vault-300 dark:bg-vault-600" title="Disabled" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-vault-900 dark:text-vault-100 truncate">
+            {entry.name || `Entry ${index + 1}`}
+          </div>
+
+          <div className="flex items-center gap-2 mt-1 text-xs text-vault-500 dark:text-vault-400">
+            <span>{entry.keys.length} key{entry.keys.length !== 1 ? 's' : ''}</span>
+            <span>·</span>
+            <span>{tokenCount} tokens</span>
+          </div>
+        </div>
+
+        <button
+          onClick={handleDelete}
+          className="
+            opacity-0 group-hover:opacity-100 focus:opacity-100
+            p-1.5 text-vault-400 hover:text-red-500 dark:text-vault-500 dark:hover:text-red-400
+            hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all
+          "
+          title="Delete entry"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Full detail editor for an entry (right panel)
+ */
+function LorebookEntryDetail({
+  entry,
+  onUpdate,
   aiConfig,
   samplerSettings,
   promptSettings,
   getContextContent,
   contextSectionIds,
   setSelectedText,
-}: LorebookEntryCardProps): React.ReactElement {
-  // Use the shared AI editor hook for the content field
+}: LorebookEntryDetailProps): React.ReactElement {
   const { editorRef } = useAIEditor({
     value: entry.content,
     onChange: (value) => onUpdate({ ...entry, content: value }),
@@ -73,9 +146,9 @@ function LorebookEntryCard({
     promptSettings,
     getContextContent,
     contextSectionIds,
-    minHeight: 'clamp(110px, 22vh, 180px)',
-    maxHeight: 'clamp(220px, 40vh, 360px)',
-    isActive: isOpen,
+    minHeight: '200px',
+    maxHeight: 'none',
+    isActive: true,
   });
 
   // Local state for keys input to allow typing commas/spaces without immediate parsing
@@ -84,11 +157,9 @@ function LorebookEntryCard({
   const aiServiceRef = useRef<AIService | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync keysInput when entry.keys changes from outside (e.g., initial load)
-  // Only update if the actual keys content is different to avoid resetting while typing
+  // Sync keysInput when entry.keys changes from outside
   React.useEffect(() => {
     const newKeysString = entry.keys.join(', ');
-    // Only update if different (to avoid interrupting typing)
     setKeysInput(prev => prev !== newKeysString ? newKeysString : prev);
   }, [entry.keys]);
 
@@ -136,7 +207,6 @@ function LorebookEntryCard({
         getContextContent(contextSectionIds)
       );
 
-      // Clear timeout on success
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
@@ -144,7 +214,6 @@ function LorebookEntryCard({
 
       const parsedKeys = result.content.split(',').map(k => k.trim()).filter(k => k);
       if (parsedKeys.length > 0) {
-        // Merge with existing keys, avoiding duplicates
         const mergedKeys = [...entry.keys];
         for (const key of parsedKeys) {
           if (!mergedKeys.some(k => k.toLowerCase() === key.toLowerCase())) {
@@ -156,7 +225,7 @@ function LorebookEntryCard({
         onUpdate({ ...entry, keys: mergedKeys });
       }
     } catch {
-      // Silent fail or aborted - user can try again
+      // Silent fail or aborted
     } finally {
       aiServiceRef.current = null;
       if (timeoutRef.current) {
@@ -167,19 +236,13 @@ function LorebookEntryCard({
     }
   };
 
-  // Form input handlers
+  // Form handlers
   const handleNameChange = (value: string) => onUpdate({ ...entry, name: value });
-  
-  const handleKeysChange = (value: string) => {
-    setKeysInput(value);
-  };
-  
+  const handleKeysChange = (value: string) => setKeysInput(value);
   const handleKeysBlur = () => {
-    // Parse keys only when the input loses focus
     const parsedKeys = keysInput.split(',').map(k => k.trim()).filter(k => k);
     onUpdate({ ...entry, keys: parsedKeys });
   };
-  
   const handleCommentChange = (value: string) => onUpdate({ ...entry, comment: value });
   const handlePriorityChange = (value: string) => {
     const num = parseInt(value, 10);
@@ -190,227 +253,163 @@ function LorebookEntryCard({
   const handleCaseSensitiveChange = (checked: boolean) => onUpdate({ ...entry, case_sensitive: checked });
   const handleConstantChange = (checked: boolean) => onUpdate({ ...entry, constant: checked });
 
-  const keysDisplay = entry.keys.join(', ') || 'No keys';
-  const statusDisplay = entry.enabled ? 'Enabled' : 'Disabled';
-
   return (
-    <div className="border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden bg-white dark:bg-vault-800 shadow-sm">
-      {/* Card Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-vault-50 dark:bg-vault-700/50 border-b border-vault-200 dark:border-vault-700">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="text-xs font-mono text-vault-400 dark:text-vault-500 shrink-0">
-            (UID: {entry.id})
-          </span>
-          <span className="text-sm font-medium text-vault-700 dark:text-vault-300 truncate">
-            {entry.name || `Entry ${index + 1}`}
-          </span>
-          <span className="text-xs text-vault-500 dark:text-vault-400 shrink-0">
-            ({entry.keys.length} keys)
-          </span>
-          <span className="text-xs text-vault-500 dark:text-vault-400 shrink-0">
-            Tokens: {estimateTokens(entry.content)}
-          </span>
-          <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
-            entry.enabled
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-          }`}>
-            {statusDisplay}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
+    <div className="space-y-5">
+      {/* Name Field */}
+      <div>
+        <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+          Entry Name
+        </label>
+        <input
+          type="text"
+          value={entry.name || ''}
+          onChange={(e) => handleNameChange(e.target.value)}
+          placeholder="Entry display name (optional)"
+          className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
+            text-vault-900 dark:text-vault-100 placeholder:text-vault-400
+            focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
+        />
+      </div>
+
+      {/* Keys Field */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <label className="text-sm font-medium text-vault-700 dark:text-vault-300">
+            Trigger Keys
+          </label>
+          <span className="text-xs text-vault-400">(comma-separated)</span>
           <button
-            onClick={onToggle}
-            className="p-1.5 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-200 dark:hover:bg-vault-700 rounded-lg transition-colors"
-            title={isOpen ? 'Collapse' : 'Expand'}
+            onClick={handleGenerateKeys}
+            disabled={!generatingKeys && !entry.content.trim()}
+            title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
+            className={`p-1.5 rounded transition-colors ${
+              generatingKeys
+                ? 'text-red-400 animate-pulse cursor-pointer hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+                : 'text-vault-400 hover:text-vault-600 dark:hover:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700 disabled:opacity-40 disabled:cursor-not-allowed'
+            }`}
           >
-            {isOpen ? (
-              <ChevronUp className="w-4 h-4" />
+            {generatingKeys ? (
+              <Square className="w-3.5 h-3.5 fill-current" />
             ) : (
-              <ChevronDown className="w-4 h-4" />
+              <Sparkles className="w-3.5 h-3.5" />
             )}
           </button>
-          <button
-            onClick={onDelete}
-            className="p-1.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-            title="Delete entry"
+        </div>
+        <input
+          type="text"
+          value={keysInput}
+          onChange={(e) => handleKeysChange(e.target.value)}
+          onBlur={handleKeysBlur}
+          placeholder="castle, fortress, stronghold"
+          className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
+            text-vault-900 dark:text-vault-100 placeholder:text-vault-400
+            focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
+        />
+      </div>
+
+      {/* Settings Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Priority */}
+        <div>
+          <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+            Priority
+          </label>
+          <input
+            type="number"
+            value={entry.priority ?? 0}
+            onChange={(e) => handlePriorityChange(e.target.value)}
+            className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
+              text-vault-900 dark:text-vault-100
+              focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Position */}
+        <div>
+          <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+            Position
+          </label>
+          <select
+            value={entry.position || 'before_char'}
+            onChange={(e) => handlePositionChange(e.target.value as LorebookEntry['position'])}
+            className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
+              text-vault-900 dark:text-vault-100
+              focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
+            {POSITION_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Card Content (when expanded) */}
-      {isOpen && (
-        <div className="p-4 space-y-4">
-          {/* Name Field */}
-          <div>
-            <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1.5">
-              Entry Name
-            </label>
-            <input
-              type="text"
-              value={entry.name || ''}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="Entry display name (optional)"
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-                text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-                focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
-            />
-          </div>
+      {/* Toggles */}
+      <div className="flex flex-wrap gap-4">
+        <label className="flex items-center gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={entry.enabled}
+            onChange={(e) => handleEnabledChange(e.target.checked)}
+            className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
+          />
+          <span className="text-sm text-vault-700 dark:text-vault-300">Enabled</span>
+        </label>
+        <label className="flex items-center gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={entry.case_sensitive}
+            onChange={(e) => handleCaseSensitiveChange(e.target.checked)}
+            className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
+          />
+          <span className="text-sm text-vault-700 dark:text-vault-300">Case Sensitive</span>
+        </label>
+        <label className="flex items-center gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={entry.constant ?? false}
+            onChange={(e) => handleConstantChange(e.target.checked)}
+            className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
+          />
+          <span className="text-sm text-vault-700 dark:text-vault-300">Constant</span>
+        </label>
+      </div>
 
-          {/* Keys Field */}
-          <div>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <label className="text-xs font-medium text-vault-600 dark:text-vault-400">
-                Trigger Keys <span className="text-vault-400">(comma-separated)</span>
-              </label>
-              <button
-                onClick={handleGenerateKeys}
-                disabled={!generatingKeys && !entry.content.trim()}
-                title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
-                className={`p-1 rounded transition-colors ${
-                  generatingKeys
-                    ? 'text-red-400 animate-pulse cursor-pointer hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-vault-400 hover:text-vault-600 dark:hover:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700 disabled:opacity-40 disabled:cursor-not-allowed'
-                }`}
-              >
-                {generatingKeys ? (
-                  <Square className="w-3.5 h-3.5 fill-current" />
-                ) : (
-                  <Sparkles className="w-3.5 h-3.5" />
-                )}
-              </button>
-            </div>
-            <input
-              type="text"
-              value={keysInput}
-              onChange={(e) => handleKeysChange(e.target.value)}
-              onBlur={handleKeysBlur}
-              placeholder="castle, fortress, stronghold"
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-                text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-                focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
-            />
-          </div>
+      {/* Content Editor (with AI toolbar) */}
+      <div>
+        <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+          Content
+          <span className="text-vault-400 font-normal ml-2">(AI toolbar available when text is selected)</span>
+        </label>
+        <div
+          ref={editorRef}
+          className="border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+          style={{ minHeight: '200px' }}
+        />
+      </div>
 
-          {/* Settings Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Priority */}
-            <div>
-              <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1.5">
-                Priority
-              </label>
-              <input
-                type="number"
-                value={entry.priority ?? 0}
-                onChange={(e) => handlePriorityChange(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-                  text-vault-900 dark:text-vault-100
-                  focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Position */}
-            <div>
-              <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1.5">
-                Position
-              </label>
-              <select
-                value={entry.position || 'before_char'}
-                onChange={(e) => handlePositionChange(e.target.value as LorebookEntry['position'])}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-                  text-vault-900 dark:text-vault-100
-                  focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
-              >
-                {POSITION_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Toggles */}
-            <div className="flex flex-col gap-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={entry.enabled}
-                  onChange={(e) => handleEnabledChange(e.target.checked)}
-                  className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
-                />
-                <span className="text-xs text-vault-600 dark:text-vault-400">Enabled</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={entry.case_sensitive}
-                  onChange={(e) => handleCaseSensitiveChange(e.target.checked)}
-                  className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
-                />
-                <span className="text-xs text-vault-600 dark:text-vault-400">Case Sensitive</span>
-              </label>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={entry.constant ?? false}
-                  onChange={(e) => handleConstantChange(e.target.checked)}
-                  className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
-                />
-                <span className="text-xs text-vault-600 dark:text-vault-400">Constant</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Content Editor (with AI toolbar) */}
-          <div>
-            <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1.5">
-              Content <span className="text-vault-400">(AI toolbar available when text is selected)</span>
-            </label>
-            <div
-              ref={editorRef}
-              className="border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden min-h-[clamp(110px,22vh,180px)]"
-            />
-          </div>
-
-          {/* Comment Field */}
-          <div>
-            <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1.5">
-              Comment <span className="text-vault-400">(internal notes, not included in output)</span>
-            </label>
-            <input
-              type="text"
-              value={entry.comment || ''}
-              onChange={(e) => handleCommentChange(e.target.value)}
-              placeholder="Internal notes about this entry"
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-                text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-                focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Collapsed Preview */}
-      {!isOpen && (
-        <div className="px-4 py-3 bg-vault-50/50 dark:bg-vault-800/50">
-          <div className="text-xs text-vault-600 dark:text-vault-400 mb-1">
-            <strong>Keys:</strong> {keysDisplay}
-          </div>
-          <div className="text-xs text-vault-500 dark:text-vault-500 truncate">
-            {entry.content || <span className="italic">No content</span>}
-          </div>
-        </div>
-      )}
+      {/* Comment Field */}
+      <div>
+        <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+          Comment
+          <span className="text-vault-400 font-normal ml-2">(internal notes, not included in output)</span>
+        </label>
+        <input
+          type="text"
+          value={entry.comment || ''}
+          onChange={(e) => handleCommentChange(e.target.value)}
+          placeholder="Internal notes about this entry"
+          className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
+            text-vault-900 dark:text-vault-100 placeholder:text-vault-400
+            focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
+        />
+      </div>
     </div>
   );
 }
 
 /**
  * Lorebook Editor for managing character lore entries
- * Uses a key-based approach to reset state when lorebook reference changes
+ * Uses a two-panel layout: sidebar list on left, detail editor on right
  */
 export function LorebookEditor({
   lorebook,
@@ -439,7 +438,7 @@ export function LorebookEditor({
 }
 
 /**
- * Inner component that gets remounted when lorebook changes
+ * Inner component with two-panel layout
  */
 type LorebookEditorInnerProps = LorebookEditorProps;
 
@@ -453,33 +452,36 @@ function LorebookEditorInner({
   promptSettings,
   getContextContent,
 }: LorebookEditorInnerProps): React.ReactElement {
-  const [openCards, setOpenCards] = useState<Set<number>>(new Set([0]));
-  const pendingScrollEntryIdRef = useRef<number | null>(null);
-  const entryRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const normalizedPropLorebook = useMemo<CharacterBook>(() => ({
     name: lorebook?.name || '',
     description: lorebook?.description || '',
     entries: lorebook?.entries || [],
     extensions: lorebook?.extensions || {},
   }), [lorebook]);
-  const [draftLorebook, setDraftLorebook] = useState<CharacterBook>(() => ({
-    name: lorebook?.name || '',
-    description: lorebook?.description || '',
-    entries: lorebook?.entries || [],
-    extensions: lorebook?.extensions || {},
-  }));
 
-  // Sync local draft from persisted state (deferred to satisfy lint rule).
+  const [draftLorebook, setDraftLorebook] = useState<CharacterBook>(normalizedPropLorebook);
+  const [selectedEntryIndex, setSelectedEntryIndex] = useState<number>(0);
+  const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
+
+  // Sync local draft from persisted state
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setDraftLorebook(normalizedPropLorebook);
+      // Reset selection if current index is out of bounds
+      setSelectedEntryIndex(prev =>
+        prev >= (normalizedPropLorebook.entries.length || 0) ? 0 : prev
+      );
     }, 0);
     return () => clearTimeout(timeoutId);
   }, [normalizedPropLorebook]);
 
-  const entries = useMemo(() => draftLorebook.entries, [draftLorebook.entries]);
+  const entries = draftLorebook.entries;
   const bookName = draftLorebook.name ?? '';
   const bookDescription = draftLorebook.description ?? '';
+
+  // Ensure selected index is valid
+  const safeSelectedIndex = selectedEntryIndex < entries.length ? selectedEntryIndex : 0;
+  const selectedEntry = entries[safeSelectedIndex];
 
   // Notify parent of changes
   const notifyChange = useCallback((
@@ -498,13 +500,13 @@ function LorebookEditorInner({
   }, [draftLorebook.extensions, onChange]);
 
   // Handle entry update
-  const handleEntryUpdate = useCallback((index: number, updatedEntry: LorebookEntry) => {
+  const handleEntryUpdate = useCallback((updatedEntry: LorebookEntry) => {
     const newEntries = [...entries];
-    newEntries[index] = updatedEntry;
+    newEntries[safeSelectedIndex] = updatedEntry;
     notifyChange(newEntries, bookName, bookDescription);
-  }, [entries, bookName, bookDescription, notifyChange]);
+  }, [entries, safeSelectedIndex, bookName, bookDescription, notifyChange]);
 
-  // Find the lowest available ID (reuse freed IDs)
+  // Find the lowest available ID
   const getNextAvailableId = useCallback((): number => {
     const usedIds = new Set(entries.map(e => e.id));
     let id = 0;
@@ -531,61 +533,32 @@ function LorebookEditorInner({
     };
     const newEntries = [...entries, newEntry];
     const newIndex = newEntries.length - 1;
-    pendingScrollEntryIdRef.current = newId;
-    setOpenCards(prev => new Set([...prev, newIndex]));
+
     notifyChange(newEntries, bookName, bookDescription);
+    setSelectedEntryIndex(newIndex);
   }, [entries, bookName, bookDescription, notifyChange, getNextAvailableId]);
-
-  useEffect(() => {
-    const pendingEntryId = pendingScrollEntryIdRef.current;
-    if (pendingEntryId == null) return;
-
-    const scrollToEntry = () => {
-      const entryEl = entryRefs.current.get(pendingEntryId);
-      if (!entryEl) return false;
-      entryEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      pendingScrollEntryIdRef.current = null;
-      return true;
-    };
-
-    if (scrollToEntry()) return;
-
-    const rafId = window.requestAnimationFrame(() => {
-      scrollToEntry();
-    });
-
-    return () => {
-      window.cancelAnimationFrame(rafId);
-    };
-  }, [entries.length, openCards]);
 
   // Handle delete entry
   const handleDeleteEntry = useCallback((index: number) => {
-    const shouldDelete = window.confirm(`Delete lorebook entry ${index + 1}?`);
-    if (!shouldDelete) {
-      return;
-    }
+    const entry = entries[index];
+    const shouldDelete = window.confirm(`Delete lorebook entry "${entry.name || `Entry ${index + 1}`}"?`);
+    if (!shouldDelete) return;
 
     const newEntries = entries.filter((_, i) => i !== index);
-    const newOpenCards = new Set<number>();
-    openCards.forEach(i => {
-      if (i < index) newOpenCards.add(i);
-      else if (i > index) newOpenCards.add(i - 1);
-    });
-    setOpenCards(newOpenCards);
     notifyChange(newEntries, bookName, bookDescription);
-  }, [entries, openCards, bookName, bookDescription, notifyChange]);
 
-  // Handle toggle card
-  const handleToggleCard = useCallback((index: number) => {
-    const newOpenCards = new Set(openCards);
-    if (newOpenCards.has(index)) {
-      newOpenCards.delete(index);
-    } else {
-      newOpenCards.add(index);
+    // Adjust selected index if needed
+    if (selectedEntryIndex >= newEntries.length) {
+      setSelectedEntryIndex(Math.max(0, newEntries.length - 1));
+    } else if (selectedEntryIndex > index) {
+      setSelectedEntryIndex(selectedEntryIndex - 1);
     }
-    setOpenCards(newOpenCards);
-  }, [openCards]);
+  }, [entries, selectedEntryIndex, bookName, bookDescription, notifyChange]);
+
+  // Handle select entry
+  const handleSelectEntry = useCallback((index: number) => {
+    setSelectedEntryIndex(index);
+  }, []);
 
   // Handle book name/description changes
   const handleBookNameChange = (value: string) => {
@@ -597,107 +570,121 @@ function LorebookEditorInner({
   };
 
   return (
-    <div className="h-full flex flex-col min-h-0 overflow-hidden">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between shrink-0">
-        <div>
-          <h2 className="text-xl font-bold text-vault-900 dark:text-vault-50">
-            Lorebook
-          </h2>
-          <p className="text-sm text-vault-500 dark:text-vault-400">
-            {entries.length} entr{entries.length === 1 ? 'y' : 'ies'} total
-          </p>
-        </div>
-        <button
-          onClick={handleAddEntry}
-          className="flex items-center gap-2 px-4 py-2 bg-vault-600 hover:bg-vault-700 text-white text-sm rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Entry
-        </button>
-      </div>
+    <div className="h-full flex overflow-hidden">
+      {/* Left Sidebar */}
+      <div className="w-64 shrink-0 border-r border-vault-200 dark:border-vault-700 bg-vault-50/30 dark:bg-vault-800/20 flex flex-col">
+        {/* Book Settings Toggle */}
+        <div className="shrink-0 border-b border-vault-200 dark:border-vault-700">
+          <button
+            onClick={() => setIsBookSettingsOpen(!isBookSettingsOpen)}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-vault-700 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              <span>Book Settings</span>
+            </div>
+            {isBookSettingsOpen ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
 
-      {/* Book Settings */}
-      <div className="mb-4 p-4 bg-vault-50 dark:bg-vault-800/50 border border-vault-200 dark:border-vault-700 rounded-xl shrink-0">
-        <h3 className="text-sm font-semibold text-vault-700 dark:text-vault-300 mb-3">
-          Book Settings
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1.5">
-              Book Name
-            </label>
-            <input
-              type="text"
-              value={bookName}
-              onChange={(e) => handleBookNameChange(e.target.value)}
-              placeholder="Character Lorebook"
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-                text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-                focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1.5">
-              Description
-            </label>
-            <input
-              type="text"
-              value={bookDescription}
-              onChange={(e) => handleBookDescriptionChange(e.target.value)}
-              placeholder="Brief description of this lorebook"
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-                text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-                focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
-            />
-          </div>
+          {isBookSettingsOpen && (
+            <div className="px-3 pb-3 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1">
+                  Book Name
+                </label>
+                <input
+                  type="text"
+                  value={bookName}
+                  onChange={(e) => handleBookNameChange(e.target.value)}
+                  placeholder="Character Lorebook"
+                  className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded
+                    text-vault-900 dark:text-vault-100 placeholder:text-vault-400
+                    focus:outline-none focus:ring-1 focus:ring-vault-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={bookDescription}
+                  onChange={(e) => handleBookDescriptionChange(e.target.value)}
+                  placeholder="Brief description"
+                  className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded
+                    text-vault-900 dark:text-vault-100 placeholder:text-vault-400
+                    focus:outline-none focus:ring-1 focus:ring-vault-500"
+                />
+              </div>
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Entries List */}
-      <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
-        {entries.length === 0 ? (
-          <div className="text-center py-12 text-vault-400 dark:text-vault-500">
-            <Book className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">No lore entries yet</p>
-            <p className="text-xs mt-1">Click "Add Entry" to create your first lore entry</p>
-          </div>
-        ) : (
-          entries.map((entry, index) => (
-            <div
-              key={entry.id}
-              ref={(el) => {
-                if (el) {
-                  entryRefs.current.set(entry.id, el);
-                } else {
-                  entryRefs.current.delete(entry.id);
-                }
-              }}
-            >
-              <LorebookEntryCard
+        {/* Entry List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {entries.length === 0 ? (
+            <div className="text-center py-8 text-vault-400 dark:text-vault-500">
+              <Book className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">No entries yet</p>
+              <p className="text-[10px] mt-0.5">Click "Add Entry" to start</p>
+            </div>
+          ) : (
+            entries.map((entry, index) => (
+              <LorebookEntryListItem
+                key={entry.id}
                 entry={entry}
                 index={index}
-                isOpen={openCards.has(index)}
-                onToggle={() => handleToggleCard(index)}
-                onUpdate={(updatedEntry) => handleEntryUpdate(index, updatedEntry)}
+                isSelected={index === safeSelectedIndex}
+                onSelect={() => handleSelectEntry(index)}
                 onDelete={() => handleDeleteEntry(index)}
-                aiConfig={aiConfig}
-                samplerSettings={samplerSettings}
-                promptSettings={promptSettings}
-                getContextContent={getContextContent}
-                contextSectionIds={contextSectionIds}
-                setSelectedText={setSelectedText}
               />
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
+
+        {/* Add Button at Bottom */}
+        <div className="shrink-0 p-3 border-t border-vault-200 dark:border-vault-700">
+          <button
+            onClick={handleAddEntry}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-vault-300 dark:border-vault-600
+              text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200
+              hover:border-vault-400 dark:hover:border-vault-500 hover:bg-vault-50 dark:hover:bg-vault-700/30
+              rounded-lg text-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Entry
+          </button>
+        </div>
       </div>
 
-      {/* Info Footer */}
-      <div className="mt-4 p-3 bg-vault-50 dark:bg-vault-800/50 border border-vault-200 dark:border-vault-700 rounded-lg shrink-0">
-        <p className="text-xs text-vault-600 dark:text-vault-400">
-          <strong>Note:</strong> This editor provides essential lore management. For advanced logic or complex world-building features, power users may prefer using dedicated tools like SillyTavern's World Info.
-        </p>
+      {/* Right Detail Panel */}
+      <div className="flex-1 overflow-y-auto bg-white dark:bg-vault-900">
+        {selectedEntry ? (
+          <div className="p-6">
+            <LorebookEntryDetail
+              entry={selectedEntry}
+              onUpdate={handleEntryUpdate}
+              aiConfig={aiConfig}
+              samplerSettings={samplerSettings}
+              promptSettings={promptSettings}
+              getContextContent={getContextContent}
+              contextSectionIds={contextSectionIds}
+              setSelectedText={setSelectedText}
+            />
+          </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-vault-400 dark:text-vault-500">
+            <div className="text-center">
+              <Book className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">Select an entry to edit</p>
+              <p className="text-xs mt-1">Or create a new one to get started</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
