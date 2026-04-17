@@ -152,14 +152,11 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentOperation, setCurrentOperation] = useState<AIOperation | null>(null);
   const [aiResult, setAiResult] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_aiReasoning, setAiReasoning] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_streamingContent, setStreamingContent] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_streamingReasoning, setStreamingReasoning] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_error, setError] = useState<string | null>(null);
+  // Streaming buffers stored in refs to avoid re-render thrashing
+  const streamingContentRef = useRef('');
+  const streamingReasoningRef = useRef('');
+  const aiReasoningRef = useRef('');
+  const errorRef = useRef<string | null>(null);
   const [selection, setSelection] = useState<{ from: number; to: number; text: string } | null>(null);
 
   // Use refs to avoid closure issues with callbacks
@@ -268,12 +265,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     // Get the latest config from ref to avoid stale closure
     const currentConfig = aiConfigRef.current;
 
-    // Reset state
-    setError(null);
+    // Reset streaming refs (not state, to avoid re-render thrashing)
+    streamingContentRef.current = '';
+    streamingReasoningRef.current = '';
+    aiReasoningRef.current = '';
+    errorRef.current = null;
     setAiResult(null);
-    setAiReasoning('');
-    setStreamingContent('');
-    setStreamingReasoning('');
     setCurrentOperation(operation);
     setIsProcessing(true);
     setIsStreaming(currentConfig.enableStreaming);
@@ -305,18 +302,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
       const onChunk = currentConfig.enableStreaming ? (chunk: { content?: string; reasoning?: string }) => {
         if (chunk.reasoning) {
-          setStreamingReasoning(prev => {
-            const newVal = prev + chunk.reasoning;
-            panelUpdateRef.current?.({ streamingReasoning: newVal });
-            return newVal;
-          });
+          streamingReasoningRef.current += chunk.reasoning;
+          panelUpdateRef.current?.({ streamingReasoning: streamingReasoningRef.current });
         }
         if (chunk.content) {
-          setStreamingContent(prev => {
-            const newVal = prev + chunk.content;
-            panelUpdateRef.current?.({ streamingContent: newVal });
-            return newVal;
-          });
+          streamingContentRef.current += chunk.content;
+          panelUpdateRef.current?.({ streamingContent: streamingContentRef.current });
         }
       } : undefined;
 
@@ -353,8 +344,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
       // Update result
       aiResultRef.current = response.content;
+      aiReasoningRef.current = response.reasoning || '';
       setAiResult(response.content);
-      setAiReasoning(response.reasoning || '');
       setIsProcessing(false);
       setIsStreaming(false);
 
@@ -369,7 +360,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       // Check if this was an abort/cancellation
       if (err instanceof AIError && err.message === 'Request was cancelled') {
         console.log('[useAIEditor] AI request cancelled by user');
-        // Clear state without showing error
+        // Clear refs without triggering state updates
+        streamingContentRef.current = '';
+        streamingReasoningRef.current = '';
+        // Clear state
         setIsProcessing(false);
         setIsStreaming(false);
         panelUpdateRef.current?.({
@@ -385,7 +379,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       } else {
         console.error('AI operation failed:', err);
         const errorMsg = err instanceof AIError ? err.message : 'AI operation failed. Please try again.';
-        setError(errorMsg);
+        errorRef.current = errorMsg;
         setIsProcessing(false);
         setIsStreaming(false);
 
@@ -437,12 +431,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     }, 4000);
 
     // Clear AI state
+    streamingContentRef.current = '';
+    streamingReasoningRef.current = '';
+    aiReasoningRef.current = '';
+    errorRef.current = null;
     setAiResult(null);
-    setAiReasoning('');
-    setStreamingContent('');
-    setStreamingReasoning('');
     setCurrentOperation(null);
-    setError(null);
     setSelection(null);
     setSelectedText('');
 
@@ -461,12 +455,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
   // Handle reject - clear AI state
   const reject = useCallback(() => {
+    // Clear streaming refs
+    streamingContentRef.current = '';
+    streamingReasoningRef.current = '';
+    aiReasoningRef.current = '';
+    errorRef.current = null;
+    // Clear state
     setAiResult(null);
-    setAiReasoning('');
-    setStreamingContent('');
-    setStreamingReasoning('');
     setCurrentOperation(null);
-    setError(null);
     setIsProcessing(false);
     setIsStreaming(false);
     setSelection(null);
