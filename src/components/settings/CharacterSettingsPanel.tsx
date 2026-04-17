@@ -1062,7 +1062,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                         Security Notice
                       </h4>
                       <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-                        Your API key is stored locally in your browser's IndexedDB.
+                        Your API key is stored locally in your browser's storage.
                         This is convenient but means the key could be accessed by malicious
                         browser extensions or if someone gains physical access to your unlocked computer.
                       </p>

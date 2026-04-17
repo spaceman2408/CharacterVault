@@ -38,7 +38,7 @@
 - **Import & Export** — Bring in existing character cards (PNG or JSON) and export your creations.
 - **Snapshot History & Rollback** — Automatic open and idle snapshots plus manual snapshots let you compare revisions and restore whole cards or individual sections.
 - **Diff Viewer** — Inspect snapshot changes with a dedicated history modal, section-level collapse controls, and highlighted before/after diffs.
-- **Offline Support** — All your data is stored locally in your browser via IndexedDB.
+- **Offline Support** — All your data is stored locally in your browser's storage via IndexedDB.
   - Online ai tools require an internet connection.
 
 ---
