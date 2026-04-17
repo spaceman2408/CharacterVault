@@ -696,9 +696,12 @@ function AppContent(): React.ReactNode {
   useEffect(() => {
     const completed = WelcomeTutorial.isCompleted?.() ?? false;
     const shouldShow = !completed;
-    setShowTutorial(shouldShow);
-    setIsInitialTutorial(shouldShow); // Only true for the initial check
-    setIsReady(true);
+    // Use requestAnimationFrame to avoid cascading renders warning
+    requestAnimationFrame(() => {
+      setShowTutorial(shouldShow);
+      setIsInitialTutorial(shouldShow); // Only true for the initial check
+      setIsReady(true);
+    });
   }, []);
 
   // Handle opening character when redirected from import page via query param
