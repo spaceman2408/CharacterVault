@@ -686,7 +686,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 /**
  * Main app content component (home route)
  */
-function AppContent(): React.ReactElement {
+function AppContent(): React.ReactNode {
   const { isCharacterOpen, openCharacter } = useCharacterContext();
   const [isReady, setIsReady] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
