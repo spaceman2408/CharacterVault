@@ -15,6 +15,8 @@ import {
   Settings,
   ChevronDown,
   ChevronLeft,
+  Search,
+  X,
 } from 'lucide-react';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
@@ -463,6 +465,8 @@ function LorebookEditorInner({
   const [draftLorebook, setDraftLorebook] = useState<CharacterBook>(normalizedPropLorebook);
   const [selectedEntryIndex, setSelectedEntryIndex] = useState<number>(0);
   const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
+  const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Sync local draft from persisted state
   useEffect(() => {
@@ -557,7 +561,16 @@ function LorebookEditorInner({
     }
   }, [entries, selectedEntryIndex, bookName, bookDescription, notifyChange]);
 
-  const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
+  // Filter entries based on search query
+  const filteredEntries = useMemo(() => {
+    if (!searchQuery.trim()) return entries;
+    const query = searchQuery.toLowerCase();
+    return entries.filter(entry =>
+      (entry.name?.toLowerCase() || '').includes(query) ||
+      (entry.content?.toLowerCase() || '').includes(query) ||
+      entry.keys.some(key => key.toLowerCase().includes(query))
+    );
+  }, [entries, searchQuery]);
 
   // Handle select entry with mobile view
   const handleSelectEntry = useCallback((index: number) => {
@@ -638,6 +651,37 @@ function LorebookEditorInner({
           )}
         </div>
 
+        {/* Search Bar */}
+        {entries.length > 0 && (
+          <div className="shrink-0 px-3 py-2 border-b border-vault-200 dark:border-vault-700">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-vault-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Search ${entries.length} entries...`}
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded
+                  text-vault-900 dark:text-vault-100 placeholder:text-vault-400
+                  focus:outline-none focus:ring-1 focus:ring-vault-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-vault-400 hover:text-vault-600 dark:hover:text-vault-300"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <div className="text-[10px] text-vault-500 dark:text-vault-400 mt-1">
+                {filteredEntries.length} of {entries.length} entries
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Entry List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {entries.length === 0 ? (
@@ -646,17 +690,26 @@ function LorebookEditorInner({
               <p className="text-xs">No entries yet</p>
               <p className="text-[10px] mt-0.5">Click "Add Entry" to start</p>
             </div>
+          ) : filteredEntries.length === 0 ? (
+            <div className="text-center py-8 text-vault-400 dark:text-vault-500">
+              <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">No entries match</p>
+              <p className="text-[10px] mt-0.5">Try a different search term</p>
+            </div>
           ) : (
-            entries.map((entry, index) => (
-              <LorebookEntryListItem
-                key={entry.id}
-                entry={entry}
-                index={index}
-                isSelected={index === safeSelectedIndex}
-                onSelect={() => handleSelectEntry(index)}
-                onDelete={() => handleDeleteEntry(index)}
-              />
-            ))
+            filteredEntries.map((entry) => {
+              const originalIndex = entries.findIndex(e => e.id === entry.id);
+              return (
+                <LorebookEntryListItem
+                  key={entry.id}
+                  entry={entry}
+                  index={originalIndex}
+                  isSelected={originalIndex === safeSelectedIndex}
+                  onSelect={() => handleSelectEntry(originalIndex)}
+                  onDelete={() => handleDeleteEntry(originalIndex)}
+                />
+              );
+            })
           )}
         </div>
 
