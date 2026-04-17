@@ -3,7 +3,6 @@ import {
   Camera,
   ChevronDown,
   Clock3,
-  History,
   LoaderCircle,
   RotateCcw,
   ShieldAlert,
@@ -30,10 +29,6 @@ interface AlignedLine {
   value: string;
   compareValue: string;
   changed: boolean;
-}
-
-interface SectionPreviewProps {
-  entry: SnapshotDiffEntry;
 }
 
 type ConfirmAction =
@@ -238,7 +233,7 @@ function SnapshotSourceBadge({ snapshot }: { snapshot: CharacterSnapshot }): Rea
         : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200';
 
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${toneClassName}`}>
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${toneClassName}`}>
       {formatSnapshotLabel(snapshot)}
     </span>
   );
@@ -263,12 +258,12 @@ function HighlightedText({
   }, [compareValue, value]);
 
   return (
-    <div className="max-h-96 space-y-1 overflow-y-auto">
+    <div className="space-y-1">
       {previewLines.length > 0 ? previewLines.map((line) => (
         <div
           key={line.key}
-          className={`break-words rounded-lg px-2 py-1 text-sm leading-6 text-vault-700 dark:text-vault-200 ${
-            line.changed ? 'bg-vault-100/90 dark:bg-vault-800/70' : ''
+          className={`break-words rounded px-1.5 py-0.5 text-sm leading-6 text-vault-700 dark:text-vault-200 ${
+            line.changed ? 'bg-vault-100/80 dark:bg-vault-800/60' : ''
           }`}
         >
           {line.segments.length > 0 ? line.segments.map((segment, segmentIndex) => (
@@ -285,37 +280,8 @@ function HighlightedText({
           )}
         </div>
       )) : (
-        <div className="rounded-lg px-2 py-1 text-sm text-vault-400 dark:text-vault-500">Empty</div>
+        <div className="rounded px-2 py-1 text-sm text-vault-400 dark:text-vault-500">Empty</div>
       )}
-    </div>
-  );
-}
-
-function TextPreviewCard({
-  heading,
-  value,
-  compareValue,
-  tone,
-}: {
-  heading: string;
-  value: string;
-  compareValue: string;
-  tone: 'snapshot' | 'current';
-}): React.ReactElement {
-  const changedLineCount = useMemo(() => getChangedLineCount(value, compareValue), [compareValue, value]);
-  const changedToneClassName = tone === 'snapshot'
-    ? 'bg-amber-200/90 text-amber-950 dark:bg-amber-700/50 dark:text-amber-50'
-    : 'bg-emerald-200/90 text-emerald-950 dark:bg-emerald-700/50 dark:text-emerald-50';
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-vault-200/90 bg-white/90 p-3 dark:border-vault-800 dark:bg-vault-950/60">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-vault-500 dark:text-vault-400">{heading}</p>
-        <span className="text-xs text-vault-500 dark:text-vault-400">
-          {changedLineCount} {changedLineCount === 1 ? 'line changed' : 'lines changed'}
-        </span>
-      </div>
-      <HighlightedText value={value} compareValue={compareValue} changedToneClassName={changedToneClassName} />
     </div>
   );
 }
@@ -328,11 +294,11 @@ function ImagePreviewCard({
   value: unknown;
 }): React.ReactElement {
   return (
-    <div className="rounded-2xl border border-vault-200/90 bg-white/90 p-3 dark:border-vault-800 dark:bg-vault-950/60">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-vault-500 dark:text-vault-400">{heading}</p>
-      <div className="flex min-h-40 items-center justify-center rounded-xl border border-vault-200 bg-vault-50 p-3 dark:border-vault-800 dark:bg-vault-900/80">
+    <div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">{heading}</p>
+      <div className="flex min-h-32 items-center justify-center rounded-lg border border-vault-200 bg-vault-50 p-2 dark:border-vault-800 dark:bg-vault-900/60">
         {typeof value === 'string' && value ? (
-          <img src={value} alt={heading} className="max-h-48 rounded-xl object-contain" />
+          <img src={value} alt={heading} className="max-h-40 rounded object-contain" />
         ) : (
           <span className="text-sm text-vault-500 dark:text-vault-400">No image</span>
         )}
@@ -341,10 +307,55 @@ function ImagePreviewCard({
   );
 }
 
-function SectionPreview({ entry }: SectionPreviewProps): React.ReactElement {
+function SyncedDiffView({
+  snapshotValue,
+  currentValue,
+}: {
+  snapshotValue: string;
+  currentValue: string;
+}): React.ReactElement {
+  const changedLineCountLeft = useMemo(() => getChangedLineCount(snapshotValue, currentValue), [snapshotValue, currentValue]);
+  const changedLineCountRight = useMemo(() => getChangedLineCount(currentValue, snapshotValue), [currentValue, snapshotValue]);
+
+  return (
+    <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
+      <div className="grid lg:grid-cols-2">
+        {/* Revision snapshot */}
+        <div className="border-b border-vault-200 p-3 dark:border-vault-800 lg:border-b-0 lg:border-r">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+            Revision snapshot · {changedLineCountLeft} {changedLineCountLeft === 1 ? 'line' : 'lines'} changed
+          </p>
+          <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
+            <HighlightedText
+              value={snapshotValue}
+              compareValue={currentValue}
+              changedToneClassName="bg-amber-200/80 text-amber-950 dark:bg-amber-700/40 dark:text-amber-50"
+            />
+          </div>
+        </div>
+
+        {/* Current draft */}
+        <div className="p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+            Current draft · {changedLineCountRight} {changedLineCountRight === 1 ? 'line' : 'lines'} changed
+          </p>
+          <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
+            <HighlightedText
+              value={currentValue}
+              compareValue={snapshotValue}
+              changedToneClassName="bg-emerald-200/80 text-emerald-950 dark:bg-emerald-700/40 dark:text-emerald-50"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionPreview({ entry }: { entry: SnapshotDiffEntry }): React.ReactElement {
   if (isImageEntry(entry)) {
     return (
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <ImagePreviewCard heading="Revision snapshot" value={entry.snapshotValue} />
         <ImagePreviewCard heading="Current draft" value={entry.currentValue} />
       </div>
@@ -354,22 +365,7 @@ function SectionPreview({ entry }: SectionPreviewProps): React.ReactElement {
   const snapshotValue = formatValue(entry.snapshotValue);
   const currentValue = formatValue(entry.currentValue);
 
-  return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      <TextPreviewCard
-        heading="Revision snapshot"
-        value={snapshotValue}
-        compareValue={currentValue}
-        tone="snapshot"
-      />
-      <TextPreviewCard
-        heading="Current draft"
-        value={currentValue}
-        compareValue={snapshotValue}
-        tone="current"
-      />
-    </div>
-  );
+  return <SyncedDiffView snapshotValue={snapshotValue} currentValue={currentValue} />;
 }
 
 function ConfirmationDialog({
@@ -395,41 +391,37 @@ function ConfirmationDialog({
       ? {
         eyebrow: 'Restore card',
         title: 'Restore the full card from this revision?',
-        description: 'Your current draft will be replaced with the selected revision. A rollback snapshot will still be created automatically.',
+        description: `Your current draft will be replaced with the "${formatSnapshotLabel(action.snapshot)}" revision from ${new Date(action.snapshot.createdAt).toLocaleString()}. A rollback snapshot will still be created automatically.`,
         confirmLabel: 'Restore card',
         confirmClassName: 'bg-vault-900 text-white hover:bg-black dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white',
       }
       : {
         eyebrow: 'Restore section',
         title: `Restore ${action.entry.label}?`,
-        description: 'Only this section will be restored from the selected revision. Other sections remain unchanged.',
+        description: `Only this section will be restored from the "${formatSnapshotLabel(action.snapshot)}" revision. Other sections remain unchanged.`,
         confirmLabel: 'Restore section',
         confirmClassName: 'bg-vault-900 text-white hover:bg-black dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white',
       };
 
   return (
     <div className="absolute inset-0 z-20 flex items-end justify-center bg-black/45 p-3 backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="w-full max-w-md rounded-3xl border border-vault-200 bg-white p-5 shadow-2xl dark:border-vault-800 dark:bg-vault-900">
+      <div className="w-full max-w-md rounded-2xl border border-vault-200 bg-white p-5 shadow-2xl dark:border-vault-800 dark:bg-vault-900">
         <div className="mb-4 flex items-start gap-3">
-          <div className="rounded-2xl bg-vault-100 p-3 text-vault-700 dark:bg-vault-800 dark:text-vault-100">
+          <div className="rounded-xl bg-vault-100 p-2.5 text-vault-700 dark:bg-vault-800 dark:text-vault-100">
             <ShieldAlert className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-vault-500 dark:text-vault-400">{config.eyebrow}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">{config.eyebrow}</p>
             <h4 className="mt-1 text-lg font-semibold text-vault-950 dark:text-vault-50">{config.title}</h4>
             <p className="mt-2 text-sm leading-6 text-vault-600 dark:text-vault-300">{config.description}</p>
           </div>
-        </div>
-        <div className="rounded-2xl border border-vault-200 bg-vault-50/80 px-4 py-3 text-sm text-vault-600 dark:border-vault-800 dark:bg-vault-950/70 dark:text-vault-300">
-          <p className="font-medium text-vault-900 dark:text-vault-100">{formatSnapshotLabel(action.snapshot)}</p>
-          <p>{new Date(action.snapshot.createdAt).toLocaleString()}</p>
         </div>
         <div className="mt-5 flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}
             disabled={isBusy}
-            className="rounded-xl border border-vault-300 px-4 py-2 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
+            className="rounded-lg border border-vault-300 px-4 py-2 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
           >
             Cancel
           </button>
@@ -437,7 +429,7 @@ function ConfirmationDialog({
             type="button"
             onClick={onConfirm}
             disabled={isBusy}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${config.confirmClassName}`}
+            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${config.confirmClassName}`}
           >
             {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
             {config.confirmLabel}
@@ -465,40 +457,32 @@ function TimelineCard({
 }): React.ReactElement {
   return (
     <div
-      className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
+      className={`rounded-xl border px-3 py-2.5 transition-all ${
         isSelected
           ? 'border-vault-900 bg-white shadow-sm dark:border-vault-100 dark:bg-vault-900'
-          : 'border-vault-200/90 bg-white/75 hover:border-vault-300 hover:bg-white dark:border-vault-800 dark:bg-vault-950/60 dark:hover:border-vault-700 dark:hover:bg-vault-900/80'
+          : 'border-vault-200 bg-white hover:border-vault-300 hover:bg-white dark:border-vault-800 dark:bg-vault-950 dark:hover:border-vault-700 dark:hover:bg-vault-900/80'
       } ${isHighlighted ? 'ring-2 ring-emerald-300 dark:ring-emerald-700' : ''}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <button type="button" onClick={onSelect} className="min-w-0 flex-1 text-left">
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <SnapshotSourceBadge snapshot={snapshot} />
-          <p className="mt-3 text-sm font-medium text-vault-900 dark:text-vault-100">{formatSnapshotDescription(snapshot)}</p>
+          <span className="shrink-0 text-xs text-vault-400">
+            {new Date(snapshot.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+          </span>
         </button>
         {!characterSnapshotService.isBaselineSnapshot(snapshot) ? (
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-lg p-2 text-vault-400 transition-colors hover:bg-vault-100 hover:text-red-600 dark:hover:bg-vault-800"
+            className="shrink-0 rounded p-1.5 text-vault-400 transition-colors hover:bg-vault-100 hover:text-red-600 dark:hover:bg-vault-800"
             title="Delete revision"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         ) : null}
-      </div>
-      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-vault-500 dark:text-vault-400">
-        <span className="inline-flex items-center gap-1.5">
-          <Clock3 className="h-3.5 w-3.5" />
-          {new Date(snapshot.createdAt).toLocaleString()}
-        </span>
-        <span className={`rounded-full px-2 py-1 font-medium ${
-          hasChanges
-            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200'
-            : 'bg-vault-100 text-vault-600 dark:bg-vault-800 dark:text-vault-300'
-        }`}>
-          {hasChanges ? 'Has changes' : 'Matches draft'}
-        </span>
+        {hasChanges && (
+          <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" title="Has changes" />
+        )}
       </div>
     </div>
   );
@@ -535,6 +519,113 @@ function MobileRevisionScroller({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+interface SnapshotSummaryProps {
+  snapshot: CharacterSnapshot;
+  changedSectionCount: number;
+  hasActiveSectionDiff: boolean;
+  isBusy: boolean;
+  onRestore: () => void;
+}
+
+function SnapshotSummary({
+  snapshot,
+  changedSectionCount,
+  hasActiveSectionDiff,
+  isBusy,
+  onRestore,
+}: SnapshotSummaryProps): React.ReactElement {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <SnapshotSourceBadge snapshot={snapshot} />
+          <h3 className="mt-1.5 text-xl font-semibold text-vault-950 dark:text-vault-50">{formatSnapshotLabel(snapshot)}</h3>
+          <p className="text-sm text-vault-500 dark:text-vault-400">{formatSnapshotDescription(snapshot)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onRestore}
+          disabled={isBusy || changedSectionCount === 0}
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-vault-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Restore card
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-vault-200 pt-3 text-sm text-vault-500 dark:border-vault-800 dark:text-vault-400">
+        <span className="inline-flex items-center gap-1.5">
+          <Clock3 className="h-3.5 w-3.5" />
+          {new Date(snapshot.createdAt).toLocaleString()}
+        </span>
+        <span>{changedSectionCount} {changedSectionCount === 1 ? 'section' : 'sections'} changed</span>
+        {hasActiveSectionDiff && (
+          <span className="text-sky-600 dark:text-sky-400">Includes active section</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface DiffSectionProps {
+  entry: SnapshotDiffEntry;
+  snapshot: CharacterSnapshot;
+  isActive: boolean;
+  isCollapsed: boolean;
+  isBusy: boolean;
+  onToggle: () => void;
+  onRestore: () => void;
+}
+
+function DiffSection({
+  entry,
+  isActive,
+  isCollapsed,
+  isBusy,
+  onToggle,
+  onRestore,
+}: DiffSectionProps): React.ReactElement {
+  return (
+    <div className="border-t border-vault-200 pt-4 first:border-t-0 first:pt-0 dark:border-vault-800">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center gap-3 text-left"
+      >
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-vault-500 transition-transform ${
+            isCollapsed ? '-rotate-90' : 'rotate-0'
+          }`}
+        />
+        <span className="flex-1 text-base font-semibold text-vault-950 dark:text-vault-50">{entry.label}</span>
+        {isActive && (
+          <span className="inline-flex shrink-0 items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800 dark:bg-sky-950/50 dark:text-sky-200">
+            Active
+          </span>
+        )}
+      </button>
+
+      {!isCollapsed && (
+        <div className="mt-3 pl-7">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm text-vault-500 dark:text-vault-400">Compare revision vs. current draft</p>
+            <button
+              type="button"
+              onClick={onRestore}
+              disabled={isBusy}
+              className="inline-flex items-center gap-2 rounded-lg border border-vault-300 px-3 py-1.5 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Restore section
+            </button>
+          </div>
+          <SectionPreview entry={entry} />
+        </div>
+      )}
     </div>
   );
 }
@@ -791,75 +882,65 @@ export function CharacterHistoryModal({
       onClick={requestClose}
     >
       <div
-        className={`relative flex h-dvh w-full flex-col overflow-hidden bg-white transition-all duration-200 dark:bg-vault-950 sm:h-[min(88vh,860px)] sm:max-w-7xl sm:rounded-4xl sm:border sm:border-vault-200 sm:shadow-2xl dark:sm:border-vault-800 ${
+        className={`relative flex h-dvh w-full flex-col overflow-hidden bg-white transition-all duration-200 dark:bg-vault-950 sm:h-[min(88vh,860px)] sm:max-w-7xl sm:rounded-2xl sm:border sm:border-vault-200 sm:shadow-2xl dark:sm:border-vault-800 ${
           isClosing ? 'translate-y-3 opacity-0 sm:translate-y-0 sm:scale-[0.98]' : 'translate-y-0 opacity-100 sm:scale-100'
         }`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-vault-200 bg-white/90 px-4 py-4 backdrop-blur-xl dark:border-vault-800 dark:bg-vault-950/90 sm:px-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-vault-500 dark:text-vault-400">Revisions</p>
-              <div className="mt-2 flex items-center gap-3">
-                <div className="rounded-2xl bg-vault-100 p-3 text-vault-700 dark:bg-vault-800 dark:text-vault-100">
-                  <History className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="text-xl font-semibold text-vault-950 dark:text-vault-50">Revision history</h2>
-                  <p className="text-sm text-vault-500 dark:text-vault-400">{currentCharacter.name}</p>
-                </div>
-              </div>
-            </div>
+        {/* Header - Flattened */}
+        <div className="flex items-center justify-between gap-4 border-b border-vault-200 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-vault-800 dark:bg-vault-950/90 sm:px-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">Revisions</p>
+            <h2 className="text-lg font-semibold text-vault-950 dark:text-vault-50">{currentCharacter.name}</h2>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void handleCreateSnapshot()}
-                disabled={isBusy}
-                className="inline-flex items-center gap-2 rounded-xl bg-vault-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
-              >
-                {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                Save revision
-              </button>
-              <button
-                type="button"
-                onClick={requestClose}
-                disabled={isBusy}
-                className="rounded-xl border border-vault-300 p-2 text-vault-500 transition-colors hover:bg-vault-100 hover:text-vault-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-400 dark:hover:bg-vault-800 dark:hover:text-vault-100"
-                title="Close revisions"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleCreateSnapshot()}
+              disabled={isBusy}
+              className="inline-flex items-center gap-2 rounded-lg bg-vault-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
+            >
+              {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              Save revision
+            </button>
+            <button
+              type="button"
+              onClick={requestClose}
+              disabled={isBusy}
+              className="rounded-lg border border-vault-300 p-2 text-vault-500 transition-colors hover:bg-vault-100 hover:text-vault-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-400 dark:hover:bg-vault-800 dark:hover:text-vault-100"
+              title="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-          <aside className="hidden min-h-0 w-full max-w-sm shrink-0 border-r border-vault-200 bg-vault-50/80 dark:border-vault-800 dark:bg-vault-950/70 md:flex md:flex-col">
-            <div className="border-b border-vault-200 px-5 py-4 dark:border-vault-800">
-              <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">{snapshots.length} saved revisions</p>
-              <p className="mt-1 text-sm text-vault-500 dark:text-vault-400">Browse a timeline of save points before restoring anything.</p>
+          {/* Sidebar - Flattened */}
+          <aside className="hidden min-h-0 w-full max-w-xs shrink-0 border-r border-vault-200 bg-vault-50/50 dark:border-vault-800 dark:bg-vault-950/50 md:flex md:flex-col">
+            <div className="flex items-center justify-between border-b border-vault-200 px-4 py-2.5 dark:border-vault-800">
+              <span className="text-sm font-medium text-vault-900 dark:text-vault-100">{snapshots.length} revisions</span>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-3">
               {isSnapshotsLoading && snapshots.length === 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {[0, 1, 2].map(index => (
                     <div
                       key={`timeline-skeleton-${index}`}
-                      className="animate-pulse rounded-2xl border border-vault-200 bg-white/80 p-4 dark:border-vault-800 dark:bg-vault-900/60"
+                      className="animate-pulse rounded-xl border border-vault-200 bg-white p-3 dark:border-vault-800 dark:bg-vault-900/60"
                     >
-                      <div className="h-4 w-24 rounded bg-vault-200 dark:bg-vault-700" />
-                      <div className="mt-4 h-3 w-full rounded bg-vault-150 dark:bg-vault-800" />
-                      <div className="mt-2 h-3 w-32 rounded bg-vault-150 dark:bg-vault-800" />
+                      <div className="h-3.5 w-20 rounded bg-vault-200 dark:bg-vault-700" />
+                      <div className="mt-2 h-2.5 w-full rounded bg-vault-150 dark:bg-vault-800" />
                     </div>
                   ))}
                 </div>
               ) : snapshots.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-vault-300 bg-white/80 p-6 text-sm text-vault-500 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-400">
+                <div className="rounded-xl border border-dashed border-vault-300 bg-white/80 p-4 text-center text-sm text-vault-500 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-400">
                   No revisions available yet.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {snapshots.map(snapshot => (
                     <TimelineCard
                       key={snapshot.id}
@@ -876,12 +957,9 @@ export function CharacterHistoryModal({
             </div>
           </aside>
 
+          {/* Main content */}
           <section className="flex min-h-0 flex-1 flex-col">
-            <div className="border-b border-vault-200 px-4 py-4 dark:border-vault-800 sm:px-6 md:hidden">
-              <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">{snapshots.length} saved revisions</p>
-              <p className="mt-1 text-sm text-vault-500 dark:text-vault-400">Select a revision, review the change summary, then restore with confidence.</p>
-            </div>
-
+            {/* Mobile scroller - no header duplication */}
             {isSnapshotsLoading && snapshots.length === 0 ? null : snapshots.length > 0 ? (
               <MobileRevisionScroller
                 snapshots={snapshots}
@@ -895,130 +973,42 @@ export function CharacterHistoryModal({
 
             <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4 sm:px-6">
               {!selectedSnapshot ? (
-                <div className="flex min-h-full items-center justify-center rounded-4xl border border-dashed border-vault-300 bg-vault-50/70 p-8 text-center dark:border-vault-700 dark:bg-vault-900/40">
+                <div className="flex min-h-full items-center justify-center rounded-2xl border border-dashed border-vault-300 bg-vault-50/50 p-8 text-center dark:border-vault-700 dark:bg-vault-900/40">
                   <div className="max-w-md">
                     <h3 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Select a revision</h3>
-                    <p className="mt-2 text-sm leading-6 text-vault-500 dark:text-vault-400">
+                    <p className="mt-1 text-sm text-vault-500 dark:text-vault-400">
                       Choose a save point from the timeline to review changes against your current draft.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="rounded-4xl border border-vault-200 bg-linear-to-br from-white via-white to-vault-50/70 p-5 dark:border-vault-800 dark:from-vault-950 dark:via-vault-950 dark:to-vault-900/60">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0">
-                        <SnapshotSourceBadge snapshot={selectedSnapshot} />
-                        <h3 className="mt-3 text-2xl font-semibold text-vault-950 dark:text-vault-50">{formatSnapshotLabel(selectedSnapshot)}</h3>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-vault-600 dark:text-vault-300">
-                          {formatSnapshotDescription(selectedSnapshot)}
-                        </p>
-                      </div>
-
-                      <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[18rem]">
-                        <div className="rounded-2xl border border-vault-200 bg-white/80 px-4 py-3 dark:border-vault-800 dark:bg-vault-950/80">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-vault-500 dark:text-vault-400">Saved at</p>
-                          <p className="mt-2 text-sm font-medium text-vault-900 dark:text-vault-100">
-                            {new Date(selectedSnapshot.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="rounded-2xl border border-vault-200 bg-white/80 px-4 py-3 dark:border-vault-800 dark:bg-vault-950/80">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-vault-500 dark:text-vault-400">Changed sections</p>
-                          <p className="mt-2 text-sm font-medium text-vault-900 dark:text-vault-100">{changedSectionCount}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex flex-col gap-3 border-t border-vault-200 pt-4 dark:border-vault-800 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex flex-wrap gap-2">
-                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                          changedSectionCount > 0
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200'
-                            : 'bg-vault-100 text-vault-700 dark:bg-vault-800 dark:text-vault-300'
-                        }`}>
-                          {changedSectionCount > 0 ? 'Different from current draft' : 'Matches current draft'}
-                        </span>
-                        {hasActiveSectionDiff ? (
-                          <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-800 dark:bg-sky-950/50 dark:text-sky-200">
-                            Includes your active editor section
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setConfirmAction({ kind: 'restore-whole', snapshot: selectedSnapshot })}
-                        disabled={isBusy || changedSectionCount === 0}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-vault-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                        Restore card
-                      </button>
-                    </div>
-                  </div>
+                <div className="space-y-6">
+                  {/* Snapshot summary - Flattened, no card wrapper */}
+                  <SnapshotSummary
+                    snapshot={selectedSnapshot}
+                    changedSectionCount={changedSectionCount}
+                    hasActiveSectionDiff={hasActiveSectionDiff}
+                    isBusy={isBusy}
+                    onRestore={() => setConfirmAction({ kind: 'restore-whole', snapshot: selectedSnapshot })}
+                  />
 
                   {changedSectionCount === 0 ? (
-                    <div className="rounded-4xl border border-vault-200 bg-white/80 p-6 dark:border-vault-800 dark:bg-vault-950/60">
-                      <p className="text-sm text-vault-500 dark:text-vault-400">
-                        This revision already matches the current draft. No restore action is needed.
-                      </p>
-                    </div>
+                    <p className="text-sm text-vault-500 dark:text-vault-400">
+                      This revision already matches the current draft. No restore action is needed.
+                    </p>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-0">
                       {diffEntries.map(entry => (
-                        <div
+                        <DiffSection
                           key={entry.section}
-                          className="rounded-4xl border border-vault-200 bg-white/85 p-4 shadow-sm dark:border-vault-800 dark:bg-vault-950/55 sm:p-5"
-                        >
-                          <div className="flex flex-col gap-3 border-b border-vault-200 pb-4 dark:border-vault-800 sm:flex-row sm:items-start sm:justify-between">
-                            <button
-                              type="button"
-                              onClick={() => toggleSectionCollapsed(entry.section)}
-                              className="min-w-0 flex-1 text-left"
-                            >
-                              <div className="flex items-start gap-3">
-                                <ChevronDown
-                                  className={`mt-1 h-4 w-4 shrink-0 text-vault-500 transition-transform ${
-                                    collapsedSections[entry.section] ? '-rotate-90' : 'rotate-0'
-                                  }`}
-                                />
-                                <div className="min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <h4 className="text-lg font-semibold text-vault-950 dark:text-vault-50">{entry.label}</h4>
-                                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                                      entry.section === activeSection
-                                        ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200'
-                                        : 'bg-vault-100 text-vault-700 dark:bg-vault-800 dark:text-vault-300'
-                                    }`}>
-                                      {entry.section === activeSection ? 'Active section' : 'Changed section'}
-                                    </span>
-                                    <span className="inline-flex items-center rounded-full bg-vault-100 px-2.5 py-1 text-[11px] font-semibold text-vault-600 dark:bg-vault-800 dark:text-vault-300">
-                                      {collapsedSections[entry.section] ? 'Collapsed' : 'Expanded'}
-                                    </span>
-                                  </div>
-                                  <p className="mt-2 text-sm leading-6 text-vault-500 dark:text-vault-400">
-                                    Review this section against the current draft, then restore only this area if needed.
-                                  </p>
-                                </div>
-                              </div>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmAction({ kind: 'restore-section', snapshot: selectedSnapshot, entry })}
-                              disabled={isBusy}
-                              className="inline-flex items-center justify-center gap-2 rounded-xl border border-vault-300 px-4 py-2 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                              Restore section
-                            </button>
-                          </div>
-
-                          {!collapsedSections[entry.section] ? (
-                            <div className="mt-4">
-                              <SectionPreview entry={entry} />
-                            </div>
-                          ) : null}
-                        </div>
+                          entry={entry}
+                          snapshot={selectedSnapshot}
+                          isActive={entry.section === activeSection}
+                          isCollapsed={!!collapsedSections[entry.section]}
+                          isBusy={isBusy}
+                          onToggle={() => toggleSectionCollapsed(entry.section)}
+                          onRestore={() => setConfirmAction({ kind: 'restore-section', snapshot: selectedSnapshot, entry })}
+                        />
                       ))}
                     </div>
                   )}
