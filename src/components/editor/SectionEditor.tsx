@@ -253,10 +253,6 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
       {isCreatorNotesSection && isSplitPreviewOpen ? (
         <div className="flex-1 min-h-0 grid gap-4 lg:grid-cols-2">
           <div className="min-h-0 overflow-hidden rounded-xl border border-vault-200 bg-vault-950 shadow-inner dark:border-vault-700">
-            <div className="flex items-center justify-between border-b border-vault-200/80 bg-vault-900/80 px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-vault-200 dark:border-vault-700">
-              <span>Rendered Preview</span>
-              <span className="text-[11px] tracking-[0.12em] text-vault-400">Sandboxed</span>
-            </div>
             <CreatorNotesPreviewPane
               content={livePreviewValue}
               className="h-[calc(100%-41px)]"
