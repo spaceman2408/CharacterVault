@@ -144,6 +144,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     aiReasoning?: string;
     currentOperation?: AIOperation | null;
     error?: string | null;
+    instructPrompt?: string | null;
   }) => void) | null>(null);
   const aiServiceRef = useRef<AIService | null>(null);
 
@@ -157,6 +158,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const streamingReasoningRef = useRef('');
   const aiReasoningRef = useRef('');
   const errorRef = useRef<string | null>(null);
+  const lastInstructPromptRef = useRef<string | null>(null);
   const [selection, setSelection] = useState<{ from: number; to: number; text: string } | null>(null);
 
   // Use refs to avoid closure issues with callbacks
@@ -270,6 +272,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     streamingReasoningRef.current = '';
     aiReasoningRef.current = '';
     errorRef.current = null;
+    // Store the custom prompt for error recovery on instruct operations
+    if (operation === 'instruct' && customPrompt) {
+      lastInstructPromptRef.current = customPrompt;
+    } else {
+      lastInstructPromptRef.current = null;
+    }
     setAiResult(null);
     setCurrentOperation(operation);
     setIsProcessing(true);
@@ -345,6 +353,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       // Update result
       aiResultRef.current = response.content;
       aiReasoningRef.current = response.reasoning || '';
+      lastInstructPromptRef.current = null; // Clear stored prompt on success
       setAiResult(response.content);
       setIsProcessing(false);
       setIsStreaming(false);
@@ -363,6 +372,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         // Clear refs without triggering state updates
         streamingContentRef.current = '';
         streamingReasoningRef.current = '';
+        lastInstructPromptRef.current = null;
         // Clear state
         setIsProcessing(false);
         setIsStreaming(false);
@@ -383,11 +393,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         setIsProcessing(false);
         setIsStreaming(false);
 
-        // Update panel with error
+        // Update panel with error, and pass back the instruct prompt for recovery
         panelUpdateRef.current?.({
           isProcessing: false,
           isStreaming: false,
           error: errorMsg,
+          instructPrompt: currentOperation === 'instruct' ? lastInstructPromptRef.current : null,
         });
       }
     } finally {
@@ -435,6 +446,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     streamingReasoningRef.current = '';
     aiReasoningRef.current = '';
     errorRef.current = null;
+    lastInstructPromptRef.current = null;
     setAiResult(null);
     setCurrentOperation(null);
     setSelection(null);
@@ -455,11 +467,16 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
   // Handle reject - clear AI state
   const reject = useCallback(() => {
+    // Check if this was an instruct operation - recover the prompt
+    const isInstruct = currentOperation === 'instruct';
+    const savedPrompt = isInstruct ? lastInstructPromptRef.current : null;
+
     // Clear streaming refs
     streamingContentRef.current = '';
     streamingReasoningRef.current = '';
     aiReasoningRef.current = '';
     errorRef.current = null;
+    lastInstructPromptRef.current = null;
     // Clear state
     setAiResult(null);
     setCurrentOperation(null);
@@ -468,7 +485,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     setSelection(null);
     setSelectedText('');
 
-    // Clear panel state
+    // Clear panel state (but pass back the instruct prompt for recovery)
     panelUpdateRef.current?.({
       isProcessing: false,
       isStreaming: false,
@@ -478,8 +495,9 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       aiReasoning: '',
       currentOperation: null,
       error: null,
+      instructPrompt: savedPrompt,
     });
-  }, [setSelectedText]);
+  }, [currentOperation, setSelectedText]);
 
   // Handle abort - cancel the current AI request
   const abort = useCallback(() => {

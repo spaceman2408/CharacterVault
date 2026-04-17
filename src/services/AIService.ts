@@ -287,8 +287,17 @@ export class AIService {
   /**
    * Interpolate text and instruction into a prompt template
    * Replaces ${text} and ${instruction} placeholders with actual values
+   * When text is empty, generates a prompt for creating new content
    */
   private interpolateInstructPrompt(template: string, text: string, instruction: string): string {
+    if (!text || text.trim().length === 0) {
+      // Generate a prompt for creating new content
+      return `Please generate text based on the following instruction:
+
+Instruction: ${instruction}
+
+Provide only the generated text without any additional commentary.`;
+    }
     return template
       .replace(/\$\{text\}/g, text)
       .replace(/\$\{instruction\}/g, instruction);

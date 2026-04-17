@@ -34,6 +34,7 @@ export type AIStreamingCallback = (update: {
   aiReasoning?: string;
   currentOperation?: AIOperation | null;
   error?: string | null;
+  instructPrompt?: string | null;
 }) => void;
 
 /**
@@ -64,6 +65,7 @@ interface AIPanelState {
   currentOperation: AIOperation | null;
   error: string | null;
   showReasoning: boolean;
+  instructPrompt: string | null;
 }
 
 /**
@@ -99,6 +101,7 @@ function createToolbarPanel(
     currentOperation: null,
     error: null,
     showReasoning: false,
+    instructPrompt: null,
   };
   
   let currentSampler = sampler;
@@ -282,7 +285,6 @@ function createToolbarPanel(
     e.preventDefault(); // Prevent editor losing focus
   });
   instructBtn.addEventListener('click', () => {
-    if (!hasSelection) return;
     isInstructMode = true;
     updateState();
     instructInput.focus();
@@ -295,11 +297,16 @@ function createToolbarPanel(
   // Handle instruct send
   const sendInstruct = () => {
     const prompt = instructInput.value.trim();
-    if (!prompt || !hasSelection || !currentSelection) return;
+    if (!prompt) return;
 
+    // Store the prompt in state for error recovery
+    state.instructPrompt = prompt;
     isInstructMode = false;
     // Call the action with instruct operation and custom prompt
-    onAction('instruct', selectedText, currentSelection, prompt);
+    // If no selection, pass empty text and use current cursor position
+    const text = hasSelection ? selectedText : '';
+    const selection = currentSelection ?? view.state.selection.main;
+    onAction('instruct', text, selection, prompt);
 
     // Reset UI
     instructInput.value = '';
@@ -858,8 +865,10 @@ function createToolbarPanel(
     } else {
       currentSelection = null;
       selectedText = '';
-      isInstructMode = false;
-      instructInput.value = '';
+      if (!isInstructMode) {
+        // Don't clear instruct mode if we're in it - user can still type their prompt
+        instructInput.value = '';
+      }
       infoText.textContent = 'Select text to use AI';
       infoText.style.color = 'var(--ai-toolbar-text-muted)';
       infoText.classList.remove('warning');
@@ -899,8 +908,14 @@ function createToolbarPanel(
     const pointerEvents = hasSelection ? 'auto' : 'none';
 
     for (const btn of primaryButtons.values()) {
-      btn.style.opacity = opacity;
-      btn.style.pointerEvents = pointerEvents;
+      // Instruct button is always enabled
+      if (btn === instructBtn) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      } else {
+        btn.style.opacity = opacity;
+        btn.style.pointerEvents = pointerEvents;
+      }
     }
 
     for (const btn of polishButtons.values()) {
@@ -923,9 +938,20 @@ function createToolbarPanel(
     if (update.aiReasoning !== undefined) state.aiReasoning = update.aiReasoning;
     if (update.currentOperation !== undefined) state.currentOperation = update.currentOperation;
     if (update.error !== undefined) state.error = update.error;
+    if (update.instructPrompt !== undefined) state.instructPrompt = update.instructPrompt;
 
-    // Update toolbar button visibility when processing state changes
-    if (wasProcessing !== state.isProcessing) {
+    // If there's an error and we have a stored instruct prompt, restore instruct mode
+    let restoredInstructMode = false;
+    if (update.error && state.instructPrompt && state.currentOperation === 'instruct') {
+      isInstructMode = true;
+      instructInput.value = state.instructPrompt;
+      restoredInstructMode = true;
+      // Clear the stored prompt so we don't re-enter instruct mode on subsequent updates
+      state.instructPrompt = null;
+    }
+
+    // Update toolbar button visibility when processing state changes or when we restored instruct mode
+    if (wasProcessing !== state.isProcessing || restoredInstructMode) {
       updateState();
     }
 
