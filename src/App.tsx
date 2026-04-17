@@ -26,6 +26,7 @@ import {
   X,
   HelpCircle
 } from 'lucide-react';
+import { PromoBanner } from './components/PromoBanner';
 
 // --- Utility Components ---
 
@@ -185,6 +186,16 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   const [deleteConfirmState, setDeleteConfirmState] = useState<{ id: string; name: string } | null>(null);
   const [copyConfirmState, setCopyConfirmState] = useState<{ id: string; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Promo banner dismissal state
+  const [isPromoDismissed, setIsPromoDismissed] = useState(() => {
+    return localStorage.getItem('characterVaultPromoDismissed') === 'true';
+  });
+
+  const handlePromoDismiss = () => {
+    localStorage.setItem('characterVaultPromoDismissed', 'true');
+    setIsPromoDismissed(true);
+  };
 
   // Pagination
   const getPageSize = () => (typeof window !== 'undefined' && window.innerWidth < 640 ? 12 : 18);
@@ -525,6 +536,22 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
           </div>
         )}
 
+        {/* Promo Banner - Shows on desktop (fixed left) and mobile (inline below header) */}
+        {!isPromoDismissed && !isLoading && (
+          <>
+            {/* Desktop: Fixed left sidebar */}
+            <div className="hidden lg:block fixed left-4 xl:left-6 top-24 z-40 w-56 xl:w-64">
+              <div className="sticky top-24">
+                <PromoBanner onDismiss={handlePromoDismiss} />
+              </div>
+            </div>
+            {/* Mobile: Inline banner above grid */}
+            <div className="lg:hidden mb-6 px-4 sm:px-6">
+              <PromoBanner onDismiss={handlePromoDismiss} />
+            </div>
+          </>
+        )}
+
         {/* Character Grid */}
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
@@ -542,7 +569,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               {searchQuery ? `No results for "${searchQuery}"` : "Get started by creating a new character or importing a card."}
             </p>
             {!searchQuery && (
-              <button 
+              <button
                 onClick={() => fileInputRef.current?.click()}
                 className="px-6 py-2.5 border border-vault-300 dark:border-vault-700 rounded-xl hover:bg-vault-50 dark:hover:bg-vault-900 transition-colors font-medium"
               >
@@ -565,29 +592,27 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                   ))
                 : visibleCharacters.map((char) => <CharacterCardSkeleton key={char.id} />)}
             </div>
-            {sortedCharacters.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 pb-20">
-                <p className="text-sm text-vault-500 dark:text-vault-400">
-                  Page {safeCurrentPage} of {totalPages}
-                </p>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={safeCurrentPage === 1}
-                    className="px-4 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-400 dark:hover:border-vault-600 hover:shadow-md transition-all text-sm font-medium text-vault-600 dark:text-vault-300 disabled:opacity-50 disabled:hover:border-vault-200 dark:disabled:hover:border-vault-800 disabled:hover:shadow-none"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={safeCurrentPage === totalPages}
-                    className="px-4 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-400 dark:hover:border-vault-600 hover:shadow-md transition-all text-sm font-medium text-vault-600 dark:text-vault-300 disabled:opacity-50 disabled:hover:border-vault-200 dark:disabled:hover:border-vault-800 disabled:hover:shadow-none"
-                  >
-                    Next
-                  </button>
-                </div>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 pb-20">
+              <p className="text-sm text-vault-500 dark:text-vault-400">
+                Page {safeCurrentPage} of {totalPages}
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="px-4 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-400 dark:hover:border-vault-600 hover:shadow-md transition-all text-sm font-medium text-vault-600 dark:text-vault-300 disabled:opacity-50 disabled:hover:border-vault-200 dark:disabled:hover:border-vault-800 disabled:hover:shadow-none"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                  className="px-4 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-400 dark:hover:border-vault-600 hover:shadow-md transition-all text-sm font-medium text-vault-600 dark:text-vault-300 disabled:opacity-50 disabled:hover:border-vault-200 dark:disabled:hover:border-vault-800 disabled:hover:shadow-none"
+                >
+                  Next
+                </button>
               </div>
-            )}
+            </div>
           </>
         )}
       </main>

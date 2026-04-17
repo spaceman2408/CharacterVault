@@ -26,6 +26,7 @@ import {
   Zap,
   Palette,
   ScrollText,
+  ExternalLink,
 } from 'lucide-react';
 import './tutorial.css';
 
@@ -64,6 +65,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       { icon: Upload, label: 'Import Cards', detail: 'Import PNG cards with embedded data or raw JSON character files' },
       { icon: Plus, label: 'Create New', detail: 'Start fresh with a blank character template and build from scratch' },
       { icon: FileText, label: 'V2 & V3 Support', detail: 'Full compatibility with both character card specifications' },
+      { icon: ExternalLink, label: 'SillyTavern Extension', detail: 'Import straight from SillyTavern with the companion extension. Install the extension, export choosing "CharacterVault"' },
     ],
     accentIcon: Upload,
   },
@@ -310,6 +312,39 @@ export function WelcomeTutorial({ onComplete }: WelcomeTutorialProps): React.Rea
                   );
                 })}
               </div>
+
+              {/* SillyTavern integration callout - step 0 only */}
+              {step.id === 0 && (
+                <div className="mt-4 relative flex items-center gap-3 p-3 rounded-xl overflow-hidden big-linear-to-r from-amber-900/80 via-yellow-800/80 to-amber-900/80 dark:from-amber-900/60 dark:via-yellow-700/50 dark:to-amber-900/60 border border-amber-500/30 shadow-[0_0_24px_-4px_rgba(251,191,36,0.3)]">
+                  {/* Golden shimmer sweep */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <div className="absolute inset-0 big-linear-to-r from-transparent via-amber-200/30 to-transparent animate-[golden-shimmer_2s_linear_infinite]" />
+                  </div>
+                  {/* Glow dots */}
+                  <div className="absolute -top-3 -right-3 w-12 h-12 bg-amber-400/20 rounded-full blur-lg pointer-events-none" />
+                  <div className="absolute -bottom-3 -left-3 w-8 h-8 bg-yellow-300/15 rounded-full blur-md pointer-events-none" />
+
+                  <Zap className="relative w-4 h-4 text-amber-300 fill-amber-300 shrink-0 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
+                  <span className="relative text-sm text-amber-50 font-semibold">
+                    Now with SillyTavern integration! Import your cards straight from SillyTavern!
+                  </span>
+                  <a
+                    href="https://github.com/spaceman2408/SillyTavern-CharacterVaultExport"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative shrink-0 ml-auto p-1.5 text-amber-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+
+                  <style>{`
+                    @keyframes golden-shimmer {
+                      0% { transform: translateX(-100%); }
+                      100% { transform: translateX(200%); }
+                    }
+                  `}</style>
+                </div>
+              )}
             </div>
           </div>
 
