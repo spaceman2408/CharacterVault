@@ -5,7 +5,8 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2, ChevronDown, ChevronUp, Book } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Book, Sparkles, Square } from 'lucide-react';
+import { AIService } from '../../services/AIService';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
 import type { CharacterSection, LorebookEntry, CharacterBook } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
@@ -79,7 +80,10 @@ function LorebookEntryCard({
 
   // Local state for keys input to allow typing commas/spaces without immediate parsing
   const [keysInput, setKeysInput] = React.useState(entry.keys.join(', '));
-  
+  const [generatingKeys, setGeneratingKeys] = useState(false);
+  const aiServiceRef = useRef<AIService | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Sync keysInput when entry.keys changes from outside (e.g., initial load)
   // Only update if the actual keys content is different to avoid resetting while typing
   React.useEffect(() => {
@@ -87,6 +91,81 @@ function LorebookEntryCard({
     // Only update if different (to avoid interrupting typing)
     setKeysInput(prev => prev !== newKeysString ? newKeysString : prev);
   }, [entry.keys]);
+
+  // Cleanup timeout and abort on unmount
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      aiServiceRef.current?.abort();
+    };
+  }, []);
+
+  // Abort ongoing generation
+  const handleAbortGeneration = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    aiServiceRef.current?.abort();
+    aiServiceRef.current = null;
+    setGeneratingKeys(false);
+  };
+
+  // Generate trigger keys using AI
+  const handleGenerateKeys = async () => {
+    if (generatingKeys) {
+      handleAbortGeneration();
+      return;
+    }
+    if (!entry.content.trim()) return;
+
+    setGeneratingKeys(true);
+    aiServiceRef.current = new AIService(aiConfig, samplerSettings, promptSettings);
+
+    // 15-second timeout
+    timeoutRef.current = setTimeout(() => {
+      handleAbortGeneration();
+    }, 15000);
+
+    try {
+      const result = await aiServiceRef.current.instructText(
+        entry.content,
+        'Generate 2-5 comma-separated trigger keywords/keys that would cause this lorebook entry to activate. Output ONLY the comma-separated keywords, nothing else.',
+        getContextContent(contextSectionIds)
+      );
+
+      // Clear timeout on success
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
+      const parsedKeys = result.content.split(',').map(k => k.trim()).filter(k => k);
+      if (parsedKeys.length > 0) {
+        // Merge with existing keys, avoiding duplicates
+        const mergedKeys = [...entry.keys];
+        for (const key of parsedKeys) {
+          if (!mergedKeys.some(k => k.toLowerCase() === key.toLowerCase())) {
+            mergedKeys.push(key);
+          }
+        }
+        const newKeysString = mergedKeys.join(', ');
+        setKeysInput(newKeysString);
+        onUpdate({ ...entry, keys: mergedKeys });
+      }
+    } catch {
+      // Silent fail or aborted - user can try again
+    } finally {
+      aiServiceRef.current = null;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      setGeneratingKeys(false);
+    }
+  };
 
   // Form input handlers
   const handleNameChange = (value: string) => onUpdate({ ...entry, name: value });
@@ -182,9 +261,27 @@ function LorebookEntryCard({
 
           {/* Keys Field */}
           <div>
-            <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1.5">
-              Trigger Keys <span className="text-vault-400">(comma-separated)</span>
-            </label>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <label className="text-xs font-medium text-vault-600 dark:text-vault-400">
+                Trigger Keys <span className="text-vault-400">(comma-separated)</span>
+              </label>
+              <button
+                onClick={handleGenerateKeys}
+                disabled={!generatingKeys && !entry.content.trim()}
+                title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
+                className={`p-1 rounded transition-colors ${
+                  generatingKeys
+                    ? 'text-red-400 animate-pulse cursor-pointer hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+                    : 'text-vault-400 hover:text-vault-600 dark:hover:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700 disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
+              >
+                {generatingKeys ? (
+                  <Square className="w-3.5 h-3.5 fill-current" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
             <input
               type="text"
               value={keysInput}
