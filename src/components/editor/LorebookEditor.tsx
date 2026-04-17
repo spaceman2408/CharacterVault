@@ -14,6 +14,7 @@ import {
   Square,
   Settings,
   ChevronDown,
+  ChevronLeft,
 } from 'lucide-react';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
@@ -536,6 +537,7 @@ function LorebookEditorInner({
 
     notifyChange(newEntries, bookName, bookDescription);
     setSelectedEntryIndex(newIndex);
+    setIsMobileViewOpen(true);
   }, [entries, bookName, bookDescription, notifyChange, getNextAvailableId]);
 
   // Handle delete entry
@@ -555,9 +557,17 @@ function LorebookEditorInner({
     }
   }, [entries, selectedEntryIndex, bookName, bookDescription, notifyChange]);
 
-  // Handle select entry
+  const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
+
+  // Handle select entry with mobile view
   const handleSelectEntry = useCallback((index: number) => {
     setSelectedEntryIndex(index);
+    setIsMobileViewOpen(true);
+  }, []);
+
+  // Handle back to list on mobile
+  const handleBackToList = useCallback(() => {
+    setIsMobileViewOpen(false);
   }, []);
 
   // Handle book name/description changes
@@ -570,9 +580,13 @@ function LorebookEditorInner({
   };
 
   return (
-    <div className="h-full flex overflow-hidden">
-      {/* Left Sidebar */}
-      <div className="w-64 shrink-0 border-r border-vault-200 dark:border-vault-700 bg-vault-50/30 dark:bg-vault-800/20 flex flex-col">
+    <div className="h-full flex flex-col md:flex-row overflow-hidden">
+      {/* Left Sidebar - Hidden on mobile when viewing detail */}
+      <div className={`
+        w-full md:w-64 shrink-0 border-r border-vault-200 dark:border-vault-700 
+        bg-vault-50/30 dark:bg-vault-800/20 flex flex-col
+        ${isMobileViewOpen ? 'hidden md:flex' : 'flex'}
+      `}>
         {/* Book Settings Toggle */}
         <div className="shrink-0 border-b border-vault-200 dark:border-vault-700">
           <button
@@ -662,9 +676,20 @@ function LorebookEditorInner({
       </div>
 
       {/* Right Detail Panel */}
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-vault-900">
+      <div className={`
+        flex-1 overflow-y-auto bg-white dark:bg-vault-900
+        ${!isMobileViewOpen ? 'hidden md:block' : 'block'}
+      `}>
         {selectedEntry ? (
-          <div className="p-6">
+          <div className="p-4 md:p-6">
+            {/* Mobile Back Button */}
+            <button
+              onClick={handleBackToList}
+              className="md:hidden mb-4 flex items-center gap-1 text-sm text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back to entries
+            </button>
             <LorebookEntryDetail
               entry={selectedEntry}
               onUpdate={handleEntryUpdate}

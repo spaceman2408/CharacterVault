@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Trash2, MessageSquare } from 'lucide-react';
+import { Plus, Trash2, MessageSquare, ChevronLeft } from 'lucide-react';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
 import type { CharacterSection } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
@@ -165,6 +165,7 @@ export function GreetingsEditor({
 }: GreetingsEditorProps): React.ReactElement {
   const [greetingsList, setGreetingsList] = useState<string[]>(greetings);
   const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(0);
+  const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
 
   // Sync list from persisted state
   useEffect(() => {
@@ -200,6 +201,7 @@ export function GreetingsEditor({
     const newIndex = newList.length - 1;
     setGreetingsList(newList);
     setSelectedGreetingIndex(newIndex);
+    setIsMobileViewOpen(true);
     onChange(newList);
   }, [greetingsList, onChange]);
 
@@ -220,9 +222,15 @@ export function GreetingsEditor({
     }
   }, [greetingsList, selectedGreetingIndex, onChange]);
 
-  // Handle select greeting
+  // Handle select greeting with mobile view
   const handleSelectGreeting = useCallback((index: number) => {
     setSelectedGreetingIndex(index);
+    setIsMobileViewOpen(true);
+  }, []);
+
+  // Handle back to list on mobile
+  const handleBackToList = useCallback(() => {
+    setIsMobileViewOpen(false);
   }, []);
 
   // Ensure selected index is valid
@@ -230,9 +238,13 @@ export function GreetingsEditor({
   const selectedGreeting = greetingsList[safeSelectedIndex];
 
   return (
-    <div className="h-full flex overflow-hidden">
-      {/* Left Sidebar */}
-      <div className="w-64 shrink-0 border-r border-vault-200 dark:border-vault-700 bg-vault-50/30 dark:bg-vault-800/20 flex flex-col">
+    <div className="h-full flex flex-col md:flex-row overflow-hidden">
+      {/* Left Sidebar - Hidden on mobile when viewing detail */}
+      <div className={`
+        w-full md:w-64 shrink-0 border-r border-vault-200 dark:border-vault-700 
+        bg-vault-50/30 dark:bg-vault-800/20 flex flex-col
+        ${isMobileViewOpen ? 'hidden md:flex' : 'flex'}
+      `}>
         {/* Header */}
         <div className="shrink-0 px-3 py-2.5 border-b border-vault-200 dark:border-vault-700">
           <div className="flex items-center gap-2">
@@ -281,9 +293,20 @@ export function GreetingsEditor({
       </div>
 
       {/* Right Detail Panel */}
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-vault-900">
+      <div className={`
+        flex-1 overflow-y-auto bg-white dark:bg-vault-900
+        ${!isMobileViewOpen ? 'hidden md:block' : 'block'}
+      `}>
         {selectedGreeting !== undefined ? (
-          <div className="p-6">
+          <div className="p-4 md:p-6">
+            {/* Mobile Back Button */}
+            <button
+              onClick={handleBackToList}
+              className="md:hidden mb-4 flex items-center gap-1 text-sm text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back to greetings
+            </button>
             <GreetingDetail
               greeting={selectedGreeting}
               onImmediateUpdate={(value) => handleGreetingImmediateUpdate(safeSelectedIndex, value)}
