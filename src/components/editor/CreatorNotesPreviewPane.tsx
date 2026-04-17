@@ -8,6 +8,7 @@ import React from 'react';
 interface CreatorNotesPreviewPaneProps {
   content: string;
   className?: string;
+  style?: React.CSSProperties;
   frameClassName?: string;
   emptyClassName?: string;
 }
@@ -45,7 +46,6 @@ function buildCreatorNotesPreviewDoc(content: string): string {
       html,
       body {
         margin: 0;
-        min-height: 100%;
         background:
           radial-gradient(circle at top, rgba(71, 85, 105, 0.2), transparent 42%),
           linear-gradient(180deg, #0f172a 0%, #111827 100%);
@@ -73,7 +73,7 @@ function buildCreatorNotesPreviewDoc(content: string): string {
 
 export function CreatorNotesPreviewPane({
   content,
-  className = '',
+  style,
   frameClassName = '',
   emptyClassName = '',
 }: CreatorNotesPreviewPaneProps): React.ReactElement {
@@ -88,14 +88,13 @@ export function CreatorNotesPreviewPane({
   }
 
   return (
-    <div className={className}>
-      <iframe
-        title="Creator Notes Preview"
-        sandbox=""
-        srcDoc={previewDocument}
-        className={frameClassName}
-      />
-    </div>
+    <iframe
+      title="Creator Notes Preview"
+      sandbox=""
+      srcDoc={previewDocument}
+      className={frameClassName}
+      style={style}
+    />
   );
 }
 
