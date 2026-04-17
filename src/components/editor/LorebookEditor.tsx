@@ -9,6 +9,7 @@ import { Plus, Trash2, ChevronDown, ChevronUp, Book } from 'lucide-react';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
 import type { CharacterSection, LorebookEntry, CharacterBook } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
+import { estimateTokens } from '../../services/AIService';
 
 interface LorebookEditorProps {
   lorebook: CharacterBook | undefined;
@@ -126,6 +127,9 @@ function LorebookEntryCard({
           </span>
           <span className="text-xs text-vault-500 dark:text-vault-400 shrink-0">
             ({entry.keys.length} keys)
+          </span>
+          <span className="text-xs text-vault-500 dark:text-vault-400 shrink-0">
+            Tokens: {estimateTokens(entry.content)}
           </span>
           <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
             entry.enabled
