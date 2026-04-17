@@ -532,7 +532,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
             maxHeight: maxHeight ?? '100%',
             overflowY: 'auto',
             overflowX: 'hidden',
-            overscrollBehaviorY: 'contain',
+            overscrollBehaviorY: 'auto',
             WebkitOverflowScrolling: 'touch',
             touchAction: 'pan-y',
           },
@@ -636,6 +636,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         window.clearTimeout(persistTimeoutRef.current);
         persistTimeoutRef.current = null;
       }
+
       view.destroy();
       viewRef.current = null;
       panelUpdateRef.current = null;
