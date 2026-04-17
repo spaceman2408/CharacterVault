@@ -95,12 +95,12 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 4,
-    title: 'Zoggy & Export',
+    title: 'Orion & Export',
     subtitle: 'Chat with your AI assistant — and ship your cards',
     description:
-      'Zoggy is CharacterVault\'s built-in chat assistant. Add sections to the AI Context panel so Zoggy can read your card and give tailored advice. When you\'re done, export as PNG with embedded data or raw JSON.',
+      'Orion is CharacterVault\'s built-in chat assistant. Add sections to the AI Context panel so Orion can read your card and give tailored advice. When you\'re done, export as PNG with embedded data or raw JSON.',
     features: [
-      { icon: MessageCircle, label: 'Ask Zoggy', detail: 'Chat about best practices, get help writing sections, or brainstorm character ideas' },
+      { icon: MessageCircle, label: 'Ask Orion', detail: 'Chat about best practices, get help writing sections, or brainstorm character ideas' },
       { icon: ScrollText, label: 'AI Context', detail: 'Pin card sections to context so the AI has full awareness of your character' },
       { icon: Download, label: 'Export', detail: 'Save as a PNG with embedded card data, or export the raw JSON file' },
     ],

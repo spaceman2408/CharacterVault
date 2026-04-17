@@ -31,7 +31,7 @@
 - **Character Library** — All your characters in one beautiful grid view with quick search and sorting.
 - **Card Editor** — Edit every essential part of your character: name, description, personality, scenario, greetings, and more.
 - **Lorebook/World Info Support** — Add lore entries with keywords that trigger during conversations.
-- **AI Assistant Zoggy** — Built-in AI chat to help you write and brainstorm character details.
+- **AI Assistant Orion** — Built-in AI chat to help you write and brainstorm character details.
 - **Context Panel** — Choose which character sections to include when chatting with the AI.
 - **AI Tools** — Use AI to enhance and rephrase your text, apply stylistic filters, and more.
 - **Image Support** — Upload and manage character avatar images or change existing ones.
@@ -134,7 +134,7 @@ The AI panel on the right is your creative partner:
 2. Ask questions or request help in the **Ask AI** panel on the right.
 3. The AI will use your selected character sections as context.
 
-> I named the AI Assistant "Zoggy" after a craft lager brand.
+> I named the AI Assistant "Orion" after a craft lager brand.
 
 ---
 

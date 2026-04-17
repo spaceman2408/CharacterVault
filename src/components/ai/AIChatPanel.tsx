@@ -184,7 +184,7 @@ export function AIChatPanel({
         <div className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-vault-600 dark:text-vault-400" />
           <h2 className="font-semibold text-vault-900 dark:text-vault-100">
-            Ask Zoggy
+            Ask Orion
           </h2>
         </div>
         <div className="flex items-center gap-1">
@@ -232,7 +232,7 @@ export function AIChatPanel({
           {chatHistory.length === 0 && (
             <div className="text-center py-8 text-vault-400 dark:text-vault-500">
               <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">Hi, I'm Zoggy!</p>
+              <p className="text-sm">Hi, I'm Orion!</p>
               <p className="text-xs mt-1">Ask me anything about your character card, or just chat with me! Don't forget to add your context!</p>
             </div>
           )}
