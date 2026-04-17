@@ -9,7 +9,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * Return interface for the useTypewriter hook
  */
 export interface UseTypewriterReturn {
-  // State
+  // State (for React JSX consumption)
   displayedContent: string;
   displayedReasoning: string;
   isTyping: boolean;
@@ -22,9 +22,6 @@ export interface UseTypewriterReturn {
   startStreaming: () => void;
   stopStreaming: () => void;
   flushQueues: () => void;
-  // Raw content (for final message)
-  streamingContent: string;
-  streamingReasoning: string;
 }
 
 /**
@@ -68,8 +65,10 @@ export function useTypewriter(): UseTypewriterReturn {
   const [isTyping, setIsTyping] = useState(false);
   const [isReasoningComplete, setIsReasoningComplete] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingContent, setStreamingContent] = useState('');
-  const [streamingReasoning, setStreamingReasoning] = useState('');
+  // Use refs for raw streaming buffers to avoid re-render thrashing
+  // (these are exposed for debugging but not consumed by JSX)
+  const streamingContentRef = useRef('');
+  const streamingReasoningRef = useRef('');
 
   // Use refs to track queues for synchronous access within interval
   const contentQueueRef = useRef<string[]>([]);
@@ -160,7 +159,8 @@ export function useTypewriter(): UseTypewriterReturn {
     const newQueue = [...contentQueueRef.current, chunk];
     contentQueueRef.current = newQueue;
     setContentChunkQueue(newQueue);
-    setStreamingContent(prev => prev + chunk);
+    // Update ref instead of state to avoid re-render thrashing
+    streamingContentRef.current += chunk;
   }, []);
 
   /**
@@ -170,7 +170,8 @@ export function useTypewriter(): UseTypewriterReturn {
     const newQueue = [...reasoningQueueRef.current, chunk];
     reasoningQueueRef.current = newQueue;
     setReasoningChunkQueue(newQueue);
-    setStreamingReasoning(prev => prev + chunk);
+    // Update ref instead of state to avoid re-render thrashing
+    streamingReasoningRef.current += chunk;
   }, []);
 
   /**
@@ -191,13 +192,13 @@ export function useTypewriter(): UseTypewriterReturn {
     setContentChunkQueue([]);
     setReasoningChunkQueue([]);
     setIsReasoningComplete(false);
-    setStreamingContent('');
-    setStreamingReasoning('');
     setIsTyping(false);
-    // Reset refs as well
+    // Reset refs as well (including streaming buffers)
     contentQueueRef.current = [];
     reasoningQueueRef.current = [];
     isReasoningCompleteRef.current = false;
+    streamingContentRef.current = '';
+    streamingReasoningRef.current = '';
     // Start streaming
     setIsStreaming(true);
   }, []);
@@ -214,11 +215,7 @@ export function useTypewriter(): UseTypewriterReturn {
    */
   const flushQueues = useCallback(() => {
     // Mark reasoning as complete when flushing (if there was reasoning)
-    const currentDisplayedReasoning = displayedReasoning;
-    const currentStreamingContent = streamingContent;
-    const currentStreamingReasoning = streamingReasoning;
-
-    if (currentDisplayedReasoning || reasoningQueueRef.current.length > 0) {
+    if (displayedReasoning || reasoningQueueRef.current.length > 0) {
       isReasoningCompleteRef.current = true;
       setIsReasoningComplete(true);
     }
@@ -238,15 +235,15 @@ export function useTypewriter(): UseTypewriterReturn {
       setContentChunkQueue([]);
     }
 
-    // Ensure displayed content is at least as complete as streaming content
-    setDisplayedContent(prev => prev.length < currentStreamingContent.length ? currentStreamingContent : prev);
-    setDisplayedReasoning(prev => prev.length < currentStreamingReasoning.length ? currentStreamingReasoning : prev);
+    // Ensure displayed content is at least as complete as streaming content (using refs to avoid stale closures)
+    setDisplayedContent(prev => prev.length < streamingContentRef.current.length ? streamingContentRef.current : prev);
+    setDisplayedReasoning(prev => prev.length < streamingReasoningRef.current.length ? streamingReasoningRef.current : prev);
 
     setIsTyping(false);
-  }, [displayedReasoning, streamingContent, streamingReasoning]);
+  }, [displayedReasoning]); // Only depend on displayedReasoning for the initial check
 
   return {
-    // State
+    // State (for React JSX consumption)
     displayedContent,
     displayedReasoning,
     isTyping,
@@ -259,9 +256,6 @@ export function useTypewriter(): UseTypewriterReturn {
     startStreaming,
     stopStreaming,
     flushQueues,
-    // Raw content
-    streamingContent,
-    streamingReasoning,
   };
 }
 
