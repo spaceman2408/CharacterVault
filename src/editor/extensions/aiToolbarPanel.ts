@@ -153,6 +153,7 @@ function createToolbarPanel(
   let currentSelection: SelectionRange | null = null;
   let selectedText = '';
   let isInstructMode = false;
+  let hasSamplerError = false;
 
   // Create button helper
   function createButton(
@@ -848,6 +849,7 @@ function createToolbarPanel(
         infoText.style.color = 'var(--ai-toolbar-error-text, #ef4444)';
         infoText.classList.add('warning');
         hasSelection = false;
+        hasSamplerError = true;
       } else if (estimatedTokens > limit) {
         if (limit <= 0) {
           infoText.textContent = `⚠️ AI needs a larger context window`;
@@ -857,10 +859,12 @@ function createToolbarPanel(
         infoText.style.color = 'var(--ai-toolbar-error-text, #ef4444)';
         infoText.classList.add('warning');
         hasSelection = false; // Disable buttons
+        hasSamplerError = true;
       } else {
         infoText.textContent = `${charCount} chars selected`;
         infoText.style.color = 'var(--ai-toolbar-text-muted)';
         infoText.classList.remove('warning');
+        hasSamplerError = false;
       }
     } else {
       currentSelection = null;
@@ -869,9 +873,12 @@ function createToolbarPanel(
         // Don't clear instruct mode if we're in it - user can still type their prompt
         instructInput.value = '';
       }
-      infoText.textContent = 'Select text to use AI';
-      infoText.style.color = 'var(--ai-toolbar-text-muted)';
-      infoText.classList.remove('warning');
+      // Keep sampler error state - it applies regardless of selection
+      if (!hasSamplerError) {
+        infoText.textContent = 'Select text to use AI, or use Custom to generate';
+        infoText.style.color = 'var(--ai-toolbar-text-muted)';
+        infoText.classList.remove('warning');
+      }
       dropdown.style.display = 'none';
     }
 
@@ -904,14 +911,21 @@ function createToolbarPanel(
     searchBtn.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
 
     // Update all buttons
-    const opacity = hasSelection ? '1' : '0.5';
-    const pointerEvents = hasSelection ? 'auto' : 'none';
+    // When there's a sampler error, all buttons are disabled including Custom
+    // When no sampler error, Custom is always available but other buttons need selection
+    const opacity = hasSamplerError ? '0.5' : (hasSelection ? '1' : '0.5');
+    const pointerEvents = hasSamplerError ? 'none' : (hasSelection ? 'auto' : 'none');
 
     for (const btn of primaryButtons.values()) {
-      // Instruct button is always enabled
+      // Instruct button is always enabled unless there's a sampler error
       if (btn === instructBtn) {
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = 'auto';
+        if (hasSamplerError) {
+          btn.style.opacity = '0.5';
+          btn.style.pointerEvents = 'none';
+        } else {
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+        }
       } else {
         btn.style.opacity = opacity;
         btn.style.pointerEvents = pointerEvents;
