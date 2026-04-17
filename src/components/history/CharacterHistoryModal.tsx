@@ -262,21 +262,21 @@ function HighlightedText({
       {previewLines.length > 0 ? previewLines.map((line) => (
         <div
           key={line.key}
-          className={`break-words rounded px-1.5 py-0.5 text-sm leading-6 text-vault-700 dark:text-vault-200 ${
+          className={`wrap-break-words rounded px-1.5 py-0.5 text-sm leading-6 text-vault-700 dark:text-vault-200 ${
             line.changed ? 'bg-vault-100/80 dark:bg-vault-800/60' : ''
           }`}
         >
           {line.segments.length > 0 ? line.segments.map((segment, segmentIndex) => (
             <span
               key={`${line.key}-${segmentIndex}`}
-              className={segment.changed ? `break-words rounded px-0.5 ${changedToneClassName}` : undefined}
+              className={segment.changed ? `wrap-break-words rounded px-0.5 ${changedToneClassName}` : undefined}
             >
               {segment.text || ' '}
             </span>
           )) : line.value ? (
-            <span className="break-words">{line.value}</span>
+            <span className="wrap-break-words">{line.value}</span>
           ) : (
-            <span className={`break-words rounded px-0.5 ${changedToneClassName}`}>{line.compareValue || ' '}</span>
+            <span className={`wrap-break-words rounded px-0.5 ${changedToneClassName}`}>{line.compareValue || ' '}</span>
           )}
         </div>
       )) : (
