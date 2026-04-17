@@ -688,7 +688,18 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
  */
 function AppContent(): React.ReactElement {
   const { isCharacterOpen, openCharacter } = useCharacterContext();
-  const [showTutorial, setShowTutorial] = useState(() => !(WelcomeTutorial.isCompleted?.() ?? false));
+  const [isReady, setIsReady] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [isInitialTutorial, setIsInitialTutorial] = useState(false);
+
+  // Check tutorial state on mount to prevent app from showing first
+  useEffect(() => {
+    const completed = WelcomeTutorial.isCompleted?.() ?? false;
+    const shouldShow = !completed;
+    setShowTutorial(shouldShow);
+    setIsInitialTutorial(shouldShow); // Only true for the initial check
+    setIsReady(true);
+  }, []);
 
   // Handle opening character when redirected from import page via query param
   // Note: With HashRouter, query params are in window.location.hash (after #/)
@@ -714,12 +725,23 @@ function AppContent(): React.ReactElement {
 
   const handleReplayTutorial = useCallback(() => {
     WelcomeTutorial.reset?.();
+    setIsInitialTutorial(false); // Replays should show entrance animation
     setShowTutorial(true);
   }, []);
 
+  // Don't render anything until we've checked tutorial state
+  if (!isReady) {
+    return null;
+  }
+
   return (
     <>
-      {showTutorial && <WelcomeTutorial onComplete={handleTutorialComplete} />}
+      {showTutorial && (
+        <WelcomeTutorial 
+          onComplete={handleTutorialComplete} 
+          skipEntranceAnimation={isInitialTutorial}
+        />
+      )}
       {isCharacterOpen ? <CharacterWorkspace /> : <CharacterSelectionView onReplayTutorial={handleReplayTutorial} />}
     </>
   );

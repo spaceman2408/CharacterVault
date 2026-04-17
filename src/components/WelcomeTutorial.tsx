@@ -129,19 +129,21 @@ const STORAGE_KEY = 'charactervault-tutorial-completed';
 
 interface WelcomeTutorialProps {
   onComplete: () => void;
+  skipEntranceAnimation?: boolean;
 }
 
-export function WelcomeTutorial({ onComplete }: WelcomeTutorialProps): React.ReactElement {
+export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: WelcomeTutorialProps): React.ReactElement {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(skipEntranceAnimation);
 
-  // Entrance animation
+  // Entrance animation (skipped on initial page load to prevent flash)
   useEffect(() => {
+    if (skipEntranceAnimation) return;
     const timer = setTimeout(() => setIsVisible(true), 50);
     return () => clearTimeout(timer);
-  }, []);
+  }, [skipEntranceAnimation]);
 
   const step = TUTORIAL_STEPS[currentStep];
   const isFirst = currentStep === 0;
