@@ -82,8 +82,8 @@ function LorebookEntryListItem({
       className={`
         relative group cursor-pointer p-3 rounded-lg border transition-all duration-150
         ${isSelected
-          ? 'bg-vault-100 dark:bg-vault-700/50 border-vault-500 ring-1 ring-vault-500'
-          : 'bg-white dark:bg-vault-800 border-vault-200 dark:border-vault-700 hover:border-vault-300 dark:hover:border-vault-600 hover:bg-vault-50 dark:hover:bg-vault-750'
+          ? 'bg-vault-200 dark:bg-vault-700 border-vault-500 dark:border-vault-400 ring-1 ring-vault-500 dark:ring-vault-400'
+          : 'bg-white dark:bg-vault-800 border-vault-200 dark:border-vault-700 hover:border-vault-300 dark:hover:border-vault-600 hover:bg-vault-50 dark:hover:bg-vault-700'
         }
       `}
     >
