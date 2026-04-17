@@ -8,6 +8,25 @@ import type { AIConfig, SamplerSettings, AIModelInfo, PromptSettings } from '../
 import { ReasoningParser } from './ReasoningParser';
 
 /**
+ * Bytes per token ratio for token estimation.
+ * Empirically derived: 1 token ≈ 5 bytes (UTF-8)
+ */
+export const BYTES_PER_TOKEN = 5;
+
+/**
+ * Estimate token count for a string.
+ * Uses heuristic: 1 token ≈ 5 bytes (UTF-8)
+ * This handles non-ASCII text (CJK, emoji, etc.) more accurately than character count
+ * @param text - The text to estimate tokens for
+ * @returns Estimated token count
+ */
+export function estimateTokens(text: string): number {
+  if (!text) return 0;
+  const byteLength = new TextEncoder().encode(text).length;
+  return Math.ceil(byteLength / BYTES_PER_TOKEN);
+}
+
+/**
  * Default prompt settings for text operations
  */
 const DEFAULT_PROMPTS: PromptSettings = {
@@ -197,11 +216,10 @@ export class AIService {
 
   /**
    * Estimate token count for a string.
-   * Uses heuristic: 1 token ≈ 4 characters
+   * @deprecated Use estimateTokens() function directly instead
    */
   public static estimateTokens(text: string): number {
-    if (!text) return 0;
-    return Math.ceil(text.length / 4);
+    return estimateTokens(text);
   }
 
   /**

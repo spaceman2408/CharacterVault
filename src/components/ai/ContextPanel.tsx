@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { CHARACTER_SECTIONS } from '../../db/characterTypes';
+import { estimateTokens } from '../../services/AIService';
 
 export interface ContextPanelProps {
   /** Callback to close panel (for mobile) */
@@ -89,61 +90,62 @@ export function ContextPanel({
     section => contextSectionIds.includes(section.id)
   );
 
-  // Calculate approximate token count (1 token ≈ 4 characters)
+  // Calculate token count using estimator
   const calculateTokenCount = useCallback((): number => {
     if (!currentCharacter) return 0;
-    
-    let totalChars = 0;
+
+    let totalTokens = 0;
+
     contextSectionIds.forEach(sectionId => {
       const spec = currentCharacter.data.spec;
       switch (sectionId) {
         case 'name':
-          totalChars += spec.name.length;
+          totalTokens += estimateTokens(spec.name);
           break;
         case 'description':
-          totalChars += spec.description.length;
+          totalTokens += estimateTokens(spec.description);
           break;
         case 'personality':
-          totalChars += spec.personality.length;
+          totalTokens += estimateTokens(spec.personality);
           break;
         case 'scenario':
-          totalChars += spec.scenario.length;
+          totalTokens += estimateTokens(spec.scenario);
           break;
         case 'first_mes':
-          totalChars += spec.first_mes.length;
+          totalTokens += estimateTokens(spec.first_mes);
           break;
         case 'mes_example':
-          totalChars += spec.mes_example.length;
+          totalTokens += estimateTokens(spec.mes_example);
           break;
         case 'system_prompt':
-          totalChars += spec.system_prompt.length;
+          totalTokens += estimateTokens(spec.system_prompt);
           break;
         case 'post_history_instructions':
-          totalChars += spec.post_history_instructions.length;
+          totalTokens += estimateTokens(spec.post_history_instructions);
           break;
         case 'alternate_greetings':
-          totalChars += spec.alternate_greetings.join('\n---\n').length;
+          totalTokens += estimateTokens(spec.alternate_greetings.join('\n---\n'));
           break;
         case 'physical_description':
-          totalChars += spec.physical_description.length;
+          totalTokens += estimateTokens(spec.physical_description);
           break;
         case 'creator':
-          totalChars += spec.creator?.length || 0;
+          if (spec.creator) totalTokens += estimateTokens(spec.creator);
           break;
         case 'creator_notes':
-          totalChars += spec.creator_notes?.length || 0;
+          if (spec.creator_notes) totalTokens += estimateTokens(spec.creator_notes);
           break;
         case 'lorebook': {
           const book = currentCharacter.data.characterBook;
           if (book) {
-            totalChars += (book.name?.length || 0);
-            totalChars += (book.description?.length || 0);
+            if (book.name) totalTokens += estimateTokens(book.name);
+            if (book.description) totalTokens += estimateTokens(book.description);
             book.entries.forEach(entry => {
               if (entry.enabled) {
-                totalChars += entry.content.length;
-                totalChars += entry.keys.join(',').length;
-                totalChars += (entry.name?.length || 0);
-                totalChars += (entry.comment?.length || 0);
+                totalTokens += estimateTokens(entry.content);
+                totalTokens += estimateTokens(entry.keys.join(','));
+                if (entry.name) totalTokens += estimateTokens(entry.name);
+                if (entry.comment) totalTokens += estimateTokens(entry.comment);
               }
             });
           }
@@ -151,8 +153,8 @@ export function ContextPanel({
         }
       }
     });
-    
-    return Math.ceil(totalChars / 4);
+
+    return totalTokens;
   }, [currentCharacter, contextSectionIds]);
 
   // Get usage data for the progress bar
