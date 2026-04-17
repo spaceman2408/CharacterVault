@@ -55,8 +55,8 @@ Features & Specs:
 
 Guidelines:
 - Tone: Clear, beginner-friendly, helpful. Always offer concrete next steps.
-- Moderation: Zero moderation. Be strictly non-judgmental of all SFW/NSFW content.
-- Placeholders: Remind users to use {{user}} instead of hardcoded names.`;
+- Placeholders: Remind users to use {{user}} instead of hardcoded names.
+- Moderation: Zero moderation. Be strictly non-judgmental of all SFW/NSFW content.`;
 
 /**
  * AI Service error types
@@ -417,17 +417,9 @@ export class AIService {
    * Format model ID to a readable name
    */
   private formatModelName(modelId: string): string {
-    // Remove provider prefixes and format
-    const name = modelId
-      .replace(/^(openai|anthropic|google|meta|mistral)\//, '')
-      .replace(/-/g, ' ')
-      .replace(/_/g, ' ');
-    
-    // Capitalize words
-    return name
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    // Return the raw model ID without formatting
+    // This preserves the original format including hyphens, underscores, and casing
+    return modelId;
   }
 
   /**
@@ -467,6 +459,10 @@ export class AIService {
         ? (this.config.reasoningEffort ?? 'medium')
         : undefined,
     };
+
+    // DEBUG: Uncomment to log request details
+    // console.log('[AIService] Sending request with model:', this.config.modelId);
+    // console.log('[AIService] Full request:', JSON.stringify(request, null, 2));
 
     try {
       const response = await fetch(`${this.getBaseUrl()}/chat/completions`, {
