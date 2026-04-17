@@ -407,22 +407,25 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiConfig, samplerSettings, promptSettings, getContextContent, setSelectedText]);
 
-  // Handle accept - replace selected text in editor
+  // Handle accept - replace selected text in editor (or insert at cursor if no selection)
   const accept = useCallback(() => {
     const currentAiResult = aiResultRef.current;
     const currentSelection = selectionRef.current;
     const view = viewRef.current;
 
-    if (!view || !currentAiResult || !currentSelection) return;
+    if (!view || !currentAiResult) return;
 
-    const acceptedFrom = currentSelection.from;
+    // If there's no stored selection (shouldn't happen), use current cursor position
+    const insertFrom = currentSelection?.from ?? view.state.selection.main.from;
+    const insertTo = currentSelection?.to ?? insertFrom;
+    const acceptedFrom = insertFrom;
     const acceptedTo = acceptedFrom + currentAiResult.length;
 
-    // Replace the selected text using the exact CodeMirror positions
+    // Replace the selected text (or insert at position) using the exact CodeMirror positions
     view.dispatch({
       changes: {
-        from: acceptedFrom,
-        to: currentSelection.to,
+        from: insertFrom,
+        to: insertTo,
         insert: currentAiResult,
       },
       selection: { anchor: acceptedFrom, head: acceptedTo },
@@ -598,14 +601,17 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           }
 
           // Track selection changes
-          const sel = update.state.selection.main;
-          if (sel.from !== sel.to) {
-            const text = update.state.doc.sliceString(sel.from, sel.to);
-            setSelection({ from: sel.from, to: sel.to, text });
-            setSelectedText(text);
-          } else {
-            setSelection(null);
-            setSelectedText('');
+          // Don't clear selection during AI operations (accept/reject will handle it)
+          if (!isProcessing) {
+            const sel = update.state.selection.main;
+            if (sel.from !== sel.to) {
+              const text = update.state.doc.sliceString(sel.from, sel.to);
+              setSelection({ from: sel.from, to: sel.to, text });
+              setSelectedText(text);
+            } else {
+              setSelection(null);
+              setSelectedText('');
+            }
           }
         }),
         // AI Toolbar Panel
