@@ -203,39 +203,38 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
 
   return (
     <div
-      className={`fixed inset-0 z-100 flex items-center justify-center transition-all duration-500
+      className={`fixed inset-0 z-100 flex items-start sm:items-center justify-center transition-all duration-500 overflow-y-auto
         ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-vault-950/80 dark:bg-black/85 tutorial-backdrop"
+        className="fixed inset-0 bg-vault-950/80 dark:bg-black/85 tutorial-backdrop"
         onClick={handleSkip}
       />
 
-      {/* Content Card */}
+      {/* Content Card Container - handles scrolling */}
       <div
-        className={`relative z-10 w-full max-w-2xl mx-4 transition-all duration-500 ease-out
+        className={`relative z-10 w-full max-w-2xl mx-4 my-2 sm:my-8 transition-all duration-500 ease-out
           ${isVisible ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
       >
-        {/* Skip button */}
-        {!isLast && (
-          <button
-            onClick={handleSkip}
-            className="absolute -top-10 sm:-top-12 right-0 flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium
-              text-vault-400 hover:text-white transition-colors rounded-lg hover:bg-white/10"
-          >
-            <span>Skip tutorial</span>
-            <X className="w-3.5 h-3.5" />
-          </button>
-        )}
-
-        {/* Main Card */}
-        <div className="bg-white dark:bg-vault-900 rounded-2xl shadow-2xl border border-vault-200 dark:border-vault-800 overflow-hidden tutorial-card-enter">
+        {/* Main Card - max height with scroll on mobile */}
+        <div className="bg-white dark:bg-vault-900 rounded-2xl shadow-2xl border border-vault-200 dark:border-vault-800 overflow-hidden tutorial-card-enter max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
           
           {/* Header band with accent */}
-          <div className="relative px-5 pt-6 pb-4 sm:px-8 sm:pt-8 sm:pb-6 overflow-hidden">
+          <div className="relative px-4 pt-3 pb-3 sm:px-8 sm:pt-8 sm:pb-6 overflow-hidden shrink-0">
+            {/* Skip button - inside card header on mobile */}
+            {!isLast && (
+              <button
+                onClick={handleSkip}
+                className="absolute top-2 right-10 sm:top-4 sm:right-16 z-20 flex items-center gap-1 px-2 py-1 text-xs font-medium
+                  text-vault-400 hover:text-vault-600 dark:hover:text-vault-200 transition-colors rounded-lg hover:bg-vault-100 dark:hover:bg-vault-800"
+              >
+                <span>Skip</span>
+                <X className="w-3 h-3" />
+              </button>
+            )}
             {/* Decorative accent background */}
-            <div className="absolute -top-2 -right-1 w-24 h-24 sm:w-40 sm:h-40 opacity-[0.06] dark:opacity-[0.08] tutorial-float rotate-15 pointer-events-none" style={{ animationDelay: '1.2s' }}>
+            <div className="absolute -top-2 -right-1 w-24 h-24 sm:w-40 sm:h-40 opacity-[0.06] dark:opacity-[0.08] tutorial-float rotate-15 pointer-events-none z-0" style={{ animationDelay: '1.2s' }}>
               <AccentIcon className="w-full h-full" strokeWidth={1.5} />
             </div>
 
@@ -243,7 +242,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
             <div className="absolute inset-0 tutorial-shimmer pointer-events-none" />
 
             {/* Step indicator pills */}
-            <div className="flex items-center gap-1.5 mb-6 relative">
+            <div className="flex items-center gap-1.5 mb-4 sm:mb-6 relative">
               {TUTORIAL_STEPS.map((_, i) => (
                 <div
                   key={i}
@@ -272,21 +271,21 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
             </div>
           </div>
 
-          {/* Body */}
-          <div className="px-5 pb-5 sm:px-8 sm:pb-6">
+          {/* Body - scrollable on mobile */}
+          <div className="px-4 pb-4 sm:px-8 sm:pb-6 overflow-y-auto">
             <div className={`tutorial-step-content ${stepContentClass}`}>
-              <p className="text-vault-600 dark:text-vault-400 text-[15px] leading-relaxed mb-6">
+              <p className="text-vault-600 dark:text-vault-400 text-sm sm:text-[15px] leading-relaxed mb-4 sm:mb-6">
                 {step.description}
               </p>
 
               {/* Feature cards */}
-              <div className="grid gap-3">
+              <div className="grid gap-2 sm:gap-3">
                 {step.features.map((feature, idx) => {
                   const FeatureIcon = feature.icon;
                   return (
                     <div
                       key={`${step.id}-${idx}`}
-                      className="tutorial-feature-card group flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl
+                      className="tutorial-feature-card group flex items-start gap-2.5 sm:gap-4 p-2.5 sm:p-4 rounded-lg sm:rounded-xl
                         bg-vault-50 dark:bg-vault-800/60
                         border border-vault-100 dark:border-vault-800
                         hover:border-vault-300 dark:hover:border-vault-600"
@@ -295,10 +294,10 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
                         transform: isAnimating ? 'translateY(8px)' : 'translateY(0)',
                       }}
                     >
-                      <div className="shrink-0 p-2.5 rounded-lg bg-vault-200/70 dark:bg-vault-700/50
+                      <div className="shrink-0 p-2 sm:p-2.5 rounded-md sm:rounded-lg bg-vault-200/70 dark:bg-vault-700/50
                         group-hover:bg-vault-900 dark:group-hover:bg-vault-100
                         transition-colors duration-200">
-                        <FeatureIcon className="w-4 h-4 text-vault-600 dark:text-vault-300
+                        <FeatureIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-vault-600 dark:text-vault-300
                           group-hover:text-white dark:group-hover:text-vault-900
                           transition-colors duration-200" />
                       </div>
@@ -317,7 +316,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
 
               {/* SillyTavern integration callout - step 0 only */}
               {step.id === 0 && (
-                <div className="mt-4 relative flex items-center gap-3 p-3 rounded-xl overflow-hidden big-linear-to-r from-amber-900/80 via-yellow-800/80 to-amber-900/80 dark:from-amber-900/60 dark:via-yellow-700/50 dark:to-amber-900/60 border border-amber-500/30 shadow-[0_0_24px_-4px_rgba(251,191,36,0.3)]">
+                <div className="mt-3 sm:mt-4 relative flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl overflow-hidden bg-linear-to-r from-amber-900/80 via-yellow-800/80 to-amber-900/80 dark:from-amber-900/60 dark:via-yellow-700/50 dark:to-amber-900/60 border border-amber-500/30 shadow-[0_0_24px_-4px_rgba(251,191,36,0.3)]">
                   {/* Golden shimmer sweep */}
                   <div className="absolute inset-0 pointer-events-none overflow-hidden">
                     <div className="absolute inset-0 big-linear-to-r from-transparent via-amber-200/30 to-transparent animate-[golden-shimmer_2s_linear_infinite]" />
@@ -326,9 +325,9 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
                   <div className="absolute -top-3 -right-3 w-12 h-12 bg-amber-400/20 rounded-full blur-lg pointer-events-none" />
                   <div className="absolute -bottom-3 -left-3 w-8 h-8 bg-yellow-300/15 rounded-full blur-md pointer-events-none" />
 
-                  <Zap className="relative w-4 h-4 text-amber-300 fill-amber-300 shrink-0 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
-                  <span className="relative text-sm text-amber-50 font-semibold">
-                    Now with SillyTavern integration! Import your cards straight from SillyTavern!
+                  <Zap className="relative w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 fill-amber-300 shrink-0 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]" />
+                  <span className="relative text-xs sm:text-sm text-amber-50 font-semibold leading-tight">
+                    SillyTavern integration! Import cards directly!
                   </span>
                   <a
                     href="https://github.com/spaceman2408/SillyTavern-CharacterVaultExport"
@@ -351,36 +350,37 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
           </div>
 
           {/* Footer / Navigation */}
-          <div className="px-5 py-4 sm:px-8 sm:py-5 border-t border-vault-100 dark:border-vault-800 bg-vault-50/50 dark:bg-vault-800/30 flex items-center justify-between">
+          <div className="px-4 py-3 sm:px-8 sm:py-5 border-t border-vault-100 dark:border-vault-800 bg-vault-50/50 dark:bg-vault-800/30 flex items-center justify-between shrink-0">
             <button
               onClick={handlePrev}
               disabled={isFirst}
-              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200
+              className={`flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200
                 ${isFirst
                   ? 'text-vault-300 dark:text-vault-700 cursor-not-allowed'
                   : 'text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 active:scale-95'
                 }`}
             >
-              <ChevronLeft className="w-4 h-4" />
-              Back
+              <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Back</span>
             </button>
 
             <button
               onClick={isLast ? handleComplete : handleNext}
-              className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-lg
+              className="flex items-center gap-1.5 sm:gap-2 px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg
                 bg-vault-900 dark:bg-vault-100 text-white dark:text-vault-900
                 hover:opacity-90 active:scale-95
                 shadow-sm hover:shadow-md transition-all duration-200"
             >
               {isLast ? (
                 <>
-                  Get Started
-                  <Rocket className="w-4 h-4" />
+                  <span className="hidden sm:inline">Get Started</span>
+                  <span className="sm:hidden">Start</span>
+                  <Rocket className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </>
               ) : (
                 <>
                   Next
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </>
               )}
             </button>
