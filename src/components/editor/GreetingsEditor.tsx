@@ -1,13 +1,15 @@
 /**
- * @fileoverview Greetings Editor component with toolbar for managing multiple greetings.
+ * @fileoverview Greetings Editor component with two-panel layout.
+ * Left sidebar for greeting list, right panel for editor.
  * @module components/editor/GreetingsEditor
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, MessageSquare } from 'lucide-react';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
 import type { CharacterSection } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
+import { estimateTokens } from '../../services/AIService';
 
 interface GreetingsEditorProps {
   greetings: string[];
@@ -22,14 +24,18 @@ interface GreetingsEditorProps {
   activeSection: string;
 }
 
-interface GreetingCardProps {
+interface GreetingListItemProps {
   greeting: string;
   index: number;
-  isOpen: boolean;
-  onToggle: () => void;
+  isSelected: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
+}
+
+interface GreetingDetailProps {
+  greeting: string;
   onImmediateUpdate: (value: string) => void;
   onPersistUpdate: (value: string) => void;
-  onDelete: () => void;
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
@@ -39,24 +45,83 @@ interface GreetingCardProps {
 }
 
 /**
- * Individual greeting card with CodeMirror editor
+ * Compact greeting card for the sidebar list
  */
-function GreetingCard({
+function GreetingListItem({
   greeting,
   index,
-  isOpen,
-  onToggle,
+  isSelected,
+  onSelect,
+  onDelete,
+}: GreetingListItemProps): React.ReactElement {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete();
+  };
+
+  const hasContent = greeting.trim().length > 0;
+  const tokenCount = estimateTokens(greeting);
+
+  return (
+    <div
+      onClick={onSelect}
+      className={`
+        relative group cursor-pointer p-3 rounded-lg border transition-all duration-150
+        ${isSelected
+          ? 'bg-vault-200 dark:bg-vault-700 border-vault-500 dark:border-vault-400 ring-1 ring-vault-500 dark:ring-vault-400'
+          : 'bg-white dark:bg-vault-800 border-vault-200 dark:border-vault-700 hover:border-vault-300 dark:hover:border-vault-600 hover:bg-vault-50 dark:hover:bg-vault-700'
+        }
+      `}
+    >
+      <div className="flex items-start gap-2">
+        <div className="mt-0.5 shrink-0">
+          {hasContent ? (
+            <div className="w-2 h-2 rounded-full bg-green-500" title="Has content" />
+          ) : (
+            <div className="w-2 h-2 rounded-full bg-vault-300 dark:bg-vault-600" title="Empty" />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-vault-900 dark:text-vault-100 truncate">
+            Greeting {index + 1}
+          </div>
+
+          <div className="flex items-center gap-2 mt-1 text-xs text-vault-500 dark:text-vault-400">
+            <span>{tokenCount} tokens</span>
+          </div>
+        </div>
+
+        <button
+          onClick={handleDelete}
+          className="
+            opacity-0 group-hover:opacity-100 focus:opacity-100
+            p-1.5 text-vault-400 hover:text-red-500 dark:text-vault-500 dark:hover:text-red-400
+            hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all
+          "
+          title="Delete greeting"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Full editor for a greeting (right panel)
+ */
+function GreetingDetail({
+  greeting,
   onImmediateUpdate,
   onPersistUpdate,
-  onDelete,
   aiConfig,
   samplerSettings,
   promptSettings,
   getContextContent,
   contextSectionIds,
   setSelectedText,
-}: GreetingCardProps): React.ReactElement {
-  // Use the shared AI editor hook
+}: GreetingDetailProps): React.ReactElement {
   const { editorRef } = useAIEditor({
     value: greeting,
     onImmediateChange: onImmediateUpdate,
@@ -67,57 +132,26 @@ function GreetingCard({
     promptSettings,
     getContextContent,
     contextSectionIds,
-    minHeight: 'clamp(84px, 18vh, 140px)',
-    maxHeight: 'clamp(180px, 36vh, 300px)',
-    isActive: isOpen,
+    minHeight: '200px',
+    maxHeight: 'none',
+    isActive: true,
   });
 
   return (
-    <div className="border border-vault-200 dark:border-vault-700 rounded-lg overflow-hidden bg-white dark:bg-vault-800">
-      <div className="flex items-center justify-between px-4 py-3 bg-vault-50 dark:bg-vault-700/50 border-b border-vault-200 dark:border-vault-700">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-vault-700 dark:text-vault-300">
-            Greeting {index + 1}
-          </span>
-          <span className="text-xs text-vault-500 dark:text-vault-400">
-            ({greeting.length} chars)
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onToggle}
-            className="p-1 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-200 dark:hover:bg-vault-700 rounded transition-colors"
-            title={isOpen ? 'Collapse' : 'Expand'}
-          >
-            {isOpen ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-            title="Delete greeting"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      {isOpen && (
-        <div ref={editorRef} className="min-h-[clamp(84px,18vh,140px)]" />
-      )}
-      {!isOpen && (
-        <div className="px-4 py-3 text-sm text-vault-600 dark:text-vault-400 italic truncate">
-          {greeting || <span className="text-vault-400">Empty greeting</span>}
-        </div>
-      )}
+    <div className="h-full flex flex-col">
+      {/* Editor */}
+      <div
+        ref={editorRef}
+        className="border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+        style={{ minHeight: '200px' }}
+      />
     </div>
   );
 }
 
 /**
- * Greetings Editor with toolbar for managing multiple greetings
+ * Greetings Editor with two-panel layout
+ * Sidebar list on left, detail editor on right
  */
 export function GreetingsEditor({
   greetings,
@@ -130,12 +164,16 @@ export function GreetingsEditor({
   getContextContent,
 }: GreetingsEditorProps): React.ReactElement {
   const [greetingsList, setGreetingsList] = useState<string[]>(greetings);
-  const [openCards, setOpenCards] = useState<Set<number>>(new Set([0]));
+  const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(0);
 
-  // Sync list from persisted state (deferred to satisfy lint rule).
+  // Sync list from persisted state
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setGreetingsList(greetings);
+      // Reset selection if out of bounds
+      setSelectedGreetingIndex(prev =>
+        prev >= (greetings.length || 0) ? 0 : prev
+      );
     }, 0);
     return () => clearTimeout(timeoutId);
   }, [greetings]);
@@ -146,11 +184,12 @@ export function GreetingsEditor({
     return newList;
   }, [greetingsList]);
 
-  // Handle greeting update
+  // Handle greeting update (immediate local state)
   const handleGreetingImmediateUpdate = useCallback((index: number, value: string) => {
     setGreetingsList(buildUpdatedList(index, value));
   }, [buildUpdatedList]);
 
+  // Handle greeting update (persist to parent)
   const handleGreetingPersistUpdate = useCallback((index: number, value: string) => {
     onChange(buildUpdatedList(index, value));
   }, [buildUpdatedList, onChange]);
@@ -158,87 +197,97 @@ export function GreetingsEditor({
   // Handle add greeting
   const handleAddGreeting = useCallback(() => {
     const newList = [...greetingsList, ''];
-    const newOpenCards = new Set(openCards);
-    newOpenCards.add(newList.length - 1);
+    const newIndex = newList.length - 1;
     setGreetingsList(newList);
-    setOpenCards(newOpenCards);
+    setSelectedGreetingIndex(newIndex);
     onChange(newList);
-  }, [greetingsList, openCards, onChange]);
+  }, [greetingsList, onChange]);
 
   // Handle delete greeting
   const handleDeleteGreeting = useCallback((index: number) => {
     const shouldDelete = window.confirm(`Delete greeting ${index + 1}?`);
-    if (!shouldDelete) {
-      return;
-    }
+    if (!shouldDelete) return;
 
     const newList = greetingsList.filter((_, i) => i !== index);
-    const newOpenCards = new Set(openCards);
-    newOpenCards.delete(index);
-    // Adjust open card indices
-    const adjustedOpenCards = new Set<number>();
-    newOpenCards.forEach(i => {
-      if (i > index) {
-        adjustedOpenCards.add(i - 1);
-      } else {
-        adjustedOpenCards.add(i);
-      }
-    });
     setGreetingsList(newList);
-    setOpenCards(adjustedOpenCards);
     onChange(newList);
-  }, [greetingsList, openCards, onChange]);
 
-  // Handle toggle card
-  const handleToggleCard = useCallback((index: number) => {
-    const newOpenCards = new Set(openCards);
-    if (newOpenCards.has(index)) {
-      newOpenCards.delete(index);
-    } else {
-      newOpenCards.add(index);
+    // Adjust selected index if needed
+    if (selectedGreetingIndex >= newList.length) {
+      setSelectedGreetingIndex(Math.max(0, newList.length - 1));
+    } else if (selectedGreetingIndex > index) {
+      setSelectedGreetingIndex(selectedGreetingIndex - 1);
     }
-    setOpenCards(newOpenCards);
-  }, [openCards]);
+  }, [greetingsList, selectedGreetingIndex, onChange]);
+
+  // Handle select greeting
+  const handleSelectGreeting = useCallback((index: number) => {
+    setSelectedGreetingIndex(index);
+  }, []);
+
+  // Ensure selected index is valid
+  const safeSelectedIndex = selectedGreetingIndex < greetingsList.length ? selectedGreetingIndex : 0;
+  const selectedGreeting = greetingsList[safeSelectedIndex];
 
   return (
-    <div className="h-full flex flex-col min-h-0 overflow-hidden">
-      {/* Toolbar */}
-      <div className="mb-4 flex items-center justify-between shrink-0">
-        <div>
-          <h2 className="text-xl font-bold text-vault-900 dark:text-vault-50">
-            Greetings
-          </h2>
-          <p className="text-sm text-vault-500 dark:text-vault-400">
-            Alternate greetings for your character ({greetingsList.length} total)
-          </p>
+    <div className="h-full flex overflow-hidden">
+      {/* Left Sidebar */}
+      <div className="w-64 shrink-0 border-r border-vault-200 dark:border-vault-700 bg-vault-50/30 dark:bg-vault-800/20 flex flex-col">
+        {/* Header */}
+        <div className="shrink-0 px-3 py-2.5 border-b border-vault-200 dark:border-vault-700">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-vault-500" />
+            <span className="text-sm font-medium text-vault-700 dark:text-vault-300">
+              {greetingsList.length} greeting{greetingsList.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
-        <button
-          onClick={handleAddGreeting}
-          className="flex items-center gap-2 px-4 py-2 bg-vault-600 hover:bg-vault-700 text-white text-sm rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Greeting
-        </button>
+
+        {/* Greeting List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {greetingsList.length === 0 ? (
+            <div className="text-center py-8 text-vault-400 dark:text-vault-500">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">No greetings yet</p>
+              <p className="text-[10px] mt-0.5">Click "New Greeting" to start</p>
+            </div>
+          ) : (
+            greetingsList.map((greeting, index) => (
+              <GreetingListItem
+                key={index}
+                greeting={greeting}
+                index={index}
+                isSelected={index === safeSelectedIndex}
+                onSelect={() => handleSelectGreeting(index)}
+                onDelete={() => handleDeleteGreeting(index)}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Add Button at Bottom */}
+        <div className="shrink-0 p-3 border-t border-vault-200 dark:border-vault-700">
+          <button
+            onClick={handleAddGreeting}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-vault-300 dark:border-vault-600
+              text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200
+              hover:border-vault-400 dark:hover:border-vault-500 hover:bg-vault-50 dark:hover:bg-vault-700/30
+              rounded-lg text-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Greeting
+          </button>
+        </div>
       </div>
 
-      {/* Greetings List */}
-      <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
-        {greetingsList.length === 0 ? (
-          <div className="text-center py-12 text-vault-400 dark:text-vault-500">
-            <p className="text-sm">No alternate greetings yet</p>
-            <p className="text-xs mt-1">Click "Add Greeting" to create one</p>
-          </div>
-        ) : (
-          greetingsList.map((greeting, index) => (
-            <GreetingCard
-              key={index}
-              greeting={greeting}
-              index={index}
-              isOpen={openCards.has(index)}
-              onToggle={() => handleToggleCard(index)}
-              onImmediateUpdate={(value) => handleGreetingImmediateUpdate(index, value)}
-              onPersistUpdate={(value) => handleGreetingPersistUpdate(index, value)}
-              onDelete={() => handleDeleteGreeting(index)}
+      {/* Right Detail Panel */}
+      <div className="flex-1 overflow-y-auto bg-white dark:bg-vault-900">
+        {selectedGreeting !== undefined ? (
+          <div className="p-6">
+            <GreetingDetail
+              greeting={selectedGreeting}
+              onImmediateUpdate={(value) => handleGreetingImmediateUpdate(safeSelectedIndex, value)}
+              onPersistUpdate={(value) => handleGreetingPersistUpdate(safeSelectedIndex, value)}
               aiConfig={aiConfig}
               samplerSettings={samplerSettings}
               promptSettings={promptSettings}
@@ -246,7 +295,15 @@ export function GreetingsEditor({
               contextSectionIds={contextSectionIds}
               setSelectedText={setSelectedText}
             />
-          ))
+          </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-vault-400 dark:text-vault-500">
+            <div className="text-center">
+              <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">Select a greeting to edit</p>
+              <p className="text-xs mt-1">Or create a new one to get started</p>
+            </div>
+          </div>
         )}
       </div>
     </div>
