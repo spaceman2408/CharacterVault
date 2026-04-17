@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { CHARACTER_SECTIONS } from '../../db/characterTypes';
-import { estimateTokens } from '../../services/AIService';
+import { estimateTokens, BYTES_PER_TOKEN } from '../../services/AIService';
 
 export interface ContextPanelProps {
   /** Callback to close panel (for mobile) */
@@ -273,8 +273,16 @@ export function ContextPanel({
             {/* Info about auto-included section */}
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400">
-                <Info className="w-4 h-4 shrink-0" />
-                <span>Current section is automatically included</span>
+                <div className="group relative">
+                  <Info className="w-4 h-4 shrink-0 cursor-help" />
+                  <div className="absolute top-full left-0 mt-2 w-64 p-2 bg-vault-800 text-vault-100 text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-lg">
+                    <p className="font-medium mb-1">How tokens are estimated:</p>
+                    <p>Text size in bytes ÷ {BYTES_PER_TOKEN} (rounded up)</p>
+                    <p className="text-vault-400 mt-1">Actual token counts may vary by model.</p>
+                    <div className="absolute bottom-full left-4 -mb-px border-4 border-transparent border-b-vault-800"></div>
+                  </div>
+                </div>
+                <span>Token counts are an estimation only.</span>
               </div>
             </div>
 
