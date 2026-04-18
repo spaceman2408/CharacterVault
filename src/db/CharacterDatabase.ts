@@ -364,6 +364,18 @@ export class CharacterDatabase extends Dexie {
   // ============================================================================
 
   async createSnapshot(input: CreateSnapshotInput): Promise<CharacterSnapshot | null> {
+    // Enforce single "open" snapshot per character - return existing if already present
+    if (input.source === 'open') {
+      const existingOpen = await this.snapshots
+        .where('characterId')
+        .equals(input.characterId)
+        .filter(s => s.source === 'open')
+        .first();
+      if (existingOpen) {
+        return existingOpen;
+      }
+    }
+
     const latestSnapshot = await this.getLatestSnapshot(input.characterId);
     if (latestSnapshot?.payloadHash === input.payloadHash) {
       return null;
@@ -412,11 +424,15 @@ export class CharacterDatabase extends Dexie {
       .equals(characterId)
       .sortBy('createdAt');
 
-    if (snapshots.length <= limit) {
+    // Separate baseline (open) snapshots from deletable ones - baseline is protected
+    const baselineSnapshots = snapshots.filter(s => s.source === 'open');
+    const deletableSnapshots = snapshots.filter(s => s.source !== 'open');
+
+    if (deletableSnapshots.length <= limit) {
       return;
     }
 
-    const snapshotsToDelete = snapshots.slice(0, snapshots.length - limit);
+    const snapshotsToDelete = deletableSnapshots.slice(0, deletableSnapshots.length - limit);
     await Promise.all(snapshotsToDelete.map(snapshot => this.snapshots.delete(snapshot.id)));
   }
 }
