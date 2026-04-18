@@ -612,7 +612,7 @@ function DiffSection({
       {!isCollapsed && (
         <div className="mt-3 pl-7">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm text-vault-500 dark:text-vault-400">Compare revision vs. current draft</p>
+            <p className="text-sm text-vault-500 dark:text-vault-400">Compare snapshot vs. current draft</p>
             <button
               type="button"
               onClick={onRestore}
@@ -994,7 +994,7 @@ export function CharacterHistoryModal({
 
                   {changedSectionCount === 0 ? (
                     <p className="text-sm text-vault-500 dark:text-vault-400">
-                      This revision already matches the current draft. No restore action is needed.
+                      This snapshot already matches the current draft. No restore action is needed.
                     </p>
                   ) : (
                     <div className="space-y-0">
