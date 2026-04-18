@@ -172,7 +172,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
   // Handle alternate_greetings section specially
   if (section === 'alternate_greetings') {
     return (
-      <div className="h-full animate-fade-in-slow">
+      <div className="absolute inset-0 h-full w-full animate-fade-in-slow">
         <GreetingsEditor
           greetings={currentCharacter?.data?.spec?.alternate_greetings || []}
           onChange={(greetings) => void updateSpecField(section, greetings)}
@@ -192,7 +192,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
   // Handle lorebook section specially
   if (section === 'lorebook') {
     return (
-      <div className="h-full animate-fade-in-slow">
+      <div className="absolute inset-0 h-full w-full animate-fade-in-slow">
         <LorebookEditor
           lorebook={currentCharacter?.data?.characterBook}
           onChange={(lorebook) => {

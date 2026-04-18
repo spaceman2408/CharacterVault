@@ -511,7 +511,7 @@ function CharacterHeader({
               }`}
               title={isContextOpen ? 'Hide AI Context Panel' : 'Show AI Context Panel'}
             >
-              <PanelLeft className="w-5 h-5" />
+              <PanelLeft className="w-4 h-4" />
             </button>
             <button
               onClick={onToggleChat}
@@ -522,7 +522,7 @@ function CharacterHeader({
               }`}
               title={isChatOpen ? 'Hide Ask AI Panel' : 'Show Ask AI Panel'}
             >
-              <PanelRight className="w-5 h-5" />
+              <PanelRight className="w-4 h-4" />
             </button>
           </>
         )}
@@ -531,8 +531,10 @@ function CharacterHeader({
 
         <button
           onClick={onOpenRevisions}
-          className="flex items-center gap-2 rounded-xl border border-vault-200/80 bg-white/70 px-3 py-2 text-sm font-medium
-            text-vault-700 transition-colors duration-200 hover:bg-vault-100 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-200 dark:hover:bg-vault-800/70"
+          className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+            text-vault-700 dark:text-vault-300
+            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+            transition-colors duration-200"
           title="Open revisions"
         >
           <History className="w-4 h-4" />
@@ -541,11 +543,14 @@ function CharacterHeader({
 
         <button
           onClick={onOpenSettings}
-          className="p-2 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl transition-colors"
+          className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+            text-vault-700 dark:text-vault-300
+            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+            transition-colors duration-200"
           title="AI Settings"
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-4 h-4" />
+          <span className="hidden md:inline">Settings</span>
         </button>
         
         <button
@@ -561,8 +566,9 @@ function CharacterHeader({
         
         <button
           onClick={handleExportPNG}
-          className="flex items-center gap-2 px-3 py-2 text-sm font-medium
-            bg-vault-600 hover:bg-vault-700 text-white rounded-xl
+          className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+            text-vault-700 dark:text-vault-300
+            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
             transition-colors duration-200"
         >
           <Download className="w-4 h-4" />
@@ -777,14 +783,15 @@ function CharacterWorkspaceInner({
         <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden">
           <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'}`}>
             <div className={`h-full w-full bg-white/60 dark:bg-vault-900/60 backdrop-blur-xl
-              border border-vault-200/60 dark:border-vault-800/50 shadow-lg overflow-hidden
+              border border-vault-200/60 dark:border-vault-800/50 shadow-lg overflow-hidden relative
               ${
                 isTightLayout
                   ? 'rounded-none p-2 md:p-3 border-l-0 border-r-0'
                   : isEdgeToEdgeLayout
                   ? `rounded-none p-3 md:p-4 ${!isContextOpen ? 'border-l-0' : ''} ${!isChatOpen ? 'border-r-0' : ''}`
                   : 'rounded-2xl p-4 md:p-6'
-              }`}>
+              }`}
+              data-section-editor-container>
               {activeSection === 'image' ? (
                 <ImageEditor />
               ) : (

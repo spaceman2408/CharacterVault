@@ -257,7 +257,7 @@ function LorebookEntryDetail({
   const handleConstantChange = (checked: boolean) => onUpdate({ ...entry, constant: checked });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-2">
       {/* Name Field */}
       <div>
         <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
@@ -280,7 +280,7 @@ function LorebookEntryDetail({
           <label className="text-sm font-medium text-vault-700 dark:text-vault-300">
             Trigger Keys
           </label>
-          <span className="text-xs text-vault-400">(comma-separated)</span>
+          <span className="text-xs text-vault-400">(comma, separated)</span>
           <button
             onClick={handleGenerateKeys}
             disabled={!generatingKeys && !entry.content.trim()}
@@ -379,10 +379,6 @@ function LorebookEntryDetail({
 
       {/* Content Editor (with AI toolbar) */}
       <div>
-        <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
-          Content
-          <span className="text-vault-400 font-normal ml-2">(AI toolbar available when text is selected)</span>
-        </label>
         <div
           ref={editorRef}
           className="border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
@@ -392,15 +388,11 @@ function LorebookEntryDetail({
 
       {/* Comment Field */}
       <div>
-        <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
-          Comment
-          <span className="text-vault-400 font-normal ml-2">(internal notes, not included in output)</span>
-        </label>
         <input
           type="text"
           value={entry.comment || ''}
           onChange={(e) => handleCommentChange(e.target.value)}
-          placeholder="Internal notes about this entry"
+          placeholder="Internal notes about this entry, not used in output (optional)"
           className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
             text-vault-900 dark:text-vault-100 placeholder:text-vault-400
             focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"

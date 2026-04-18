@@ -443,6 +443,17 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
             <div className="h-6 w-px bg-vault-200 dark:bg-vault-800 mx-1 hidden sm:block" />
             
+            <button 
+              onClick={() => setIsCreating(true)}
+              className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+            text-vault-700 dark:text-vault-300
+            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+            transition-colors duration-200"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Create New</span>
+            </button>
+
             <IconButton 
               icon={isDark ? Sun : Moon} 
               onClick={toggleTheme} 
@@ -454,14 +465,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               onClick={onReplayTutorial} 
               title="Replay Tutorial" 
             />
-            
-            <button 
-              onClick={() => setIsCreating(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-vault-900 dark:bg-vault-700 text-white dark:text-vault-100 text-sm font-medium rounded-lg hover:opacity-90 transition-opacity ml-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New</span>
-            </button>
+
           </div>
         </div>
       </header>
