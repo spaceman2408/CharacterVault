@@ -425,7 +425,6 @@ export class CharacterDatabase extends Dexie {
       .sortBy('createdAt');
 
     // Separate baseline (open) snapshots from deletable ones - baseline is protected
-    const baselineSnapshots = snapshots.filter(s => s.source === 'open');
     const deletableSnapshots = snapshots.filter(s => s.source !== 'open');
 
     if (deletableSnapshots.length <= limit) {
