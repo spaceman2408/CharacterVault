@@ -585,10 +585,10 @@ function LorebookEditorInner({
   };
 
   return (
-    <div className="h-full flex flex-col md:flex-row overflow-hidden">
+    <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
       {/* Left Sidebar - Hidden on mobile when viewing detail */}
       <div className={`
-        w-full md:w-64 shrink-0 border-r border-vault-200 dark:border-vault-700 
+        w-full md:w-64 shrink-0 min-h-0 max-h-[50dvh] md:max-h-none overflow-hidden border-r border-vault-200 dark:border-vault-700 
         bg-vault-50/30 dark:bg-vault-800/20 flex flex-col
         ${isMobileViewOpen ? 'hidden md:flex' : 'flex'}
       `}>
@@ -722,11 +722,11 @@ function LorebookEditorInner({
 
       {/* Right Detail Panel */}
       <div className={`
-        flex-1 overflow-y-auto bg-white dark:bg-vault-900
+        flex-1 min-h-0 overflow-y-auto bg-white dark:bg-vault-900
         ${!isMobileViewOpen ? 'hidden md:block' : 'block'}
       `}>
         {selectedEntry ? (
-          <div className="p-4 md:p-6">
+          <div className="p-4 md:p-6 pb-[max(env(safe-area-inset-bottom),0px)]">
             {/* Mobile Back Button */}
             <button
               onClick={handleBackToList}

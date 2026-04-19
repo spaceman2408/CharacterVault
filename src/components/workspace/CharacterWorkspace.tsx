@@ -862,8 +862,8 @@ function CharacterWorkspaceInner({
         </aside>
 
         {/* Center: Main Editor - Always visible, spans available space */}
-        <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden pb-[env(safe-area-inset-bottom)]">
-          <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'}`}>
+        <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden">
+          <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'} pb-[max(env(safe-area-inset-bottom),0px)]`}>
             <div className={`h-full w-full bg-white/60 dark:bg-vault-900/60 backdrop-blur-xl
               border border-vault-200/60 dark:border-vault-800/50 shadow-lg overflow-hidden relative
               ${
