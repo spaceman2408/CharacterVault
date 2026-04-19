@@ -30,7 +30,6 @@ import {
   Eye,
   Puzzle,
   Download,
-  Save,
   Trash2,
   Upload,
   Settings,
@@ -47,6 +46,8 @@ import {
   Book,
   AlertCircle,
   X,
+  FileJson,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 interface ToastNotification {
@@ -553,29 +554,110 @@ function CharacterHeader({
           <span className="hidden md:inline">Settings</span>
         </button>
         
-        <button
-          onClick={handleExportJSON}
-          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
-            text-vault-700 dark:text-vault-300
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
-            transition-colors duration-200"
-        >
-          <Save className="w-4 h-4" />
-          <span className="hidden md:inline">Export JSON</span>
-        </button>
-        
-        <button
-          onClick={handleExportPNG}
-          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
-            text-vault-700 dark:text-vault-300
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
-            transition-colors duration-200"
-        >
-          <Download className="w-4 h-4" />
-          <span className="hidden md:inline">Export PNG</span>
-        </button>
+        {/* Export Dropdown */}
+        <ExportDropdown 
+          onExportJSON={handleExportJSON}
+          onExportPNG={handleExportPNG}
+        />
       </div>
     </header>
+  );
+}
+
+/**
+ * Export Dropdown component - Combines JSON and PNG export options
+ */
+interface ExportDropdownProps {
+  onExportJSON: () => void;
+  onExportPNG: () => void;
+}
+
+function ExportDropdown({ onExportJSON, onExportPNG }: ExportDropdownProps): React.ReactElement {
+  const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+
+  // Calculate menu position synchronously when opening
+  const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setIsOpen(!isOpen);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        buttonRef.current && !buttonRef.current.contains(target) &&
+        menuRef.current && !menuRef.current.contains(target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const handleExportJSON = () => {
+    onExportJSON();
+    setIsOpen(false);
+  };
+
+  const handleExportPNG = () => {
+    onExportPNG();
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        onClick={handleToggle}
+        className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
+          text-vault-700 dark:text-vault-300
+          hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+          transition-colors duration-200"
+        title="Export character"
+      >
+        <Download className="w-4 h-4" />
+        <span className="hidden md:inline">Export</span>
+        <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && menuPosition && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed w-40 bg-white dark:bg-vault-900 rounded-xl border border-vault-200 dark:border-vault-800 shadow-lg py-1 z-9999"
+          style={{ top: menuPosition.top, right: menuPosition.right }}
+        >
+          <button
+            onClick={handleExportJSON}
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-vault-700 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800/50 transition-colors"
+          >
+            <FileJson className="w-4 h-4" />
+            <span>Export JSON</span>
+          </button>
+          <button
+            onClick={handleExportPNG}
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-vault-700 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800/50 transition-colors"
+          >
+            <ImageIcon className="w-4 h-4" />
+            <span>Export PNG</span>
+          </button>
+        </div>,
+        document.body
+      )}
+    </div>
   );
 }
 
