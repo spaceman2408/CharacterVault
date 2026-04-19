@@ -531,19 +531,19 @@ function CharacterHeader({
 
         <button
           onClick={onOpenRevisions}
-          className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
             text-vault-700 dark:text-vault-300
             hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
             transition-colors duration-200"
           title="Open revisions"
         >
           <History className="w-4 h-4" />
-          <span>Revisions</span>
+          <span className="hidden md:inline">Snapshots</span>
         </button>
 
         <button
           onClick={onOpenSettings}
-          className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
             text-vault-700 dark:text-vault-300
             hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
             transition-colors duration-200"
@@ -555,7 +555,7 @@ function CharacterHeader({
         
         <button
           onClick={handleExportJSON}
-          className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
             text-vault-700 dark:text-vault-300
             hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
             transition-colors duration-200"
@@ -566,7 +566,7 @@ function CharacterHeader({
         
         <button
           onClick={handleExportPNG}
-          className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
             text-vault-700 dark:text-vault-300
             hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
             transition-colors duration-200"
