@@ -556,6 +556,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
             overscrollBehaviorY: 'auto',
             WebkitOverflowScrolling: 'touch',
             touchAction: 'pan-y',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           },
           '.cm-content': {
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',

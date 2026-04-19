@@ -223,8 +223,20 @@ body,
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   overflow: hidden;
+}
+
+/* ============================================================================
+   MOBILE SAFE AREA
+   ============================================================================ */
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-inset-bottom {
+  bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ============================================================================

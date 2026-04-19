@@ -281,7 +281,7 @@ export const ImportPage: React.FC = () => {
   const isSillyTavernSource = source === 'st';
 
   return (
-    <div className="h-screen flex flex-col bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 overflow-hidden">
+    <div className="h-dvh flex flex-col bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 overflow-hidden">
       {/* Header */}
       <header className="shrink-0 w-full backdrop-blur-xl bg-white/80 dark:bg-vault-950/80 border-b border-vault-200 dark:border-vault-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">

@@ -717,7 +717,7 @@ function CharacterWorkspaceContent(): React.ReactElement {
 
   if (!currentCharacter) {
     return (
-      <div className="h-screen w-full flex items-center justify-center">
+      <div className="h-dvh w-full flex items-center justify-center">
         <div className="text-center">
           <p className="text-vault-500">No character selected</p>
         </div>
@@ -813,7 +813,7 @@ function CharacterWorkspaceInner({
   }, []);
 
   return (
-    <div className="h-screen w-full flex flex-col bg-linear-to-br from-vault-50 via-vault-50 to-vault-100/50 
+    <div className="h-dvh w-full flex flex-col bg-linear-to-br from-vault-50 via-vault-50 to-vault-100/50 
       dark:from-vault-950 dark:via-vault-950 dark:to-vault-900/50 overflow-hidden">
       
       <CharacterHeader 
@@ -844,8 +844,8 @@ function CharacterWorkspaceInner({
         {/* Left Panel: AI Context */}
         <aside 
           className={`
-            ${isContextOpen && isMobile ? 'fixed inset-y-0 left-0 z-40 w-80 shadow-2xl translate-x-0' : ''}
-            ${!isContextOpen && isMobile ? 'fixed inset-y-0 left-0 z-40 w-80 shadow-2xl -translate-x-full' : ''}
+            ${isContextOpen && isMobile ? 'fixed top-0 left-0 right-auto z-40 w-80 shadow-2xl translate-x-0 h-dvh safe-area-bottom' : ''}
+            ${!isContextOpen && isMobile ? 'fixed top-0 left-0 right-auto z-40 w-80 shadow-2xl -translate-x-full h-dvh safe-area-bottom' : ''}
             ${isContextOpen && !isMobile ? 'lg:w-72 xl:w-80 translate-x-0' : ''}
             ${!isContextOpen && !isMobile ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden' : ''}
             transition-all duration-300 ease-in-out
@@ -862,7 +862,7 @@ function CharacterWorkspaceInner({
         </aside>
 
         {/* Center: Main Editor - Always visible, spans available space */}
-        <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden">
+        <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden pb-[env(safe-area-inset-bottom)]">
           <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'}`}>
             <div className={`h-full w-full bg-white/60 dark:bg-vault-900/60 backdrop-blur-xl
               border border-vault-200/60 dark:border-vault-800/50 shadow-lg overflow-hidden relative
@@ -886,8 +886,8 @@ function CharacterWorkspaceInner({
         {/* Right Panel: Ask AI */}
         <aside 
           className={`
-            ${isChatOpen && isMobile ? 'fixed inset-y-0 right-0 z-40 w-80 shadow-2xl translate-x-0' : ''}
-            ${!isChatOpen && isMobile ? 'fixed inset-y-0 right-0 z-40 w-80 shadow-2xl translate-x-full' : ''}
+            ${isChatOpen && isMobile ? 'fixed top-0 right-0 left-auto z-40 w-80 shadow-2xl translate-x-0 h-dvh safe-area-bottom' : ''}
+            ${!isChatOpen && isMobile ? 'fixed top-0 right-0 left-auto z-40 w-80 shadow-2xl translate-x-full h-dvh safe-area-bottom' : ''}
             ${isChatOpen && !isMobile ? 'lg:w-80 xl:w-96 translate-x-0' : ''}
             ${!isChatOpen && !isMobile ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden' : ''}
             transition-all duration-300 ease-in-out

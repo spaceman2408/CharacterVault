@@ -395,7 +395,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   };
 
   return (
-    <div className="h-screen overflow-y-auto bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 transition-colors duration-500 animate-fade-in-slow">
+    <div className="h-dvh overflow-y-auto bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 transition-colors duration-500 animate-fade-in-slow">
       
       {/* --- Sticky Header --- */}
       <header className="sticky top-0 z-30 w-full backdrop-blur-xl bg-white/80 dark:bg-vault-950/80 border-b border-vault-200 dark:border-vault-800">
