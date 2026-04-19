@@ -401,12 +401,13 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         setIsStreaming(false);
 
         // Update panel with error, and pass back the instruct prompt for recovery
+        // Use local 'operation' param instead of 'currentOperation' state to avoid closure staleness
         panelUpdateRef.current?.({
           isProcessing: false,
           isStreaming: false,
           error: errorMsg,
-          currentOperation,
-          instructPrompt: currentOperation === 'instruct' ? lastInstructPromptRef.current : null,
+          currentOperation: operation,
+          instructPrompt: operation === 'instruct' ? lastInstructPromptRef.current : null,
         });
       }
     } finally {

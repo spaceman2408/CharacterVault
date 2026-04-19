@@ -703,12 +703,12 @@ textarea:focus:not(:focus-visible) {
    AI TOOLBAR PANEL - MOBILE RESPONSIVE
    ============================================================================ */
 
-@media (max-width: 640px) {
-  /* Hide the "Select text to use AI" / char count info on mobile, UNLESS it's a warning */
-  .ai-toolbar-panel .ai-toolbar-info:not(.warning) {
-    display: none !important;
-  }
+/* Hide the "Select text to use AI" / char count info, UNLESS it's a warning */
+.ai-toolbar-panel .ai-toolbar-info:not(.warning) {
+  display: none !important;
+}
 
+@media (max-width: 640px) {
   /* Hide separator on mobile */
   .ai-toolbar-panel .ai-toolbar-info ~ div,
   .ai-toolbar-panel div[style*="width: 1px"][style*="height: 24px"] {

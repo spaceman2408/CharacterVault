@@ -929,7 +929,7 @@ function createToolbarPanel(
       }
       // Keep sampler error state - it applies regardless of selection
       if (!hasSamplerError) {
-        infoText.textContent = 'Select text to use AI, or use Custom to generate';
+        infoText.textContent = 'Select text to use AI';
         infoText.style.color = 'var(--ai-toolbar-text-muted)';
         infoText.classList.remove('warning');
       }
@@ -957,7 +957,8 @@ function createToolbarPanel(
       primaryContainer.style.display = 'flex';
       moreContainer.style.display = 'block';
       separator.style.display = 'block';
-      infoText.style.display = 'block';
+      // Only show info text if it has a warning
+      infoText.style.display = infoText.classList.contains('warning') ? 'block' : 'none';
     }
 
     const isCompactCustomLayout = !state.isProcessing && isInstructMode;
