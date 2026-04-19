@@ -956,9 +956,9 @@ function createToolbarPanel(
       instructContainer.style.display = 'none';
       primaryContainer.style.display = 'flex';
       moreContainer.style.display = 'block';
-      separator.style.display = 'block';
-      // Only show info text if it has a warning
-      infoText.style.display = infoText.classList.contains('warning') ? 'block' : 'none';
+      const showInfo = infoText.classList.contains('warning');
+      separator.style.display = showInfo ? 'block' : 'none';
+      infoText.style.display = showInfo ? 'block' : 'none';
     }
 
     const isCompactCustomLayout = !state.isProcessing && isInstructMode;
