@@ -22,6 +22,8 @@ interface GreetingsEditorProps {
   promptSettings: PromptSettings;
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   activeSection: string;
+  fontSize?: number;
+  onFontSizeChange?: (size: number) => void;
 }
 
 interface GreetingListItemProps {
@@ -42,6 +44,8 @@ interface GreetingDetailProps {
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   contextSectionIds: CharacterSection[];
   setSelectedText: (text: string) => void;
+  fontSize?: number;
+  onFontSizeChange?: (size: number) => void;
 }
 
 /**
@@ -121,6 +125,8 @@ function GreetingDetail({
   getContextContent,
   contextSectionIds,
   setSelectedText,
+  fontSize,
+  onFontSizeChange,
 }: GreetingDetailProps): React.ReactElement {
   const { editorRef } = useAIEditor({
     value: greeting,
@@ -135,6 +141,8 @@ function GreetingDetail({
     minHeight: '200px',
     maxHeight: 'none',
     isActive: true,
+    fontSize,
+    onFontSizeChange,
   });
 
   return (
@@ -162,6 +170,8 @@ export function GreetingsEditor({
   samplerSettings,
   promptSettings,
   getContextContent,
+  fontSize,
+  onFontSizeChange,
 }: GreetingsEditorProps): React.ReactElement {
   const [greetingsList, setGreetingsList] = useState<string[]>(greetings);
   const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(0);
@@ -317,6 +327,8 @@ export function GreetingsEditor({
               getContextContent={getContextContent}
               contextSectionIds={contextSectionIds}
               setSelectedText={setSelectedText}
+              fontSize={fontSize}
+              onFontSizeChange={onFontSizeChange}
             />
           </div>
         ) : (

@@ -168,7 +168,7 @@
   --ai-toolbar-error-bg: rgba(239, 68, 68, 0.1);
   --ai-toolbar-error-border: rgba(239, 68, 68, 0.3);
   --ai-toolbar-error-text: #ef4444;
-  --ai-toolbar-accent-primary: #a78bfa;
+  --ai-toolbar-accent-primary: #22d3ee;
   --ai-toolbar-accent-secondary: #60a5fa;
   --ai-toolbar-accent-success: #10b981;
   --ai-toolbar-accent-warning: #f59e0b;
@@ -186,11 +186,11 @@
   --vault-search-text-secondary: #a3a3a3;
   --vault-search-btn-bg: #404040;
   --vault-search-btn-hover: #525252;
-  --vault-search-primary: #60a5fa;
+  --vault-search-primary: #22d3ee;
   --vault-search-match-bg: rgba(251, 191, 36, 0.26);
   --vault-search-match-selected: rgba(251, 191, 36, 0.5);
   --vault-search-match-selected-ring: rgba(253, 186, 116, 0.7);
-  --vault-search-focus-shadow: rgba(96, 165, 250, 0.2);
+  --vault-search-focus-shadow: rgba(34, 211, 238, 0.25);
 
   --tooltip-bg: #262626;
   --tooltip-border: #404040;
@@ -573,6 +573,8 @@ textarea:focus:not(:focus-visible) {
 
 .cm-toolbar-search-panel .search-btn:hover {
   background-color: var(--vault-search-btn-hover);
+  border-color: var(--vault-search-primary);
+  color: var(--vault-search-primary);
 }
 
 .cm-toolbar-search-panel .search-btn.close {
@@ -588,25 +590,22 @@ textarea:focus:not(:focus-visible) {
   gap: 4px;
   padding: 4px 8px;
   border-radius: 4px;
+  border: 1px solid var(--vault-search-input-border);
   cursor: pointer;
   font-size: 12px;
   font-family: monospace;
   color: var(--vault-search-text-secondary);
   user-select: none;
+  transition: all 0.15s ease;
 }
 
 .cm-toolbar-search-panel .search-option:hover {
   background-color: var(--vault-search-btn-hover);
-}
-
-.cm-toolbar-search-panel .search-option input[type="checkbox"] {
-  display: none;
-}
-
-.cm-toolbar-search-panel .search-option input[type="checkbox"]:checked + span {
+  border-color: var(--vault-search-primary);
   color: var(--vault-search-primary);
-  font-weight: bold;
 }
+
+/* Checkbox styling is handled in JavaScript for dynamic theme support */
 
 .cm-searchMatch {
   background-color: var(--vault-search-match-bg) !important;

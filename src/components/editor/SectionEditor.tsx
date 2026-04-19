@@ -78,6 +78,8 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     promptSettings,
     getContextContent,
     activeSection,
+    fontSize,
+    setFontSize,
   } = useCharacterEditorContext();
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
@@ -130,6 +132,8 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     minHeight: 'clamp(180px, 40vh, 400px)',
     editorStyles: { padding: 'clamp(8px, 2vw, 16px)' },
     isActive: section !== 'image' && section !== 'alternate_greetings' && section !== 'lorebook' && !!currentCharacter,
+    fontSize,
+    onFontSizeChange: setFontSize,
   });
 
   // Early return for no character
@@ -184,6 +188,8 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           promptSettings={promptSettings}
           getContextContent={getContextContent}
           activeSection={activeSection}
+          fontSize={fontSize}
+          onFontSizeChange={setFontSize}
         />
       </div>
     );
@@ -210,6 +216,8 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           promptSettings={promptSettings}
           getContextContent={getContextContent}
           activeSection={activeSection}
+          fontSize={fontSize}
+          onFontSizeChange={setFontSize}
         />
       </div>
     );

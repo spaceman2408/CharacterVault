@@ -14,6 +14,7 @@ import type { SamplerSettings, AIConfig, PromptSettings, AIOperation } from '../
 import { aiToolbarPanel, getPanelUpdateFunction } from '../editor/extensions/aiToolbarPanel';
 import { toolbarSearch, toolbarSearchTheme } from '../editor/extensions/toolbarSearch';
 import { themeSync } from '../editor/extensions/themeSync';
+import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
 import { AIService, AIError } from '../services/AIService';
 
 const setAcceptedEditHighlight = StateEffect.define<{ from: number; to: number } | null>();
@@ -78,6 +79,10 @@ export interface UseAIEditorOptions {
   editorStyles?: Record<string, string>;
   /** Whether the editor is currently active/visible */
   isActive?: boolean;
+  /** Initial font size for the editor (defaults to 16) */
+  fontSize?: number;
+  /** Callback when font size changes (for persistence) */
+  onFontSizeChange?: (size: number) => void;
 }
 
 export interface UseAIEditorReturn {
@@ -131,6 +136,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     maxHeight,
     editorStyles = {},
     isActive = true,
+    fontSize,
+    onFontSizeChange,
   } = options;
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -398,6 +405,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           isProcessing: false,
           isStreaming: false,
           error: errorMsg,
+          currentOperation,
           instructPrompt: currentOperation === 'instruct' ? lastInstructPromptRef.current : null,
         });
       }
@@ -543,7 +551,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         EditorView.contentAttributes.of({ spellcheck: 'true' }),
         EditorView.theme({
           '&': {
-            fontSize: 'clamp(14px, 2.6vw, 16px)',
+            fontSize: 'var(--editor-font-size, 16px)',
             height: '100%',
             overflow: 'hidden',
             ...editorStyles,
@@ -623,11 +631,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           },
           accept,
           reject,
-          abort
+          abort,
+          onFontSizeChange
         ),
         // Search & Replace functionality
         toolbarSearch(),
         toolbarSearchTheme(),
+        // Font size extension
+        fontSizeExtension(fontSize),
       ],
     });
 
@@ -717,9 +728,20 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
        panel.__panel.updateSampler(samplerSettings);
     } else {
       // Alternative: Use the registry if we store the whole panel there
-      // Let's modify aiToolbarPanel.ts to store the whole object in the registry
+      // Let's modify aiToolbarPanel.ts to store the whole panel there
     }
   }, [samplerSettings]);
+
+  // Sync external font size changes to the editor
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || fontSize === undefined) return;
+
+    const currentSize = view.state.field(editorFontSizeField, false) ?? DEFAULT_FONT_SIZE;
+    if (fontSize !== currentSize) {
+      setFontSize(view, fontSize);
+    }
+  }, [fontSize]);
 
   return {
     editorRef,

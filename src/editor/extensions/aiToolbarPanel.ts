@@ -6,11 +6,18 @@
  */
 
 import { EditorView, showPanel, type Panel, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { SelectionRange } from '@codemirror/state';
+import { SelectionRange, StateEffect } from '@codemirror/state';
 import type { AIOperation } from '../../db/types';
-import { toggleToolbarSearch } from './toolbarSearch';
+import { toggleToolbarSearch, searchPanelOpen } from './toolbarSearch';
+import { createFontSizeControl } from './fontSizeControl';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings } from '../../db/types';
+
+// Check if dark mode is active
+const isDarkMode = () => {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.classList.contains('dark');
+};
 
 /**
  * Callback for AI operations
@@ -41,6 +48,11 @@ export type AIStreamingCallback = (update: {
  * Callback for aborting AI operations
  */
 export type AIAbortCallback = () => void;
+
+/**
+ * Callback for font size changes
+ */
+export type FontSizeChangeCallback = (size: number) => void;
 
 // Registry to store panel update functions by editor view
 const panelRegistry = new WeakMap<EditorView, AIStreamingCallback>();
@@ -77,7 +89,8 @@ function createToolbarPanel(
   onAction: AIToolbarActionCallback,
   onAccept: () => void,
   onReject: () => void,
-  onAbort: AIAbortCallback
+  onAbort: AIAbortCallback,
+  onFontSizeChange?: FontSizeChangeCallback
 ): Panel & { updateState: () => void; updateAIState: AIStreamingCallback; updateSampler: (s: SamplerSettings) => void } {
   const dom = document.createElement('div');
   dom.className = 'ai-toolbar-panel';
@@ -407,7 +420,48 @@ function createToolbarPanel(
   searchBtn.addEventListener('mousedown', (e) => {
     e.preventDefault();
   });
+
+  // Update search button appearance based on search panel state (matches aA button styling)
+  const updateSearchButtonState = () => {
+    const isOpen = view.state.field(searchPanelOpen);
+    if (isOpen) {
+      const isDark = isDarkMode();
+      searchBtn.style.background = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
+      searchBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+    } else {
+      searchBtn.style.background = 'transparent';
+      searchBtn.style.borderColor = 'var(--ai-toolbar-input-border)';
+    }
+  };
+
+  // Set initial state
+  updateSearchButtonState();
+
+  // Listen for search panel state changes - defer dispatch to avoid "update in progress" error
+  const searchPanelListener = EditorView.updateListener.of((update) => {
+    const wasOpen = update.startState.field(searchPanelOpen);
+    const isOpen = update.state.field(searchPanelOpen);
+    if (wasOpen !== isOpen) {
+      updateSearchButtonState();
+    }
+  });
+  
+  // Defer the dispatch to avoid "update in progress" error
+  setTimeout(() => {
+    view.dispatch({ effects: StateEffect.appendConfig.of([searchPanelListener]) });
+  }, 0);
+
   toolbarContainer.appendChild(searchBtn);
+
+  // Font size control (aA button with slider popup)
+  let fontSizeBtn: HTMLElement | undefined;
+  let fontSizeCleanup: (() => void) | undefined;
+  if (onFontSizeChange) {
+    const { button: fontSizeBtnContainer, cleanup } = createFontSizeControl(view, onFontSizeChange);
+    fontSizeBtn = fontSizeBtnContainer;
+    toolbarContainer.appendChild(fontSizeBtnContainer);
+    fontSizeCleanup = cleanup;
+  }
 
   // Abort button (shown during processing)
   const abortBtn = document.createElement('button');
@@ -909,6 +963,9 @@ function createToolbarPanel(
     const isCompactCustomLayout = !state.isProcessing && isInstructMode;
     toolbarContainer.classList.toggle('ai-toolbar-instruct-mode', isCompactCustomLayout);
     searchBtn.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
+    if (fontSizeBtn) {
+      fontSizeBtn.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
+    }
 
     // Update all buttons
     // When there's a sampler error, all buttons are disabled including Custom
@@ -988,7 +1045,12 @@ function createToolbarPanel(
     updateSampler: (s: SamplerSettings) => {
       currentSampler = s;
       updateState();
-    }
+    },
+    destroy: () => {
+      if (fontSizeCleanup) {
+        fontSizeCleanup();
+      }
+    },
   };
 
   // Store panel instance on DOM for useAIEditor to access
@@ -1033,10 +1095,11 @@ export function aiToolbarPanel(
   onAction: AIToolbarActionCallback,
   onAccept: () => void,
   onReject: () => void,
-  onAbort: AIAbortCallback
+  onAbort: AIAbortCallback,
+  onFontSizeChange?: FontSizeChangeCallback
 ) {
   return [
-    showPanel.of((view) => createToolbarPanel(view, sampler, onAction, onAccept, onReject, onAbort)),
+    showPanel.of((view) => createToolbarPanel(view, sampler, onAction, onAccept, onReject, onAbort, onFontSizeChange)),
     toolbarPanelPlugin(onAction),
   ];
 }

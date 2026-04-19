@@ -34,6 +34,8 @@ interface LorebookEditorProps {
   promptSettings: PromptSettings;
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   activeSection: string;
+  fontSize?: number;
+  onFontSizeChange?: (size: number) => void;
 }
 
 interface LorebookEntryListItemProps {
@@ -53,6 +55,8 @@ interface LorebookEntryDetailProps {
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   contextSectionIds: CharacterSection[];
   setSelectedText: (text: string) => void;
+  fontSize?: number;
+  onFontSizeChange?: (size: number) => void;
 }
 
 const POSITION_OPTIONS: { value: LorebookEntry['position']; label: string }[] = [
@@ -139,6 +143,8 @@ function LorebookEntryDetail({
   getContextContent,
   contextSectionIds,
   setSelectedText,
+  fontSize,
+  onFontSizeChange,
 }: LorebookEntryDetailProps): React.ReactElement {
   const { editorRef } = useAIEditor({
     value: entry.content,
@@ -152,6 +158,8 @@ function LorebookEntryDetail({
     minHeight: '200px',
     maxHeight: 'none',
     isActive: true,
+    fontSize,
+    onFontSizeChange,
   });
 
   // Local state for keys input to allow typing commas/spaces without immediate parsing
@@ -416,6 +424,8 @@ export function LorebookEditor({
   promptSettings,
   getContextContent,
   activeSection,
+  fontSize,
+  onFontSizeChange,
 }: LorebookEditorProps): React.ReactElement {
   return (
     <LorebookEditorInner
@@ -428,6 +438,8 @@ export function LorebookEditor({
       promptSettings={promptSettings}
       getContextContent={getContextContent}
       activeSection={activeSection}
+      fontSize={fontSize}
+      onFontSizeChange={onFontSizeChange}
     />
   );
 }
@@ -446,6 +458,8 @@ function LorebookEditorInner({
   samplerSettings,
   promptSettings,
   getContextContent,
+  fontSize,
+  onFontSizeChange,
 }: LorebookEditorInnerProps): React.ReactElement {
   const normalizedPropLorebook = useMemo<CharacterBook>(() => ({
     name: lorebook?.name || '',
@@ -744,6 +758,8 @@ function LorebookEditorInner({
               getContextContent={getContextContent}
               contextSectionIds={contextSectionIds}
               setSelectedText={setSelectedText}
+              fontSize={fontSize}
+              onFontSizeChange={onFontSizeChange}
             />
           </div>
         ) : (

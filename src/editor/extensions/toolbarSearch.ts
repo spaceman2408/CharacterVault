@@ -187,27 +187,66 @@ function applyQueryToControls(query: SearchQuery, controls: SearchPanelControls)
   controls.regexpCb.checked = query.regexp;
 }
 
+// CSS variable helpers
+const cssVar = (name: string, fallback: string) => `var(${name}, ${fallback})`;
+
+// Check if dark mode is active
+const isDarkMode = () => {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.classList.contains('dark');
+};
+
 // Create search panel DOM
 function createSearchPanel(view: EditorView): SearchPanelControls {
   const dom = document.createElement('div');
   dom.className = 'cm-toolbar-search-panel';
+  dom.style.cssText = `
+    background-color: ${cssVar('--ai-toolbar-bg', '#ffffff')};
+    border-bottom: 1px solid ${cssVar('--ai-toolbar-border', '#e5e7eb')};
+    padding: 8px 12px;
+  `;
 
   const container = document.createElement('div');
   container.className = 'search-container';
+  container.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  `;
   dom.appendChild(container);
 
   const searchRow = document.createElement('div');
   searchRow.className = 'search-row';
+  searchRow.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  `;
   container.appendChild(searchRow);
 
   const replaceRow = document.createElement('div');
   replaceRow.className = 'replace-row';
+  replaceRow.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  `;
   container.appendChild(replaceRow);
 
   const searchInput = document.createElement('input');
   searchInput.type = 'text';
   searchInput.className = 'search-input';
   searchInput.placeholder = 'Find...';
+  searchInput.style.cssText = `
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 14px;
+    border: 1px solid ${cssVar('--ai-toolbar-input-border', '#d1d5db')};
+    border-radius: 6px;
+    background-color: ${cssVar('--ai-toolbar-input-bg', '#ffffff')};
+    color: ${cssVar('--ai-toolbar-text', '#374151')};
+    outline: none;
+  `;
   searchRow.appendChild(searchInput);
 
   const prevBtn = document.createElement('button');
@@ -216,6 +255,31 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
   prevBtn.textContent = '^';
   prevBtn.title = 'Previous match (Shift+Enter)';
   prevBtn.setAttribute('aria-label', 'Previous match');
+  prevBtn.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid ${cssVar('--ai-toolbar-input-border', '#d1d5db')};
+    border-radius: 6px;
+    background-color: transparent;
+    color: ${cssVar('--ai-toolbar-text-secondary', '#6b7280')};
+    cursor: pointer;
+    transition: all 0.15s ease;
+  `;
+  prevBtn.addEventListener('mouseenter', () => {
+    const isDark = isDarkMode();
+    prevBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
+    prevBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+    prevBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+  });
+  prevBtn.addEventListener('mouseleave', () => {
+    prevBtn.style.backgroundColor = 'transparent';
+    prevBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
+    prevBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+  });
   searchRow.appendChild(prevBtn);
 
   const nextBtn = document.createElement('button');
@@ -224,10 +288,28 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
   nextBtn.textContent = 'v';
   nextBtn.title = 'Next match (Enter)';
   nextBtn.setAttribute('aria-label', 'Next match');
+  nextBtn.style.cssText = prevBtn.style.cssText;
+  nextBtn.addEventListener('mouseenter', () => {
+    const isDark = isDarkMode();
+    nextBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
+    nextBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+    nextBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+  });
+  nextBtn.addEventListener('mouseleave', () => {
+    nextBtn.style.backgroundColor = 'transparent';
+    nextBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
+    nextBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+  });
   searchRow.appendChild(nextBtn);
 
   const countEl = document.createElement('span');
   countEl.className = 'search-match-count';
+  countEl.style.cssText = `
+    font-size: 12px;
+    font-weight: 500;
+    color: ${cssVar('--ai-toolbar-text-muted', '#9ca3af')};
+    padding: 0 6px;
+  `;
   searchRow.appendChild(countEl);
 
   const createOption = (
@@ -239,15 +321,68 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
     const label = document.createElement('label');
     label.className = 'search-option';
     label.title = tooltip;
+    label.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: ${cssVar('--ai-toolbar-text-secondary', '#6b7280')};
+      border: 1px solid ${cssVar('--ai-toolbar-input-border', '#d1d5db')};
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s ease;
+    `;
 
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.className = cssClass;
     input.setAttribute('aria-label', ariaLabel);
     input.title = tooltip;
+    input.style.cssText = 'display: none;';
 
     const span = document.createElement('span');
     span.textContent = text;
+
+    // Update label appearance when checkbox is toggled
+    const updateCheckedState = () => {
+      const isDark = isDarkMode();
+      const isChecked = input.checked;
+      if (isChecked) {
+        // Checked state: stronger accent color
+        label.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.2)' : 'rgba(124, 58, 237, 0.2)';
+        label.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+        label.style.color = isDark ? '#22d3ee' : '#7c3aed';
+        label.style.fontWeight = '700';
+      } else {
+        // Unchecked state: reset to default
+        label.style.backgroundColor = 'transparent';
+        label.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
+        label.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+        label.style.fontWeight = '500';
+      }
+    };
+    input.addEventListener('change', updateCheckedState);
+
+    // Override mouseenter/mouseleave to respect checked state
+    label.addEventListener('mouseenter', () => {
+      const isDark = isDarkMode();
+      const isChecked = input.checked;
+      if (isChecked) {
+        // Checked + hover: even stronger
+        label.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.3)' : 'rgba(124, 58, 237, 0.3)';
+      } else {
+        // Unchecked + hover: subtle accent
+        label.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
+        label.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+        label.style.color = isDark ? '#22d3ee' : '#7c3aed';
+      }
+    });
+    label.addEventListener('mouseleave', () => {
+      updateCheckedState();
+    });
 
     label.appendChild(input);
     label.appendChild(span);
@@ -264,15 +399,42 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'search-btn close';
-  closeBtn.textContent = 'x';
+  closeBtn.textContent = '×';
   closeBtn.title = 'Close search (Escape)';
   closeBtn.setAttribute('aria-label', 'Close search');
+  closeBtn.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+    font-weight: 600;
+    border: 1px solid ${cssVar('--ai-toolbar-input-border', '#d1d5db')};
+    border-radius: 6px;
+    background-color: transparent;
+    color: ${cssVar('--ai-toolbar-text-secondary', '#6b7280')};
+    cursor: pointer;
+    transition: all 0.15s ease;
+  `;
+  closeBtn.addEventListener('mouseenter', () => {
+    const isDark = isDarkMode();
+    closeBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
+    closeBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+    closeBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+  });
+  closeBtn.addEventListener('mouseleave', () => {
+    closeBtn.style.backgroundColor = 'transparent';
+    closeBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
+    closeBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+  });
   searchRow.appendChild(closeBtn);
 
   const replaceInput = document.createElement('input');
   replaceInput.type = 'text';
   replaceInput.className = 'replace-input';
   replaceInput.placeholder = 'Replace...';
+  replaceInput.style.cssText = searchInput.style.cssText;
   replaceRow.appendChild(replaceInput);
 
   const replaceBtn = document.createElement('button');
@@ -281,6 +443,18 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
   replaceBtn.textContent = 'Replace';
   replaceBtn.title = 'Replace current match';
   replaceBtn.setAttribute('aria-label', 'Replace current match');
+  replaceBtn.style.cssText = prevBtn.style.cssText;
+  replaceBtn.addEventListener('mouseenter', () => {
+    const isDark = isDarkMode();
+    replaceBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
+    replaceBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+    replaceBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+  });
+  replaceBtn.addEventListener('mouseleave', () => {
+    replaceBtn.style.backgroundColor = 'transparent';
+    replaceBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
+    replaceBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+  });
   replaceRow.appendChild(replaceBtn);
 
   const replaceAllBtn = document.createElement('button');
@@ -289,6 +463,18 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
   replaceAllBtn.textContent = 'Replace All';
   replaceAllBtn.title = 'Replace all matches';
   replaceAllBtn.setAttribute('aria-label', 'Replace all matches');
+  replaceAllBtn.style.cssText = prevBtn.style.cssText;
+  replaceAllBtn.addEventListener('mouseenter', () => {
+    const isDark = isDarkMode();
+    replaceAllBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
+    replaceAllBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+    replaceAllBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+  });
+  replaceAllBtn.addEventListener('mouseleave', () => {
+    replaceAllBtn.style.backgroundColor = 'transparent';
+    replaceAllBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
+    replaceAllBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+  });
   replaceRow.appendChild(replaceAllBtn);
 
   const caseCb = caseOption.input;
@@ -486,6 +672,84 @@ export function toolbarSearchTheme() {
       borderRadius: '2px',
       outline: '1px solid var(--vault-search-match-selected-ring, rgba(180, 83, 9, 0.65))',
       boxShadow: '0 0 0 1px var(--vault-search-match-selected-ring, rgba(180, 83, 9, 0.65))',
+    },
+    // Toolbar search panel styling - matches aA button/popup theme
+    '& .cm-toolbar-search-panel': {
+      backgroundColor: 'var(--ai-toolbar-bg, #ffffff)',
+      borderBottom: '1px solid var(--ai-toolbar-border, #e5e7eb)',
+      padding: '8px 12px',
+    },
+    '& .cm-toolbar-search-panel .search-container': {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+    },
+    '& .cm-toolbar-search-panel .search-row, & .cm-toolbar-search-panel .replace-row': {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px',
+    },
+    '& .cm-toolbar-search-panel .search-input, & .cm-toolbar-search-panel .replace-input': {
+      flex: '1',
+      padding: '6px 10px',
+      fontSize: '14px',
+      border: '1px solid var(--ai-toolbar-input-border, #d1d5db)',
+      borderRadius: '6px',
+      backgroundColor: 'var(--ai-toolbar-input-bg, #ffffff)',
+      color: 'var(--ai-toolbar-text, #374151)',
+      outline: 'none',
+    },
+    '& .cm-toolbar-search-panel .search-input:focus, & .cm-toolbar-search-panel .replace-input:focus': {
+      borderColor: 'var(--ai-toolbar-accent-primary, #7c3aed)',
+      boxShadow: '0 0 0 3px rgba(124, 58, 237, 0.1)',
+    },
+    '& .cm-toolbar-search-panel .search-btn': {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '6px 10px',
+      fontSize: '13px',
+      fontWeight: '500',
+      border: '1px solid var(--ai-toolbar-input-border, #d1d5db)',
+      borderRadius: '6px',
+      backgroundColor: 'transparent',
+      color: 'var(--ai-toolbar-text-secondary, #6b7280)',
+      cursor: 'pointer',
+      transition: 'all 0.15s ease',
+    },
+    '& .cm-toolbar-search-panel .search-btn:hover': {
+      backgroundColor: 'var(--ai-toolbar-hover-bg, rgba(124, 58, 237, 0.1))',
+      borderColor: 'var(--ai-toolbar-accent-primary, #7c3aed)',
+      color: 'var(--ai-toolbar-accent-primary, #7c3aed)',
+    },
+    '& .cm-toolbar-search-panel .search-btn.close': {
+      fontWeight: '600',
+    },
+    '& .cm-toolbar-search-panel .search-option': {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '4px',
+      padding: '4px 8px',
+      fontSize: '12px',
+      fontWeight: '500',
+      color: 'var(--ai-toolbar-text-secondary, #6b7280)',
+      border: '1px solid var(--ai-toolbar-input-border, #d1d5db)',
+      borderRadius: '4px',
+      cursor: 'pointer',
+      userSelect: 'none',
+    },
+    '& .cm-toolbar-search-panel .search-option:hover': {
+      backgroundColor: 'var(--ai-toolbar-hover-bg, rgba(124, 58, 237, 0.1))',
+      borderColor: 'var(--ai-toolbar-accent-primary, #7c3aed)',
+    },
+    '& .cm-toolbar-search-panel .search-option input[type="checkbox"]': {
+      accentColor: 'var(--ai-toolbar-accent-primary, #7c3aed)',
+    },
+    '& .cm-toolbar-search-panel .search-match-count': {
+      fontSize: '12px',
+      fontWeight: '500',
+      color: 'var(--ai-toolbar-text-muted, #9ca3af)',
+      padding: '0 6px',
     },
   });
 }
