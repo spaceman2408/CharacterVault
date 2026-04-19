@@ -58,7 +58,7 @@ export function CreatorNotesPreviewModal({
             <button
               type="button"
               onClick={onAddToEditor}
-              className="rounded-lg bg-vault-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-vault-700 dark:hover:bg-vault-500"
+              className="hidden rounded-lg bg-vault-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-vault-700 sm:block dark:hover:bg-vault-500"
             >
               Add to Editor
             </button>
