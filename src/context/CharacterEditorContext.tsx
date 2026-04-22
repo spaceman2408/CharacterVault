@@ -6,7 +6,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { Character, CharacterSection, CharacterSnapshot, SnapshotDiffEntry } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
-import { characterDb } from '../db/CharacterDatabase';
 import { DEFAULT_SETTINGS } from '../db/types';
 import { useCharacterContext } from './useCharacterContext';
 import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation, type ManualSnapshotResult } from './characterEditorContextTypes';
@@ -14,7 +13,6 @@ import { characterSettingsService } from '../services/CharacterSettingsService';
 import { characterSnapshotService } from '../services/CharacterSnapshotService';
 
 const CENTRAL_SAVE_DEBOUNCE_MS = 500;
-const AUTO_SNAPSHOT_IDLE_MS = 30000;
 
 /**
  * Props for the CharacterEditorProvider component
@@ -28,7 +26,7 @@ interface CharacterEditorProviderProps {
  * 
  * Features:
  * - Current character management
- * - Auto-save functionality (debounced)
+ * - Debounced save functionality
  * - Save status tracking
  * - AI settings and context management
  * 
@@ -68,11 +66,10 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     resolve: Array<(value: Character) => void>;
     reject: Array<(reason?: unknown) => void>;
   }>>(new Map());
-  const autoSnapshotTimerRef = useRef<number | null>(null);
-  const pendingAutoSnapshotCharacterIdRef = useRef<string | null>(null);
   const openedCharacterIdRef = useRef<string | null>(null);
   const currentCharacterRef = useRef<Character | null>(currentCharacter);
   const selectedTextRef = useRef(selectedText);
+  const isHistoryOpenRef = useRef(isHistoryOpen);
 
   useEffect(() => {
     currentCharacterRef.current = currentCharacter;
@@ -82,12 +79,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     selectedTextRef.current = selectedText;
   }, [selectedText]);
 
-  const clearAutoSnapshotTimer = useCallback(() => {
-    if (autoSnapshotTimerRef.current !== null) {
-      window.clearTimeout(autoSnapshotTimerRef.current);
-      autoSnapshotTimerRef.current = null;
-    }
-  }, []);
+  useEffect(() => {
+    isHistoryOpenRef.current = isHistoryOpen;
+  }, [isHistoryOpen]);
 
   const refreshSnapshotsForCharacter = useCallback(async (characterId: string) => {
     setIsSnapshotsLoading(true);
@@ -110,38 +104,18 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     await refreshSnapshotsForCharacter(currentCharacterId);
   }, [currentCharacterId, refreshSnapshotsForCharacter]);
 
-  const createSnapshotFromCharacter = useCallback(async (character: Character, source: 'open' | 'auto' | 'manual' | 'rollback') => {
+  const createSnapshotFromCharacter = useCallback(async (character: Character, source: 'open' | 'manual' | 'rollback') => {
     try {
       const snapshot = await characterSnapshotService.createSnapshot(character, source);
-      await refreshSnapshotsForCharacter(character.id);
+      if (isHistoryOpenRef.current) {
+        await refreshSnapshotsForCharacter(character.id);
+      }
       return snapshot;
     } catch (error) {
       console.error(`Failed to create ${source} snapshot:`, error);
       return null;
     }
   }, [refreshSnapshotsForCharacter]);
-
-  const scheduleAutoSnapshot = useCallback((characterId: string) => {
-    pendingAutoSnapshotCharacterIdRef.current = characterId;
-    clearAutoSnapshotTimer();
-    autoSnapshotTimerRef.current = window.setTimeout(() => {
-      const pendingCharacterId = pendingAutoSnapshotCharacterIdRef.current;
-      pendingAutoSnapshotCharacterIdRef.current = null;
-      autoSnapshotTimerRef.current = null;
-
-      if (!pendingCharacterId) {
-        return;
-      }
-
-      void (async () => {
-        const latestCharacter = await characterDb.getCharacter(pendingCharacterId);
-        if (!latestCharacter) {
-          return;
-        }
-        await createSnapshotFromCharacter(latestCharacter, 'auto');
-      })();
-    }, AUTO_SNAPSHOT_IDLE_MS);
-  }, [clearAutoSnapshotTimer, createSnapshotFromCharacter]);
 
   const commitQueuedCharacterUpdate = useCallback(async (requestKey: string, characterId: string): Promise<Character | null> => {
     const queuedInput = updateCharacterPendingInputRef.current.get(requestKey);
@@ -161,7 +135,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
         setIsDirty(false);
         setSaveStatus('saved');
-        scheduleAutoSnapshot(updated.id);
       }
 
       currentResolvers?.resolve.forEach(fn => fn(updated));
@@ -178,7 +151,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       currentResolvers?.reject.forEach(fn => fn(error));
       throw error;
     }
-  }, [scheduleAutoSnapshot, updateCharacterBase]);
+  }, [updateCharacterBase]);
 
   const commitQueuedSpecFieldUpdate = useCallback(async (
     requestKey: string,
@@ -202,7 +175,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
         setIsDirty(false);
         setSaveStatus('saved');
-        scheduleAutoSnapshot(updated.id);
       }
 
       currentResolvers?.resolve.forEach(fn => fn(updated));
@@ -219,7 +191,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       currentResolvers?.reject.forEach(fn => fn(error));
       throw error;
     }
-  }, [scheduleAutoSnapshot, updateSpecFieldBase]);
+  }, [updateSpecFieldBase]);
 
   const flushPendingSaves = useCallback(async (): Promise<Character | null> => {
     const character = currentCharacterRef.current;
@@ -305,8 +277,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       openedCharacterIdRef.current = null;
       setSnapshots([]);
       setIsHistoryOpen(false);
-      pendingAutoSnapshotCharacterIdRef.current = null;
-      clearAutoSnapshotTimer();
       return;
     }
 
@@ -315,14 +285,28 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
 
     openedCharacterIdRef.current = currentCharacterId;
-    pendingAutoSnapshotCharacterIdRef.current = null;
-    clearAutoSnapshotTimer();
-    void refreshSnapshots();
-  }, [clearAutoSnapshotTimer, currentCharacter, currentCharacterId, refreshSnapshots]);
+    void createSnapshotFromCharacter(currentCharacter, 'open');
+    if (isHistoryOpenRef.current) {
+      void refreshSnapshots();
+    } else {
+      setSnapshots([]);
+    }
+  }, [createSnapshotFromCharacter, currentCharacter, currentCharacterId, refreshSnapshots]);
 
-  useEffect(() => () => {
-    clearAutoSnapshotTimer();
-  }, [clearAutoSnapshotTimer]);
+  useEffect(() => {
+    if (!isHistoryOpen) {
+      setSnapshots([]);
+      setIsSnapshotsLoading(false);
+      return;
+    }
+
+    if (!currentCharacterId) {
+      setSnapshots([]);
+      return;
+    }
+
+    void refreshSnapshotsForCharacter(currentCharacterId);
+  }, [currentCharacterId, isHistoryOpen, refreshSnapshotsForCharacter]);
 
   // Clear removed sections when navigating so they can be auto-added again
   // Using a ref to track previous active section to avoid cascading renders
@@ -533,11 +517,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
 
     const latestCharacter = await flushPendingSaves();
-    clearAutoSnapshotTimer();
-    pendingAutoSnapshotCharacterIdRef.current = null;
     const snapshot = await createSnapshotFromCharacter(latestCharacter ?? character, 'manual');
     return snapshot ? 'created' : 'skipped';
-  }, [clearAutoSnapshotTimer, createSnapshotFromCharacter, flushPendingSaves]);
+  }, [createSnapshotFromCharacter, flushPendingSaves]);
 
   const getSnapshotDiff = useCallback((snapshotId: string): SnapshotDiffEntry[] => {
     const character = currentCharacterRef.current;
@@ -583,8 +565,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       return;
     }
 
-    clearAutoSnapshotTimer();
-    pendingAutoSnapshotCharacterIdRef.current = null;
     setSaveStatus('saving');
 
     try {
@@ -624,7 +604,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       throw error;
     }
   }, [
-    clearAutoSnapshotTimer,
     createSnapshotFromCharacter,
     snapshots,
     updateCharacterBase,

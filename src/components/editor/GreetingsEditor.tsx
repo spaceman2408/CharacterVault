@@ -4,7 +4,7 @@
  * @module components/editor/GreetingsEditor
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Plus, Trash2, MessageSquare, ChevronLeft } from 'lucide-react';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
 import type { CharacterSection } from '../../db/characterTypes';
@@ -29,6 +29,7 @@ interface GreetingsEditorProps {
 interface GreetingListItemProps {
   greeting: string;
   index: number;
+  tokenCount: number | null;
   isSelected: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -36,7 +37,6 @@ interface GreetingListItemProps {
 
 interface GreetingDetailProps {
   greeting: string;
-  onImmediateUpdate: (value: string) => void;
   onPersistUpdate: (value: string) => void;
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
@@ -54,6 +54,7 @@ interface GreetingDetailProps {
 function GreetingListItem({
   greeting,
   index,
+  tokenCount,
   isSelected,
   onSelect,
   onDelete,
@@ -64,8 +65,6 @@ function GreetingListItem({
   };
 
   const hasContent = greeting.trim().length > 0;
-  const tokenCount = estimateTokens(greeting);
-
   return (
     <div
       onClick={onSelect}
@@ -92,7 +91,7 @@ function GreetingListItem({
           </div>
 
           <div className="flex items-center gap-2 mt-1 text-xs text-vault-500 dark:text-vault-400">
-            <span>{tokenCount} tokens</span>
+            {tokenCount !== null ? <span>{tokenCount} tokens</span> : null}
           </div>
         </div>
 
@@ -117,7 +116,6 @@ function GreetingListItem({
  */
 function GreetingDetail({
   greeting,
-  onImmediateUpdate,
   onPersistUpdate,
   aiConfig,
   samplerSettings,
@@ -128,10 +126,18 @@ function GreetingDetail({
   fontSize,
   onFontSizeChange,
 }: GreetingDetailProps): React.ReactElement {
+  const [draftGreeting, setDraftGreeting] = useState(greeting);
+
+  useEffect(() => {
+    setDraftGreeting(greeting);
+  }, [greeting]);
+
   const { editorRef } = useAIEditor({
-    value: greeting,
-    onImmediateChange: onImmediateUpdate,
+    value: draftGreeting,
+    onImmediateChange: setDraftGreeting,
     onPersistChange: onPersistUpdate,
+    saveMode: 'debounced',
+    saveDebounceMs: 250,
     setSelectedText,
     aiConfig,
     samplerSettings,
@@ -189,21 +195,13 @@ export function GreetingsEditor({
     return () => clearTimeout(timeoutId);
   }, [greetings]);
 
-  const buildUpdatedList = useCallback((index: number, value: string) => {
-    const newList = [...greetingsList];
-    newList[index] = value;
-    return newList;
-  }, [greetingsList]);
-
-  // Handle greeting update (immediate local state)
-  const handleGreetingImmediateUpdate = useCallback((index: number, value: string) => {
-    setGreetingsList(buildUpdatedList(index, value));
-  }, [buildUpdatedList]);
-
   // Handle greeting update (persist to parent)
   const handleGreetingPersistUpdate = useCallback((index: number, value: string) => {
-    onChange(buildUpdatedList(index, value));
-  }, [buildUpdatedList, onChange]);
+    const newList = [...greetingsList];
+    newList[index] = value;
+    setGreetingsList(newList);
+    onChange(newList);
+  }, [greetingsList, onChange]);
 
   // Handle add greeting
   const handleAddGreeting = useCallback(() => {
@@ -246,6 +244,10 @@ export function GreetingsEditor({
   // Ensure selected index is valid
   const safeSelectedIndex = selectedGreetingIndex < greetingsList.length ? selectedGreetingIndex : 0;
   const selectedGreeting = greetingsList[safeSelectedIndex];
+  const selectedGreetingTokenCount = useMemo(
+    () => (selectedGreeting !== undefined ? estimateTokens(selectedGreeting) : null),
+    [selectedGreeting],
+  );
 
   return (
     <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
@@ -279,6 +281,7 @@ export function GreetingsEditor({
                 key={index}
                 greeting={greeting}
                 index={index}
+                tokenCount={index === safeSelectedIndex ? selectedGreetingTokenCount : null}
                 isSelected={index === safeSelectedIndex}
                 onSelect={() => handleSelectGreeting(index)}
                 onDelete={() => handleDeleteGreeting(index)}
@@ -319,7 +322,6 @@ export function GreetingsEditor({
             </button>
             <GreetingDetail
               greeting={selectedGreeting}
-              onImmediateUpdate={(value) => handleGreetingImmediateUpdate(safeSelectedIndex, value)}
               onPersistUpdate={(value) => handleGreetingPersistUpdate(safeSelectedIndex, value)}
               aiConfig={aiConfig}
               samplerSettings={samplerSettings}

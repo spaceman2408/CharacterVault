@@ -41,6 +41,7 @@ interface LorebookEditorProps {
 interface LorebookEntryListItemProps {
   entry: LorebookEntry;
   index: number;
+  tokenCount: number | null;
   isSelected: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -48,7 +49,7 @@ interface LorebookEntryListItemProps {
 
 interface LorebookEntryDetailProps {
   entry: LorebookEntry;
-  onUpdate: (entry: LorebookEntry) => void;
+  onPersistUpdate: (entry: LorebookEntry) => void;
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
@@ -72,6 +73,7 @@ const POSITION_OPTIONS: { value: LorebookEntry['position']; label: string }[] = 
 function LorebookEntryListItem({
   entry,
   index,
+  tokenCount,
   isSelected,
   onSelect,
   onDelete,
@@ -80,9 +82,6 @@ function LorebookEntryListItem({
     e.stopPropagation();
     onDelete();
   };
-
-  const tokenCount = estimateTokens(entry.content);
-
   return (
     <div
       onClick={onSelect}
@@ -110,8 +109,12 @@ function LorebookEntryListItem({
 
           <div className="flex items-center gap-2 mt-1 text-xs text-vault-500 dark:text-vault-400">
             <span>{entry.keys.length} key{entry.keys.length !== 1 ? 's' : ''}</span>
-            <span>·</span>
-            <span>{tokenCount} tokens</span>
+            {tokenCount !== null ? (
+              <>
+                <span>·</span>
+                <span>{tokenCount} tokens</span>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -131,12 +134,14 @@ function LorebookEntryListItem({
   );
 }
 
+const MemoizedLorebookEntryListItem = React.memo(LorebookEntryListItem);
+
 /**
  * Full detail editor for an entry (right panel)
  */
 function LorebookEntryDetail({
   entry,
-  onUpdate,
+  onPersistUpdate,
   aiConfig,
   samplerSettings,
   promptSettings,
@@ -146,9 +151,20 @@ function LorebookEntryDetail({
   fontSize,
   onFontSizeChange,
 }: LorebookEntryDetailProps): React.ReactElement {
+  const [draftEntry, setDraftEntry] = useState(entry);
   const { editorRef } = useAIEditor({
-    value: entry.content,
-    onChange: (value) => onUpdate({ ...entry, content: value }),
+    key: String(entry.id),
+    value: draftEntry.content,
+    onImmediateChange: (value) => {
+      setDraftEntry(prev => ({ ...prev, content: value }));
+    },
+    onPersistChange: (value) => {
+      const updatedEntry = { ...draftEntry, content: value };
+      setDraftEntry(updatedEntry);
+      onPersistUpdate(updatedEntry);
+    },
+    saveMode: 'debounced',
+    saveDebounceMs: 250,
     setSelectedText,
     aiConfig,
     samplerSettings,
@@ -168,11 +184,16 @@ function LorebookEntryDetail({
   const aiServiceRef = useRef<AIService | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  React.useEffect(() => {
+    setDraftEntry(entry);
+    setKeysInput(entry.keys.join(', '));
+  }, [entry]);
+
   // Sync keysInput when entry.keys changes from outside
   React.useEffect(() => {
-    const newKeysString = entry.keys.join(', ');
+    const newKeysString = draftEntry.keys.join(', ');
     setKeysInput(prev => prev !== newKeysString ? newKeysString : prev);
-  }, [entry.keys]);
+  }, [draftEntry.keys]);
 
   // Cleanup timeout and abort on unmount
   React.useEffect(() => {
@@ -201,7 +222,7 @@ function LorebookEntryDetail({
       handleAbortGeneration();
       return;
     }
-    if (!entry.content.trim()) return;
+    if (!draftEntry.content.trim()) return;
 
     setGeneratingKeys(true);
     aiServiceRef.current = new AIService(aiConfig, samplerSettings, promptSettings);
@@ -213,7 +234,7 @@ function LorebookEntryDetail({
 
     try {
       const result = await aiServiceRef.current.instructText(
-        entry.content,
+        draftEntry.content,
         'Generate 2-5 comma-separated trigger keywords/keys that would cause this lorebook entry to activate. Output ONLY the comma-separated keywords, nothing else.',
         getContextContent(contextSectionIds)
       );
@@ -225,7 +246,7 @@ function LorebookEntryDetail({
 
       const parsedKeys = result.content.split(',').map(k => k.trim()).filter(k => k);
       if (parsedKeys.length > 0) {
-        const mergedKeys = [...entry.keys];
+        const mergedKeys = [...draftEntry.keys];
         for (const key of parsedKeys) {
           if (!mergedKeys.some(k => k.toLowerCase() === key.toLowerCase())) {
             mergedKeys.push(key);
@@ -233,7 +254,9 @@ function LorebookEntryDetail({
         }
         const newKeysString = mergedKeys.join(', ');
         setKeysInput(newKeysString);
-        onUpdate({ ...entry, keys: mergedKeys });
+        const updatedEntry = { ...draftEntry, keys: mergedKeys };
+        setDraftEntry(updatedEntry);
+        onPersistUpdate(updatedEntry);
       }
     } catch {
       // Silent fail or aborted
@@ -248,21 +271,49 @@ function LorebookEntryDetail({
   };
 
   // Form handlers
-  const handleNameChange = (value: string) => onUpdate({ ...entry, name: value });
+  const handleNameChange = (value: string) => {
+    const updatedEntry = { ...draftEntry, name: value };
+    setDraftEntry(updatedEntry);
+    onPersistUpdate(updatedEntry);
+  };
   const handleKeysChange = (value: string) => setKeysInput(value);
   const handleKeysBlur = () => {
     const parsedKeys = keysInput.split(',').map(k => k.trim()).filter(k => k);
-    onUpdate({ ...entry, keys: parsedKeys });
+    const updatedEntry = { ...draftEntry, keys: parsedKeys };
+    setDraftEntry(updatedEntry);
+    onPersistUpdate(updatedEntry);
   };
-  const handleCommentChange = (value: string) => onUpdate({ ...entry, comment: value });
+  const handleCommentChange = (value: string) => {
+    const updatedEntry = { ...draftEntry, comment: value };
+    setDraftEntry(updatedEntry);
+    onPersistUpdate(updatedEntry);
+  };
   const handlePriorityChange = (value: string) => {
     const num = parseInt(value, 10);
-    onUpdate({ ...entry, priority: isNaN(num) ? 0 : num });
+    const updatedEntry = { ...draftEntry, priority: isNaN(num) ? 0 : num };
+    setDraftEntry(updatedEntry);
+    onPersistUpdate(updatedEntry);
   };
-  const handlePositionChange = (value: LorebookEntry['position']) => onUpdate({ ...entry, position: value });
-  const handleEnabledChange = (checked: boolean) => onUpdate({ ...entry, enabled: checked });
-  const handleCaseSensitiveChange = (checked: boolean) => onUpdate({ ...entry, case_sensitive: checked });
-  const handleConstantChange = (checked: boolean) => onUpdate({ ...entry, constant: checked });
+  const handlePositionChange = (value: LorebookEntry['position']) => {
+    const updatedEntry = { ...draftEntry, position: value };
+    setDraftEntry(updatedEntry);
+    onPersistUpdate(updatedEntry);
+  };
+  const handleEnabledChange = (checked: boolean) => {
+    const updatedEntry = { ...draftEntry, enabled: checked };
+    setDraftEntry(updatedEntry);
+    onPersistUpdate(updatedEntry);
+  };
+  const handleCaseSensitiveChange = (checked: boolean) => {
+    const updatedEntry = { ...draftEntry, case_sensitive: checked };
+    setDraftEntry(updatedEntry);
+    onPersistUpdate(updatedEntry);
+  };
+  const handleConstantChange = (checked: boolean) => {
+    const updatedEntry = { ...draftEntry, constant: checked };
+    setDraftEntry(updatedEntry);
+    onPersistUpdate(updatedEntry);
+  };
 
   return (
     <div className="space-y-2">
@@ -273,7 +324,7 @@ function LorebookEntryDetail({
         </label>
         <input
           type="text"
-          value={entry.name || ''}
+          value={draftEntry.name || ''}
           onChange={(e) => handleNameChange(e.target.value)}
           placeholder="Entry display name (optional)"
           className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
@@ -291,7 +342,7 @@ function LorebookEntryDetail({
           <span className="text-xs text-vault-400">(comma, separated)</span>
           <button
             onClick={handleGenerateKeys}
-            disabled={!generatingKeys && !entry.content.trim()}
+            disabled={!generatingKeys && !draftEntry.content.trim()}
             title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
             className={`p-1.5 rounded transition-colors ${
               generatingKeys
@@ -327,7 +378,7 @@ function LorebookEntryDetail({
           </label>
           <input
             type="number"
-            value={entry.priority ?? 0}
+            value={draftEntry.priority ?? 0}
             onChange={(e) => handlePriorityChange(e.target.value)}
             className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
               text-vault-900 dark:text-vault-100
@@ -398,7 +449,7 @@ function LorebookEntryDetail({
       <div>
         <input
           type="text"
-          value={entry.comment || ''}
+          value={draftEntry.comment || ''}
           onChange={(e) => handleCommentChange(e.target.value)}
           placeholder="Internal notes about this entry, not used in output (optional)"
           className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
@@ -494,28 +545,27 @@ function LorebookEditorInner({
   const safeSelectedIndex = selectedEntryIndex < entries.length ? selectedEntryIndex : 0;
   const selectedEntry = entries[safeSelectedIndex];
 
-  // Notify parent of changes
-  const notifyChange = useCallback((
+  const buildUpdatedLorebook = useCallback((
     newEntries: LorebookEntry[],
     newName: string,
     newDesc: string
-  ) => {
-    const updatedLorebook: CharacterBook = {
+  ): CharacterBook => ({
       name: newName,
       description: newDesc,
       entries: newEntries,
       extensions: draftLorebook.extensions || {},
-    };
+    }), [draftLorebook.extensions]);
+
+  const persistLorebook = useCallback((updatedLorebook: CharacterBook) => {
     setDraftLorebook(updatedLorebook);
     onChange(updatedLorebook);
-  }, [draftLorebook.extensions, onChange]);
+  }, [onChange]);
 
-  // Handle entry update
-  const handleEntryUpdate = useCallback((updatedEntry: LorebookEntry) => {
+  const handleEntryPersistUpdate = useCallback((updatedEntry: LorebookEntry) => {
     const newEntries = [...entries];
     newEntries[safeSelectedIndex] = updatedEntry;
-    notifyChange(newEntries, bookName, bookDescription);
-  }, [entries, safeSelectedIndex, bookName, bookDescription, notifyChange]);
+    persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
+  }, [entries, safeSelectedIndex, bookName, bookDescription, buildUpdatedLorebook, persistLorebook]);
 
   // Find the lowest available ID
   const getNextAvailableId = useCallback((): number => {
@@ -545,10 +595,10 @@ function LorebookEditorInner({
     const newEntries = [...entries, newEntry];
     const newIndex = newEntries.length - 1;
 
-    notifyChange(newEntries, bookName, bookDescription);
+    persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
     setSelectedEntryIndex(newIndex);
     setIsMobileViewOpen(true);
-  }, [entries, bookName, bookDescription, notifyChange, getNextAvailableId]);
+  }, [entries, bookName, bookDescription, buildUpdatedLorebook, getNextAvailableId, persistLorebook]);
 
   // Handle delete entry
   const handleDeleteEntry = useCallback((index: number) => {
@@ -557,7 +607,7 @@ function LorebookEditorInner({
     if (!shouldDelete) return;
 
     const newEntries = entries.filter((_, i) => i !== index);
-    notifyChange(newEntries, bookName, bookDescription);
+    persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
 
     // Adjust selected index if needed
     if (selectedEntryIndex >= newEntries.length) {
@@ -565,7 +615,7 @@ function LorebookEditorInner({
     } else if (selectedEntryIndex > index) {
       setSelectedEntryIndex(selectedEntryIndex - 1);
     }
-  }, [entries, selectedEntryIndex, bookName, bookDescription, notifyChange]);
+  }, [entries, selectedEntryIndex, bookName, bookDescription, buildUpdatedLorebook, persistLorebook]);
 
   // Filter entries based on search query
   const filteredEntries = useMemo(() => {
@@ -577,6 +627,19 @@ function LorebookEditorInner({
       entry.keys.some(key => key.toLowerCase().includes(query))
     );
   }, [entries, searchQuery]);
+
+  const entryIndexById = useMemo(() => {
+    const indexById = new Map<number, number>();
+    entries.forEach((entry, index) => {
+      indexById.set(entry.id, index);
+    });
+    return indexById;
+  }, [entries]);
+
+  const selectedEntryTokenCount = useMemo(
+    () => (selectedEntry ? estimateTokens(selectedEntry.content) : null),
+    [selectedEntry],
+  );
 
   // Handle select entry with mobile view
   const handleSelectEntry = useCallback((index: number) => {
@@ -591,11 +654,11 @@ function LorebookEditorInner({
 
   // Handle book name/description changes
   const handleBookNameChange = (value: string) => {
-    notifyChange(entries, value, bookDescription);
+    persistLorebook(buildUpdatedLorebook(entries, value, bookDescription));
   };
 
   const handleBookDescriptionChange = (value: string) => {
-    notifyChange(entries, bookName, value);
+    persistLorebook(buildUpdatedLorebook(entries, bookName, value));
   };
 
   return (
@@ -704,12 +767,13 @@ function LorebookEditorInner({
             </div>
           ) : (
             filteredEntries.map((entry) => {
-              const originalIndex = entries.findIndex(e => e.id === entry.id);
+              const originalIndex = entryIndexById.get(entry.id) ?? 0;
               return (
-                <LorebookEntryListItem
+                <MemoizedLorebookEntryListItem
                   key={entry.id}
                   entry={entry}
                   index={originalIndex}
+                  tokenCount={originalIndex === safeSelectedIndex ? selectedEntryTokenCount : null}
                   isSelected={originalIndex === safeSelectedIndex}
                   onSelect={() => handleSelectEntry(originalIndex)}
                   onDelete={() => handleDeleteEntry(originalIndex)}
@@ -751,7 +815,7 @@ function LorebookEditorInner({
             </button>
             <LorebookEntryDetail
               entry={selectedEntry}
-              onUpdate={handleEntryUpdate}
+              onPersistUpdate={handleEntryPersistUpdate}
               aiConfig={aiConfig}
               samplerSettings={samplerSettings}
               promptSettings={promptSettings}

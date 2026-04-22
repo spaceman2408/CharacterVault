@@ -99,6 +99,19 @@ function formatChangedLorebookContent(value: CharacterBook | null, compareValue:
   );
 }
 
+function isGreetingsValue(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(entry => typeof entry === 'string');
+}
+
+function formatChangedGreetings(value: string[], compareValue: string[]): string {
+  return normalizeLineEndings(
+    value
+      .filter((greeting, index) => normalizeLineEndings(greeting) !== normalizeLineEndings(compareValue[index] ?? ''))
+      .filter(greeting => greeting.length > 0)
+      .join('\n\n---\n\n'),
+  );
+}
+
 function splitChangedSegments(value: string, compareValue: string): DiffSegment[] {
   const normalizedValue = normalizeLineEndings(value);
   const normalizedCompareValue = normalizeLineEndings(compareValue);
@@ -149,7 +162,7 @@ function formatSnapshotLabel(snapshot: CharacterSnapshot): string {
     case 'open':
       return 'Opened card';
     case 'auto':
-      return 'Auto save point';
+      return 'Legacy auto save point';
     case 'manual':
       return 'Manual save point';
     case 'rollback':
@@ -164,7 +177,7 @@ function formatSnapshotDescription(snapshot: CharacterSnapshot): string {
     case 'open':
       return 'Saved when this card was opened.';
     case 'auto':
-      return 'Saved after edits settled.';
+      return 'Saved automatically by an older version of the app.';
     case 'manual':
       return 'Saved on demand from the revisions panel.';
     case 'rollback':
@@ -403,11 +416,22 @@ function SectionPreview({ entry }: { entry: SnapshotDiffEntry }): React.ReactEle
     ? entry.currentValue
     : null;
   const isLorebookEntry = snapshotLorebookValue !== null || currentLorebookValue !== null;
+  const snapshotGreetingsValue = entry.section === 'alternate_greetings' && isGreetingsValue(entry.snapshotValue)
+    ? entry.snapshotValue
+    : null;
+  const currentGreetingsValue = entry.section === 'alternate_greetings' && isGreetingsValue(entry.currentValue)
+    ? entry.currentValue
+    : null;
+  const isGreetingsEntry = snapshotGreetingsValue !== null || currentGreetingsValue !== null;
   const snapshotValue = isLorebookEntry
     ? formatChangedLorebookContent(snapshotLorebookValue, currentLorebookValue)
+    : isGreetingsEntry
+      ? formatChangedGreetings(snapshotGreetingsValue ?? [], currentGreetingsValue ?? [])
     : formatValue(entry.snapshotValue);
   const currentValue = isLorebookEntry
     ? formatChangedLorebookContent(currentLorebookValue, snapshotLorebookValue)
+    : isGreetingsEntry
+      ? formatChangedGreetings(currentGreetingsValue ?? [], snapshotGreetingsValue ?? [])
     : formatValue(entry.currentValue);
 
   return <SyncedDiffView snapshotValue={snapshotValue} currentValue={currentValue} />;
