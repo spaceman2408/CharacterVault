@@ -105,13 +105,13 @@ interface ChatCompletionRequest {
   repetition_penalty?: number;
   stream?: boolean;
   max_tokens?: number;
-  /** Enable reasoning/thinking mode for supported models (DeepSeek, etc.) */
   include_reasoning?: boolean;
-  /** OpenRouter reasoning parameter - can be boolean or { enabled: boolean; effort?: 'low' | 'medium' | 'high' } */
   reasoning?: boolean | { enabled: boolean; effort?: 'low' | 'medium' | 'high' };
-  /** OpenAI o1/o3/o4-mini reasoning effort level */
   reasoning_effort?: 'low' | 'medium' | 'high';
+  [key: string]: unknown;
 }
+
+const NON_STANDARD_PARAMS = ['min_p', 'top_k', 'repetition_penalty', 'include_reasoning', 'reasoning', 'reasoning_effort'] as const;
 
 /**
  * OpenAI-compatible chat completion response
@@ -442,7 +442,6 @@ Provide only the generated text without any additional commentary.`;
     const sampler = { ...this.sampler, ...customSampler };
     const useStreaming = this.config.enableStreaming && onChunk;
 
-    // Create new abort controller for this request
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
@@ -456,10 +455,6 @@ Provide only the generated text without any additional commentary.`;
       repetition_penalty: sampler.repetitionPenalty,
       stream: !!useStreaming,
       max_tokens: sampler.maxTokens,
-      // Support multiple formats:
-      // - include_reasoning for DeepSeek and other APIs
-      // - reasoning for OpenRouter format
-      // - reasoning_effort for OpenAI o1/o3/o4-mini models
       include_reasoning: this.config.enableReasoning ?? false,
       reasoning: this.config.enableReasoning
         ? { enabled: true, effort: this.config.reasoningEffort ?? 'medium' }
@@ -469,77 +464,53 @@ Provide only the generated text without any additional commentary.`;
         : undefined,
     };
 
-    // DEBUG: Uncomment to log request details
-    // console.log('[AIService] Sending request with model:', this.config.modelId);
-    // console.log('[AIService] Full request:', JSON.stringify(request, null, 2));
+    //DEBUG: Uncomment to log request details
+    //console.log('[AIService] Sending request with model:', this.config.modelId);
+    //console.log('[AIService] Full request:', JSON.stringify(request, null, 2));
 
     try {
-      const response = await fetch(`${this.getBaseUrl()}/chat/completions`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(request),
-        signal,
-      });
+      let currentRequest = request;
+      let response = await this.sendRequest(currentRequest, signal);
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new AIError('Invalid API key', 'auth', 401);
-        }
-        if (response.status === 429) {
-          throw new AIError('Rate limit exceeded', 'rate_limit', 429);
-        }
-        if (response.status === 400) {
-          const errorData = await response.json().catch(() => ({}));
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (response.status !== 400) break;
+
+        const errorText = await response.text().catch(() => '');
+        let errorData: Record<string, unknown>;
+        try { errorData = JSON.parse(errorText); } catch { errorData = {}; }
+
+        const stripped = this.stripRejectedParams(currentRequest, errorData);
+        if (!stripped) {
           throw new AIError(
-            errorData.error?.message || 'Invalid request',
+            (errorData.error as { message?: string } | undefined)?.message || 'Invalid request',
             'invalid_request',
             400
           );
         }
-        // Try to get error message from response body for other errors
-        let errorMessage = response.statusText || `HTTP ${response.status}`;
-        try {
-          const errorData = await response.json().catch(() => null);
-          if (errorData?.error?.message) {
-            errorMessage = errorData.error.message;
-          } else if (errorData?.message) {
-            errorMessage = errorData.message;
-          }
-        } catch {
-          // If we can't parse JSON, use the status text we already have
-        }
+
+        console.warn(
+          `[AIService] Model "${this.config.modelId}" rejected parameters: ${stripped.removed.join(', ')}. ` +
+          `Retrying without them...`
+        );
+        this.abortController = new AbortController();
+        currentRequest = stripped.request;
+        response = await this.sendRequest(currentRequest, this.abortController.signal);
+      }
+
+      if (response.status === 400) {
+        const errorText = await response.text().catch(() => '');
+        let errorData: Record<string, unknown>;
+        try { errorData = JSON.parse(errorText); } catch { errorData = {}; }
         throw new AIError(
-          this.withBaseUrlHint(`API error: ${errorMessage}`),
-          'server',
-          response.status
+          (errorData.error as { message?: string } | undefined)?.message || 'Invalid request',
+          'invalid_request',
+          400
         );
       }
 
-      // Handle streaming response
-      if (useStreaming && response.body) {
-        return await this.handleStreamingResponse(response.body, onChunk!);
-      }
-
-      // Handle non-streaming response
-      const data = await response.json() as ChatCompletionResponse;
-
-      if (!data.choices || data.choices.length === 0) {
-        throw new AIError('No response from AI', 'unknown');
-      }
-
-      // Extract reasoning from non-streaming response if available
-      const choice = data.choices[0];
-      const message = choice.message;
-      
-      // Check for reasoning in message (some APIs include it here)
-      const reasoningContent = (message as unknown as { reasoning_content?: string }).reasoning_content;
-      const reasoning = (message as unknown as { reasoning?: string }).reasoning;
-      
-      return { 
-        content: message.content,
-        reasoning: reasoningContent ?? reasoning ?? undefined,
-      };
+      return await this.handleResponse(response, !!useStreaming, onChunk);
     } catch (error) {
+      if (error instanceof AIError) throw error;
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('[AIService] Request aborted - operation cancelled by user');
         throw new AIError('Request was cancelled', 'unknown');
@@ -548,6 +519,98 @@ Provide only the generated text without any additional commentary.`;
     } finally {
       this.abortController = null;
     }
+  }
+
+  private async sendRequest(request: ChatCompletionRequest, signal: AbortSignal): Promise<Response> {
+    return fetch(`${this.getBaseUrl()}/chat/completions`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(request),
+      signal,
+    });
+  }
+
+  private stripRejectedParams(
+    request: ChatCompletionRequest,
+    errorData: Record<string, unknown>
+  ): { request: ChatCompletionRequest; removed: string[] } | null {
+    const errorObj = errorData.error as Record<string, unknown> | undefined;
+    const errorMsg = (errorObj?.message as string | undefined)
+      || (errorData.message as string | undefined)
+      || (typeof errorData.error === 'string' ? errorData.error : '')
+      || '';
+    const lowerMsg = errorMsg.toLowerCase();
+
+    const removed: string[] = [];
+    for (const param of NON_STANDARD_PARAMS) {
+      if (lowerMsg.includes(param) && request[param] !== undefined) {
+        removed.push(param);
+      }
+    }
+
+    if (lowerMsg.includes('logit_bias') && request.logit_bias !== undefined) {
+      removed.push('logit_bias');
+    }
+
+    if (removed.length === 0) return null;
+
+    const cleaned = { ...request };
+    for (const param of removed) {
+      delete cleaned[param];
+    }
+    return { request: cleaned, removed };
+  }
+
+  private async handleResponse(
+    response: Response,
+    useStreaming: boolean,
+    onChunk?: (chunk: { content?: string; reasoning?: string }) => void
+  ): Promise<AIResponse> {
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new AIError('Invalid API key', 'auth', 401);
+      }
+      if (response.status === 429) {
+        throw new AIError('Rate limit exceeded', 'rate_limit', 429);
+      }
+      let errorMessage = response.statusText || `HTTP ${response.status}`;
+      try {
+        const errorData = await response.json().catch(() => null);
+        if (errorData?.error?.message) {
+          errorMessage = errorData.error.message;
+        } else if (errorData?.message) {
+          errorMessage = errorData.message;
+        }
+      } catch {
+        // If we can't parse JSON, use the status text we already have
+      }
+      throw new AIError(
+        this.withBaseUrlHint(`API error: ${errorMessage}`),
+        'server',
+        response.status
+      );
+    }
+
+    if (useStreaming && response.body) {
+      return await this.handleStreamingResponse(response.body, onChunk!);
+    }
+
+    const data = await response.json() as ChatCompletionResponse;
+
+    if (!data.choices || data.choices.length === 0) {
+      throw new AIError('No response from AI', 'unknown');
+    }
+
+    const choice = data.choices[0];
+    const message = choice.message;
+
+    const reasoningContent = (message as unknown as { reasoning_content?: string }).reasoning_content;
+    const reasoning = (message as unknown as { reasoning?: string }).reasoning;
+
+    return {
+      content: message.content,
+      reasoning: reasoningContent ?? reasoning ?? undefined,
+    };
   }
 
   /**
