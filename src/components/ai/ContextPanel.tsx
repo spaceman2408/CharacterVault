@@ -63,7 +63,7 @@ export function ContextPanel({
   
   // Context limit from sampler settings
   const contextLimit = samplerSettings.contextLength;
-  const hasLorebook = !!currentCharacterData?.characterBook?.entries.length;
+  const hasLorebook = !!currentCharacterData?.characterBook;
 
   // Filter sections based on search query
   const filteredSections = CHARACTER_SECTIONS.filter(section => {
