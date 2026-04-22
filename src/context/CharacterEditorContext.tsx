@@ -6,6 +6,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { Character, CharacterSection, CharacterSnapshot, SnapshotDiffEntry } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
+import { characterDb } from '../db/CharacterDatabase';
 import { DEFAULT_SETTINGS } from '../db/types';
 import { useCharacterContext } from './useCharacterContext';
 import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation, type ManualSnapshotResult } from './characterEditorContextTypes';
@@ -68,8 +69,18 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     reject: Array<(reason?: unknown) => void>;
   }>>(new Map());
   const autoSnapshotTimerRef = useRef<number | null>(null);
-  const pendingAutoSnapshotCharacterRef = useRef<Character | null>(null);
+  const pendingAutoSnapshotCharacterIdRef = useRef<string | null>(null);
   const openedCharacterIdRef = useRef<string | null>(null);
+  const currentCharacterRef = useRef<Character | null>(currentCharacter);
+  const selectedTextRef = useRef(selectedText);
+
+  useEffect(() => {
+    currentCharacterRef.current = currentCharacter;
+  }, [currentCharacter]);
+
+  useEffect(() => {
+    selectedTextRef.current = selectedText;
+  }, [selectedText]);
 
   const clearAutoSnapshotTimer = useCallback(() => {
     if (autoSnapshotTimerRef.current !== null) {
@@ -110,19 +121,25 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
   }, [refreshSnapshotsForCharacter]);
 
-  const scheduleAutoSnapshot = useCallback((character: Character) => {
-    pendingAutoSnapshotCharacterRef.current = character;
+  const scheduleAutoSnapshot = useCallback((characterId: string) => {
+    pendingAutoSnapshotCharacterIdRef.current = characterId;
     clearAutoSnapshotTimer();
     autoSnapshotTimerRef.current = window.setTimeout(() => {
-      const pendingCharacter = pendingAutoSnapshotCharacterRef.current;
-      pendingAutoSnapshotCharacterRef.current = null;
+      const pendingCharacterId = pendingAutoSnapshotCharacterIdRef.current;
+      pendingAutoSnapshotCharacterIdRef.current = null;
       autoSnapshotTimerRef.current = null;
 
-      if (!pendingCharacter) {
+      if (!pendingCharacterId) {
         return;
       }
 
-      void createSnapshotFromCharacter(pendingCharacter, 'auto');
+      void (async () => {
+        const latestCharacter = await characterDb.getCharacter(pendingCharacterId);
+        if (!latestCharacter) {
+          return;
+        }
+        await createSnapshotFromCharacter(latestCharacter, 'auto');
+      })();
     }, AUTO_SNAPSHOT_IDLE_MS);
   }, [clearAutoSnapshotTimer, createSnapshotFromCharacter]);
 
@@ -144,7 +161,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
         setIsDirty(false);
         setSaveStatus('saved');
-        scheduleAutoSnapshot(updated);
+        scheduleAutoSnapshot(updated.id);
       }
 
       currentResolvers?.resolve.forEach(fn => fn(updated));
@@ -185,7 +202,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
         setIsDirty(false);
         setSaveStatus('saved');
-        scheduleAutoSnapshot(updated);
+        scheduleAutoSnapshot(updated.id);
       }
 
       currentResolvers?.resolve.forEach(fn => fn(updated));
@@ -205,11 +222,12 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   }, [scheduleAutoSnapshot, updateSpecFieldBase]);
 
   const flushPendingSaves = useCallback(async (): Promise<Character | null> => {
-    if (!currentCharacter) {
+    const character = currentCharacterRef.current;
+    if (!character) {
       return null;
     }
 
-    const characterId = currentCharacter.id;
+    const characterId = character.id;
     const updates: Array<Promise<Character | null>> = [];
     const characterRequestKey = `${characterId}:updateCharacter`;
 
@@ -231,12 +249,12 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
 
     if (updates.length === 0) {
-      return currentCharacter;
+      return character;
     }
 
     const results = await Promise.all(updates);
-    return results.filter((result): result is Character => result !== null).at(-1) ?? currentCharacter;
-  }, [commitQueuedCharacterUpdate, commitQueuedSpecFieldUpdate, currentCharacter]);
+    return results.filter((result): result is Character => result !== null).at(-1) ?? character;
+  }, [commitQueuedCharacterUpdate, commitQueuedSpecFieldUpdate]);
 
   // Context sections = active section (unless removed) + user-added sections
   const contextSectionIds = React.useMemo<CharacterSection[]>(() => {
@@ -287,7 +305,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       openedCharacterIdRef.current = null;
       setSnapshots([]);
       setIsHistoryOpen(false);
-      pendingAutoSnapshotCharacterRef.current = null;
+      pendingAutoSnapshotCharacterIdRef.current = null;
       clearAutoSnapshotTimer();
       return;
     }
@@ -297,7 +315,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
 
     openedCharacterIdRef.current = currentCharacterId;
-    pendingAutoSnapshotCharacterRef.current = null;
+    pendingAutoSnapshotCharacterIdRef.current = null;
     clearAutoSnapshotTimer();
     void refreshSnapshots();
   }, [clearAutoSnapshotTimer, currentCharacter, currentCharacterId, refreshSnapshots]);
@@ -325,11 +343,12 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
    * Update the character
    */
   const updateCharacter = useCallback(async (input: Partial<Character>): Promise<Character> => {
-    if (!currentCharacter) {
+    const character = currentCharacterRef.current;
+    if (!character) {
       throw new Error('No character is currently open');
     }
 
-    const characterId = currentCharacter.id;
+    const characterId = character.id;
     const requestKey = `${characterId}:updateCharacter`;
     setIsDirty(true);
     setSaveStatus('saving');
@@ -363,7 +382,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
       updateCharacterSaveTimerRef.current.set(requestKey, timerId);
     });
-  }, [commitQueuedCharacterUpdate, currentCharacter]);
+  }, [commitQueuedCharacterUpdate]);
 
   /**
    * Update a specific spec field
@@ -372,12 +391,13 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     field: keyof Character['data']['spec'],
     value: string | string[]
   ): Promise<Character> => {
-    if (!currentCharacter) {
+    const character = currentCharacterRef.current;
+    if (!character) {
       throw new Error('No character is currently open');
     }
 
-    const requestKey = `${currentCharacter.id}:${String(field)}`;
-    const characterId = currentCharacter.id;
+    const requestKey = `${character.id}:${String(field)}`;
+    const characterId = character.id;
     specPendingValueRef.current.set(requestKey, value);
     setIsDirty(true);
     setSaveStatus('saving');
@@ -403,7 +423,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
       specSaveTimerRef.current.set(requestKey, timerId);
     });
-  }, [commitQueuedSpecFieldUpdate, currentCharacter]);
+  }, [commitQueuedSpecFieldUpdate]);
 
   /**
    * Set font size
@@ -507,19 +527,21 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   }, []);
 
   const createManualSnapshot = useCallback(async (): Promise<ManualSnapshotResult> => {
-    if (!currentCharacter) {
+    const character = currentCharacterRef.current;
+    if (!character) {
       return 'skipped';
     }
 
     const latestCharacter = await flushPendingSaves();
     clearAutoSnapshotTimer();
-    pendingAutoSnapshotCharacterRef.current = null;
-    const snapshot = await createSnapshotFromCharacter(latestCharacter ?? currentCharacter, 'manual');
+    pendingAutoSnapshotCharacterIdRef.current = null;
+    const snapshot = await createSnapshotFromCharacter(latestCharacter ?? character, 'manual');
     return snapshot ? 'created' : 'skipped';
-  }, [clearAutoSnapshotTimer, createSnapshotFromCharacter, currentCharacter, flushPendingSaves]);
+  }, [clearAutoSnapshotTimer, createSnapshotFromCharacter, flushPendingSaves]);
 
   const getSnapshotDiff = useCallback((snapshotId: string): SnapshotDiffEntry[] => {
-    if (!currentCharacter) {
+    const character = currentCharacterRef.current;
+    if (!character) {
       return [];
     }
 
@@ -528,8 +550,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       return [];
     }
 
-    return characterSnapshotService.diffSnapshotAgainstCharacter(snapshot, currentCharacter);
-  }, [currentCharacter, snapshots]);
+    return characterSnapshotService.diffSnapshotAgainstCharacter(snapshot, character);
+  }, [snapshots]);
 
   const deleteSnapshot = useCallback(async (snapshotId: string) => {
     const snapshot = snapshots.find(entry => entry.id === snapshotId);
@@ -551,7 +573,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     scope: 'whole' | 'section',
     targetSection?: CharacterSection,
   ) => {
-    if (!currentCharacter) {
+    const character = currentCharacterRef.current;
+    if (!character) {
       return;
     }
 
@@ -561,15 +584,15 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
 
     clearAutoSnapshotTimer();
-    pendingAutoSnapshotCharacterRef.current = null;
+    pendingAutoSnapshotCharacterIdRef.current = null;
     setSaveStatus('saving');
 
     try {
       let restoredCharacter: Character;
 
       if (scope === 'whole') {
-        const input = characterSnapshotService.restoreWholeCharacter(currentCharacter, snapshot);
-        restoredCharacter = await updateCharacterBase(currentCharacter.id, input);
+        const input = characterSnapshotService.restoreWholeCharacter(character, snapshot);
+        restoredCharacter = await updateCharacterBase(character.id, input);
       } else {
         const sectionToRestore = targetSection;
         if (!sectionToRestore) {
@@ -577,18 +600,18 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
           return;
         }
 
-        const action = characterSnapshotService.restoreSection(currentCharacter, snapshot, sectionToRestore);
+        const action = characterSnapshotService.restoreSection(character, snapshot, sectionToRestore);
         if (!action) {
           setSaveStatus('saved');
           return;
         }
 
         if (action.kind === 'image') {
-          restoredCharacter = await updateCharacterBase(currentCharacter.id, { imageData: action.value });
+          restoredCharacter = await updateCharacterBase(character.id, { imageData: action.value });
         } else if (action.kind === 'spec') {
-          restoredCharacter = await updateSpecFieldBase(currentCharacter.id, action.field, action.value);
+          restoredCharacter = await updateSpecFieldBase(character.id, action.field, action.value);
         } else {
-          restoredCharacter = await updateCharacterBase(currentCharacter.id, action.input);
+          restoredCharacter = await updateCharacterBase(character.id, action.input);
         }
       }
 
@@ -603,7 +626,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   }, [
     clearAutoSnapshotTimer,
     createSnapshotFromCharacter,
-    currentCharacter,
     snapshots,
     updateCharacterBase,
     updateSpecFieldBase,
@@ -613,10 +635,11 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
    * Get context content for AI from selected sections
    */
   const getContextContent = useCallback((sectionIds: CharacterSection[]): string[] => {
-    if (!currentCharacter) return [];
+    const character = currentCharacterRef.current;
+    if (!character) return [];
     
     return sectionIds.map(sectionId => {
-      const spec = currentCharacter.data.spec;
+      const spec = character.data.spec;
       switch (sectionId) {
         case 'name':
           return `Character Name: ${spec.name}`;
@@ -650,7 +673,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
         case 'tags':
           return spec.tags?.length ? `Tags: ${spec.tags.join(', ')}` : '';
         case 'lorebook': {
-          const book = currentCharacter.data.characterBook;
+          const book = character.data.characterBook;
           if (!book || book.entries.length === 0) return '';
           
           const enabledEntries = book.entries.filter(e => e.enabled);
@@ -677,16 +700,17 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
           return '';
       }
     }).filter(content => content.length > 0);
-  }, [currentCharacter]);
+  }, []);
 
   /**
    * Handle AI operation result
    */
   const handleAIOperation = useCallback((result: string, operation: AIOperation, originalSelectedText?: string) => {
-    if (!currentCharacter || !activeSection) return;
+    const character = currentCharacterRef.current;
+    if (!character || !activeSection) return;
     
     // Get current field value
-    const spec = currentCharacter.data.spec;
+    const spec = character.data.spec;
     let currentValue: string;
     
     switch (activeSection) {
@@ -741,7 +765,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
     
     // Use the passed original selected text, or fall back to state (for backwards compatibility)
-    const textToReplace = originalSelectedText ?? selectedText;
+    const textToReplace = originalSelectedText ?? selectedTextRef.current;
     
     let newContent: string;
     
@@ -800,7 +824,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     
     // Clear selected text
     setSelectedText('');
-  }, [currentCharacter, activeSection, selectedText, updateSpecField]);
+  }, [activeSection, updateSpecField]);
 
   const value: CharacterEditorContextValue = {
     currentCharacter,

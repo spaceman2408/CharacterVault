@@ -16,6 +16,52 @@ import type {
 import { DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
 import { v4 as uuidv4 } from 'uuid';
 
+function stableSerialize(value: unknown): string {
+  if (value === null || value === undefined) {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableSerialize(item)).join(',')}]`;
+  }
+
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey));
+    return `{${entries.map(([key, entryValue]) => `${JSON.stringify(key)}:${stableSerialize(entryValue)}`).join(',')}}`;
+  }
+
+  return JSON.stringify(value);
+}
+
+function hashString(value: string): string {
+  let hashA = 0x811c9dc5;
+  let hashB = 0x9e3779b1;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    hashA ^= code;
+    hashA = Math.imul(hashA, 0x01000193);
+    hashB ^= code;
+    hashB = Math.imul(hashB, 0x85ebca6b);
+  }
+
+  return `${(hashA >>> 0).toString(16).padStart(8, '0')}${(hashB >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+async function computeSnapshotPayloadHash(payload: CharacterSnapshot['payload']): Promise<string> {
+  const serializedPayload = stableSerialize(payload);
+
+  if (globalThis.crypto?.subtle) {
+    const payloadBytes = new TextEncoder().encode(serializedPayload);
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', payloadBytes);
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  return hashString(serializedPayload);
+}
+
 /**
  * Database class for CharacterVault.
  * Single database storing all characters and settings.
@@ -45,6 +91,24 @@ export class CharacterDatabase extends Dexie {
       characters: 'id, name, updatedAt, createdAt',
       settings: 'id',
       snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+    });
+
+    this.version(3).stores({
+      characters: 'id, name, updatedAt, createdAt',
+      settings: 'id',
+      snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+    }).upgrade(async (tx) => {
+      const snapshots = await tx.table<CharacterSnapshot, string>('snapshots').toArray();
+
+      await Promise.all(snapshots.map(async (snapshot) => {
+        const compactPayloadHash = await computeSnapshotPayloadHash(snapshot.payload);
+        if (snapshot.payloadHash !== compactPayloadHash) {
+          await tx.table<CharacterSnapshot, string>('snapshots').put({
+            ...snapshot,
+            payloadHash: compactPayloadHash,
+          });
+        }
+      }));
     });
   }
 

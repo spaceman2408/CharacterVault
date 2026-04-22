@@ -73,6 +73,21 @@ function stableSerialize(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function hashString(value: string): string {
+  let hashA = 0x811c9dc5;
+  let hashB = 0x9e3779b1;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    hashA ^= code;
+    hashA = Math.imul(hashA, 0x01000193);
+    hashB ^= code;
+    hashB = Math.imul(hashB, 0x85ebca6b);
+  }
+
+  return `${(hashA >>> 0).toString(16).padStart(8, '0')}${(hashB >>> 0).toString(16).padStart(8, '0')}`;
+}
+
 function clonePayloadData<T>(value: T): T {
   if (value === undefined) {
     return value;
@@ -100,6 +115,19 @@ function getSectionValue(payload: CharacterSnapshotPayload, section: SnapshotDif
   }
 }
 
+function getCharacterSectionValue(character: Character, section: SnapshotDiffEntry['section']): unknown {
+  switch (section) {
+    case 'image':
+      return character.imageData;
+    case 'lorebook':
+      return character.data.characterBook ?? null;
+    case 'extensions':
+      return character.data.extensions ?? {};
+    default:
+      return character.data.spec[section];
+  }
+}
+
 class CharacterSnapshotService {
   buildPayload(character: Character): CharacterSnapshotPayload {
     return {
@@ -109,13 +137,21 @@ class CharacterSnapshotService {
     };
   }
 
-  buildPayloadHash(payload: CharacterSnapshotPayload): string {
-    return stableSerialize(payload);
+  async buildPayloadHash(payload: CharacterSnapshotPayload): Promise<string> {
+    const serializedPayload = stableSerialize(payload);
+
+    if (globalThis.crypto?.subtle) {
+      const payloadBytes = new TextEncoder().encode(serializedPayload);
+      const digest = await globalThis.crypto.subtle.digest('SHA-256', payloadBytes);
+      return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    return hashString(serializedPayload);
   }
 
   async createSnapshot(character: Character, source: SnapshotSource): Promise<CharacterSnapshot | null> {
     const payload = this.buildPayload(character);
-    const payloadHash = this.buildPayloadHash(payload);
+    const payloadHash = await this.buildPayloadHash(payload);
     return characterDb.createSnapshot({
       characterId: character.id,
       source,
@@ -138,11 +174,9 @@ class CharacterSnapshotService {
   }
 
   diffSnapshotAgainstCharacter(snapshot: CharacterSnapshot, character: Character): SnapshotDiffEntry[] {
-    const currentPayload = this.buildPayload(character);
-
     return DIFFABLE_SECTIONS.map(section => {
       const snapshotValue = getSectionValue(snapshot.payload, section);
-      const currentValue = getSectionValue(currentPayload, section);
+      const currentValue = getCharacterSectionValue(character, section);
       return {
         section,
         label: getSectionLabel(section),
@@ -151,6 +185,14 @@ class CharacterSnapshotService {
         currentValue,
       };
     });
+  }
+
+  countChangedSections(snapshot: CharacterSnapshot, character: Character): number {
+    return DIFFABLE_SECTIONS.reduce((count, section) => {
+      const snapshotValue = getSectionValue(snapshot.payload, section);
+      const currentValue = getCharacterSectionValue(character, section);
+      return count + (stableSerialize(snapshotValue) !== stableSerialize(currentValue) ? 1 : 0);
+    }, 0);
   }
 
   restoreWholeCharacter(_currentCharacter: Character, snapshot: CharacterSnapshot): UpdateCharacterInput {

@@ -49,8 +49,13 @@ export function ContextPanel({
     removeContextSection,
     samplerSettings,
   } = useCharacterEditorContext();
-  
+
+  const currentCharacterData = currentCharacter?.data ?? null;
+  const hasCurrentCharacter = currentCharacterData !== null;
   const [searchQuery, setSearchQuery] = useState('');
+  const handleSearchQueryChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+  }, []);
   
   // Collapsible section states
   const [isSelectedContextExpanded, setIsSelectedContextExpanded] = useState(true);
@@ -58,6 +63,7 @@ export function ContextPanel({
   
   // Context limit from sampler settings
   const contextLimit = samplerSettings.contextLength;
+  const hasLorebook = !!currentCharacterData?.characterBook?.entries.length;
 
   // Filter sections based on search query
   const filteredSections = CHARACTER_SECTIONS.filter(section => {
@@ -70,8 +76,6 @@ export function ContextPanel({
     
     // Hide lorebook if character has no lorebook or it's empty
     if (section.id === 'lorebook') {
-      const hasLorebook = currentCharacter?.data.characterBook && 
-                         currentCharacter.data.characterBook.entries.length > 0;
       if (!hasLorebook) return false;
     }
     
@@ -92,12 +96,12 @@ export function ContextPanel({
 
   // Calculate token count using estimator
   const calculateTokenCount = useCallback((): number => {
-    if (!currentCharacter) return 0;
+    if (!currentCharacterData) return 0;
 
     let totalTokens = 0;
 
     contextSectionIds.forEach(sectionId => {
-      const spec = currentCharacter.data.spec;
+      const spec = currentCharacterData.spec;
       switch (sectionId) {
         case 'name':
           totalTokens += estimateTokens(spec.name);
@@ -136,7 +140,7 @@ export function ContextPanel({
           if (spec.creator_notes) totalTokens += estimateTokens(spec.creator_notes);
           break;
         case 'lorebook': {
-          const book = currentCharacter.data.characterBook;
+          const book = currentCharacterData.characterBook;
           if (book) {
             if (book.name) totalTokens += estimateTokens(book.name);
             if (book.description) totalTokens += estimateTokens(book.description);
@@ -155,7 +159,7 @@ export function ContextPanel({
     });
 
     return totalTokens;
-  }, [currentCharacter, contextSectionIds]);
+  }, [currentCharacterData, contextSectionIds]);
 
   // Get usage data for the progress bar
   const usageData = React.useMemo(() => {
@@ -176,7 +180,7 @@ export function ContextPanel({
     };
   }, [calculateTokenCount, contextLimit]);
 
-  if (!currentCharacter) return <></>;
+  if (!hasCurrentCharacter) return <></>;
 
   return (
     <div className="h-full flex flex-col bg-vault-50 dark:bg-vault-900 border-r border-vault-200 dark:border-vault-800 animate-fade-in-slow">
@@ -342,7 +346,7 @@ export function ContextPanel({
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearchQueryChange}
                   placeholder="Search sections..."
                   className="w-full pl-9 pr-4 py-2 text-sm border border-vault-300 dark:border-vault-700 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 placeholder-vault-400 focus:outline-none focus:ring-2 focus:ring-vault-500"
                 />

@@ -3,7 +3,7 @@
  * @module @hooks/useCharacter
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { characterDb } from '../db/CharacterDatabase';
 import { characterSnapshotService } from '../services/CharacterSnapshotService';
 import type {
@@ -45,11 +45,15 @@ interface CharacterOperations {
  */
 export function useCharacter(): [CharacterResult, CharacterOperations] {
   const [characters, setCharacters] = useState<Character[]>([]);
-  const [currentCharacter, setCurrentCharacter] = useState<Character | null>(null);
+  const [currentCharacterId, setCurrentCharacterId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [settings, setSettings] = useState<CharacterVaultSettings | null>(null);
   const specUpdateSequenceRef = useRef<Map<string, number>>(new Map());
+  const currentCharacter = useMemo(
+    () => characters.find(character => character.id === currentCharacterId) ?? null,
+    [characters, currentCharacterId],
+  );
 
   /**
    * Load all characters and settings on mount
@@ -92,7 +96,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   const createCharacter = useCallback(async (input: CreateCharacterInput): Promise<Character> => {
     const character = await characterDb.createCharacter(input);
     setCharacters(prev => [character, ...prev]);
-    setCurrentCharacter(character);
+    setCurrentCharacterId(character.id);
 
     // Update last active character in settings
     if (settings) {
@@ -114,7 +118,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
         await characterSnapshotService.createSnapshot(character, 'open').catch(error => {
           console.error('Failed to create baseline snapshot:', error);
         });
-        setCurrentCharacter(character);
+        setCurrentCharacterId(characterId);
 
         // Update last active character in settings
         if (settings) {
@@ -134,7 +138,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
    * Close the current character
    */
   const closeCharacter = useCallback(() => {
-    setCurrentCharacter(null);
+    setCurrentCharacterId(null);
     if (settings) {
       characterDb.updateSettings({ lastActiveCharacterId: undefined });
       setSettings({ ...settings, lastActiveCharacterId: undefined });
@@ -149,8 +153,8 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
       await characterDb.deleteCharacter(characterId);
       setCharacters(prev => prev.filter(c => c.id !== characterId));
 
-      if (currentCharacter?.id === characterId) {
-        setCurrentCharacter(null);
+      if (currentCharacterId === characterId) {
+        setCurrentCharacterId(null);
         if (settings) {
           await characterDb.updateSettings({ lastActiveCharacterId: undefined });
           setSettings({ ...settings, lastActiveCharacterId: undefined });
@@ -160,7 +164,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
       setError(err instanceof Error ? err : new Error('Failed to delete character'));
       throw err;
     }
-  }, [currentCharacter, settings]);
+  }, [currentCharacterId, settings]);
 
   /**
    * Update a character
@@ -174,15 +178,12 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
       setCharacters(prev =>
         prev.map(c => (c.id === characterId ? updated : c))
       );
-      if (currentCharacter?.id === characterId) {
-        setCurrentCharacter(updated);
-      }
       return updated;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to update character'));
       throw err;
     }
-  }, [currentCharacter]);
+  }, []);
 
   /**
    * Update a specific spec field
@@ -205,7 +206,6 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
       setCharacters(prev =>
         prev.map(c => (c.id === characterId ? updated : c))
       );
-      setCurrentCharacter(prev => (prev?.id === characterId ? updated : prev));
       return updated;
     } catch (err) {
       if (specUpdateSequenceRef.current.get(sequenceKey) !== nextSequence) {

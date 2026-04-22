@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { characterSnapshotService } from '../../services';
-import type { CharacterSnapshot, SnapshotDiffEntry } from '../../db/characterTypes';
+import type { CharacterBook, CharacterSnapshot, SnapshotDiffEntry } from '../../db/characterTypes';
 
 interface CharacterHistoryModalProps {
   isOpen: boolean;
@@ -29,6 +29,10 @@ interface AlignedLine {
   value: string;
   compareValue: string;
   changed: boolean;
+}
+
+interface HighlightedLine extends AlignedLine {
+  segments: DiffSegment[];
 }
 
 type ConfirmAction =
@@ -61,6 +65,38 @@ function formatValue(value: unknown): string {
 
 function isImageEntry(entry: SnapshotDiffEntry): boolean {
   return entry.section === 'image';
+}
+
+function isLorebookValue(value: unknown): value is CharacterBook | null {
+  return value === null || (typeof value === 'object' && value !== null && 'entries' in value);
+}
+
+function getSortedLorebookEntries(value: CharacterBook | null) {
+  return value?.entries
+    ?.slice()
+    .sort((left, right) => left.insertion_order - right.insertion_order) ?? [];
+}
+
+function formatChangedLorebookContent(value: CharacterBook | null, compareValue: CharacterBook | null): string {
+  const entries = getSortedLorebookEntries(value);
+  if (entries.length === 0) {
+    return '';
+  }
+
+  const compareEntriesById = new Map(
+    getSortedLorebookEntries(compareValue).map(entry => [entry.id, entry]),
+  );
+
+  return normalizeLineEndings(
+    entries
+      .filter(entry => {
+        const compareEntry = compareEntriesById.get(entry.id);
+        return !compareEntry || normalizeLineEndings(compareEntry.content ?? '') !== normalizeLineEndings(entry.content ?? '');
+      })
+      .map(entry => entry.content ?? '')
+      .filter(content => content.length > 0)
+      .join('\n\n---\n\n'),
+  );
 }
 
 function splitChangedSegments(value: string, compareValue: string): DiffSegment[] {
@@ -219,8 +255,17 @@ function alignLines(value: string, compareValue: string): AlignedLine[] {
   return alignedLines.reverse();
 }
 
-function getChangedLineCount(value: string, compareValue: string): number {
-  return alignLines(value, compareValue).filter(line => line.changed).length;
+function buildHighlightedLines(value: string, compareValue: string): HighlightedLine[] {
+  return alignLines(value, compareValue)
+    .filter(line => line.value || line.compareValue)
+    .map(line => ({
+      ...line,
+      segments: splitChangedSegments(line.value, line.compareValue),
+    }));
+}
+
+function isSectionCollapsedByDefault(section: SnapshotDiffEntry['section'], activeSection: string): boolean {
+  return section !== activeSection;
 }
 
 function SnapshotSourceBadge({ snapshot }: { snapshot: CharacterSnapshot }): React.ReactElement {
@@ -240,26 +285,15 @@ function SnapshotSourceBadge({ snapshot }: { snapshot: CharacterSnapshot }): Rea
 }
 
 function HighlightedText({
-  value,
-  compareValue,
+  lines,
   changedToneClassName,
 }: {
-  value: string;
-  compareValue: string;
+  lines: HighlightedLine[];
   changedToneClassName: string;
 }): React.ReactElement {
-  const previewLines = useMemo(() => {
-    return alignLines(value, compareValue)
-      .filter(line => line.value || line.compareValue)
-      .map(line => ({
-        ...line,
-        segments: splitChangedSegments(line.value, line.compareValue),
-      }));
-  }, [compareValue, value]);
-
   return (
     <div className="space-y-1">
-      {previewLines.length > 0 ? previewLines.map((line) => (
+      {lines.length > 0 ? lines.map((line) => (
         <div
           key={line.key}
           className={`wrap-break-words rounded px-1.5 py-0.5 text-sm leading-6 text-vault-700 dark:text-vault-200 ${
@@ -314,8 +348,10 @@ function SyncedDiffView({
   snapshotValue: string;
   currentValue: string;
 }): React.ReactElement {
-  const changedLineCountLeft = useMemo(() => getChangedLineCount(snapshotValue, currentValue), [snapshotValue, currentValue]);
-  const changedLineCountRight = useMemo(() => getChangedLineCount(currentValue, snapshotValue), [currentValue, snapshotValue]);
+  const snapshotLines = useMemo(() => buildHighlightedLines(snapshotValue, currentValue), [currentValue, snapshotValue]);
+  const currentLines = useMemo(() => buildHighlightedLines(currentValue, snapshotValue), [currentValue, snapshotValue]);
+  const changedLineCountLeft = useMemo(() => snapshotLines.filter(line => line.changed).length, [snapshotLines]);
+  const changedLineCountRight = useMemo(() => currentLines.filter(line => line.changed).length, [currentLines]);
 
   return (
     <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
@@ -327,8 +363,7 @@ function SyncedDiffView({
           </p>
           <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
             <HighlightedText
-              value={snapshotValue}
-              compareValue={currentValue}
+              lines={snapshotLines}
               changedToneClassName="bg-amber-200/80 text-amber-950 dark:bg-amber-700/40 dark:text-amber-50"
             />
           </div>
@@ -341,8 +376,7 @@ function SyncedDiffView({
           </p>
           <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
             <HighlightedText
-              value={currentValue}
-              compareValue={snapshotValue}
+              lines={currentLines}
               changedToneClassName="bg-emerald-200/80 text-emerald-950 dark:bg-emerald-700/40 dark:text-emerald-50"
             />
           </div>
@@ -362,8 +396,19 @@ function SectionPreview({ entry }: { entry: SnapshotDiffEntry }): React.ReactEle
     );
   }
 
-  const snapshotValue = formatValue(entry.snapshotValue);
-  const currentValue = formatValue(entry.currentValue);
+  const snapshotLorebookValue = entry.section === 'lorebook' && isLorebookValue(entry.snapshotValue)
+    ? entry.snapshotValue
+    : null;
+  const currentLorebookValue = entry.section === 'lorebook' && isLorebookValue(entry.currentValue)
+    ? entry.currentValue
+    : null;
+  const isLorebookEntry = snapshotLorebookValue !== null || currentLorebookValue !== null;
+  const snapshotValue = isLorebookEntry
+    ? formatChangedLorebookContent(snapshotLorebookValue, currentLorebookValue)
+    : formatValue(entry.snapshotValue);
+  const currentValue = isLorebookEntry
+    ? formatChangedLorebookContent(currentLorebookValue, snapshotLorebookValue)
+    : formatValue(entry.currentValue);
 
   return <SyncedDiffView snapshotValue={snapshotValue} currentValue={currentValue} />;
 }
@@ -715,10 +760,6 @@ export function CharacterHistoryModal({
   }, [isVisible, snapshots]);
 
   useEffect(() => {
-    setCollapsedSections({});
-  }, [selectedSnapshotId]);
-
-  useEffect(() => {
     if (!isVisible) {
       previousSnapshotIdsRef.current = [];
       return;
@@ -796,14 +837,18 @@ export function CharacterHistoryModal({
   }, [confirmAction, isVisible, requestClose]);
 
   const diffCounts = useMemo(() => {
+    if (!currentCharacter) {
+      return {};
+    }
+
     const counts: Record<string, number> = {};
 
     snapshots.forEach(snapshot => {
-      counts[snapshot.id] = getSnapshotDiff(snapshot.id).filter(entry => entry.changed).length;
+      counts[snapshot.id] = characterSnapshotService.countChangedSections(snapshot, currentCharacter);
     });
 
     return counts;
-  }, [getSnapshotDiff, snapshots]);
+  }, [currentCharacter, snapshots]);
 
   const selectedSnapshot = useMemo(
     () => snapshots.find(snapshot => snapshot.id === selectedSnapshotId) ?? null,
@@ -869,10 +914,15 @@ export function CharacterHistoryModal({
     }
   };
 
+  const handleSelectSnapshot = (snapshotId: string) => {
+    setCollapsedSections({});
+    setSelectedSnapshotId(snapshotId);
+  };
+
   const toggleSectionCollapsed = (section: string) => {
     setCollapsedSections(prev => ({
       ...prev,
-      [section]: !prev[section],
+      [section]: !(prev[section] ?? isSectionCollapsedByDefault(section as SnapshotDiffEntry['section'], activeSection)),
     }));
   };
 
@@ -948,7 +998,7 @@ export function CharacterHistoryModal({
                       isSelected={snapshot.id === selectedSnapshotId}
                       isHighlighted={highlightedSnapshotIds.includes(snapshot.id)}
                       hasChanges={(diffCounts[snapshot.id] ?? 0) > 0}
-                      onSelect={() => setSelectedSnapshotId(snapshot.id)}
+                      onSelect={() => handleSelectSnapshot(snapshot.id)}
                       onDelete={() => setConfirmAction({ kind: 'delete', snapshot })}
                     />
                   ))}
@@ -966,7 +1016,7 @@ export function CharacterHistoryModal({
                 selectedSnapshotId={selectedSnapshotId}
                 highlightedSnapshotIds={highlightedSnapshotIds}
                 diffCounts={diffCounts}
-                onSelect={setSelectedSnapshotId}
+                onSelect={handleSelectSnapshot}
                 onDelete={(snapshot) => setConfirmAction({ kind: 'delete', snapshot })}
               />
             ) : null}
@@ -1004,7 +1054,7 @@ export function CharacterHistoryModal({
                           entry={entry}
                           snapshot={selectedSnapshot}
                           isActive={entry.section === activeSection}
-                          isCollapsed={!!collapsedSections[entry.section]}
+                          isCollapsed={collapsedSections[entry.section] ?? isSectionCollapsedByDefault(entry.section, activeSection)}
                           isBusy={isBusy}
                           onToggle={() => toggleSectionCollapsed(entry.section)}
                           onRestore={() => setConfirmAction({ kind: 'restore-section', snapshot: selectedSnapshot, entry })}
