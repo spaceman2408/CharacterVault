@@ -7,7 +7,6 @@ import React from 'react';
 
 interface CreatorNotesPreviewPaneProps {
   content: string;
-  className?: string;
   style?: React.CSSProperties;
   frameClassName?: string;
   emptyClassName?: string;
@@ -22,54 +21,38 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function buildCreatorNotesPreviewDoc(content: string): string {
+function buildBodyContent(content: string): string {
   const trimmedContent = content.trim();
   const containsMarkup = /<[^>]+>/.test(trimmedContent);
-  const bodyContent = containsMarkup
+  return containsMarkup
     ? trimmedContent
     : `<pre class="creator-notes-plain">${escapeHtml(content)}</pre>`;
+}
 
-  return `<!DOCTYPE html>
+const SKELETON_DOC = `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      :root {
-        color-scheme: dark;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html,
-      body {
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      html, body {
         margin: 0;
-        background:
-          radial-gradient(circle at top, rgba(71, 85, 105, 0.2), transparent 42%),
-          linear-gradient(180deg, #0f172a 0%, #111827 100%);
+        background: radial-gradient(circle at top, rgba(71,85,105,0.2), transparent 42%), linear-gradient(180deg, #0f172a 0%, #111827 100%);
         color: #e2e8f0;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
-
-      body {
-        padding: 16px;
-        line-height: 1.5;
-        overflow-wrap: anywhere;
-      }
-
+      body { padding: 16px; line-height: 1.5; overflow-wrap: anywhere; }
       .creator-notes-plain {
-        margin: 0;
-        white-space: pre-wrap;
+        margin: 0; white-space: pre-wrap;
         font: 500 14px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         color: inherit;
       }
     </style>
   </head>
-  <body>${bodyContent}</body>
+  <body></body>
 </html>`;
-}
 
 export function CreatorNotesPreviewPane({
   content,
@@ -77,7 +60,19 @@ export function CreatorNotesPreviewPane({
   frameClassName = '',
   emptyClassName = '',
 }: CreatorNotesPreviewPaneProps): React.ReactElement {
-  const previewDocument = React.useMemo(() => buildCreatorNotesPreviewDoc(content), [content]);
+  const iframeRef = React.useRef<HTMLIFrameElement>(null);
+  const isLoadedRef = React.useRef(false);
+  const deferredContent = React.useDeferredValue(content);
+  const bodyContent = React.useMemo(() => buildBodyContent(deferredContent), [deferredContent]);
+
+  // Update the iframe body content when deferred content changes
+  React.useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe || !isLoadedRef.current) return;
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    doc.body.innerHTML = bodyContent;
+  }, [bodyContent]);
 
   if (!content.trim()) {
     return (
@@ -89,11 +84,19 @@ export function CreatorNotesPreviewPane({
 
   return (
     <iframe
+      ref={iframeRef}
       title="Creator Notes Preview"
-      sandbox=""
-      srcDoc={previewDocument}
+      sandbox="allow-same-origin"
+      srcDoc={SKELETON_DOC}
       className={frameClassName}
       style={style}
+      onLoad={() => {
+        isLoadedRef.current = true;
+        const iframe = iframeRef.current;
+        if (iframe?.contentDocument) {
+          iframe.contentDocument.body.innerHTML = bodyContent;
+        }
+      }}
     />
   );
 }

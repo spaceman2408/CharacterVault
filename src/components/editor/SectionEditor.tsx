@@ -263,7 +263,6 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           <div className="min-h-0 overflow-hidden rounded-xl border border-vault-200 bg-vault-950 shadow-inner dark:border-vault-700">
             <CreatorNotesPreviewPane
               content={livePreviewValue}
-              className="h-[calc(100%-41px)]"
               frameClassName="block h-full w-full bg-vault-950"
               emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-vault-300"
             />
