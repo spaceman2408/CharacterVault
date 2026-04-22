@@ -611,9 +611,8 @@ function SnapshotSummary({
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <SnapshotSourceBadge snapshot={snapshot} />
-          <h3 className="mt-1.5 text-xl font-semibold text-vault-950 dark:text-vault-50">{formatSnapshotLabel(snapshot)}</h3>
-          <p className="text-sm text-vault-500 dark:text-vault-400">{formatSnapshotDescription(snapshot)}</p>
+          <h3 className="text-xl font-semibold text-vault-950 dark:text-vault-50">{formatSnapshotLabel(snapshot)}</h3>
+            <p className="text-sm text-vault-500 dark:text-vault-400">{formatSnapshotDescription(snapshot)}</p>
         </div>
         <button
           type="button"
