@@ -267,6 +267,8 @@ export interface AIModelInfo {
     prompt: number;
     completion: number;
   };
+  /** Whether this model supports provider selection (NanoGPT) */
+  supportsProviderSelection?: boolean;
 }
 
 /**
@@ -305,6 +307,18 @@ export interface AIConfig {
 
   /** Last custom base URL entered by the user (preserved when switching to/from presets) */
   lastCustomBaseUrl?: string;
+
+  /** Selected provider ID for models that support provider selection (NanoGPT) */
+  selectedProvider?: string;
+
+  /** Per-model provider overrides: modelId -> providerId */
+  providerByModelId?: Record<string, string>;
+
+  /** Whether to use subscription-only models endpoint (NanoGPT) */
+  subscriptionModelsOnly?: boolean;
+
+  /** Billing mode: 'sub' uses subscription (default), 'paygo' forces pay-as-you-go for provider selection */
+  billingMode?: 'sub' | 'paygo';
 }
 
 /**
@@ -442,6 +456,10 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'id'> = {
     enableReasoning: false,
     showReasoning: false,
     reasoningEffort: 'medium',
+    selectedProvider: undefined,
+    providerByModelId: {},
+    subscriptionModelsOnly: false,
+    billingMode: 'sub',
   },
   sampler: {
     temperature: 0.7,

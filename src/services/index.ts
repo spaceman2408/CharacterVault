@@ -11,6 +11,18 @@ export {
   type ReasoningParseResult,
 } from './ReasoningParser';
 
+// Provider adapters
+export {
+  resolveProvider,
+  NanoGPTProvider,
+  OpenAICompatProvider,
+  type IProviderAdapter,
+  type ModelProvider,
+  type ModelProviderInfo,
+  type ExtendedAIModelInfo,
+  type FetchModelsOptions,
+} from './providers';
+
 // CharacterVault services
 export { CharacterSettingsService, characterSettingsService } from './CharacterSettingsService';
 export { CharacterImportService, characterImportService } from './CharacterImportService';

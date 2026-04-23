@@ -32,12 +32,15 @@ import {
   Search,
   Shield,
   Trash2,
+  CreditCard,
+  Zap,
 } from 'lucide-react';
-import type { AIConfig, SamplerSettings, PromptSettings } from '../../db/types';
+import type { AIConfig, SamplerSettings, PromptSettings, AIModelInfo } from '../../db/types';
 import { DEFAULT_SETTINGS } from '../../db/types';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { useCharacterEditorContext } from '../../context';
 import { AIService, AIError } from '../../services/AIService';
+import type { ModelProvider } from '../../services/providers';
 
 interface CharacterSettingsPanelProps {
   isOpen: boolean;
@@ -317,7 +320,7 @@ const SamplerSettingsSection: React.FC<SamplerSettingsSectionProps> = ({
 
 // Model selector with search
 interface ModelSelectProps {
-  models: Array<{ id: string; name: string }>;
+  models: AIModelInfo[];
   selectedModelId: string;
   onSelect: (modelId: string) => void;
   onFetch: () => void;
@@ -489,6 +492,120 @@ const ModelSelect: React.FC<ModelSelectProps> = ({
   );
 };
 
+// Provider selector for models that support provider selection (NanoGPT)
+interface ProviderSelectProps {
+  providers: ModelProvider[];
+  selectedProvider: string;
+  onSelect: (provider: string) => void;
+  isLoading: boolean;
+  disabled?: boolean;
+}
+
+const ProviderSelect: React.FC<ProviderSelectProps> = ({
+  providers,
+  selectedProvider,
+  onSelect,
+  isLoading,
+  disabled = false,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedProviderInfo = providers.find((p) => p.provider === selectedProvider);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const formatPrice = (price: number): string => {
+    return `$${price.toFixed(4)}`;
+  };
+
+  return (
+    <div className="space-y-2" ref={containerRef}>
+      <label className="flex items-center gap-2 text-sm font-semibold text-vault-800 dark:text-vault-200">
+        <span className="p-1.5 rounded-md bg-vault-100 dark:bg-vault-800 text-vault-600 dark:text-vault-400">
+          <Zap className="w-4 h-4" />
+        </span>
+        Provider
+      </label>
+      <button
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled || isLoading}
+        className={`w-full px-3 py-2.5 border rounded-lg text-left transition-all duration-200 flex items-center justify-between ${
+          disabled || isLoading
+            ? 'bg-vault-100 dark:bg-vault-800 text-vault-400 cursor-not-allowed border-vault-200 dark:border-vault-700'
+            : 'bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 border-vault-300 dark:border-vault-600 hover:border-vault-400 dark:hover:border-vault-500 focus:outline-none focus:ring-2 focus:ring-vault-500/50'
+        }`}
+      >
+        <span className="flex items-center gap-2">
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : selectedProvider ? (
+            <>
+              <span className="font-medium">{selectedProvider}</span>
+              <span className="text-vault-500 text-xs">
+                (In: {formatPrice(selectedProviderInfo?.pricing.inputPer1kTokens ?? 0)}/1k, Out: {formatPrice(selectedProviderInfo?.pricing.outputPer1kTokens ?? 0)}/1k)
+              </span>
+            </>
+          ) : (
+            <span className="text-vault-400">Platform default (auto-selected)</span>
+          )}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-vault-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Dropdown */}
+      {isOpen && !isLoading && providers.length > 0 && (
+        <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-vault-800 border border-vault-300 dark:border-vault-600 rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+          <button
+            onClick={() => {
+              onSelect('');
+              setIsOpen(false);
+            }}
+            className={`w-full px-3 py-2 text-left text-sm transition-colors duration-150 ${
+              !selectedProvider
+                ? 'bg-vault-100 dark:bg-vault-700 text-vault-900 dark:text-vault-100 font-medium'
+                : 'text-vault-700 dark:text-vault-300 hover:bg-vault-50 dark:hover:bg-vault-700/50'
+            }`}
+          >
+            <div className="font-medium">Platform default</div>
+            <div className="text-xs text-vault-500">Let NanoGPT select the best provider</div>
+          </button>
+          {providers.map((provider) => (
+            <button
+              key={provider.provider}
+              onClick={() => {
+                onSelect(provider.provider);
+                setIsOpen(false);
+              }}
+              className={`w-full px-3 py-2 text-left text-sm transition-colors duration-150 ${
+                provider.provider === selectedProvider
+                  ? 'bg-vault-100 dark:bg-vault-700 text-vault-900 dark:text-vault-100 font-medium'
+                  : 'text-vault-700 dark:text-vault-300 hover:bg-vault-50 dark:hover:bg-vault-700/50'
+              }`}
+            >
+              <div className="font-medium">{provider.provider}</div>
+              <div className="text-xs text-vault-500">
+                In: {formatPrice(provider.pricing.inputPer1kTokens)}/1k tokens, Out: {formatPrice(provider.pricing.outputPer1kTokens)}/1k tokens
+                {!provider.available && <span className="text-amber-500 ml-2">(unavailable)</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Toast notification component
 const ToastContainer: React.FC<{
   toasts: ToastNotification[];
@@ -564,7 +681,16 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     showReasoning: false,
     reasoningEffort: 'medium',
     lastCustomBaseUrl: '',
+    selectedProvider: undefined,
+    providerByModelId: {},
+    subscriptionModelsOnly: false,
+    billingMode: 'sub',
   });
+
+  // Provider selection state
+  const [modelProviders, setModelProviders] = useState<ModelProvider[]>([]);
+  const [isFetchingProviders, setIsFetchingProviders] = useState(false);
+  const [supportsProviderSelection, setSupportsProviderSelection] = useState(false);
   const [localSampler, setLocalSampler] = useState<SamplerSettings>({
     temperature: 0.7,
     minP: 0.05,
@@ -767,7 +893,10 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
 
     try {
       const aiService = new AIService(localAIConfig, localSampler);
-      const models = await aiService.fetchModels();
+      const models = await aiService.fetchModels({
+        subscriptionOnly: localAIConfig.subscriptionModelsOnly,
+        detailed: true,
+      });
       setLocalAIConfig(prev => ({ ...prev, availableModels: models }));
       addToast('success', `Fetched ${models.length} models`);
     } catch (err) {
@@ -780,6 +909,41 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
       setIsFetchingModels(false);
     }
   };
+
+  const fetchModelProviders = useCallback(async (modelId: string) => {
+    if (!modelId) return;
+
+    setIsFetchingProviders(true);
+    try {
+      const aiService = new AIService(localAIConfig, localSampler);
+      const providerInfo = await aiService.fetchModelProviders(modelId);
+
+      setSupportsProviderSelection(providerInfo.supportsProviderSelection);
+
+      if (providerInfo.supportsProviderSelection) {
+        setModelProviders(providerInfo.providers);
+      } else {
+        setModelProviders([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch model providers:', err);
+      setModelProviders([]);
+      setSupportsProviderSelection(false);
+    } finally {
+      setIsFetchingProviders(false);
+    }
+  }, [localAIConfig, localSampler]);
+
+  // Fetch providers when model changes
+  useEffect(() => {
+    if (!localAIConfig.modelId) {
+      setModelProviders([]);
+      setSupportsProviderSelection(false);
+      return;
+    }
+
+    void fetchModelProviders(localAIConfig.modelId);
+  }, [localAIConfig.modelId, fetchModelProviders]);
 
   const isPresetUrl = (url: string): boolean => {
     return AI_BASE_URL_PRESETS.some(preset => normalizeBaseUrl(preset.baseUrl) === normalizeBaseUrl(url));
@@ -852,10 +1016,34 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
         }
       }
 
+      // Check if this model has a saved provider preference
+      const savedProvider = prev.providerByModelId?.[modelId] ?? prev.selectedProvider;
+
       return {
         ...prev,
         modelId,
         modelIdsByBaseUrl,
+        selectedProvider: savedProvider ?? '',
+      };
+    });
+  };
+
+  const handleProviderChange = (providerId: string) => {
+    setLocalAIConfig(prev => {
+      const providerByModelId = { ...(prev.providerByModelId ?? {}) };
+
+      if (prev.modelId) {
+        if (providerId) {
+          providerByModelId[prev.modelId] = providerId;
+        } else {
+          delete providerByModelId[prev.modelId];
+        }
+      }
+
+      return {
+        ...prev,
+        selectedProvider: providerId,
+        providerByModelId,
       };
     });
   };
@@ -941,7 +1129,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     setIsClearing(true);
     try {
       await characterSettingsService.clearAISettings();
-      
+
       // Reset local state to defaults
       setLocalAIConfig({
         baseUrl: 'https://nano-gpt.com/api/v1',
@@ -955,8 +1143,13 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
         showReasoning: false,
         reasoningEffort: 'medium',
         lastCustomBaseUrl: '',
+        selectedProvider: undefined,
+        providerByModelId: {},
+        subscriptionModelsOnly: false,
+        billingMode: 'sub',
       });
-      
+      setModelProviders([]);
+
       await reloadSettings();
       addToast('success', 'AI settings cleared. Your characters are safe.');
       setShowClearConfirm(false);
@@ -1201,8 +1394,79 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                       isFetching={isFetchingModels}
                       disabled={false}
                     />
+
+                    {/* Provider selection for models that support it */}
+                    {localAIConfig.modelId && supportsProviderSelection && (
+                      <div className="relative">
+                        <ProviderSelect
+                          providers={modelProviders}
+                          selectedProvider={localAIConfig.selectedProvider ?? ''}
+                          onSelect={handleProviderChange}
+                          isLoading={isFetchingProviders}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {/* NanoGPT-specific options - only show for NanoGPT */}
+                {selectedBaseUrlPreset === 'nano-gpt' && (
+                  <div className="bg-white dark:bg-vault-800/50 rounded-xl p-5 border border-vault-200 dark:border-vault-700 shadow-sm">
+                    <h3 className="text-sm font-semibold text-vault-800 dark:text-vault-200 mb-4 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-vault-600 dark:text-vault-400" />
+                      NanoGPT Options
+                    </h3>
+                    <div className="space-y-4">
+                      <label className="flex items-start gap-3 text-sm text-vault-700 dark:text-vault-300 cursor-pointer group">
+                        <div className="relative mt-0.5">
+                          <input
+                            type="checkbox"
+                            checked={localAIConfig.subscriptionModelsOnly ?? false}
+                            onChange={(e) => {
+                              const subscriptionOnly = e.target.checked;
+                              setLocalAIConfig(prev => ({ ...prev, subscriptionModelsOnly: subscriptionOnly }));
+                              // Re-fetch models with new setting
+                              if (localAIConfig.baseUrl && localAIConfig.apiKey) {
+                                void fetchModels();
+                              }
+                            }}
+                            className="peer sr-only"
+                          />
+                          <div className="w-10 h-6 bg-vault-300 dark:bg-vault-700 rounded-full peer-checked:bg-vault-600 dark:peer-checked:bg-vault-500 transition-colors duration-200" />
+                          <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="group-hover:text-vault-900 dark:group-hover:text-vault-100 transition-colors font-medium">Subscription models only</span>
+                          <p className="text-xs text-vault-500 mt-0.5">
+                            Show only models included in your NanoGPT subscription. Ignores the &quot;Also show paid models&quot; preference.
+                          </p>
+                        </div>
+                      </label>
+
+                      <label className="flex items-start gap-3 text-sm text-vault-700 dark:text-vault-300 cursor-pointer group">
+                        <div className="relative mt-0.5">
+                          <input
+                            type="checkbox"
+                            checked={localAIConfig.billingMode === 'paygo'}
+                            onChange={(e) => setLocalAIConfig(prev => ({
+                              ...prev,
+                              billingMode: e.target.checked ? 'paygo' : 'sub',
+                            }))}
+                            className="peer sr-only"
+                          />
+                          <div className="w-10 h-6 bg-vault-300 dark:bg-vault-700 rounded-full peer-checked:bg-vault-600 dark:peer-checked:bg-vault-500 transition-colors duration-200" />
+                          <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="group-hover:text-vault-900 dark:group-hover:text-vault-100 transition-colors font-medium">Pay-as-you-go billing</span>
+                          <p className="text-xs text-vault-500 mt-0.5">
+                            Force pay-as-you-go pricing even with an active subscription. Required for provider selection on subscription-covered models.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                )}
 
                 <div className="bg-white dark:bg-vault-800/50 rounded-xl p-5 border border-vault-200 dark:border-vault-700 shadow-sm">
                   <h3 className="text-sm font-semibold text-vault-800 dark:text-vault-200 mb-4 flex items-center gap-2">

@@ -6,6 +6,8 @@
 
 import type { AIConfig, SamplerSettings, AIModelInfo, PromptSettings } from '../db/types';
 import { ReasoningParser } from './ReasoningParser';
+import { resolveProvider } from './providers';
+import type { ModelProviderInfo, FetchModelsOptions } from './providers';
 
 /**
  * Bytes per token ratio for token estimation.
@@ -165,19 +167,6 @@ interface ChatCompletionChunk {
     reasoning?: {
       content?: string;
     };
-  }>;
-}
-
-/**
- * OpenAI-compatible models list response
- */
-interface ModelsResponse {
-  object: string;
-  data: Array<{
-    id: string;
-    object: string;
-    created: number;
-    owned_by: string;
   }>;
 }
 
@@ -352,6 +341,11 @@ Provide only the generated text without any additional commentary.`;
       headers['Authorization'] = `Bearer ${this.config.apiKey}`;
     }
 
+    // Add provider-specific headers (e.g., X-Provider, X-Billing-Mode)
+    const provider = resolveProvider(this.config.baseUrl);
+    const providerHeaders = provider.getChatHeaders(this.config);
+    Object.assign(headers, providerHeaders);
+
     return headers;
   }
 
@@ -378,57 +372,57 @@ Provide only the generated text without any additional commentary.`;
 
   /**
    * Fetch available models from the API
+   * Delegates to the appropriate provider adapter
    */
-  async fetchModels(): Promise<AIModelInfo[]> {
+  async fetchModels(options?: FetchModelsOptions): Promise<AIModelInfo[]> {
     try {
-      const response = await fetch(`${this.getBaseUrl()}/models`, {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
+      const provider = resolveProvider(this.config.baseUrl);
+      return await provider.fetchModels(this.getBaseUrl(), this.config.apiKey, options);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'Invalid API key') {
           throw new AIError('Invalid API key', 'auth', 401);
         }
-        if (response.status === 429) {
+        if (error.message === 'Rate limit exceeded') {
           throw new AIError('Rate limit exceeded', 'rate_limit', 429);
         }
-        throw new AIError(
-          this.withBaseUrlHint(`Failed to fetch models: ${response.statusText || `HTTP ${response.status}`}`),
-          'server',
-          response.status
-        );
+        throw new AIError(this.withBaseUrlHint(error.message), 'server');
       }
-
-      const data = await response.json() as ModelsResponse;
-
-      if (!Array.isArray(data.data)) {
-        throw new AIError(
-          this.withBaseUrlHint('Failed to fetch models: the API response did not include a valid model list.'),
-          'invalid_request',
-          response.status
-        );
-      }
-      
-      const models = data.data.map(model => ({
-        id: model.id,
-        name: this.formatModelName(model.id),
-      }));
-      
-      // Sort models alphabetically by name
-      return models.sort((a, b) => a.name.localeCompare(b.name));
-    } catch (error) {
-      this.handleError(error);
+      throw new AIError(this.withBaseUrlHint('An unknown error occurred'), 'unknown');
     }
   }
 
   /**
-   * Format model ID to a readable name
+   * Fetch available providers for a specific model.
+   * Delegates short-circuit logic to the resolved provider adapter:
+   * - Non-supporting providers return immediately (no network call)
+   * - Provider cache is checked before making an API call
+   * - Model list's supportsProviderSelection flag is used when available
    */
-  private formatModelName(modelId: string): string {
-    // Return the raw model ID without formatting
-    // This preserves the original format including hyphens, underscores, and casing
-    return modelId;
+  async fetchModelProviders(modelId: string): Promise<ModelProviderInfo> {
+    try {
+      const provider = resolveProvider(this.config.baseUrl);
+
+      if (!provider.maySupportProviderSelection(modelId, this.config.availableModels)) {
+        return {
+          canonicalId: modelId,
+          displayName: this.config.availableModels?.find((m) => m.id === modelId)?.name || modelId,
+          supportsProviderSelection: false,
+          defaultPrice: { inputPer1kTokens: 0, outputPer1kTokens: 0 },
+          providers: [],
+        };
+      }
+
+      return await provider.fetchModelProviders(this.getBaseUrl(), this.config.apiKey, modelId);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === 'Rate limit exceeded') {
+          throw new AIError('Rate limit exceeded', 'rate_limit', 429);
+        }
+        throw new AIError(this.withBaseUrlHint(error.message), 'server');
+      }
+      throw new AIError(this.withBaseUrlHint('An unknown error occurred'), 'unknown');
+    }
   }
 
   /**
