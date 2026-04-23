@@ -12,6 +12,7 @@ import type {
   CreateSnapshotInput,
   CreateCharacterInput,
   UpdateCharacterInput,
+  SnapshotMetadata,
 } from './characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
 import { v4 as uuidv4 } from 'uuid';
@@ -497,6 +498,45 @@ export class CharacterDatabase extends Dexie {
 
     const snapshotsToDelete = deletableSnapshots.slice(0, deletableSnapshots.length - limit);
     await Promise.all(snapshotsToDelete.map(snapshot => this.snapshots.delete(snapshot.id)));
+  }
+
+  /**
+   * Get lightweight snapshot metadata for a character (excludes heavy payload)
+   * Use this for timeline lists; load full payload only when needed
+   * @param {string} characterId - Character ID
+   * @returns {Promise<SnapshotMetadata[]>} Array of snapshot metadata, sorted newest first
+   */
+  async getSnapshotMetadataForCharacter(characterId: string): Promise<SnapshotMetadata[]> {
+    const snapshots = await this.snapshots
+      .where('characterId')
+      .equals(characterId)
+      .sortBy('createdAt');
+    return snapshots.reverse().map(({ id, characterId: cId, source, createdAt, payloadHash }) => ({
+      id,
+      characterId: cId,
+      source,
+      createdAt,
+      payloadHash,
+    }));
+  }
+
+  /**
+   * Get a single snapshot by ID (includes full payload)
+   * Use this when you need the actual snapshot data for diff/restore
+   * @param {string} snapshotId - Snapshot ID
+   * @returns {Promise<CharacterSnapshot | undefined>} Full snapshot or undefined
+   */
+  async getSnapshotById(snapshotId: string): Promise<CharacterSnapshot | undefined> {
+    return this.snapshots.get(snapshotId);
+  }
+
+  /**
+   * Delete a snapshot by ID directly
+   * @param {string} snapshotId - Snapshot ID
+   * @returns {Promise<void>}
+   */
+  async deleteSnapshotById(snapshotId: string): Promise<void> {
+    await this.snapshots.delete(snapshotId);
   }
 }
 

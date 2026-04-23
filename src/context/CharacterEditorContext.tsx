@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import type { Character, CharacterSection, CharacterSnapshot, SnapshotDiffEntry } from '../db/characterTypes';
+import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
 import { DEFAULT_SETTINGS } from '../db/types';
 import { useCharacterContext } from './useCharacterContext';
@@ -50,7 +50,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [samplerSettings, setSamplerSettings] = useState<SamplerSettings>(DEFAULT_SETTINGS.sampler);
   const [promptSettings, setPromptSettings] = useState<PromptSettings>(DEFAULT_SETTINGS.prompts);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [snapshots, setSnapshots] = useState<CharacterSnapshot[]>([]);
+  const [snapshotMetadata, setSnapshotMetadata] = useState<SnapshotMetadata[]>([]);
   const [isSnapshotsLoading, setIsSnapshotsLoading] = useState(false);
   const specFieldRequestVersionRef = useRef<Map<string, number>>(new Map());
   const specSaveTimerRef = useRef<Map<string, number>>(new Map());
@@ -86,8 +86,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const refreshSnapshotsForCharacter = useCallback(async (characterId: string) => {
     setIsSnapshotsLoading(true);
     try {
-      const nextSnapshots = await characterSnapshotService.listSnapshots(characterId);
-      setSnapshots(nextSnapshots);
+      const metadata = await characterSnapshotService.listSnapshotMetadata(characterId);
+      setSnapshotMetadata(metadata);
     } catch (error) {
       console.error('Failed to load snapshots:', error);
     } finally {
@@ -97,7 +97,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
   const refreshSnapshots = useCallback(async () => {
     if (!currentCharacterId) {
-      setSnapshots([]);
+      setSnapshotMetadata([]);
       return;
     }
 
@@ -275,7 +275,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   useEffect(() => {
     if (!currentCharacter || !currentCharacterId) {
       openedCharacterIdRef.current = null;
-      setSnapshots([]);
+      setSnapshotMetadata([]);
       setIsHistoryOpen(false);
       return;
     }
@@ -289,19 +289,19 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     if (isHistoryOpenRef.current) {
       void refreshSnapshots();
     } else {
-      setSnapshots([]);
+      setSnapshotMetadata([]);
     }
   }, [createSnapshotFromCharacter, currentCharacter, currentCharacterId, refreshSnapshots]);
 
   useEffect(() => {
     if (!isHistoryOpen) {
-      setSnapshots([]);
+      setSnapshotMetadata([]);
       setIsSnapshotsLoading(false);
       return;
     }
 
     if (!currentCharacterId) {
-      setSnapshots([]);
+      setSnapshotMetadata([]);
       return;
     }
 
@@ -521,34 +521,36 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     return snapshot ? 'created' : 'skipped';
   }, [createSnapshotFromCharacter, flushPendingSaves]);
 
-  const getSnapshotDiff = useCallback((snapshotId: string): SnapshotDiffEntry[] => {
+  const getSnapshotDiff = useCallback(async (snapshotId: string): Promise<SnapshotDiffEntry[]> => {
     const character = currentCharacterRef.current;
     if (!character) {
       return [];
     }
 
-    const snapshot = snapshots.find(entry => entry.id === snapshotId);
+    // Load the full snapshot payload lazily from DB
+    const snapshot = await characterSnapshotService.loadSnapshotPayload(snapshotId);
     if (!snapshot) {
       return [];
     }
 
+    // Store the selected snapshot for potential restore operations
     return characterSnapshotService.diffSnapshotAgainstCharacter(snapshot, character);
-  }, [snapshots]);
+  }, []);
 
   const deleteSnapshot = useCallback(async (snapshotId: string) => {
-    const snapshot = snapshots.find(entry => entry.id === snapshotId);
-    if (!snapshot) {
+    const metadata = snapshotMetadata.find(entry => entry.id === snapshotId);
+    if (!metadata) {
       return;
     }
 
     try {
-      await characterSnapshotService.deleteSnapshot(snapshot);
-      await refreshSnapshotsForCharacter(snapshot.characterId);
+      await characterSnapshotService.deleteSnapshotById(snapshotId);
+      await refreshSnapshotsForCharacter(metadata.characterId);
     } catch (error) {
       console.error('Failed to delete snapshot:', error);
       throw error;
     }
-  }, [refreshSnapshotsForCharacter, snapshots]);
+  }, [refreshSnapshotsForCharacter, snapshotMetadata]);
 
   const restoreSnapshot = useCallback(async (
     snapshotId: string,
@@ -560,7 +562,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       return;
     }
 
-    const snapshot = snapshots.find(entry => entry.id === snapshotId);
+    // Load the full snapshot payload lazily from DB
+    const snapshot = await characterSnapshotService.loadSnapshotPayload(snapshotId);
     if (!snapshot) {
       return;
     }
@@ -605,7 +608,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
   }, [
     createSnapshotFromCharacter,
-    snapshots,
     updateCharacterBase,
     updateSpecFieldBase,
   ]);
@@ -818,7 +820,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     samplerSettings,
     promptSettings,
     isHistoryOpen,
-    snapshots,
+    snapshotMetadata,
     isSnapshotsLoading,
     setActiveSection,
     updateCharacter,

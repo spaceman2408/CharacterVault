@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { characterSnapshotService } from '../../services';
-import type { CharacterBook, CharacterSnapshot, SnapshotDiffEntry } from '../../db/characterTypes';
+import type { CharacterBook, CharacterSnapshot, SnapshotMetadata, SnapshotDiffEntry } from '../../db/characterTypes';
 
 interface CharacterHistoryModalProps {
   isOpen: boolean;
@@ -36,9 +36,9 @@ interface HighlightedLine extends AlignedLine {
 }
 
 type ConfirmAction =
-  | { kind: 'delete'; snapshot: CharacterSnapshot }
-  | { kind: 'restore-whole'; snapshot: CharacterSnapshot }
-  | { kind: 'restore-section'; snapshot: CharacterSnapshot; entry: SnapshotDiffEntry };
+  | { kind: 'delete'; metadata: SnapshotMetadata }
+  | { kind: 'restore-whole'; metadata: SnapshotMetadata }
+  | { kind: 'restore-section'; metadata: SnapshotMetadata; entry: SnapshotDiffEntry };
 
 const MODAL_CLOSE_MS = 180;
 const NEW_SNAPSHOT_HIGHLIGHT_MS = 1800;
@@ -157,8 +157,8 @@ function splitChangedSegments(value: string, compareValue: string): DiffSegment[
   ];
 }
 
-function formatSnapshotLabel(snapshot: CharacterSnapshot): string {
-  switch (snapshot.source) {
+function formatSnapshotLabel(source: SnapshotMetadata['source']): string {
+  switch (source) {
     case 'open':
       return 'Opened card';
     case 'auto':
@@ -168,12 +168,12 @@ function formatSnapshotLabel(snapshot: CharacterSnapshot): string {
     case 'rollback':
       return 'Post-restore save point';
     default:
-      return characterSnapshotService.formatSnapshotSource(snapshot.source);
+      return characterSnapshotService.formatSnapshotSource(source);
   }
 }
 
-function formatSnapshotDescription(snapshot: CharacterSnapshot): string {
-  switch (snapshot.source) {
+function formatSnapshotDescription(source: SnapshotMetadata['source']): string {
+  switch (source) {
     case 'open':
       return 'Saved when this card was opened.';
     case 'auto':
@@ -183,7 +183,7 @@ function formatSnapshotDescription(snapshot: CharacterSnapshot): string {
     case 'rollback':
       return 'Saved after a restore completed.';
     default:
-      return characterSnapshotService.describeSnapshotSource(snapshot.source);
+      return characterSnapshotService.describeSnapshotSource(source);
   }
 }
 
@@ -281,18 +281,18 @@ function isSectionCollapsedByDefault(section: SnapshotDiffEntry['section'], acti
   return section !== activeSection;
 }
 
-function SnapshotSourceBadge({ snapshot }: { snapshot: CharacterSnapshot }): React.ReactElement {
-  const toneClassName = snapshot.source === 'manual'
+function SnapshotSourceBadge({ source }: { source: SnapshotMetadata['source'] }): React.ReactElement {
+  const toneClassName = source === 'manual'
     ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200'
-    : snapshot.source === 'rollback'
+    : source === 'rollback'
       ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200'
-      : snapshot.source === 'open'
+      : source === 'open'
         ? 'bg-vault-200 text-vault-700 dark:bg-vault-800 dark:text-vault-200'
         : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200';
 
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${toneClassName}`}>
-      {formatSnapshotLabel(snapshot)}
+      {formatSnapshotLabel(source)}
     </span>
   );
 }
@@ -460,14 +460,14 @@ function ConfirmationDialog({
       ? {
         eyebrow: 'Restore card',
         title: 'Restore the full card from this revision?',
-        description: `Your current draft will be replaced with the "${formatSnapshotLabel(action.snapshot)}" revision from ${new Date(action.snapshot.createdAt).toLocaleString()}. A rollback snapshot will still be created automatically.`,
+        description: `Your current draft will be replaced with the "${formatSnapshotLabel(action.metadata.source)}" revision from ${new Date(action.metadata.createdAt).toLocaleString()}. A rollback snapshot will still be created automatically.`,
         confirmLabel: 'Restore card',
         confirmClassName: 'bg-vault-900 text-white hover:bg-black dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white',
       }
       : {
         eyebrow: 'Restore section',
         title: `Restore ${action.entry.label}?`,
-        description: `Only this section will be restored from the "${formatSnapshotLabel(action.snapshot)}" revision. Other sections remain unchanged.`,
+        description: `Only this section will be restored from the "${formatSnapshotLabel(action.metadata.source)}" revision. Other sections remain unchanged.`,
         confirmLabel: 'Restore section',
         confirmClassName: 'bg-vault-900 text-white hover:bg-black dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white',
       };
@@ -510,14 +510,14 @@ function ConfirmationDialog({
 }
 
 function TimelineCard({
-  snapshot,
+  metadata,
   isSelected,
   isHighlighted,
   hasChanges,
   onSelect,
   onDelete,
 }: {
-  snapshot: CharacterSnapshot;
+  metadata: SnapshotMetadata;
   isSelected: boolean;
   isHighlighted: boolean;
   hasChanges: boolean;
@@ -534,12 +534,12 @@ function TimelineCard({
     >
       <div className="flex items-center gap-2">
         <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-          <SnapshotSourceBadge snapshot={snapshot} />
+          <SnapshotSourceBadge source={metadata.source} />
           <span className="shrink-0 text-xs text-vault-400">
-            {new Date(snapshot.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            {new Date(metadata.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
           </span>
         </button>
-        {!characterSnapshotService.isBaselineSnapshot(snapshot) ? (
+        {!characterSnapshotService.isBaselineSnapshotMetadata(metadata) ? (
           <button
             type="button"
             onClick={onDelete}
@@ -558,32 +558,32 @@ function TimelineCard({
 }
 
 function MobileRevisionScroller({
-  snapshots,
+  metadata,
   selectedSnapshotId,
   highlightedSnapshotIds,
-  diffCounts,
+  hasChangesById,
   onSelect,
   onDelete,
 }: {
-  snapshots: CharacterSnapshot[];
+  metadata: SnapshotMetadata[];
   selectedSnapshotId: string | null;
   highlightedSnapshotIds: string[];
-  diffCounts: Record<string, number>;
+  hasChangesById: Record<string, boolean>;
   onSelect: (snapshotId: string) => void;
-  onDelete: (snapshot: CharacterSnapshot) => void;
+  onDelete: (metadata: SnapshotMetadata) => void;
 }): React.ReactElement {
   return (
     <div className="overflow-x-auto px-4 pb-4 md:hidden">
       <div className="flex gap-3">
-        {snapshots.map(snapshot => (
-          <div key={snapshot.id} className="min-w-[16rem] max-w-[16rem] shrink-0">
+        {metadata.map(meta => (
+          <div key={meta.id} className="min-w-[16rem] max-w-[16rem] shrink-0">
             <TimelineCard
-              snapshot={snapshot}
-              isSelected={snapshot.id === selectedSnapshotId}
-              isHighlighted={highlightedSnapshotIds.includes(snapshot.id)}
-              hasChanges={(diffCounts[snapshot.id] ?? 0) > 0}
-              onSelect={() => onSelect(snapshot.id)}
-              onDelete={() => onDelete(snapshot)}
+              metadata={meta}
+              isSelected={meta.id === selectedSnapshotId}
+              isHighlighted={highlightedSnapshotIds.includes(meta.id)}
+              hasChanges={hasChangesById[meta.id] ?? false}
+              onSelect={() => onSelect(meta.id)}
+              onDelete={() => onDelete(meta)}
             />
           </div>
         ))}
@@ -593,7 +593,7 @@ function MobileRevisionScroller({
 }
 
 interface SnapshotSummaryProps {
-  snapshot: CharacterSnapshot;
+  metadata: SnapshotMetadata;
   changedSectionCount: number;
   hasActiveSectionDiff: boolean;
   isBusy: boolean;
@@ -601,7 +601,7 @@ interface SnapshotSummaryProps {
 }
 
 function SnapshotSummary({
-  snapshot,
+  metadata,
   changedSectionCount,
   hasActiveSectionDiff,
   isBusy,
@@ -611,8 +611,8 @@ function SnapshotSummary({
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="text-xl font-semibold text-vault-950 dark:text-vault-50">{formatSnapshotLabel(snapshot)}</h3>
-            <p className="text-sm text-vault-500 dark:text-vault-400">{formatSnapshotDescription(snapshot)}</p>
+          <h3 className="text-xl font-semibold text-vault-950 dark:text-vault-50">{formatSnapshotLabel(metadata.source)}</h3>
+            <p className="text-sm text-vault-500 dark:text-vault-400">{formatSnapshotDescription(metadata.source)}</p>
         </div>
         <button
           type="button"
@@ -628,7 +628,7 @@ function SnapshotSummary({
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-vault-200 pt-3 text-sm text-vault-500 dark:border-vault-800 dark:text-vault-400">
         <span className="inline-flex items-center gap-1.5">
           <Clock3 className="h-3.5 w-3.5" />
-          {new Date(snapshot.createdAt).toLocaleString()}
+          {new Date(metadata.createdAt).toLocaleString()}
         </span>
         <span>{changedSectionCount} {changedSectionCount === 1 ? 'section' : 'sections'} changed</span>
         {hasActiveSectionDiff && (
@@ -641,7 +641,7 @@ function SnapshotSummary({
 
 interface DiffSectionProps {
   entry: SnapshotDiffEntry;
-  snapshot: CharacterSnapshot;
+  snapshot: CharacterSnapshot | null;
   isActive: boolean;
   isCollapsed: boolean;
   isBusy: boolean;
@@ -706,7 +706,7 @@ export function CharacterHistoryModal({
   const {
     currentCharacter,
     activeSection,
-    snapshots,
+    snapshotMetadata,
     isSnapshotsLoading,
     refreshSnapshots,
     createManualSnapshot,
@@ -715,12 +715,22 @@ export function CharacterHistoryModal({
     getSnapshotDiff,
   } = useCharacterEditorContext();
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<CharacterSnapshot | null>(null);
+  const [diffEntries, setDiffEntries] = useState<SnapshotDiffEntry[]>([]);
+  const [isLoadingDiff, setIsLoadingDiff] = useState(false);
+
+  // Get selected metadata for display
+  const selectedMetadata = useMemo(
+    () => snapshotMetadata.find(meta => meta.id === selectedSnapshotId) ?? null,
+    [snapshotMetadata, selectedSnapshotId]
+  );
   const [isVisible, setIsVisible] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [highlightedSnapshotIds, setHighlightedSnapshotIds] = useState<string[]>([]);
+  const [currentPayloadHash, setCurrentPayloadHash] = useState<string | null>(null);
   const previousSnapshotIdsRef = useRef<string[]>([]);
   const snapshotHighlightTimeoutsRef = useRef<number[]>([]);
 
@@ -768,19 +778,32 @@ export function CharacterHistoryModal({
     void refreshSnapshots();
   }, [isVisible, refreshSnapshots]);
 
+  // Compute current character payload hash once for comparison
+  useEffect(() => {
+    if (!currentCharacter) {
+      setCurrentPayloadHash(null);
+      return;
+    }
+
+    void characterSnapshotService.computeCharacterPayloadHash(currentCharacter).then(hash => {
+      setCurrentPayloadHash(hash);
+    });
+  }, [currentCharacter]);
+
+  // Select the first snapshot when list loads
   useEffect(() => {
     if (!isVisible) {
       return;
     }
 
     setSelectedSnapshotId(currentSelectedSnapshotId => {
-      if (currentSelectedSnapshotId && snapshots.some(snapshot => snapshot.id === currentSelectedSnapshotId)) {
+      if (currentSelectedSnapshotId && snapshotMetadata.some(meta => meta.id === currentSelectedSnapshotId)) {
         return currentSelectedSnapshotId;
       }
 
-      return snapshots[0]?.id ?? null;
+      return snapshotMetadata[0]?.id ?? null;
     });
-  }, [isVisible, snapshots]);
+  }, [isVisible, snapshotMetadata]);
 
   useEffect(() => {
     if (!isVisible) {
@@ -789,7 +812,7 @@ export function CharacterHistoryModal({
     }
 
     const previousSnapshotIds = previousSnapshotIdsRef.current;
-    const nextSnapshotIds = snapshots.map(snapshot => snapshot.id);
+    const nextSnapshotIds = snapshotMetadata.map(meta => meta.id);
 
     if (
       previousSnapshotIds.length > 0 &&
@@ -809,14 +832,14 @@ export function CharacterHistoryModal({
       if (insertedSnapshotIds.length > 0) {
         setHighlightedSnapshotIds(prev => [...new Set([...prev, ...insertedSnapshotIds])]);
         const timeoutId = window.setTimeout(() => {
-          setHighlightedSnapshotIds(prev => prev.filter(snapshotId => !insertedSnapshotIds.includes(snapshotId)));
+          setHighlightedSnapshotIds(prev => prev.filter(id => !insertedSnapshotIds.includes(id)));
         }, NEW_SNAPSHOT_HIGHLIGHT_MS);
         snapshotHighlightTimeoutsRef.current.push(timeoutId);
       }
     }
 
     previousSnapshotIdsRef.current = nextSnapshotIds;
-  }, [isVisible, snapshots]);
+  }, [isVisible, snapshotMetadata]);
 
   useEffect(() => () => {
     clearSnapshotHighlightTimeouts();
@@ -860,27 +883,45 @@ export function CharacterHistoryModal({
   }, [confirmAction, isVisible, requestClose]);
 
   const diffCounts = useMemo(() => {
-    if (!currentCharacter) {
-      return {};
-    }
+    const hasChangesById: Record<string, boolean> = {};
 
-    const counts: Record<string, number> = {};
-
-    snapshots.forEach(snapshot => {
-      counts[snapshot.id] = characterSnapshotService.countChangedSections(snapshot, currentCharacter);
+    snapshotMetadata.forEach(meta => {
+      // Cheap check: if payloadHash differs from current, it has changes
+      hasChangesById[meta.id] = currentPayloadHash !== null &&
+        meta.payloadHash !== currentPayloadHash;
     });
 
-    return counts;
-  }, [currentCharacter, snapshots]);
+    return hasChangesById;
+  }, [snapshotMetadata, currentPayloadHash]);
 
-  const selectedSnapshot = useMemo(
-    () => snapshots.find(snapshot => snapshot.id === selectedSnapshotId) ?? null,
-    [selectedSnapshotId, snapshots],
-  );
-  const diffEntries = useMemo(
-    () => (selectedSnapshot ? getSnapshotDiff(selectedSnapshot.id).filter(entry => entry.changed) : []),
-    [getSnapshotDiff, selectedSnapshot],
-  );
+  // Load diff for selected snapshot
+  useEffect(() => {
+    if (!selectedSnapshotId) {
+      setSelectedSnapshot(null);
+      setDiffEntries([]);
+      return;
+    }
+
+    setIsLoadingDiff(true);
+    void (async () => {
+      try {
+        const entries = await getSnapshotDiff(selectedSnapshotId);
+        const filtered = entries.filter(entry => entry.changed);
+        setDiffEntries(filtered);
+
+        // Also load the full snapshot for restore operations
+        const snapshot = await characterSnapshotService.loadSnapshotPayload(selectedSnapshotId);
+        setSelectedSnapshot(snapshot ?? null);
+      } catch (error) {
+        console.error('Failed to load diff:', error);
+        setDiffEntries([]);
+        setSelectedSnapshot(null);
+      } finally {
+        setIsLoadingDiff(false);
+      }
+    })();
+  }, [selectedSnapshotId, getSnapshotDiff]);
+
   const changedSectionCount = diffEntries.length;
   const hasActiveSectionDiff = diffEntries.some(entry => entry.section === activeSection);
 
@@ -912,14 +953,14 @@ export function CharacterHistoryModal({
 
     try {
       if (confirmAction.kind === 'delete') {
-        await deleteSnapshot(confirmAction.snapshot.id);
+        await deleteSnapshot(confirmAction.metadata.id);
         onToast('success', 'Revision deleted', 'The selected revision was removed from local history.');
       } else if (confirmAction.kind === 'restore-whole') {
-        await restoreSnapshot(confirmAction.snapshot.id, 'whole');
+        await restoreSnapshot(confirmAction.metadata.id, 'whole');
         onToast('success', 'Card restored', 'The full card was restored from the selected revision.');
         closeModal();
       } else {
-        await restoreSnapshot(confirmAction.snapshot.id, 'section', confirmAction.entry.section);
+        await restoreSnapshot(confirmAction.metadata.id, 'section', confirmAction.entry.section);
         onToast('success', 'Section restored', `${confirmAction.entry.label} was restored from the selected revision.`);
       }
 
@@ -940,6 +981,8 @@ export function CharacterHistoryModal({
   const handleSelectSnapshot = (snapshotId: string) => {
     setCollapsedSections({});
     setSelectedSnapshotId(snapshotId);
+    setDiffEntries([]);
+    setSelectedSnapshot(null);
   };
 
   const toggleSectionCollapsed = (section: string) => {
@@ -993,10 +1036,10 @@ export function CharacterHistoryModal({
           {/* Sidebar - Flattened */}
           <aside className="hidden min-h-0 w-full max-w-xs shrink-0 border-r border-vault-200 bg-vault-50/50 dark:border-vault-800 dark:bg-vault-950/50 md:flex md:flex-col">
             <div className="flex items-center justify-between border-b border-vault-200 px-4 py-2.5 dark:border-vault-800">
-              <span className="text-sm font-medium text-vault-900 dark:text-vault-100">{snapshots.length} revisions</span>
+              <span className="text-sm font-medium text-vault-900 dark:text-vault-100">{snapshotMetadata.length} revisions</span>
             </div>
             <div className="flex-1 overflow-y-auto p-3">
-              {isSnapshotsLoading && snapshots.length === 0 ? (
+              {isSnapshotsLoading && snapshotMetadata.length === 0 ? (
                 <div className="space-y-2">
                   {[0, 1, 2].map(index => (
                     <div
@@ -1008,21 +1051,21 @@ export function CharacterHistoryModal({
                     </div>
                   ))}
                 </div>
-              ) : snapshots.length === 0 ? (
+              ) : snapshotMetadata.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-vault-300 bg-white/80 p-4 text-center text-sm text-vault-500 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-400">
                   No revisions available yet.
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {snapshots.map(snapshot => (
+                  {snapshotMetadata.map(meta => (
                     <TimelineCard
-                      key={snapshot.id}
-                      snapshot={snapshot}
-                      isSelected={snapshot.id === selectedSnapshotId}
-                      isHighlighted={highlightedSnapshotIds.includes(snapshot.id)}
-                      hasChanges={(diffCounts[snapshot.id] ?? 0) > 0}
-                      onSelect={() => handleSelectSnapshot(snapshot.id)}
-                      onDelete={() => setConfirmAction({ kind: 'delete', snapshot })}
+                      key={meta.id}
+                      metadata={meta}
+                      isSelected={meta.id === selectedSnapshotId}
+                      isHighlighted={highlightedSnapshotIds.includes(meta.id)}
+                      hasChanges={diffCounts[meta.id] ?? false}
+                      onSelect={() => handleSelectSnapshot(meta.id)}
+                      onDelete={() => setConfirmAction({ kind: 'delete', metadata: meta })}
                     />
                   ))}
                 </div>
@@ -1033,19 +1076,19 @@ export function CharacterHistoryModal({
           {/* Main content */}
           <section className="flex min-h-0 flex-1 flex-col">
             {/* Mobile scroller - no header duplication */}
-            {isSnapshotsLoading && snapshots.length === 0 ? null : snapshots.length > 0 ? (
+            {isSnapshotsLoading && snapshotMetadata.length === 0 ? null : snapshotMetadata.length > 0 ? (
               <MobileRevisionScroller
-                snapshots={snapshots}
+                metadata={snapshotMetadata}
                 selectedSnapshotId={selectedSnapshotId}
                 highlightedSnapshotIds={highlightedSnapshotIds}
-                diffCounts={diffCounts}
+                hasChangesById={diffCounts}
                 onSelect={handleSelectSnapshot}
-                onDelete={(snapshot) => setConfirmAction({ kind: 'delete', snapshot })}
+                onDelete={(meta) => setConfirmAction({ kind: 'delete', metadata: meta })}
               />
             ) : null}
 
             <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4 sm:px-6">
-              {!selectedSnapshot ? (
+              {!selectedSnapshotId ? (
                 <div className="flex min-h-full items-center justify-center rounded-2xl border border-dashed border-vault-300 bg-vault-50/50 p-8 text-center dark:border-vault-700 dark:bg-vault-900/40">
                   <div className="max-w-md">
                     <h3 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Select a revision</h3>
@@ -1054,16 +1097,25 @@ export function CharacterHistoryModal({
                     </p>
                   </div>
                 </div>
+              ) : isLoadingDiff ? (
+                <div className="flex min-h-full items-center justify-center">
+                  <div className="text-center">
+                    <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-vault-400" />
+                    <p className="mt-2 text-sm text-vault-500 dark:text-vault-400">Loading diff...</p>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-6">
                   {/* Snapshot summary - Flattened, no card wrapper */}
-                  <SnapshotSummary
-                    snapshot={selectedSnapshot}
-                    changedSectionCount={changedSectionCount}
-                    hasActiveSectionDiff={hasActiveSectionDiff}
-                    isBusy={isBusy}
-                    onRestore={() => setConfirmAction({ kind: 'restore-whole', snapshot: selectedSnapshot })}
-                  />
+                  {selectedMetadata && (
+                    <SnapshotSummary
+                      metadata={selectedMetadata}
+                      changedSectionCount={changedSectionCount}
+                      hasActiveSectionDiff={hasActiveSectionDiff}
+                      isBusy={isBusy}
+                      onRestore={() => selectedMetadata && setConfirmAction({ kind: 'restore-whole', metadata: selectedMetadata })}
+                    />
+                  )}
 
                   {changedSectionCount === 0 ? (
                     <p className="text-sm text-vault-500 dark:text-vault-400">
@@ -1080,7 +1132,7 @@ export function CharacterHistoryModal({
                           isCollapsed={collapsedSections[entry.section] ?? isSectionCollapsedByDefault(entry.section, activeSection)}
                           isBusy={isBusy}
                           onToggle={() => toggleSectionCollapsed(entry.section)}
-                          onRestore={() => setConfirmAction({ kind: 'restore-section', snapshot: selectedSnapshot, entry })}
+                          onRestore={() => selectedMetadata && setConfirmAction({ kind: 'restore-section', metadata: selectedMetadata, entry })}
                         />
                       ))}
                     </div>

@@ -4,7 +4,7 @@
  */
 
 import { createContext } from 'react';
-import type { Character, CharacterSection, CharacterSnapshot, SnapshotDiffEntry } from '../db/characterTypes';
+import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
 
 /**
@@ -66,8 +66,8 @@ export interface CharacterEditorContextValue {
   promptSettings: PromptSettings;
   /** Whether the history modal is open */
   isHistoryOpen: boolean;
-  /** Persisted snapshots for the current character */
-  snapshots: CharacterSnapshot[];
+  /** Persisted snapshot metadata for the current character (lightweight, no payloads) */
+  snapshotMetadata: SnapshotMetadata[];
   /** Snapshot loading state */
   isSnapshotsLoading: boolean;
   
@@ -105,8 +105,8 @@ export interface CharacterEditorContextValue {
   deleteSnapshot: (snapshotId: string) => Promise<void>;
   /** Restore a snapshot */
   restoreSnapshot: (snapshotId: string, scope: 'whole' | 'section', targetSection?: CharacterSection) => Promise<void>;
-  /** Get diff entries for a snapshot */
-  getSnapshotDiff: (snapshotId: string) => SnapshotDiffEntry[];
+  /** Get diff entries for a snapshot (async - loads payload lazily) */
+  getSnapshotDiff: (snapshotId: string) => Promise<SnapshotDiffEntry[]>;
   /** Handle AI operation result */
   handleAIOperation: (result: string, operation: AIOperation, originalSelectedText?: string) => void;
   /** Get context content for AI */

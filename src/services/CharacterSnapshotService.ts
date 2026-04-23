@@ -11,6 +11,7 @@ import type {
   SnapshotDiffEntry,
   SnapshotSource,
   UpdateCharacterInput,
+  SnapshotMetadata,
 } from '../db/characterTypes';
 import { CHARACTER_SECTIONS, characterDb } from '../db';
 
@@ -165,12 +166,51 @@ class CharacterSnapshotService {
     return [...snapshots].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
+  /**
+   * Get lightweight snapshot metadata for a character (excludes heavy payload)
+   * Use this for timeline lists; the full payload is loaded only when needed
+   * @param {string} characterId - Character ID
+   * @returns {Promise<SnapshotMetadata[]>} Array of snapshot metadata
+   */
+  async listSnapshotMetadata(characterId: string): Promise<SnapshotMetadata[]> {
+    return characterDb.getSnapshotMetadataForCharacter(characterId);
+  }
+
+  /**
+   * Load the full snapshot payload from the database
+   * Use this when you need the actual snapshot data for diff/restore
+   * @param {string} snapshotId - Snapshot ID
+   * @returns {Promise<CharacterSnapshot | undefined>} Full snapshot or undefined
+   */
+  async loadSnapshotPayload(snapshotId: string): Promise<CharacterSnapshot | undefined> {
+    return characterDb.getSnapshotById(snapshotId);
+  }
+
   async deleteSnapshot(snapshot: CharacterSnapshot): Promise<void> {
     if (this.isBaselineSnapshot(snapshot)) {
       throw new Error('Baseline snapshots cannot be deleted.');
     }
 
     await characterDb.deleteSnapshot(snapshot.id);
+  }
+
+  /**
+   * Delete a snapshot by ID
+   * Checks if it's a baseline snapshot before deleting (throws if baseline)
+   * @param {string} snapshotId - Snapshot ID
+   * @returns {Promise<void>}
+   * @throws {Error} If the snapshot is a baseline snapshot
+   */
+  async deleteSnapshotById(snapshotId: string): Promise<void> {
+    // Load metadata to check if baseline
+    const metadata = await characterDb.getSnapshotById(snapshotId);
+    if (!metadata) {
+      return;
+    }
+    if (this.isBaselineSnapshot(metadata)) {
+      throw new Error('Baseline snapshots cannot be deleted.');
+    }
+    await characterDb.deleteSnapshotById(snapshotId);
   }
 
   diffSnapshotAgainstCharacter(snapshot: CharacterSnapshot, character: Character): SnapshotDiffEntry[] {
@@ -251,6 +291,36 @@ class CharacterSnapshotService {
 
   isBaselineSnapshot(snapshot: CharacterSnapshot): boolean {
     return snapshot.source === 'open';
+  }
+
+  /**
+   * Check if a snapshot is a baseline snapshot using metadata only
+   * @param {SnapshotMetadata} metadata - Snapshot metadata
+   * @returns {boolean} True if the snapshot is a baseline (open) snapshot
+   */
+  isBaselineSnapshotMetadata(metadata: SnapshotMetadata): boolean {
+    return metadata.source === 'open';
+  }
+
+  /**
+   * Compute the current character's payload hash
+   * Use this to compare with snapshot payloadHash for cheap diff detection
+   * @param {Character} character - Current character
+   * @returns {Promise<string>} Payload hash
+   */
+  async computeCharacterPayloadHash(character: Character): Promise<string> {
+    const payload = this.buildPayload(character);
+    return this.buildPayloadHash(payload);
+  }
+
+  /**
+   * Check if a snapshot matches the current character (cheap check using hashes)
+   * @param {SnapshotMetadata} metadata - Snapshot metadata
+   * @param {string} currentPayloadHash - Current character's payload hash
+   * @returns {boolean} True if the snapshot matches the current character
+   */
+  snapshotMatchesCurrent(metadata: SnapshotMetadata, currentPayloadHash: string): boolean {
+    return metadata.payloadHash === currentPayloadHash;
   }
 }
 

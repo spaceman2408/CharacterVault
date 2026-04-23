@@ -138,6 +138,18 @@ export interface CharacterSnapshot {
   payloadHash: string;
 }
 
+/**
+ * Lightweight snapshot metadata - excludes the heavy payload
+ * Use this for timeline lists; load full payload only when needed
+ */
+export interface SnapshotMetadata {
+  id: UUID;
+  characterId: UUID;
+  source: SnapshotSource;
+  createdAt: Timestamp;
+  payloadHash: string;
+}
+
 export interface CreateSnapshotInput {
   characterId: UUID;
   source: SnapshotSource;
