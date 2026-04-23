@@ -278,6 +278,24 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       openedCharacterIdRef.current = null;
       setSnapshotMetadata([]);
       setIsHistoryOpen(false);
+      // Clear all editor state to free memory
+      setActiveSection('name');
+      setIsDirty(false);
+      setSaveStatus('saved');
+      setSelectedText('');
+      setUserAddedContextIds([]);
+      setRemovedSectionIds([]);
+      // Clear any pending debounce timers
+      specSaveTimerRef.current.forEach(timerId => window.clearTimeout(timerId));
+      specSaveTimerRef.current.clear();
+      specPendingValueRef.current.clear();
+      specPendingResolversRef.current.clear();
+      specFieldRequestVersionRef.current.clear();
+      updateCharacterSaveTimerRef.current.forEach(timerId => window.clearTimeout(timerId));
+      updateCharacterSaveTimerRef.current.clear();
+      updateCharacterPendingInputRef.current.clear();
+      updateCharacterPendingResolversRef.current.clear();
+      updateCharacterRequestVersionRef.current.clear();
       return;
     }
 
