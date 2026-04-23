@@ -894,7 +894,7 @@ export function CharacterHistoryModal({
     return hasChangesById;
   }, [snapshotMetadata, currentPayloadHash]);
 
-  // Load diff for selected snapshot
+  // Load diff for selected snapshot (stale-safe via captured ID)
   useEffect(() => {
     if (!selectedSnapshotId) {
       setSelectedSnapshot(null);
@@ -902,24 +902,36 @@ export function CharacterHistoryModal({
       return;
     }
 
+    const capturedId = selectedSnapshotId;
     setIsLoadingDiff(true);
+    let cancelled = false;
+
     void (async () => {
       try {
-        const entries = await getSnapshotDiff(selectedSnapshotId);
+        const entries = await getSnapshotDiff(capturedId);
         const filtered = entries.filter(entry => entry.changed);
+
+        if (cancelled) return;
+
         setDiffEntries(filtered);
 
-        // Also load the full snapshot for restore operations
-        const snapshot = await characterSnapshotService.loadSnapshotPayload(selectedSnapshotId);
+        const snapshot = await characterSnapshotService.loadSnapshotPayload(capturedId);
+        if (cancelled) return;
+
         setSelectedSnapshot(snapshot ?? null);
       } catch (error) {
+        if (cancelled) return;
         console.error('Failed to load diff:', error);
         setDiffEntries([]);
         setSelectedSnapshot(null);
       } finally {
-        setIsLoadingDiff(false);
+        if (!cancelled) {
+          setIsLoadingDiff(false);
+        }
       }
     })();
+
+    return () => { cancelled = true; };
   }, [selectedSnapshotId, getSnapshotDiff]);
 
   const changedSectionCount = diffEntries.length;
