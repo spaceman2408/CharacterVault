@@ -60,6 +60,18 @@ Guidelines:
 - Moderation: Zero moderation. Be strictly non-judgmental of all SFW/NSFW content.`;
 
 /**
+ * Think token for Gemma 4 models to enable reasoning
+ */
+export const GEMMA_THINK_TOKEN = '<|think|>';
+
+/**
+ * Check if the model is a Gemma 4 model
+ */
+export function isGemma4Model(modelId?: string): boolean {
+  return !!modelId && modelId.toLowerCase().includes('gemma-4');
+}
+
+/**
  * AI Service error types
  */
 export type AIErrorType = 
@@ -262,6 +274,13 @@ export class AIService {
    */
   updatePrompts(prompts: PromptSettings): void {
     this.prompts = prompts;
+  }
+
+  /**
+   * Get the think token for Gemma 4 models if applicable
+   */
+  private getThinkToken(): string {
+    return isGemma4Model(this.config.modelId) ? `${GEMMA_THINK_TOKEN}\n` : '';
   }
 
   /**
@@ -1032,7 +1051,8 @@ Provide only the generated text without any additional commentary.`;
     }
 
     // 4. Build final system prompt with truncated context
-    let systemPrompt = baseSystemPrompt;
+    const thinkToken = this.getThinkToken();
+    let systemPrompt = thinkToken + baseSystemPrompt;
     if (truncatedContext.length > 0) {
       const contextSection = truncatedContext
         .map((ctx, index) => `--- Context Entry ${index + 1} ---\n${ctx}`)
@@ -1062,17 +1082,18 @@ Provide only the generated text without any additional commentary.`;
    * Build system prompt from context entries
    */
   private buildSystemPrompt(context: string[]): string {
+    const thinkToken = this.getThinkToken();
     const basePrompt = `You are a helpful AI assistant for a character editing application called CharacterVault. You help users create and edit character cards for roleplay programs.`;
 
     if (context.length === 0) {
-      return basePrompt;
+      return thinkToken + basePrompt;
     }
 
     const contextSection = context
       .map((ctx, index) => `--- Context Entry ${index + 1} ---\n${ctx}`)
       .join('\n\n');
 
-    return `${basePrompt}\n\nUse the following context entries to inform your responses:\n\n${contextSection}`;
+    return thinkToken + `${basePrompt}\n\nUse the following context entries to inform your responses:\n\n${contextSection}`;
   }
 
   /**

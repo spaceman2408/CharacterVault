@@ -96,8 +96,8 @@ export class ReasoningParser {
   private mainContent: string = '';
 
   /** Think tag variations that might be used by different models (case-insensitive) */
-  private static readonly THINK_START_VARIATIONS = ['<think>', '<thinking>', '<reasoning>', '<thought>'];
-  private static readonly THINK_END_VARIATIONS = ['</think>', '</thinking>', '</reasoning>', '</thought>'];
+  private static readonly THINK_START_VARIATIONS = ['<think>', '<thinking>', '<reasoning>', '<thought>', '<|channel>thought'];
+  private static readonly THINK_END_VARIATIONS = ['</think>', '</thinking>', '</reasoning>', '</thought>', '<channel|>'];
 
   /**
    * Parses a streaming chunk from an AI model and extracts reasoning content.
@@ -383,6 +383,11 @@ export function detectReasoningFormat(modelId: string): ReasoningFormat {
 
   // Qwen and QwQ models use inline tags
   if (lowerModelId.includes('qwen') || lowerModelId.includes('qwq')) {
+    return ReasoningFormat.INLINE_TAGS;
+  }
+
+  // Gemma 4 models use inline tags with <|channel>thought<channel|> format
+  if (lowerModelId.includes('gemma-4')) {
     return ReasoningFormat.INLINE_TAGS;
   }
 
