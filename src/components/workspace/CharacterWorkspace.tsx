@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
 import type { CharacterSection } from '../../db/characterTypes';
 import { CHARACTER_SECTIONS } from '../../db/characterTypes';
+import { generateThumbnail } from '../../utils/thumbnail';
 import { SectionEditor } from '../editor/SectionEditor';
 import { ContextPanel } from '../ai/ContextPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
@@ -275,10 +276,11 @@ function ImageEditor(): React.ReactElement {
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const result = e.target?.result as string;
       if (currentCharacter && result) {
-        void updateCharacter({ imageData: result });
+        const thumbnailData = await generateThumbnail(result);
+        void updateCharacter({ imageData: result, thumbnailData });
       }
     };
     reader.readAsDataURL(file);
@@ -324,7 +326,7 @@ function ImageEditor(): React.ReactElement {
               className="w-96 h-96 max-w-full max-h-[60vh] object-contain rounded-2xl border-2 border-vault-200 dark:border-vault-700 shadow-lg"
             />
             <button
-              onClick={() => currentCharacter && void updateCharacter({ imageData: '' })}
+              onClick={() => currentCharacter && void updateCharacter({ imageData: '', thumbnailData: '' })}
               className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg
                 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
             >

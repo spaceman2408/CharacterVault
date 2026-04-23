@@ -11,6 +11,7 @@ import { useCharacterContext } from './useCharacterContext';
 import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation, type ManualSnapshotResult } from './characterEditorContextTypes';
 import { characterSettingsService } from '../services/CharacterSettingsService';
 import { characterSnapshotService } from '../services/CharacterSnapshotService';
+import { generateThumbnail } from '../utils/thumbnail';
 
 const CENTRAL_SAVE_DEBOUNCE_MS = 500;
 
@@ -590,7 +591,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
         }
 
         if (action.kind === 'image') {
-          restoredCharacter = await updateCharacterBase(character.id, { imageData: action.value });
+          const thumbnailData = action.value ? await generateThumbnail(action.value) : '';
+          restoredCharacter = await updateCharacterBase(character.id, { imageData: action.value, thumbnailData });
         } else if (action.kind === 'spec') {
           restoredCharacter = await updateSpecFieldBase(character.id, action.field, action.value);
         } else {

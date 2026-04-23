@@ -11,6 +11,7 @@ import type {
   ImportCharacterResult 
 } from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
+import { generateThumbnail } from '../utils/thumbnail';
 
 /**
  * Character Import Service
@@ -70,7 +71,7 @@ export class CharacterImportService {
     // Handle v3 spec format (spec: "chara_card_v3", spec_version: "3.0", data: {...})
     const v3Data = this.extractV3Data(data);
     if (v3Data) {
-      const character = await this.createCharacterFromV2(v3Data, '');
+      const character = await this.createCharacterFromV2(v3Data, '', '');
       return {
         success: true,
         character,
@@ -100,7 +101,7 @@ export class CharacterImportService {
         creator_notes: typeof cardData.creator_notes === 'string' ? cardData.creator_notes : undefined,
         avatar: typeof cardData.avatar === 'string' ? cardData.avatar : undefined,
       };
-      const character = await this.createCharacterFromV2(card, '');
+      const character = await this.createCharacterFromV2(card, '', '');
       return {
         success: true,
         character,
@@ -220,13 +221,14 @@ export class CharacterImportService {
         };
       }
 
-      // Convert to image data URL
+      // Convert to image data URL and generate thumbnail
       const imageData = await this.fileToDataURL(file);
+      const thumbnailData = await generateThumbnail(imageData);
 
       // Try v3 extraction first (handles both nested v3 and flat v2 with v3 fields)
       const v3Data = this.extractV3Data(characterData);
       if (v3Data) {
-        const character = await this.createCharacterFromV2(v3Data, imageData);
+        const character = await this.createCharacterFromV2(v3Data, imageData, thumbnailData);
         return {
           success: true,
           character,
@@ -266,7 +268,7 @@ export class CharacterImportService {
           creator_notes: typeof cardData.creator_notes === 'string' ? cardData.creator_notes : undefined,
           avatar: typeof cardData.avatar === 'string' ? cardData.avatar : undefined,
         };
-        const character = await this.createCharacterFromV2(card, imageData);
+        const character = await this.createCharacterFromV2(card, imageData, thumbnailData);
         return {
           success: true,
           character,
@@ -305,6 +307,7 @@ export class CharacterImportService {
         const character = await characterDb.createCharacter({
           name: name,
           imageData,
+          thumbnailData,
           data: {
             spec: extractedSpec,
             characterBook: data.character_book as import('../db/characterTypes').CharacterBook | undefined,
@@ -531,7 +534,7 @@ export class CharacterImportService {
   /**
    * Create character from V2/V3 format
    */
-  private async createCharacterFromV2(data: CharacterCardV2, imageData: string): Promise<Character> {
+  private async createCharacterFromV2(data: CharacterCardV2, imageData: string, thumbnailData: string): Promise<Character> {
     const spec: CharacterSpec = {
       name: data.name || '',
       description: data.description || '',
@@ -554,6 +557,7 @@ export class CharacterImportService {
     const character = await characterDb.createCharacter({
       name: data.name || 'Imported Character',
       imageData,
+      thumbnailData,
       data: {
         spec,
         characterBook: data.character_book,
@@ -569,9 +573,16 @@ export class CharacterImportService {
    */
   private async createCharacterFromExport(data: Character): Promise<Character> {
     // Create a new character with the same data but new ID
+    // Use existing thumbnailData if present, otherwise generate it
+    let thumbnailData = data.thumbnailData || '';
+    if (!thumbnailData && data.imageData) {
+      thumbnailData = await generateThumbnail(data.imageData);
+    }
+
     const character = await characterDb.createCharacter({
       name: data.name,
       imageData: data.imageData,
+      thumbnailData,
       data: data.data,
     });
 
@@ -607,8 +618,12 @@ export class CharacterImportService {
    * Process character data after parsing/unwrapping
    */
   private async processCharacterData(data: unknown, imageData: string): Promise<ImportCharacterResult> {
+    // Generate thumbnail from the image data
+    const thumbnailData = imageData ? await generateThumbnail(imageData) : '';
+
     // Check if it's a CharacterVault export first (has id, name, data structure)
     if (this.isCharacterVaultExport(data)) {
+      // For exports, we handle thumbnail generation in createCharacterFromExport
       const character = await this.createCharacterFromExport(data as Character);
       return {
         success: true,
@@ -621,7 +636,7 @@ export class CharacterImportService {
       const wrapped = data as { spec: string; spec_version: string; data: Record<string, unknown> };
       const card = this.extractV2DataFromSpec(wrapped.data);
       if (card) {
-        const character = await this.createCharacterFromV2(card, imageData);
+        const character = await this.createCharacterFromV2(card, imageData, thumbnailData);
         return {
           success: true,
           character,
@@ -632,7 +647,7 @@ export class CharacterImportService {
     // Handle v3 spec format (spec: "chara_card_v3", spec_version: "3.0", data: {...})
     const v3Data = this.extractV3Data(data);
     if (v3Data) {
-      const character = await this.createCharacterFromV2(v3Data, imageData);
+      const character = await this.createCharacterFromV2(v3Data, imageData, thumbnailData);
       return {
         success: true,
         character,
@@ -662,7 +677,7 @@ export class CharacterImportService {
         creator_notes: typeof cardData.creator_notes === 'string' ? cardData.creator_notes : undefined,
         avatar: typeof cardData.avatar === 'string' ? cardData.avatar : undefined,
       };
-      const character = await this.createCharacterFromV2(card, imageData);
+      const character = await this.createCharacterFromV2(card, imageData, thumbnailData);
       return {
         success: true,
         character,

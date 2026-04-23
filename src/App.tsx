@@ -10,7 +10,6 @@ import { CharacterWorkspace } from './components/workspace';
 import { WelcomeTutorial } from './components/WelcomeTutorial';
 import { ImportPage } from './pages/ImportPage';
 import { characterImportService } from './services/CharacterImportService';
-import type { Character } from './db';
 import {
   Users,
   Plus,
@@ -27,6 +26,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { PromoBanner } from './components/PromoBanner';
+import type { CharacterListItem } from './db';
 
 // --- Utility Components ---
 
@@ -72,9 +72,10 @@ const IconButton = ({
 
 /**
  * Modern Character Card - Portrait Style
+ * Uses CharacterListItem for lightweight rendering
  */
 interface CharacterCardProps {
-  character: Character;
+  character: CharacterListItem;
   onOpen: (id: string) => void;
   onDuplicate: (id: string, name: string) => void;
   onDelete: (id: string, name: string) => void;
@@ -109,9 +110,9 @@ function CharacterCard({ character, onOpen, onDuplicate, onDelete }: CharacterCa
     >
       {/* Image Area - Aspect Ratio for Character Cards */}
       <div className="relative aspect-3/4 w-full overflow-hidden bg-vault-100 dark:bg-vault-800">
-        {character.imageData ? (
+        {character.thumbnailData ? (
           <img
-            src={character.imageData}
+            src={character.thumbnailData}
             alt={character.name}
             className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 will-change-transform"
             loading="lazy"
@@ -171,7 +172,7 @@ function CharacterCard({ character, onOpen, onDuplicate, onDelete }: CharacterCa
  */
 function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => void }): React.ReactElement {
   const {
-    characters,
+    characterListItems,
     isLoading,
     createCharacter,
     openCharacter,
@@ -232,14 +233,14 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
     localStorage.setItem('theme', newDark ? 'dark' : 'light');
   };
 
-  // Logic
+  // Logic - work with characterListItems for vault view
   const filteredCharacters = useMemo(() => {
-    let result = [...characters];
+    let result = [...characterListItems];
     if (searchQuery) {
       result = result.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
     }
     return result;
-  }, [characters, searchQuery]);
+  }, [characterListItems, searchQuery]);
 
   const sortedCharacters = useMemo(() => {
     return [...filteredCharacters].sort((a, b) => {
@@ -248,7 +249,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   }, [filteredCharacters]);
 
   const lastActive = useMemo(() => {
-    return [...characters].sort((a, b) => {
+    return [...characterListItems].sort((a, b) => {
       const dateA = a.lastOpenedAt ? new Date(a.lastOpenedAt).getTime() : 0;
       const dateB = b.lastOpenedAt ? new Date(b.lastOpenedAt).getTime() : 0;
 
@@ -258,7 +259,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
       return b.updatedAt.localeCompare(a.updatedAt);
     })[0];
-  }, [characters]);
+  }, [characterListItems]);
   const totalPages = Math.max(1, Math.ceil(sortedCharacters.length / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const pageStart = (safeCurrentPage - 1) * pageSize;
@@ -275,17 +276,17 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
     const preloadVisibleCards = async () => {
       const imagesToPreload = visibleCharacters
         .filter((character) => {
-          if (!character.imageData) {
+          if (!character.thumbnailData) {
             return false;
           }
 
-          return !preloadedImageSourcesRef.current.has(character.imageData);
+          return !preloadedImageSourcesRef.current.has(character.thumbnailData);
         })
         .map(
           (character) =>
             new Promise<void>((resolve) => {
               const image = new Image();
-              const imageSource = character.imageData!;
+              const imageSource = character.thumbnailData!;
 
               const finalize = () => {
                 preloadedImageSourcesRef.current.add(imageSource);
@@ -514,12 +515,12 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
         )}
 
         {/* Quick Resume & Stats Bar */}
-        {characters.length > 0 && !searchQuery && (
+        {characterListItems.length > 0 && !searchQuery && (
           <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4 mb-8">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Library</h2>
               <p className="text-vault-500 dark:text-vault-400 text-sm mt-1">
-                {characters.length} {characters.length === 1 ? 'character' : 'characters'} stored locally
+                {characterListItems.length} {characterListItems.length === 1 ? 'character' : 'characters'} stored locally
               </p>
             </div>
             

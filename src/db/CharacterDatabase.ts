@@ -13,6 +13,7 @@ import type {
   CreateCharacterInput,
   UpdateCharacterInput,
   SnapshotMetadata,
+  CharacterListItem,
 } from './characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
 import { v4 as uuidv4 } from 'uuid';
@@ -111,6 +112,13 @@ export class CharacterDatabase extends Dexie {
         }
       }));
     });
+
+    // Version 4: Add thumbnailData field (no migration needed - app is unreleased)
+    this.version(4).stores({
+      characters: 'id, name, updatedAt, createdAt',
+      settings: 'id',
+      snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+    });
   }
 
   // ============================================================================
@@ -126,6 +134,22 @@ export class CharacterDatabase extends Dexie {
       .orderBy('updatedAt')
       .reverse()
       .toArray();
+  }
+
+  /**
+   * Get lightweight list items for vault view
+   * Returns only the fields needed for card display
+   * @returns {Promise<CharacterListItem[]>} Array of character list items
+   */
+  async getAllCharacterListItems(): Promise<CharacterListItem[]> {
+    const all = await this.characters
+      .orderBy('updatedAt')
+      .reverse()
+      .toArray();
+    // Destructure to drop heavy fields (data, imageData, version, createdAt) for GC
+    return all.map(({ id, name, thumbnailData, lastOpenedAt, updatedAt }) => ({
+      id, name, thumbnailData, lastOpenedAt, updatedAt,
+    }));
   }
 
   /**
@@ -164,6 +188,7 @@ export class CharacterDatabase extends Dexie {
       id,
       name: input.name,
       imageData: input.imageData || '',
+      thumbnailData: input.thumbnailData || '',
       data: {
         spec: {
           name: input.name,
@@ -214,6 +239,7 @@ export class CharacterDatabase extends Dexie {
       ...character,
       name: input.name ?? character.name,
       imageData: input.imageData ?? character.imageData,
+      thumbnailData: input.thumbnailData ?? character.thumbnailData,
       data: {
         spec: {
           ...character.data.spec,
@@ -392,6 +418,7 @@ export class CharacterDatabase extends Dexie {
       id,
       name: characterData.name || 'Imported Character',
       imageData: characterData.imageData || '',
+      thumbnailData: characterData.thumbnailData || '',
       data: {
         spec: {
           name: characterData.data?.spec?.name || characterData.name || 'Imported Character',

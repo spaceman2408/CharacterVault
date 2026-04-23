@@ -10,6 +10,7 @@ import type {
   CreateCharacterInput,
   UpdateCharacterInput,
   CharacterVaultSettings,
+  CharacterListItem,
 } from '../db/characterTypes';
 
 /**
@@ -29,8 +30,9 @@ interface CharacterContextValue {
   duplicateCharacter: (characterId: string, newName: string) => Promise<Character>;
   updateSpecField: (characterId: string, field: keyof Character['data']['spec'], value: string | string[]) => Promise<Character>;
 
-  // Character list
-  characters: Character[];
+  // Character lists
+  characters: Character[];              // Full character objects (workspace use)
+  characterListItems: CharacterListItem[];  // Lightweight list items (vault view use)
   refreshCharacters: () => Promise<void>;
 
   // Settings
@@ -74,6 +76,7 @@ export function CharacterProvider({ children }: CharacterProviderProps): React.R
     duplicateCharacter: operations.duplicateCharacter,
     updateSpecField: operations.updateSpecField,
     characters: result.characters,
+    characterListItems: result.characterListItems,
     refreshCharacters: operations.refreshCharacters,
     settings: result.settings,
     updateSettings: operations.updateSettings,

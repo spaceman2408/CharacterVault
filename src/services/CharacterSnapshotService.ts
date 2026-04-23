@@ -134,6 +134,7 @@ class CharacterSnapshotService {
     return {
       name: character.name,
       imageData: character.imageData,
+      thumbnailData: character.thumbnailData,
       data: clonePayloadData(character.data),
     };
   }
@@ -239,6 +240,7 @@ class CharacterSnapshotService {
     return {
       name: snapshot.payload.name,
       imageData: snapshot.payload.imageData,
+      thumbnailData: snapshot.payload.thumbnailData,
       data: clonePayloadData(snapshot.payload.data),
     };
   }

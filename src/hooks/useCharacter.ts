@@ -11,6 +11,7 @@ import type {
   CreateCharacterInput,
   UpdateCharacterInput,
   CharacterVaultSettings,
+  CharacterListItem,
 } from '../db/characterTypes';
 
 /**
@@ -18,6 +19,7 @@ import type {
  */
 interface CharacterResult {
   characters: Character[];
+  characterListItems: CharacterListItem[];
   currentCharacter: Character | null;
   isLoading: boolean;
   error: Error | null;
@@ -39,12 +41,22 @@ interface CharacterOperations {
   updateSettings: (updates: Partial<Omit<CharacterVaultSettings, 'id'>>) => Promise<void>;
 }
 
+// Helper to create CharacterListItem from Character
+const toListItem = (char: Character): CharacterListItem => ({
+  id: char.id,
+  name: char.name,
+  thumbnailData: char.thumbnailData,
+  lastOpenedAt: char.lastOpenedAt,
+  updatedAt: char.updatedAt,
+});
+
 /**
  * Hook for managing character state and operations
  * @returns {[CharacterResult, CharacterOperations]} Character state and operations
  */
 export function useCharacter(): [CharacterResult, CharacterOperations] {
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [characterListItems, setCharacterListItems] = useState<CharacterListItem[]>([]);
   const [currentCharacterId, setCurrentCharacterId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -56,17 +68,18 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   );
 
   /**
-   * Load all characters and settings on mount
+   * Load list items and settings on mount
+   * Full Character objects are loaded only when needed
    */
   useEffect(() => {
     async function loadData() {
       try {
         setIsLoading(true);
-        const [chars, prefs] = await Promise.all([
-          characterDb.getAllCharacters(),
+        const [items, prefs] = await Promise.all([
+          characterDb.getAllCharacterListItems(),
           characterDb.getSettings(),
         ]);
-        setCharacters(chars);
+        setCharacterListItems(items);
         setSettings(prefs);
         // Don't restore last active character - always start at character selection
       } catch (err) {
@@ -79,12 +92,12 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   }, []);
 
   /**
-   * Refresh characters list
+   * Refresh characters list (list items only)
    */
   const refreshCharacters = useCallback(async () => {
     try {
-      const chars = await characterDb.getAllCharacters();
-      setCharacters(chars);
+      const items = await characterDb.getAllCharacterListItems();
+      setCharacterListItems(items);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to refresh characters'));
     }
@@ -96,6 +109,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   const createCharacter = useCallback(async (input: CreateCharacterInput): Promise<Character> => {
     const character = await characterDb.createCharacter(input);
     setCharacters(prev => [character, ...prev]);
+    setCharacterListItems(prev => [toListItem(character), ...prev]);
     setCurrentCharacterId(character.id);
 
     // Update last active character in settings
@@ -114,6 +128,15 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     try {
       const character = await characterDb.getCharacter(characterId);
       if (character) {
+        // Update or add the character to the full characters array
+        setCharacters(prev => {
+          const exists = prev.find(c => c.id === characterId);
+          if (exists) {
+            return prev.map(c => c.id === characterId ? character : c);
+          }
+          return [character, ...prev];
+        });
+        
         await characterDb.updateLastOpened(characterId);
         await characterSnapshotService.createSnapshot(character, 'open').catch(error => {
           console.error('Failed to create baseline snapshot:', error);
@@ -152,6 +175,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     try {
       await characterDb.deleteCharacter(characterId);
       setCharacters(prev => prev.filter(c => c.id !== characterId));
+      setCharacterListItems(prev => prev.filter(c => c.id !== characterId));
 
       if (currentCharacterId === characterId) {
         setCurrentCharacterId(null);
@@ -177,6 +201,10 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
       const updated = await characterDb.updateCharacter(characterId, input);
       setCharacters(prev =>
         prev.map(c => (c.id === characterId ? updated : c))
+      );
+      // Update the list item (only name and thumbnailData can change from updateCharacter)
+      setCharacterListItems(prev =>
+        prev.map(c => (c.id === characterId ? toListItem(updated) : c))
       );
       return updated;
     } catch (err) {
@@ -206,6 +234,12 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
       setCharacters(prev =>
         prev.map(c => (c.id === characterId ? updated : c))
       );
+      // Spec field updates don't affect list items (name is in CharacterListItem but handled separately)
+      if (field === 'name') {
+        setCharacterListItems(prev =>
+          prev.map(c => (c.id === characterId ? { ...c, name: typeof value === 'string' ? value : c.name } : c))
+        );
+      }
       return updated;
     } catch (err) {
       if (specUpdateSequenceRef.current.get(sequenceKey) !== nextSequence) {
@@ -226,6 +260,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     try {
       const duplicated = await characterDb.duplicateCharacter(characterId, newName);
       setCharacters(prev => [duplicated, ...prev]);
+      setCharacterListItems(prev => [toListItem(duplicated), ...prev]);
       return duplicated;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to duplicate character'));
@@ -250,6 +285,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
 
   const result: CharacterResult = {
     characters,
+    characterListItems,
     currentCharacter,
     isLoading,
     error,

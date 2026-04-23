@@ -95,8 +95,11 @@ export interface Character {
   /** Character display name */
   name: string;
 
-  /** Base64 encoded PNG image data */
+  /** Base64 encoded PNG image data (full resolution) */
   imageData: string;
+
+  /** Base64 encoded JPEG thumbnail (128x192 max) for vault view */
+  thumbnailData: string;
 
   /** Character V2 spec data */
   data: {
@@ -126,6 +129,7 @@ export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback';
 export interface CharacterSnapshotPayload {
   name: string;
   imageData: string;
+  thumbnailData: string;
   data: Character['data'];
 }
 
@@ -171,6 +175,7 @@ export interface SnapshotDiffEntry {
 export interface CreateCharacterInput {
   name: string;
   imageData?: string;
+  thumbnailData?: string;
   data?: Partial<Character['data']>;
 }
 
@@ -180,7 +185,20 @@ export interface CreateCharacterInput {
 export interface UpdateCharacterInput {
   name?: string;
   imageData?: string;
+  thumbnailData?: string;
   data?: Partial<Character['data']>;
+}
+
+/**
+ * Lightweight list item for vault view
+ * Contains only the fields needed for card display
+ */
+export interface CharacterListItem {
+  id: UUID;
+  name: string;
+  thumbnailData: string;
+  lastOpenedAt?: Timestamp;
+  updatedAt: Timestamp;
 }
 
 // ============================================================================
