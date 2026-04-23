@@ -77,26 +77,67 @@ function getSortedLorebookEntries(value: CharacterBook | null) {
     .sort((left, right) => left.insertion_order - right.insertion_order) ?? [];
 }
 
-function formatChangedLorebookContent(value: CharacterBook | null, compareValue: CharacterBook | null): string {
-  const entries = getSortedLorebookEntries(value);
+function formatLorebookForDiff(
+  book: CharacterBook | null,
+  otherBook: CharacterBook | null,
+): string {
+  const entries = getSortedLorebookEntries(book);
   if (entries.length === 0) {
     return '';
   }
 
-  const compareEntriesById = new Map(
-    getSortedLorebookEntries(compareValue).map(entry => [entry.id, entry]),
+  const otherEntriesById = new Map(
+    getSortedLorebookEntries(otherBook).map(entry => [entry.id, entry]),
   );
 
-  return normalizeLineEndings(
-    entries
-      .filter(entry => {
-        const compareEntry = compareEntriesById.get(entry.id);
-        return !compareEntry || normalizeLineEndings(compareEntry.content ?? '') !== normalizeLineEndings(entry.content ?? '');
-      })
-      .map(entry => entry.content ?? '')
-      .filter(content => content.length > 0)
-      .join('\n\n---\n\n'),
-  );
+  const result: string[] = [];
+
+  for (const entry of entries) {
+    const otherEntry = otherEntriesById.get(entry.id);
+    const entryName = entry.name?.trim() || `Entry ${entry.id}`;
+
+    // Determine which fields changed
+    const nameChanged = normalizeLineEndings(entry.name ?? '') !== normalizeLineEndings(otherEntry?.name ?? '');
+    const keysChanged = normalizeLineEndings(entry.keys.join(', ')) !== normalizeLineEndings((otherEntry?.keys ?? []).join(', '));
+    const contentChanged = normalizeLineEndings(entry.content ?? '') !== normalizeLineEndings(otherEntry?.content ?? '');
+    const commentChanged = normalizeLineEndings(entry.comment ?? '') !== normalizeLineEndings(otherEntry?.comment ?? '');
+
+    // Only include entries that have changes
+    if (!nameChanged && !keysChanged && !contentChanged && !commentChanged && otherEntry) {
+      continue;
+    }
+
+    const lines: string[] = [`[${entryName}]`];
+
+    if (nameChanged) {
+      const value = entry.name?.trim();
+      lines.push(`  Name: ${value ? `"${value}"` : '(empty)'}`);
+    }
+
+    if (keysChanged) {
+      const value = entry.keys.join(', ').trim();
+      lines.push(`  Trigger Keys: ${value ? `"${value}"` : '(empty)'}`);
+    }
+
+    if (contentChanged) {
+      lines.push('  Content:');
+      const content = entry.content?.trim();
+      if (content) {
+        lines.push(...content.split('\n').map(line => `    ${line}`));
+      } else {
+        lines.push('    (empty)');
+      }
+    }
+
+    if (commentChanged) {
+      const value = entry.comment?.trim();
+      lines.push(`  Internal Notes: ${value ? `"${value}"` : '(empty)'}`);
+    }
+
+    result.push(lines.join('\n'));
+  }
+
+  return normalizeLineEndings(result.join('\n\n---\n\n'));
 }
 
 function isGreetingsValue(value: unknown): value is string[] {
@@ -358,17 +399,19 @@ function SyncedDiffView({
   snapshotValue,
   currentValue,
   isSnapshotMissing,
+  hasAttemptedLoad,
 }: {
   snapshotValue: string;
   currentValue: string;
   isSnapshotMissing?: boolean;
+  hasAttemptedLoad?: boolean;
 }): React.ReactElement {
   const snapshotLines = useMemo(() => buildHighlightedLines(snapshotValue, currentValue), [currentValue, snapshotValue]);
   const currentLines = useMemo(() => buildHighlightedLines(currentValue, snapshotValue), [currentValue, snapshotValue]);
   const changedLineCountLeft = useMemo(() => snapshotLines.filter(line => line.changed).length, [snapshotLines]);
   const changedLineCountRight = useMemo(() => currentLines.filter(line => line.changed).length, [currentLines]);
 
-  if (isSnapshotMissing) {
+  if (isSnapshotMissing && hasAttemptedLoad) {
     return (
       <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
         <div className="p-6 text-center">
@@ -417,7 +460,62 @@ function SyncedDiffView({
   );
 }
 
-function SectionPreview({ entry, isSnapshotMissing }: { entry: SnapshotDiffEntry; isSnapshotMissing?: boolean }): React.ReactElement {
+function LorebookDiffView({
+  snapshotBook,
+  currentBook,
+}: {
+  snapshotBook: CharacterBook | null;
+  currentBook: CharacterBook | null;
+}): React.ReactElement {
+  const snapshotText = useMemo(() => formatLorebookForDiff(snapshotBook, currentBook), [snapshotBook, currentBook]);
+  const currentText = useMemo(() => formatLorebookForDiff(currentBook, snapshotBook), [snapshotBook, currentBook]);
+  const snapshotLines = useMemo(() => buildHighlightedLines(snapshotText, currentText), [snapshotText, currentText]);
+  const currentLines = useMemo(() => buildHighlightedLines(currentText, snapshotText), [currentText, snapshotText]);
+  const changedLineCountLeft = useMemo(() => snapshotLines.filter(line => line.changed).length, [snapshotLines]);
+  const changedLineCountRight = useMemo(() => currentLines.filter(line => line.changed).length, [currentLines]);
+
+  return (
+    <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
+      <div className="grid lg:grid-cols-2">
+        {/* Revision snapshot */}
+        <div className="border-b border-vault-200 p-3 dark:border-vault-800 lg:border-b-0 lg:border-r">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+            Revision snapshot · {changedLineCountLeft} {changedLineCountLeft === 1 ? 'line' : 'lines'} changed
+          </p>
+          <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
+            <HighlightedText
+              lines={snapshotLines}
+              changedToneClassName="bg-amber-200/80 text-amber-950 dark:bg-amber-700/40 dark:text-amber-50"
+            />
+          </div>
+        </div>
+
+        {/* Current draft */}
+        <div className="p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+            Current draft · {changedLineCountRight} {changedLineCountRight === 1 ? 'line' : 'lines'} changed
+          </p>
+          <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
+            <HighlightedText
+              lines={currentLines}
+              changedToneClassName="bg-emerald-200/80 text-emerald-950 dark:bg-emerald-700/40 dark:text-emerald-50"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionPreview({
+  entry,
+  isSnapshotMissing,
+  hasAttemptedLoad,
+}: {
+  entry: SnapshotDiffEntry;
+  isSnapshotMissing?: boolean;
+  hasAttemptedLoad?: boolean;
+}): React.ReactElement {
   if (isImageEntry(entry)) {
     return (
       <div className="grid gap-4 lg:grid-cols-2">
@@ -434,6 +532,11 @@ function SectionPreview({ entry, isSnapshotMissing }: { entry: SnapshotDiffEntry
     ? entry.currentValue
     : null;
   const isLorebookEntry = snapshotLorebookValue !== null || currentLorebookValue !== null;
+
+  if (isLorebookEntry) {
+    return <LorebookDiffView snapshotBook={snapshotLorebookValue} currentBook={currentLorebookValue} />;
+  }
+
   const snapshotGreetingsValue = entry.section === 'alternate_greetings' && isGreetingsValue(entry.snapshotValue)
     ? entry.snapshotValue
     : null;
@@ -441,18 +544,14 @@ function SectionPreview({ entry, isSnapshotMissing }: { entry: SnapshotDiffEntry
     ? entry.currentValue
     : null;
   const isGreetingsEntry = snapshotGreetingsValue !== null || currentGreetingsValue !== null;
-  const snapshotValue = isLorebookEntry
-    ? formatChangedLorebookContent(snapshotLorebookValue, currentLorebookValue)
-    : isGreetingsEntry
+  const snapshotValue = isGreetingsEntry
       ? formatChangedGreetings(snapshotGreetingsValue ?? [], currentGreetingsValue ?? [])
     : formatValue(entry.snapshotValue);
-  const currentValue = isLorebookEntry
-    ? formatChangedLorebookContent(currentLorebookValue, snapshotLorebookValue)
-    : isGreetingsEntry
+  const currentValue = isGreetingsEntry
       ? formatChangedGreetings(currentGreetingsValue ?? [], snapshotGreetingsValue ?? [])
     : formatValue(entry.currentValue);
 
-  return <SyncedDiffView snapshotValue={snapshotValue} currentValue={currentValue} isSnapshotMissing={isSnapshotMissing} />;
+  return <SyncedDiffView snapshotValue={snapshotValue} currentValue={currentValue} isSnapshotMissing={isSnapshotMissing} hasAttemptedLoad={hasAttemptedLoad} />;
 }
 
 function ConfirmationDialog({
@@ -616,6 +715,7 @@ interface SnapshotSummaryProps {
   hasActiveSectionDiff: boolean;
   isBusy: boolean;
   isSnapshotMissing: boolean;
+  hasAttemptedLoad: boolean;
   onRestore: () => void;
 }
 
@@ -625,6 +725,7 @@ function SnapshotSummary({
   hasActiveSectionDiff,
   isBusy,
   isSnapshotMissing,
+  hasAttemptedLoad,
   onRestore,
 }: SnapshotSummaryProps): React.ReactElement {
   const restoreDisabledReason = isSnapshotMissing
@@ -652,7 +753,7 @@ function SnapshotSummary({
         </button>
       </div>
 
-      {isSnapshotMissing && (
+      {isSnapshotMissing && hasAttemptedLoad && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
           <span className="font-medium">Warning:</span> This revision's snapshot data could not be loaded. It may have been corrupted or failed to save properly.
         </div>
@@ -678,6 +779,7 @@ interface DiffSectionProps {
   isActive: boolean;
   isCollapsed: boolean;
   isBusy: boolean;
+  hasAttemptedLoad: boolean;
   onToggle: () => void;
   onRestore: () => void;
 }
@@ -688,6 +790,7 @@ function DiffSection({
   isActive,
   isCollapsed,
   isBusy,
+  hasAttemptedLoad,
   onToggle,
   onRestore,
 }: DiffSectionProps): React.ReactElement {
@@ -727,7 +830,7 @@ function DiffSection({
               Restore section
             </button>
           </div>
-          <SectionPreview entry={entry} isSnapshotMissing={isSnapshotMissing} />
+          <SectionPreview entry={entry} isSnapshotMissing={isSnapshotMissing} hasAttemptedLoad={hasAttemptedLoad} />
         </div>
       )}
     </div>
@@ -754,6 +857,7 @@ export function CharacterHistoryModal({
   const [selectedSnapshot, setSelectedSnapshot] = useState<CharacterSnapshot | null>(null);
   const [diffEntries, setDiffEntries] = useState<SnapshotDiffEntry[]>([]);
   const [isLoadingDiff, setIsLoadingDiff] = useState(false);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
 
   // Get selected metadata for display
   const selectedMetadata = useMemo(
@@ -777,9 +881,12 @@ export function CharacterHistoryModal({
 
   const resetModalState = useCallback(() => {
     setSelectedSnapshotId(null);
+    setSelectedSnapshot(null);
+    setDiffEntries([]);
     setConfirmAction(null);
     setCollapsedSections({});
     setHighlightedSnapshotIds([]);
+    setHasAttemptedLoad(false);
     previousSnapshotIdsRef.current = [];
     clearSnapshotHighlightTimeouts();
   }, [clearSnapshotHighlightTimeouts]);
@@ -935,11 +1042,13 @@ export function CharacterHistoryModal({
     if (!selectedSnapshotId) {
       setSelectedSnapshot(null);
       setDiffEntries([]);
+      setHasAttemptedLoad(false);
       return;
     }
 
     const capturedId = selectedSnapshotId;
     setIsLoadingDiff(true);
+    setHasAttemptedLoad(false);
     let cancelled = false;
 
     void (async () => {
@@ -963,6 +1072,7 @@ export function CharacterHistoryModal({
       } finally {
         if (!cancelled) {
           setIsLoadingDiff(false);
+          setHasAttemptedLoad(true);
         }
       }
     })();
@@ -1042,6 +1152,7 @@ export function CharacterHistoryModal({
       setSelectedSnapshotId(snapshotId);
       setDiffEntries([]);
       setSelectedSnapshot(null);
+      setHasAttemptedLoad(false);
     }
   };
 
@@ -1174,6 +1285,7 @@ export function CharacterHistoryModal({
                       hasActiveSectionDiff={hasActiveSectionDiff}
                       isBusy={isBusy}
                       isSnapshotMissing={selectedSnapshot === null}
+                      hasAttemptedLoad={hasAttemptedLoad}
                       onRestore={() => selectedMetadata && setConfirmAction({ kind: 'restore-whole', metadata: selectedMetadata })}
                     />
                   )}
@@ -1192,6 +1304,7 @@ export function CharacterHistoryModal({
                           isActive={entry.section === activeSection}
                           isCollapsed={collapsedSections[entry.section] ?? isSectionCollapsedByDefault(entry.section, activeSection)}
                           isBusy={isBusy}
+                          hasAttemptedLoad={hasAttemptedLoad}
                           onToggle={() => toggleSectionCollapsed(entry.section)}
                           onRestore={() => selectedMetadata && setConfirmAction({ kind: 'restore-section', metadata: selectedMetadata, entry })}
                         />
