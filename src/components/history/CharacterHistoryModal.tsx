@@ -974,6 +974,16 @@ export function CharacterHistoryModal({
       } else {
         await restoreSnapshot(confirmAction.metadata.id, 'section', confirmAction.entry.section);
         onToast('success', 'Section restored', `${confirmAction.entry.label} was restored from the selected revision.`);
+        // After restoring a section, refresh the diff for this snapshot
+        if (selectedSnapshotId) {
+          setIsLoadingDiff(true);
+          try {
+            const entries = await getSnapshotDiff(selectedSnapshotId);
+            setDiffEntries(entries.filter(entry => entry.changed));
+          } finally {
+            setIsLoadingDiff(false);
+          }
+        }
       }
 
       setConfirmAction(null);
