@@ -176,11 +176,12 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
       aiServiceRef.current = aiService;
 
-      // Build conversation context from new history
-      const conversationContext: ConversationMessage[] = newHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      const conversationContext: ConversationMessage[] = newHistory
+        .slice(0, -1)
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content,
+        }));
 
       // Build context array
       const contextArray: string[] = [];
