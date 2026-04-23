@@ -145,7 +145,7 @@ export function ContextPanel({
             if (book.name) totalTokens += estimateTokens(book.name);
             if (book.description) totalTokens += estimateTokens(book.description);
             book.entries.forEach(entry => {
-              if (entry.enabled) {
+              if (entry.enabled && entry.extensions?.context_enabled !== false) {
                 totalTokens += estimateTokens(entry.content);
                 totalTokens += estimateTokens(entry.keys.join(','));
                 if (entry.name) totalTokens += estimateTokens(entry.name);

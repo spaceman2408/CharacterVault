@@ -17,12 +17,23 @@ import {
   ChevronLeft,
   Search,
   X,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
 import type { CharacterSection, LorebookEntry, CharacterBook } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
 import { estimateTokens } from '../../services/AIService';
+
+/**
+ * Check if a lorebook entry is enabled for context (AI usage)
+ * @param entry - The lorebook entry to check
+ * @returns true if the entry should be included in AI context
+ */
+function isEntryContextEnabled(entry: LorebookEntry): boolean {
+  return entry.extensions?.context_enabled !== false;
+}
 
 interface LorebookEditorProps {
   lorebook: CharacterBook | undefined;
@@ -43,8 +54,10 @@ interface LorebookEntryListItemProps {
   index: number;
   tokenCount: number | null;
   isSelected: boolean;
+  isContextEnabled: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onToggleContext: () => void;
 }
 
 interface LorebookEntryDetailProps {
@@ -75,12 +88,18 @@ function LorebookEntryListItem({
   index,
   tokenCount,
   isSelected,
+  isContextEnabled,
   onSelect,
   onDelete,
+  onToggleContext,
 }: LorebookEntryListItemProps): React.ReactElement {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete();
+  };
+  const handleToggleContext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleContext();
   };
   return (
     <div
@@ -89,19 +108,11 @@ function LorebookEntryListItem({
         relative group cursor-pointer p-3 rounded-lg border transition-all duration-150
         ${isSelected
           ? 'bg-vault-200 dark:bg-vault-700 border-vault-500 dark:border-vault-400 ring-1 ring-vault-500 dark:ring-vault-400'
-          : 'bg-white dark:bg-vault-800 border-vault-200 dark:border-vault-700 hover:border-vault-300 dark:hover:border-vault-600 hover:bg-vault-50 dark:hover:bg-vault-700'
+          : 'bg-white dark:bg-vault-800 border-vault-200 dark:border-vault-700'
         }
       `}
     >
       <div className="flex items-start gap-2">
-        <div className="mt-0.5 shrink-0">
-          {entry.enabled ? (
-            <div className="w-2 h-2 rounded-full bg-green-500" title="Enabled" />
-          ) : (
-            <div className="w-2 h-2 rounded-full bg-vault-300 dark:bg-vault-600" title="Disabled" />
-          )}
-        </div>
-
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-vault-900 dark:text-vault-100 truncate">
             {entry.name || `Entry ${index + 1}`}
@@ -118,17 +129,37 @@ function LorebookEntryListItem({
           </div>
         </div>
 
-        <button
-          onClick={handleDelete}
-          className="
-            opacity-0 group-hover:opacity-100 focus:opacity-100
-            p-1.5 text-vault-400 hover:text-red-500 dark:text-vault-500 dark:hover:text-red-400
-            hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all
-          "
-          title="Delete entry"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Context toggle button (eye icon) */}
+          <button
+            onClick={handleToggleContext}
+            className={`
+              p-1.5 rounded transition-all
+              ${isContextEnabled
+                ? 'text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-900/20'
+                : 'text-vault-400 hover:text-vault-600 hover:bg-vault-100 dark:text-vault-500 dark:hover:text-vault-300 dark:hover:bg-vault-700'
+              }
+            `}
+            title={isContextEnabled ? 'In context (click to exclude)' : 'Not in context (click to include)'}
+          >
+            {isContextEnabled ? (
+              <Eye className="w-3.5 h-3.5" />
+            ) : (
+              <EyeOff className="w-3.5 h-3.5" />
+            )}
+          </button>
+
+          <button
+            onClick={handleDelete}
+            className="
+              p-1.5 text-vault-400 hover:text-red-500 dark:text-vault-500 dark:hover:text-red-400
+              hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all
+            "
+            title="Delete entry"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -661,6 +692,24 @@ function LorebookEditorInner({
     persistLorebook(buildUpdatedLorebook(entries, bookName, value));
   };
 
+  // Handle enable all entries in context
+  const handleEnableAllContext = useCallback(() => {
+    const newEntries = entries.map(entry => ({
+      ...entry,
+      extensions: { ...entry.extensions, context_enabled: true },
+    }));
+    persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
+  }, [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook]);
+
+  // Handle disable all entries from context
+  const handleDisableAllContext = useCallback(() => {
+    const newEntries = entries.map(entry => ({
+      ...entry,
+      extensions: { ...entry.extensions, context_enabled: false },
+    }));
+    persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
+  }, [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook]);
+
   return (
     <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
       {/* Left Sidebar - Hidden on mobile when viewing detail */}
@@ -716,6 +765,31 @@ function LorebookEditorInner({
                     focus:outline-none focus:ring-1 focus:ring-vault-500"
                 />
               </div>
+              {/* Context Visibility Controls */}
+              {entries.length > 0 && (
+                <div className="flex items-center justify-between pt-2 border-t border-vault-200 dark:border-vault-700">
+                  <label className="text-xs font-medium text-vault-600 dark:text-vault-400">
+                    Context Visibility
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleEnableAllContext}
+                      className="text-xs text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 transition-colors"
+                      title="Enable all entries in context"
+                    >
+                      Enable All
+                    </button>
+                    <span className="text-vault-300 dark:text-vault-600">|</span>
+                    <button
+                      onClick={handleDisableAllContext}
+                      className="text-xs text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 transition-colors"
+                      title="Disable all entries in context"
+                    >
+                      Disable All
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -775,8 +849,18 @@ function LorebookEditorInner({
                   index={originalIndex}
                   tokenCount={originalIndex === safeSelectedIndex ? selectedEntryTokenCount : null}
                   isSelected={originalIndex === safeSelectedIndex}
+                  isContextEnabled={isEntryContextEnabled(entry)}
                   onSelect={() => handleSelectEntry(originalIndex)}
                   onDelete={() => handleDeleteEntry(originalIndex)}
+                  onToggleContext={() => {
+                    const updatedEntry = {
+                      ...entry,
+                      extensions: { ...entry.extensions, context_enabled: !isEntryContextEnabled(entry) },
+                    };
+                    const newEntries = [...entries];
+                    newEntries[originalIndex] = updatedEntry;
+                    persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
+                  }}
                 />
               );
             })

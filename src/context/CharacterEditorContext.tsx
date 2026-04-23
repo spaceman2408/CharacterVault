@@ -655,7 +655,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
           const book = character.data.characterBook;
           if (!book || book.entries.length === 0) return '';
           
-          const enabledEntries = book.entries.filter(e => e.enabled);
+          const enabledEntries = book.entries.filter(e => e.enabled && e.extensions?.context_enabled !== false);
           if (enabledEntries.length === 0) return '';
           
           let loreContent = `Lorebook: ${book.name || 'Character Lore'}\n`;
