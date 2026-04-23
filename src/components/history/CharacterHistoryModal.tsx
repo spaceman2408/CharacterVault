@@ -357,14 +357,32 @@ function ImagePreviewCard({
 function SyncedDiffView({
   snapshotValue,
   currentValue,
+  isSnapshotMissing,
 }: {
   snapshotValue: string;
   currentValue: string;
+  isSnapshotMissing?: boolean;
 }): React.ReactElement {
   const snapshotLines = useMemo(() => buildHighlightedLines(snapshotValue, currentValue), [currentValue, snapshotValue]);
   const currentLines = useMemo(() => buildHighlightedLines(currentValue, snapshotValue), [currentValue, snapshotValue]);
   const changedLineCountLeft = useMemo(() => snapshotLines.filter(line => line.changed).length, [snapshotLines]);
   const changedLineCountRight = useMemo(() => currentLines.filter(line => line.changed).length, [currentLines]);
+
+  if (isSnapshotMissing) {
+    return (
+      <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
+        <div className="p-6 text-center">
+          <div className="rounded-xl bg-amber-100 p-3 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+            <ShieldAlert className="mx-auto h-6 w-6" />
+          </div>
+          <h4 className="mt-3 text-sm font-semibold text-vault-900 dark:text-vault-100">Snapshot data unavailable</h4>
+          <p className="mt-1 text-xs text-vault-500 dark:text-vault-400">
+            This revision's snapshot could not be loaded. It may have been corrupted or failed to save properly.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
@@ -399,7 +417,7 @@ function SyncedDiffView({
   );
 }
 
-function SectionPreview({ entry }: { entry: SnapshotDiffEntry }): React.ReactElement {
+function SectionPreview({ entry, isSnapshotMissing }: { entry: SnapshotDiffEntry; isSnapshotMissing?: boolean }): React.ReactElement {
   if (isImageEntry(entry)) {
     return (
       <div className="grid gap-4 lg:grid-cols-2">
@@ -434,7 +452,7 @@ function SectionPreview({ entry }: { entry: SnapshotDiffEntry }): React.ReactEle
       ? formatChangedGreetings(currentGreetingsValue ?? [], snapshotGreetingsValue ?? [])
     : formatValue(entry.currentValue);
 
-  return <SyncedDiffView snapshotValue={snapshotValue} currentValue={currentValue} />;
+  return <SyncedDiffView snapshotValue={snapshotValue} currentValue={currentValue} isSnapshotMissing={isSnapshotMissing} />;
 }
 
 function ConfirmationDialog({
@@ -597,6 +615,7 @@ interface SnapshotSummaryProps {
   changedSectionCount: number;
   hasActiveSectionDiff: boolean;
   isBusy: boolean;
+  isSnapshotMissing: boolean;
   onRestore: () => void;
 }
 
@@ -605,8 +624,15 @@ function SnapshotSummary({
   changedSectionCount,
   hasActiveSectionDiff,
   isBusy,
+  isSnapshotMissing,
   onRestore,
 }: SnapshotSummaryProps): React.ReactElement {
+  const restoreDisabledReason = isSnapshotMissing
+    ? 'Snapshot data is missing or corrupted'
+    : changedSectionCount === 0
+      ? 'No changes to restore'
+      : undefined;
+
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-4">
@@ -617,13 +643,20 @@ function SnapshotSummary({
         <button
           type="button"
           onClick={onRestore}
-          disabled={isBusy || changedSectionCount === 0}
+          disabled={isBusy || changedSectionCount === 0 || isSnapshotMissing}
+          title={restoreDisabledReason}
           className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-vault-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
         >
           <RotateCcw className="h-4 w-4" />
           Restore card
         </button>
       </div>
+
+      {isSnapshotMissing && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+          <span className="font-medium">Warning:</span> This revision's snapshot data could not be loaded. It may have been corrupted or failed to save properly.
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-vault-200 pt-3 text-sm text-vault-500 dark:border-vault-800 dark:text-vault-400">
         <span className="inline-flex items-center gap-1.5">
@@ -651,12 +684,15 @@ interface DiffSectionProps {
 
 function DiffSection({
   entry,
+  snapshot,
   isActive,
   isCollapsed,
   isBusy,
   onToggle,
   onRestore,
 }: DiffSectionProps): React.ReactElement {
+  const isSnapshotMissing = snapshot === null;
+
   return (
     <div className="border-t border-vault-200 pt-4 first:border-t-0 first:pt-0 dark:border-vault-800">
       <button
@@ -684,14 +720,14 @@ function DiffSection({
             <button
               type="button"
               onClick={onRestore}
-              disabled={isBusy}
+              disabled={isBusy || isSnapshotMissing}
               className="inline-flex items-center gap-2 rounded-lg border border-vault-300 px-3 py-1.5 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Restore section
             </button>
           </div>
-          <SectionPreview entry={entry} />
+          <SectionPreview entry={entry} isSnapshotMissing={isSnapshotMissing} />
         </div>
       )}
     </div>
@@ -1002,9 +1038,11 @@ export function CharacterHistoryModal({
 
   const handleSelectSnapshot = (snapshotId: string) => {
     setCollapsedSections({});
-    setSelectedSnapshotId(snapshotId);
-    setDiffEntries([]);
-    setSelectedSnapshot(null);
+    if (snapshotId !== selectedSnapshotId) {
+      setSelectedSnapshotId(snapshotId);
+      setDiffEntries([]);
+      setSelectedSnapshot(null);
+    }
   };
 
   const toggleSectionCollapsed = (section: string) => {
@@ -1135,6 +1173,7 @@ export function CharacterHistoryModal({
                       changedSectionCount={changedSectionCount}
                       hasActiveSectionDiff={hasActiveSectionDiff}
                       isBusy={isBusy}
+                      isSnapshotMissing={selectedSnapshot === null}
                       onRestore={() => selectedMetadata && setConfirmAction({ kind: 'restore-whole', metadata: selectedMetadata })}
                     />
                   )}
