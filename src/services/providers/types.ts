@@ -56,14 +56,10 @@ export interface IProviderAdapter {
 
   /**
    * Quick check whether a model *might* support provider selection.
-   * Uses cached model list when available, falls back to provider-specific heuristics.
-   * Returns false when provider selection is definitively not supported,
+   * Returns false when definitively not supported (e.g. non-NanoGPT, or cached as false),
    * true when it *might* be (needs a fetchModelProviders call to confirm).
    */
-  maySupportProviderSelection(
-    modelId: string,
-    availableModels?: AIModelInfo[]
-  ): boolean;
+  maySupportProviderSelection(modelId: string): boolean;
 
   /** Get any extra headers to attach to chat completion requests */
   getChatHeaders(config: AIConfig): Record<string, string>;

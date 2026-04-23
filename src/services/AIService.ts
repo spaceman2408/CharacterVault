@@ -397,13 +397,12 @@ Provide only the generated text without any additional commentary.`;
    * Delegates short-circuit logic to the resolved provider adapter:
    * - Non-supporting providers return immediately (no network call)
    * - Provider cache is checked before making an API call
-   * - Model list's supportsProviderSelection flag is used when available
    */
   async fetchModelProviders(modelId: string): Promise<ModelProviderInfo> {
     try {
       const provider = resolveProvider(this.config.baseUrl);
 
-      if (!provider.maySupportProviderSelection(modelId, this.config.availableModels)) {
+      if (!provider.maySupportProviderSelection(modelId)) {
         return {
           canonicalId: modelId,
           displayName: this.config.availableModels?.find((m) => m.id === modelId)?.name || modelId,

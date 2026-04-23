@@ -9,7 +9,7 @@ import type {
   ExtendedAIModelInfo,
   ModelProviderInfo,
 } from './types';
-import type { AIConfig, AIModelInfo } from '../../db/types';
+import type { AIConfig } from '../../db/types';
 
 /**
  * NanoGPT API response for models endpoint with detailed=true
@@ -136,8 +136,6 @@ export class NanoGPTProvider implements IProviderAdapter {
       throw new Error('Invalid response format: expected data array');
     }
 
-    console.log('[NanoGPTProvider] Fetched models:', data.data.slice(0, 3));
-
     const models: ExtendedAIModelInfo[] = data.data.map((model) => ({
       id: model.id,
       name: model.id,
@@ -145,8 +143,6 @@ export class NanoGPTProvider implements IProviderAdapter {
       pricing: model.pricing,
       supportsProviderSelection: model.supportsProviderSelection ?? false,
     }));
-
-    console.log('[NanoGPTProvider] First model with supportsProviderSelection:', models[0]?.supportsProviderSelection);
 
     // Sort models alphabetically by ID
     return models.sort((a, b) => a.id.localeCompare(b.id));
@@ -168,17 +164,15 @@ export class NanoGPTProvider implements IProviderAdapter {
 
   /**
    * Quick check whether a model *might* support provider selection on NanoGPT.
-   * - If we already have cached provider info, use it directly
-   * - If the model list has supportsProviderSelection flag, use it
+   * - If we already have cached provider info, use it definitively
    * - Otherwise return true (conservative: let the API call decide)
+   *
+   * NOTE: The supportsProviderSelection flag from /api/v1/models is unreliable.
+   * The /api/models/:id/providers endpoint is the authoritative source.
    */
-  maySupportProviderSelection(modelId: string, availableModels?: AIModelInfo[]): boolean {
+   maySupportProviderSelection(modelId: string): boolean {
     const cached = this.getCachedProviderInfo(modelId);
     if (cached) return cached.supportsProviderSelection;
-
-    const modelInfo = availableModels?.find((m) => m.id === modelId);
-    if (modelInfo && modelInfo.supportsProviderSelection === false) return false;
-
     return true;
   }
 
