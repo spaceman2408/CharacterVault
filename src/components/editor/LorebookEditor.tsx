@@ -115,7 +115,7 @@ function LorebookEntryListItem({
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-vault-900 dark:text-vault-100 truncate">
-            {entry.name || `Entry ${index + 1}`}
+            {entry.name || `Entry ${index}`}
           </div>
 
           <div className="flex items-center gap-2 mt-1 text-xs text-vault-500 dark:text-vault-400">
@@ -634,7 +634,7 @@ function LorebookEditorInner({
   // Handle delete entry
   const handleDeleteEntry = useCallback((index: number) => {
     const entry = entries[index];
-    const shouldDelete = window.confirm(`Delete lorebook entry "${entry.name || `Entry ${index + 1}`}"?`);
+    const shouldDelete = window.confirm(`Delete lorebook entry "${entry.name || `Entry ${index}`}"?`);
     if (!shouldDelete) return;
 
     const newEntries = entries.filter((_, i) => i !== index);
