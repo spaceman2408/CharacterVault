@@ -451,7 +451,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         effects: setAcceptedEditHighlight.of(null),
       });
       clearHighlightTimeoutRef.current = null;
-    }, 4000);
+    }, 1200);
 
     // Clear AI state
     streamingContentRef.current = '';
@@ -585,9 +585,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         }),
         EditorView.baseTheme({
           '.cm-ai-accepted-highlight': {
-            backgroundColor: 'rgba(22, 163, 74, 0.28)',
-            outline: '1px solid rgba(22, 163, 74, 0.5)',
-            borderRadius: '2px',
+            backgroundColor: 'rgba(22, 163, 74, 0.10)',
           },
         }),
         acceptedEditHighlightField,
