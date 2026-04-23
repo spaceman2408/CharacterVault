@@ -622,6 +622,16 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
         )}
       </main>
 
+      {/* Footer Note */}
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="flex items-center justify-center gap-2 text-xs text-vault-400 dark:text-vault-600">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+          </svg>
+          <span>Thumbnails appear blurry to save memory. Your full images are preserved in the card when you export.</span>
+        </div>
+      </footer>
+
       {/* Delete Confirmation Modal */}
       {deleteConfirmState && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-in fade-in">
