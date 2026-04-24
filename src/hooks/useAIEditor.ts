@@ -12,6 +12,8 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import type { CharacterSection } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings, AIOperation } from '../db/types';
 import { aiToolbarPanel, getPanelUpdateFunction } from '../editor/extensions/aiToolbarPanel';
+import type { ToolbarActionConfig } from '../editor/extensions/aiToolbarPanel';
+import { normalizeHtmlEntitiesInView } from '../editor/extensions/normalizeHtmlEntities';
 import { toolbarSearch, toolbarSearchTheme } from '../editor/extensions/toolbarSearch';
 import { themeSync } from '../editor/extensions/themeSync';
 import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
@@ -43,6 +45,15 @@ const acceptedEditHighlightField = StateField.define<DecorationSet>({
   },
   provide: (field) => EditorView.decorations.from(field),
 });
+
+const defaultToolbarActions: ToolbarActionConfig[] = [
+  {
+    id: 'normalize-entities',
+    label: ';&',
+    title: 'Normalize HTML entities in the selection, or the whole document if nothing is selected',
+    onClick: normalizeHtmlEntitiesInView,
+  },
+];
 
 export interface UseAIEditorOptions {
   /** Key to force re-initialization when changed (e.g., section ID) */
@@ -83,6 +94,8 @@ export interface UseAIEditorOptions {
   fontSize?: number;
   /** Callback when font size changes (for persistence) */
   onFontSizeChange?: (size: number) => void;
+  /** Optional custom toolbar actions shown next to the standard editor controls */
+  toolbarActions?: ToolbarActionConfig[];
 }
 
 export interface UseAIEditorReturn {
@@ -138,6 +151,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     isActive = true,
     fontSize,
     onFontSizeChange,
+    toolbarActions = defaultToolbarActions,
   } = options;
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -631,7 +645,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           accept,
           reject,
           abort,
-          onFontSizeChange
+          onFontSizeChange,
+          toolbarActions,
         ),
         // Search & Replace functionality
         toolbarSearch(),
@@ -677,7 +692,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       panelUpdateRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles), flushPendingPersist, schedulePersist]);
+  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles), flushPendingPersist, schedulePersist, toolbarActions]);
 
   // Update editor content when value changes externally
   useEffect(() => {

@@ -26,4 +26,10 @@ export type {
   AIStreamingCallback,
   AIAbortCallback,
   FontSizeChangeCallback,
+  ToolbarActionConfig,
 } from './aiToolbarPanel';
+
+export {
+  normalizeHtmlEntities,
+  normalizeHtmlEntitiesInView,
+} from './normalizeHtmlEntities';

@@ -54,6 +54,13 @@ export type AIAbortCallback = () => void;
  */
 export type FontSizeChangeCallback = (size: number) => void;
 
+export interface ToolbarActionConfig {
+  id: string;
+  label: string;
+  title?: string;
+  onClick: (view: EditorView) => void;
+}
+
 // Registry to store panel update functions by editor view
 const panelRegistry = new WeakMap<EditorView, AIStreamingCallback>();
 
@@ -90,7 +97,8 @@ function createToolbarPanel(
   onAccept: () => void,
   onReject: () => void,
   onAbort: AIAbortCallback,
-  onFontSizeChange?: FontSizeChangeCallback
+  onFontSizeChange?: FontSizeChangeCallback,
+  toolbarActions: ToolbarActionConfig[] = [],
 ): Panel & { updateState: () => void; updateAIState: AIStreamingCallback; updateSampler: (s: SamplerSettings) => void } {
   const dom = document.createElement('div');
   dom.className = 'ai-toolbar-panel';
@@ -452,6 +460,38 @@ function createToolbarPanel(
   }, 0);
 
   toolbarContainer.appendChild(searchBtn);
+
+  const customActionContainers: HTMLElement[] = [];
+  for (const action of toolbarActions) {
+    const button = document.createElement('button');
+    button.className = `ai-toolbar-btn-custom ai-toolbar-btn-custom-${action.id}`;
+    button.textContent = action.label;
+    button.title = action.title ?? action.label;
+    button.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      font-size: 14px;
+      font-weight: 600;
+      background: transparent;
+      border: 1px solid var(--ai-toolbar-input-border);
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--ai-toolbar-text-secondary);
+      transition: all 0.15s ease;
+      margin-left: 4px;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    `;
+    button.addEventListener('click', () => {
+      action.onClick(view);
+    });
+    button.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+    toolbarContainer.appendChild(button);
+    customActionContainers.push(button);
+  }
 
   // Font size control (aA button with slider popup)
   let fontSizeBtn: HTMLElement | undefined;
@@ -964,6 +1004,9 @@ function createToolbarPanel(
     const isCompactCustomLayout = !state.isProcessing && isInstructMode;
     toolbarContainer.classList.toggle('ai-toolbar-instruct-mode', isCompactCustomLayout);
     searchBtn.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
+    for (const actionButton of customActionContainers) {
+      actionButton.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
+    }
     if (fontSizeBtn) {
       fontSizeBtn.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
     }
@@ -1097,10 +1140,11 @@ export function aiToolbarPanel(
   onAccept: () => void,
   onReject: () => void,
   onAbort: AIAbortCallback,
-  onFontSizeChange?: FontSizeChangeCallback
+  onFontSizeChange?: FontSizeChangeCallback,
+  toolbarActions: ToolbarActionConfig[] = [],
 ) {
   return [
-    showPanel.of((view) => createToolbarPanel(view, sampler, onAction, onAccept, onReject, onAbort, onFontSizeChange)),
+    showPanel.of((view) => createToolbarPanel(view, sampler, onAction, onAccept, onReject, onAbort, onFontSizeChange, toolbarActions)),
     toolbarPanelPlugin(onAction),
   ];
 }
