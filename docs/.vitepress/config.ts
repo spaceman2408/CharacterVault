@@ -7,6 +7,9 @@ export default defineConfig({
   srcDir: '.',
   outDir: '../dist/docs',
   cleanUrls: true,
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/CharacterVaultFavicon.svg' }],
+  ],
   themeConfig: {
     logo: '/CharacterVaultLogo.svg',
     nav: [
