@@ -8,6 +8,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { Decoration, EditorView, drawSelection, keymap, ViewUpdate } from '@codemirror/view';
 import type { DecorationSet } from '@codemirror/view';
 import { EditorState, StateEffect, StateField } from '@codemirror/state';
+import type { Extension } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import type { CharacterSection } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings, AIOperation } from '../db/types';
@@ -96,6 +97,8 @@ export interface UseAIEditorOptions {
   onFontSizeChange?: (size: number) => void;
   /** Optional custom toolbar actions shown next to the standard editor controls */
   toolbarActions?: ToolbarActionConfig[];
+  /** Additional CodeMirror extensions (e.g., language modes) to include in the editor */
+  additionalExtensions?: Extension[];
 }
 
 export interface UseAIEditorReturn {
@@ -152,6 +155,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     fontSize,
     onFontSizeChange,
     toolbarActions = defaultToolbarActions,
+    additionalExtensions,
   } = options;
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -653,6 +657,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         toolbarSearchTheme(),
         // Font size extension
         fontSizeExtension(fontSize),
+        ...(additionalExtensions ?? []),
       ],
     });
 

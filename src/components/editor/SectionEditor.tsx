@@ -13,6 +13,7 @@ import { LorebookEditor } from './LorebookEditor';
 import { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { useAIEditor } from '../../hooks';
+import { creatorNotesExtensions } from '../../editor/extensions';
 
 interface SectionEditorProps {
   section: CharacterSection;
@@ -116,6 +117,11 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     }
   }, [section, updateSpecField]);
 
+  const creatorNotesExts = React.useMemo(
+    () => section === 'creator_notes' ? creatorNotesExtensions() : undefined,
+    [section],
+  );
+
   // Use the shared AI editor hook
   // Key forces re-initialization when section changes to prevent value mixing
   const { editorRef } = useAIEditor({
@@ -134,6 +140,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     isActive: section !== 'image' && section !== 'alternate_greetings' && section !== 'lorebook' && !!currentCharacter,
     fontSize,
     onFontSizeChange: setFontSize,
+    additionalExtensions: creatorNotesExts,
   });
 
   // Early return for no character

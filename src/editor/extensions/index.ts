@@ -33,3 +33,7 @@ export {
   normalizeHtmlEntities,
   normalizeHtmlEntitiesInView,
 } from './normalizeHtmlEntities';
+
+export {
+  creatorNotesExtensions,
+} from './htmlHighlight';
