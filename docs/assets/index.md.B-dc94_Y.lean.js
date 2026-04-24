@@ -1,1 +1,0 @@
-import{_ as t,o as e,c as r,ag as o}from"./chunks/framework.qXLDknWC.js";const p=JSON.parse('{"title":"CharacterVault","description":"","frontmatter":{},"headers":[],"relativePath":"index.md","filePath":"index.md"}'),n={name:"index.md"};function i(l,a,s,c,d,h){return e(),r("div",null,[...a[0]||(a[0]=[o("",7)])])}const g=t(n,[["render",i]]);export{p as __pageData,g as default};
