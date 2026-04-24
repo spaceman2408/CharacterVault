@@ -10,6 +10,8 @@ Type your content in the editor on the Creator Notes tab. You can write:
 - **HTML** — Any markup tags (headings, lists, styled text, etc.) are rendered in the preview
 - **CSS** — Style rules in `<style>` blocks are applied within the preview sandbox
 
+If imported Creator Notes contain encoded entities like `&nbsp;` or `&amp;`, click the **;&** button in the editor toolbar to convert them back into readable characters before editing.
+
 ::: tip
 If your content has no HTML tags at all, the preview displays it as plain preformatted text in a monospace font. You don't need to write HTML if you just want to leave a simple note.
 :::
