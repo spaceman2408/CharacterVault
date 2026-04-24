@@ -13,7 +13,7 @@ export default defineConfig({
   themeConfig: {
     logo: '/CharacterVaultLogo.svg',
     nav: [
-      { text: 'App', link: '/CharacterVault/' },
+      { text: 'App', link: 'https://spaceman2408.github.io/CharacterVault/' },
       { text: 'Docs Home', link: '/' },
       { text: 'GitHub', link: 'https://github.com/spaceman2408/CharacterVault' },
     ],
