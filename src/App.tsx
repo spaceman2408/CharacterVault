@@ -23,7 +23,8 @@ import {
   Search,
   Play,
   X,
-  HelpCircle
+  HelpCircle,
+  BookOpen
 } from 'lucide-react';
 import { PromoBanner } from './components/PromoBanner';
 import type { CharacterListItem } from './db';
@@ -466,6 +467,16 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               onClick={onReplayTutorial} 
               title="Replay Tutorial" 
             />
+
+            <a
+              href={`${import.meta.env.BASE_URL}docs/`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-lg transition-all duration-200 active:scale-95 text-vault-500 hover:text-vault-900 dark:text-vault-400 dark:hover:text-vault-100 hover:bg-vault-100 dark:hover:bg-vault-800"
+              title="Documentation"
+            >
+              <BookOpen className="w-4 h-4" />
+            </a>
 
           </div>
         </div>
