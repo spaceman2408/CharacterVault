@@ -10,7 +10,7 @@
     "build": "tsc -b && vite build",
     "build:site": "npm run build && npm run docs:build",
     "predeploy": "npm run build:site",
-    "deploy": "gh-pages -d dist",
+    "deploy": "gh-pages -d dist --dotfiles --nojekyll && gh-pages -d dist/docs --dest docs --add --dotfiles --nojekyll",
     "lint": "eslint .",
     "preview": "vite preview",
     "docs:dev": "vitepress dev docs --port 3001",

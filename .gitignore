@@ -24,11 +24,12 @@ dist-ssr
 *.sw?
 
 # Project files
-docs/
 .cache/
 .build/
 .out/
 .vscode/
+docs/.vitepress/.temp/
+docs/.vitepress/cache/
 mainPlan.md
 plans/
 exampleCharacterJson.json
