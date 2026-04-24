@@ -39,7 +39,7 @@ const SKELETON_DOC = `<!DOCTYPE html>
       * { box-sizing: border-box; }
       html, body {
         margin: 0;
-        background: radial-gradient(circle at top, rgba(71,85,105,0.2), transparent 42%), linear-gradient(180deg, #0f172a 0%, #111827 100%);
+        background: #1f2937;
         color: #e2e8f0;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }

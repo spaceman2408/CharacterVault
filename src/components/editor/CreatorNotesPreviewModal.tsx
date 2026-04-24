@@ -74,8 +74,8 @@ export function CreatorNotesPreviewModal({
 
         <CreatorNotesPreviewPane
           content={content}
-          frameClassName="flex-1 overflow-auto rounded-[1.25rem] border border-vault-700 bg-vault-950 shadow-[0_20px_60px_rgba(15,23,42,0.45)]"
-          emptyClassName="flex-1 overflow-auto rounded-[1.25rem] border border-dashed border-vault-600 bg-vault-950/70 px-5 py-6 text-center text-sm text-vault-300"
+          frameClassName="flex-1 overflow-auto rounded-[1.25rem] border border-vault-600 bg-vault-800 shadow-[0_20px_60px_rgba(17,24,39,0.35)]"
+          emptyClassName="flex-1 overflow-auto rounded-[1.25rem] border border-dashed border-vault-500 bg-vault-800 px-5 py-6 text-center text-sm text-vault-300"
         />
       </div>
     </div>,

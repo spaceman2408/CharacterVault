@@ -119,7 +119,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
   // Use the shared AI editor hook
   // Key forces re-initialization when section changes to prevent value mixing
   const { editorRef } = useAIEditor({
-    key: section,
+    key: `${section}-${isSplitPreviewOpen ? 'split' : 'single'}`,
     value: currentValue,
     onImmediateChange: section === 'creator_notes' ? setLivePreviewValue : undefined,
     onPersistChange: handlePersistChange,
@@ -259,19 +259,19 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
       </div>
 
       {isCreatorNotesSection && isSplitPreviewOpen ? (
-        <div className="flex-1 min-h-0 grid gap-4 lg:grid-cols-2">
-          <div className="min-h-0 overflow-hidden rounded-xl border border-vault-200 bg-vault-950 shadow-inner dark:border-vault-700">
+        <div className="flex flex-1 min-h-0 flex-col gap-4 lg:flex-row">
+          <div
+            ref={editorRef}
+            className="min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden lg:w-1/2"
+          />
+
+          <div className="min-h-0 overflow-hidden rounded-xl border border-vault-200 bg-vault-800 shadow-inner dark:border-vault-700 lg:w-1/2">
             <CreatorNotesPreviewPane
               content={livePreviewValue}
-              frameClassName="block h-full w-full bg-vault-950"
+              frameClassName="block h-full w-full bg-vault-800"
               emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-vault-300"
             />
           </div>
-
-          <div
-            ref={editorRef}
-            className="min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
-          />
         </div>
       ) : (
         <div
