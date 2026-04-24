@@ -3,7 +3,7 @@
  * @module @services/CharacterExportService
  */
 
-import type { Character, CharacterCardV2, ExportCharacterResult } from '../db/characterTypes';
+import type { Character, CharacterBook, CharacterCardV2, LorebookEntry, ExportCharacterResult } from '../db/characterTypes';
 
 /**
  * Character Export Service
@@ -175,7 +175,7 @@ export class CharacterExportService {
       system_prompt: spec.system_prompt,
       post_history_instructions: spec.post_history_instructions,
       alternate_greetings: spec.alternate_greetings,
-      character_book: character.data.characterBook,
+      character_book: this.sanitizeLorebookForExport(character.data.characterBook),
       extensions: character.data.extensions || {},
       // V3 spec fields - use stored values or defaults
       creator: spec.creator || '',
@@ -392,6 +392,31 @@ export class CharacterExportService {
    */
   private sanitizeFilename(name: string): string {
     return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  }
+
+  /**
+   * Sanitize lorebook for export by removing fields that shouldn't be
+   * set externally and mapping fields for broad importer compatibility.
+   *
+   * - Strips `insertion_order` (managed by the importing app, not the exporter)
+   * - Maps `name` → `comment` when `comment` is absent so SillyTavern
+   *   (which reads `comment`, not `name`) can display the entry label
+   * - Coerces `case_sensitive` to a boolean for spec compliance
+   *   (ST may store it as null or omit it, using extensions.case_sensitive instead)
+   */
+  private sanitizeLorebookForExport(book: CharacterBook | undefined): CharacterBook | undefined {
+    if (!book) return undefined;
+
+    return {
+      ...book,
+      entries: book.entries.map(({ insertion_order, ...entry }: LorebookEntry) => ({
+        ...entry,
+        // Ensure ST-compatible comment: use existing comment, or fall back to name
+        comment: entry.comment || entry.name || '',
+        // Coerce case_sensitive to boolean: resolve null/undefined from extensions fallback
+        case_sensitive: entry.case_sensitive ?? (entry.extensions?.case_sensitive as boolean | null) ?? false,
+      })),
+    });
   }
 
   /**

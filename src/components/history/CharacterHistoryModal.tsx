@@ -83,7 +83,7 @@ function isLorebookValue(value: unknown): value is CharacterBook | null {
 function getSortedLorebookEntries(value: CharacterBook | null) {
   return value?.entries
     ?.slice()
-    .sort((left, right) => left.insertion_order - right.insertion_order) ?? [];
+    .sort((left, right) => (left.insertion_order ?? left.id) - (right.insertion_order ?? right.id)) ?? [];
 }
 
 function formatLorebookForDiff(

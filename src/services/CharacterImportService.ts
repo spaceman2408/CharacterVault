@@ -5,10 +5,12 @@
 
 import type { 
   Character, 
+  CharacterBook,
   CharacterCardV2, 
-  CharacterSpec, 
   CharacterExtensions,
-  ImportCharacterResult 
+  CharacterSpec,
+  ImportCharacterResult,
+  LorebookEntry,
 } from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
 import { generateThumbnail } from '../utils/thumbnail';
@@ -310,7 +312,7 @@ export class CharacterImportService {
           thumbnailData,
           data: {
             spec: extractedSpec,
-            characterBook: data.character_book as import('../db/characterTypes').CharacterBook | undefined,
+            characterBook: this.normalizeLorebookEntries(data.character_book as import('../db/characterTypes').CharacterBook | undefined),
             extensions: data.extensions as import('../db/characterTypes').CharacterExtensions | undefined,
           },
         });
@@ -560,7 +562,7 @@ export class CharacterImportService {
       thumbnailData,
       data: {
         spec,
-        characterBook: data.character_book,
+        characterBook: this.normalizeLorebookEntries(data.character_book),
         extensions: data.extensions,
       },
     });
@@ -735,6 +737,25 @@ export class CharacterImportService {
     if (!data || typeof data !== 'object') return false;
     const d = data as Record<string, unknown>;
     return d.source === 'st' && d.character !== undefined;
+  }
+
+  /**
+   * Normalize lorebook entries from external sources.
+   *
+   * SillyTavern may omit top-level `case_sensitive` (or set it to null)
+   * and instead store the value in `extensions.case_sensitive`. This method
+   * resolves the field so our internal model always has a definitive value.
+   */
+  private normalizeLorebookEntries(book: CharacterBook | undefined): CharacterBook | undefined {
+    if (!book || !book.entries?.length) return book;
+
+    return {
+      ...book,
+      entries: book.entries.map((entry: LorebookEntry) => ({
+        ...entry,
+        case_sensitive: entry.case_sensitive ?? (entry.extensions?.case_sensitive as boolean | null) ?? false,
+      })),
+    };
   }
 }
 

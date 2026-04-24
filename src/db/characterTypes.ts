@@ -26,8 +26,8 @@ export interface LorebookEntry {
   content: string;
   extensions: Record<string, unknown>;
   enabled: boolean;
-  insertion_order: number;
-  case_sensitive: boolean;
+  insertion_order?: number;
+  case_sensitive?: boolean | null;
   name?: string;
   priority?: number;
   comment?: string;

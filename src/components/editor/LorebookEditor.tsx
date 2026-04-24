@@ -450,7 +450,7 @@ function LorebookEntryDetail({
         <label className="flex items-center gap-2.5 cursor-pointer">
           <input
             type="checkbox"
-            checked={entry.case_sensitive}
+            checked={entry.case_sensitive ?? false}
             onChange={(e) => handleCaseSensitiveChange(e.target.checked)}
             className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
           />
@@ -617,7 +617,6 @@ function LorebookEditorInner({
       content: '',
       extensions: {},
       enabled: true,
-      insertion_order: entries.length,
       case_sensitive: false,
       name: '',
       priority: 0,
