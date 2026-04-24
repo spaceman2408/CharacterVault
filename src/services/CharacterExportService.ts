@@ -407,16 +407,20 @@ export class CharacterExportService {
   private sanitizeLorebookForExport(book: CharacterBook | undefined): CharacterBook | undefined {
     if (!book) return undefined;
 
+    const entries = book.entries.map((entry: LorebookEntry) => {
+      const { insertion_order, ...rest } = entry;
+      const extCaseSensitive = rest.extensions?.case_sensitive as boolean | null | undefined;
+      return {
+        ...rest,
+        comment: rest.comment || rest.name || '',
+        case_sensitive: rest.case_sensitive ?? extCaseSensitive ?? false,
+      };
+    });
+
     return {
       ...book,
-      entries: book.entries.map(({ insertion_order, ...entry }: LorebookEntry) => ({
-        ...entry,
-        // Ensure ST-compatible comment: use existing comment, or fall back to name
-        comment: entry.comment || entry.name || '',
-        // Coerce case_sensitive to boolean: resolve null/undefined from extensions fallback
-        case_sensitive: entry.case_sensitive ?? (entry.extensions?.case_sensitive as boolean | null) ?? false,
-      })),
-    });
+      entries,
+    };
   }
 
   /**

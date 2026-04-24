@@ -751,10 +751,13 @@ export class CharacterImportService {
 
     return {
       ...book,
-      entries: book.entries.map((entry: LorebookEntry) => ({
-        ...entry,
-        case_sensitive: entry.case_sensitive ?? (entry.extensions?.case_sensitive as boolean | null) ?? false,
-      })),
+      entries: book.entries.map((entry: LorebookEntry) => {
+        const extCaseSensitive = entry.extensions?.case_sensitive as boolean | null | undefined;
+        return {
+          ...entry,
+          case_sensitive: entry.case_sensitive ?? extCaseSensitive ?? false,
+        };
+      }),
     };
   }
 }
