@@ -115,7 +115,7 @@ function LorebookEntryListItem({
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-vault-900 dark:text-vault-100 truncate">
-            {entry.name || `Entry ${index}`}
+            {entry.comment || entry.name || `Entry ${index}`}
           </div>
 
           <div className="flex items-center gap-2 mt-1 text-xs text-vault-500 dark:text-vault-400">
@@ -348,15 +348,15 @@ function LorebookEntryDetail({
 
   return (
     <div className="space-y-2">
-      {/* Name Field */}
+      {/* Comment Field (Entry Name in SillyTavern) */}
       <div>
         <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
           Entry Name
         </label>
         <input
           type="text"
-          value={draftEntry.name || ''}
-          onChange={(e) => handleNameChange(e.target.value)}
+          value={draftEntry.comment || ''}
+          onChange={(e) => handleCommentChange(e.target.value)}
           placeholder="Entry display name (optional)"
           className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
             text-vault-900 dark:text-vault-100 placeholder:text-vault-400
@@ -476,12 +476,12 @@ function LorebookEntryDetail({
         />
       </div>
 
-      {/* Comment Field */}
+      {/* Name Field (internal, moved to bottom) */}
       <div>
         <input
           type="text"
-          value={draftEntry.comment || ''}
-          onChange={(e) => handleCommentChange(e.target.value)}
+          value={draftEntry.name || ''}
+          onChange={(e) => handleNameChange(e.target.value)}
           placeholder="Internal notes about this entry, not used in output (optional)"
           className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
             text-vault-900 dark:text-vault-100 placeholder:text-vault-400
