@@ -87,7 +87,8 @@ If nothing has changed between the snapshot and your current draft, the **Restor
 
 - **No duplicates** — If nothing has changed since the latest snapshot, a new one won't be created.
 - **Baseline protection** — The "Opened card" snapshot cannot be deleted.
-- **25 snapshot limit** — Each character is limited to 25 snapshots (excluding the baseline). When the limit is exceeded, the oldest ones are removed automatically.
+- **10 snapshot limit** — Each character is limited to 10 saved snapshots (excluding the baseline "Opened card" snapshot). When the limit is exceeded, the oldest ones are removed automatically.
+- **Memory-optimized images** — Snapshots only store image data when the image actually changed. If you edit text fields without changing the character image, the snapshot stores an empty image placeholder to save space. The current character image is used when restoring if the snapshot has no image data.
 - **Snapshots are local** — Snapshot data is stored in your browser. Clearing browser data or switching devices removes all snapshot history.
 
 ## Best Practices

@@ -593,7 +593,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       let restoredCharacter: Character;
 
       if (scope === 'whole') {
-        const input = characterSnapshotService.restoreWholeCharacter(character, snapshot);
+        const input = await characterSnapshotService.restoreWholeCharacter(character, snapshot);
         restoredCharacter = await updateCharacterBase(character.id, input);
       } else {
         const sectionToRestore = targetSection;
@@ -602,7 +602,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
           return;
         }
 
-        const action = characterSnapshotService.restoreSection(character, snapshot, sectionToRestore);
+        const action = await characterSnapshotService.restoreSection(character, snapshot, sectionToRestore);
         if (!action) {
           setSaveStatus('saved');
           return;

@@ -484,7 +484,7 @@ export class CharacterDatabase extends Dexie {
 
     await this.transaction('rw', this.snapshots, async () => {
       await this.snapshots.add(snapshot);
-      await this.pruneSnapshotsForCharacter(input.characterId, 25);
+      await this.pruneSnapshotsForCharacter(input.characterId, 10);
     });
 
     return snapshot;
@@ -504,6 +504,20 @@ export class CharacterDatabase extends Dexie {
       .equals(characterId)
       .sortBy('createdAt');
     return snapshots.at(-1);
+  }
+
+  async getLatestSnapshotWithImage(characterId: string): Promise<CharacterSnapshot | undefined> {
+    const snapshots = await this.snapshots
+      .where('characterId')
+      .equals(characterId)
+      .sortBy('createdAt');
+    // Search from newest (end of array) to find the most recent one with image data
+    for (let index = snapshots.length - 1; index >= 0; index -= 1) {
+      if (snapshots[index].payload.imageData) {
+        return snapshots[index];
+      }
+    }
+    return undefined;
   }
 
   async deleteSnapshot(snapshotId: string): Promise<void> {

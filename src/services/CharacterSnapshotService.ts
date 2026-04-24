@@ -152,14 +152,47 @@ class CharacterSnapshotService {
   }
 
   async createSnapshot(character: Character, source: SnapshotSource): Promise<CharacterSnapshot | null> {
-    const payload = this.buildPayload(character);
-    const payloadHash = await this.buildPayloadHash(payload);
+    // Baseline ('open') snapshots always store full image data as the reference point
+    // For other sources, check if image changed vs. latest snapshot to save memory
+    let storedImageData = character.imageData;
+    let storedThumbnailData = character.thumbnailData;
+
+    if (source !== 'open') {
+      const latestSnapshot = await this.getLatestSnapshot(character.id);
+      const imageChanged = !latestSnapshot || latestSnapshot.payload.imageData !== character.imageData;
+      if (!imageChanged) {
+        storedImageData = '';
+        storedThumbnailData = '';
+      }
+    }
+
+    // Always hash the full payload (with image) so hashes are comparable across snapshots
+    const fullPayload: CharacterSnapshotPayload = {
+      name: character.name,
+      imageData: character.imageData,
+      thumbnailData: character.thumbnailData,
+      data: clonePayloadData(character.data),
+    };
+    const payloadHash = await this.buildPayloadHash(fullPayload);
+
+    // Store the (potentially image-stripped) payload
+    const storedPayload: CharacterSnapshotPayload = {
+      name: character.name,
+      imageData: storedImageData,
+      thumbnailData: storedThumbnailData,
+      data: fullPayload.data,
+    };
+
     return characterDb.createSnapshot({
       characterId: character.id,
       source,
-      payload,
+      payload: storedPayload,
       payloadHash,
     });
+  }
+
+  private async getLatestSnapshot(characterId: string): Promise<CharacterSnapshot | undefined> {
+    return characterDb.getLatestSnapshot(characterId);
   }
 
   async listSnapshots(characterId: string): Promise<CharacterSnapshot[]> {
@@ -214,9 +247,17 @@ class CharacterSnapshotService {
     await characterDb.deleteSnapshotById(snapshotId);
   }
 
-  diffSnapshotAgainstCharacter(snapshot: CharacterSnapshot, character: Character): SnapshotDiffEntry[] {
+  async diffSnapshotAgainstCharacter(snapshot: CharacterSnapshot, character: Character): Promise<SnapshotDiffEntry[]> {
+    // Resolve the effective image data: if this snapshot has no image, inherit from the latest one that does
+    const effectiveSnapshot = { ...snapshot, payload: { ...snapshot.payload } };
+    if (!effectiveSnapshot.payload.imageData) {
+      const resolvedImage = await this.findLatestImageData(snapshot.characterId);
+      effectiveSnapshot.payload.imageData = resolvedImage?.imageData ?? '';
+      effectiveSnapshot.payload.thumbnailData = resolvedImage?.thumbnailData ?? '';
+    }
+
     return DIFFABLE_SECTIONS.map(section => {
-      const snapshotValue = getSectionValue(snapshot.payload, section);
+      const snapshotValue = getSectionValue(effectiveSnapshot.payload, section);
       const currentValue = getCharacterSectionValue(character, section);
       return {
         section,
@@ -228,6 +269,19 @@ class CharacterSnapshotService {
     });
   }
 
+  /**
+   * Find the most recent snapshot with actual image data (non-empty)
+   * @param {string} characterId - Character ID
+   * @returns {Promise<{ imageData: string; thumbnailData: string } | null>} Image data or null
+   */
+  private async findLatestImageData(characterId: string): Promise<{ imageData: string; thumbnailData: string } | null> {
+    const snapshot = await characterDb.getLatestSnapshotWithImage(characterId);
+    if (snapshot?.payload.imageData) {
+      return { imageData: snapshot.payload.imageData, thumbnailData: snapshot.payload.thumbnailData };
+    }
+    return null;
+  }
+
   countChangedSections(snapshot: CharacterSnapshot, character: Character): number {
     return DIFFABLE_SECTIONS.reduce((count, section) => {
       const snapshotValue = getSectionValue(snapshot.payload, section);
@@ -236,19 +290,33 @@ class CharacterSnapshotService {
     }, 0);
   }
 
-  restoreWholeCharacter(_currentCharacter: Character, snapshot: CharacterSnapshot): UpdateCharacterInput {
+  async restoreWholeCharacter(currentCharacter: Character, snapshot: CharacterSnapshot): Promise<UpdateCharacterInput> {
+    // If snapshot image data is empty, resolve from the latest snapshot that has it
+    let imageData = snapshot.payload.imageData;
+    let thumbnailData = snapshot.payload.thumbnailData;
+    if (!imageData) {
+      const resolvedImage = await this.findLatestImageData(snapshot.characterId);
+      imageData = resolvedImage?.imageData ?? currentCharacter.imageData;
+      thumbnailData = resolvedImage?.thumbnailData ?? currentCharacter.thumbnailData;
+    }
     return {
       name: snapshot.payload.name,
-      imageData: snapshot.payload.imageData,
-      thumbnailData: snapshot.payload.thumbnailData,
+      imageData,
+      thumbnailData,
       data: clonePayloadData(snapshot.payload.data),
     };
   }
 
-  restoreSection(currentCharacter: Character, snapshot: CharacterSnapshot, section: CharacterSection): SnapshotRestoreAction | null {
+  async restoreSection(currentCharacter: Character, snapshot: CharacterSnapshot, section: CharacterSection): Promise<SnapshotRestoreAction | null> {
     switch (section) {
-      case 'image':
-        return { kind: 'image', value: snapshot.payload.imageData };
+      case 'image': {
+        let imageData = snapshot.payload.imageData;
+        if (!imageData) {
+          const resolvedImage = await this.findLatestImageData(snapshot.characterId);
+          imageData = resolvedImage?.imageData ?? currentCharacter.imageData;
+        }
+        return { kind: 'image', value: imageData };
+      }
       case 'lorebook':
         return {
           kind: 'character',
