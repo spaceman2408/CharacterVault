@@ -1,59 +1,51 @@
 # Import & Export
 
-Character Vault supports importing and exporting character cards in multiple formats, with full compatibility for SillyTavern and other platforms that use the V2/V3 character card specification.
+CharacterVault plays well with the wider character card ecosystem. Whether you're moving characters from other apps, sharing them with friends, or just backing up your work, you can import and export in formats that work with SillyTavern, TavernAI, and most other character card tools.
 
 ## Importing Characters
 
-### From PNG
+Click **Import** in the vault header, then select a file. CharacterVault accepts PNG images with embedded data or JSON files.
 
-PNG character cards contain embedded `chara` metadata in the image file. Character Vault reads this metadata and imports the character data.
+### PNG Files
 
-1. Click the **Import** button in the character library.
-2. Select a PNG file containing embedded character data.
-3. The character is added to your vault.
+Character cards saved as PNG images store all their data in a special metadata chunk inside the file. When you import one, CharacterVault reads that chunk, parses the JSON inside, and creates a new character with the image as its avatar. This works with cards from SillyTavern, TavernAI, and similar tools.
 
-### From JSON
+### JSON Files
 
-JSON files can contain V2 or V3 character card data.
+JSON imports are flexible. CharacterVault recognizes several formats:
 
-1. Click the **Import** button.
-2. Select a JSON file.
-3. The character is imported and added to your vault.
+- **Flat V2** — a simple JSON object with fields like `name`, `description`, `personality` sitting at the top level
+- **Wrapped V2 or V3** — the same fields nested inside a structure that declares the specification version
+- **CharacterVault export** — CharacterVault's own format includes everything the app stores about a character
 
-### From SillyTavern Clipboard
+All three load cleanly into your vault.
 
-Character Vault supports importing characters copied to the clipboard from SillyTavern:
+### From SillyTavern
 
-1. In SillyTavern, copy a character to the clipboard.
-2. In Character Vault, navigate to the **Import** page (accessible via the `/import` route or the SillyTavern export extension deep link).
-3. Paste the character data.
-
-### SillyTavern Export Extension
-
-The **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)** adds a direct "Export to CharacterVault" option inside SillyTavern's export menu.
+The **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)** adds an "Export to CharacterVault" button right inside SillyTavern's export menu. When you use it, the extension copies the character to your clipboard in a format CharacterVault understands — no need to save files manually.
 
 ## Exporting Characters
 
-### As PNG
+Open a character and click **Export** in the toolbar. You have two choices:
 
-Exports the character card as a PNG image with the character data embedded in the `chara` metadata field. This is the most portable format — it can be re-imported into Character Vault, SillyTavern, or any other compatible tool.
+### PNG
 
-### As JSON V3
+Your character becomes a PNG image with all data embedded in the image file itself. This is the most versatile option — send it to anyone and they can drag it straight into SillyTavern, CharacterVault, or any compatible app. The data is embedded as a V3 specification.
 
-Exports the full V3 character card specification as a JSON file. This includes all V2 fields plus V3 additions: `avatar`, `creator_notes`, `creator`, `character_version`, `tags`, and `physical_description`.
+### JSON
 
-### As JSON V2
+Exports a JSON file using the V3 specification. Includes name, description, personality, scenario, greetings, lorebook, creator information, tags, and notes.
 
-Exports the character card in the V2 specification format for compatibility with older tools. V3-only fields (appearance, tags, creator notes, etc.) are omitted.
+## What Each Format Includes
 
-## Card Specification Support
-
-Character Vault supports both **V2** and **V3** character card specifications:
-
-| Spec | Key Fields |
-| :--- | :--- |
-| **V2** | `name`, `description`, `personality`, `scenario`, `first_mes`, `mes_example`, `system_prompt`, `post_history_instructions`, `alternate_greetings`, `character_book`, `extensions` |
-| **V3** | All V2 fields plus `avatar`, `creator_notes`, `creator`, `character_version`, `tags`, `physical_description` |
+| Feature | PNG | JSON |
+| :--- | :--- | :--- |
+| Basic fields (name, description, etc.) | ✓ | ✓ |
+| Alternate greetings | ✓ | ✓ |
+| Lorebook / character book | ✓ | ✓ |
+| Creator name, version, tags | ✓ | ✓ |
+| Creator notes | ✓ | ✓ |
+| Character image | ✓ | — |
 
 ## Next Steps
 

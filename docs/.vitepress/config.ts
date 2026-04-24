@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'CharacterVault Docs',
-  description: 'Documentation for CharacterVault — AI Character Management Suite',
+  title: 'Docs',
+  description: 'AI Character Management Suite',
   base: '/CharacterVault/docs/',
   srcDir: '.',
   outDir: '../dist/docs',
@@ -12,9 +12,8 @@ export default defineConfig({
   ],
   themeConfig: {
     logo: '/CharacterVaultLogo.svg',
-    nav: [
+nav: [
       { text: 'App', link: 'https://spaceman2408.github.io/CharacterVault/' },
-      { text: 'Docs Home', link: '/' },
       { text: 'GitHub', link: 'https://github.com/spaceman2408/CharacterVault' },
     ],
     sidebar: [
@@ -26,10 +25,11 @@ export default defineConfig({
           { text: 'Creating & Editing Characters', link: '/getting-started/creating-characters' },
         ],
       },
-      {
+{
         text: 'Features',
         items: [
-          { text: 'AI Assistant — Orion', link: '/features/ai-assistant' },
+          { text: 'AI Assistant Orion', link: '/features/ai-assistant' },
+          { text: 'AI Context Panel', link: '/features/ai-context' },
           { text: 'Editor & AI Toolkit', link: '/features/editor' },
           { text: 'Greetings Editor', link: '/features/greetings-editor' },
           { text: 'Lorebook Editor', link: '/features/lorebook-editor' },
@@ -53,8 +53,7 @@ export default defineConfig({
     search: {
       provider: 'local',
     },
-    footer: {
-      message: 'CharacterVault documentation',
+footer: {
       copyright: 'Copyright © 2026 spaceman2408',
     },
   },

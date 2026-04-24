@@ -2,6 +2,10 @@
 
 Every text field in Character Vault uses a **CodeMirror 6** editor — a fast, keyboard-friendly editor with AI tools built directly into the toolbar.
 
+::: tip
+AI toolbar operations require an AI provider to be configured. If you haven't set one up, see [AI Setup](/configuration/ai-setup).
+:::
+
 ## AI Toolbar
 
 A fixed toolbar sits at the top of every editor. When you select text, the AI buttons become active.
@@ -18,7 +22,11 @@ These are always visible in the toolbar:
 
 The **Custom** button opens an inline text input instead of running immediately. Type your instruction, then press **Enter** or click **Send**. Press **Escape** or **Cancel** to close it without running.
 
-Custom works even without a selection — you can give instructions about the whole section.
+::: tip
+Custom works even without a selection — you can give instructions about the whole section. For example, type "add more detail" to enhance the entire field at once.
+:::
+
+## Polish Operations
 
 ### Polish Operations
 
@@ -40,8 +48,12 @@ When text is selected, the right side of the toolbar shows the character count. 
 
 After an AI operation finishes, a result panel appears below the toolbar showing the AI's output:
 
-- **✓ Accept** — Replaces your selection with the AI result. The inserted text gets a brief green highlight.
+- **✓ Accept** — Replaces your selection with the AI result.
 - **✕ Reject** — Discards the AI result and keeps your original text.
+
+::: tip
+Accepted text gets a brief green highlight so you can spot what changed. It fades after a moment.
+:::
 
 ### Stop
 
