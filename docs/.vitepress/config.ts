@@ -46,6 +46,12 @@ nav: [
           { text: 'Sampler Settings', link: '/configuration/sampler-settings' },
         ],
       },
+      {
+        text: 'More',
+        items: [
+          { text: 'FAQ', link: '/faq' },
+        ],
+      },
     ],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/spaceman2408/CharacterVault' },
