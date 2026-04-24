@@ -35,6 +35,15 @@ interface HighlightedLine extends AlignedLine {
   segments: DiffSegment[];
 }
 
+interface DiffGap {
+  key: string;
+  hiddenLineCount: number;
+}
+
+type RenderableDiffLine =
+  | { type: 'line'; line: HighlightedLine }
+  | { type: 'gap'; gap: DiffGap };
+
 type ConfirmAction =
   | { kind: 'delete'; metadata: SnapshotMetadata }
   | { kind: 'restore-whole'; metadata: SnapshotMetadata }
@@ -151,6 +160,34 @@ function formatChangedGreetings(value: string[], compareValue: string[]): string
       .filter(greeting => greeting.length > 0)
       .join('\n\n---\n\n'),
   );
+}
+
+function isCreatorNotesEntry(entry: SnapshotDiffEntry): boolean {
+  return entry.section === 'creator_notes';
+}
+
+function extractStyleBlocks(html: string): string[] {
+  const normalizedHtml = normalizeLineEndings(html);
+  const styleBlocks: string[] = [];
+  const styleTagPattern = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
+
+  for (const match of normalizedHtml.matchAll(styleTagPattern)) {
+    const css = match[1]?.trim();
+    if (css) {
+      styleBlocks.push(css);
+    }
+  }
+
+  return styleBlocks;
+}
+
+function formatCreatorNotesCss(value: string): string {
+  const cssBlocks = extractStyleBlocks(value);
+  if (cssBlocks.length === 0) {
+    return '';
+  }
+
+  return normalizeLineEndings(cssBlocks.join('\n\n/* --- */\n\n'));
 }
 
 function splitChangedSegments(value: string, compareValue: string): DiffSegment[] {
@@ -318,6 +355,64 @@ function buildHighlightedLines(value: string, compareValue: string): Highlighted
     }));
 }
 
+function buildRenderableDiffLines(lines: HighlightedLine[], contextLines = 2): RenderableDiffLine[] {
+  if (lines.length === 0) {
+    return [];
+  }
+
+  const changedIndexes = lines.reduce<number[]>((indexes, line, index) => {
+    if (line.changed) {
+      indexes.push(index);
+    }
+    return indexes;
+  }, []);
+
+  if (changedIndexes.length === 0) {
+    return lines.map(line => ({ type: 'line', line }));
+  }
+
+  const windows = changedIndexes.reduce<Array<{ start: number; end: number }>>((ranges, index) => {
+    const start = Math.max(0, index - contextLines);
+    const end = Math.min(lines.length - 1, index + contextLines);
+    const previousRange = ranges[ranges.length - 1];
+
+    if (previousRange && start <= previousRange.end + 1) {
+      previousRange.end = Math.max(previousRange.end, end);
+    } else {
+      ranges.push({ start, end });
+    }
+
+    return ranges;
+  }, []);
+
+  const renderableLines: RenderableDiffLine[] = [];
+
+  windows.forEach((range, rangeIndex) => {
+    if (rangeIndex > 0) {
+      const previousRange = windows[rangeIndex - 1];
+      const hiddenLineCount = range.start - previousRange.end - 1;
+      if (hiddenLineCount > 0) {
+        renderableLines.push({
+          type: 'gap',
+          gap: {
+            key: `gap-${rangeIndex}-${range.start}`,
+            hiddenLineCount,
+          },
+        });
+      }
+    }
+
+    for (let index = range.start; index <= range.end; index += 1) {
+      renderableLines.push({
+        type: 'line',
+        line: lines[index],
+      });
+    }
+  });
+
+  return renderableLines;
+}
+
 function isSectionCollapsedByDefault(section: SnapshotDiffEntry['section'], activeSection: string): boolean {
   return section !== activeSection;
 }
@@ -341,33 +436,98 @@ function SnapshotSourceBadge({ source }: { source: SnapshotMetadata['source'] })
 function HighlightedText({
   lines,
   changedToneClassName,
+  isCode = false,
 }: {
   lines: HighlightedLine[];
   changedToneClassName: string;
+  isCode?: boolean;
 }): React.ReactElement {
+  const textClassName = isCode
+    ? 'font-mono text-[12px] leading-5 whitespace-pre-wrap break-all [overflow-wrap:anywhere]'
+    : 'text-sm leading-6 whitespace-pre-wrap break-words';
+
   return (
     <div className="space-y-1">
       {lines.length > 0 ? lines.map((line) => (
         <div
           key={line.key}
-          className={`wrap-break-words rounded px-1.5 py-0.5 text-sm leading-6 text-vault-700 dark:text-vault-200 ${
+          className={`min-w-0 rounded px-1.5 py-0.5 text-vault-700 dark:text-vault-200 ${
+            textClassName
+          } ${
             line.changed ? 'bg-vault-100/80 dark:bg-vault-800/60' : ''
           }`}
         >
           {line.segments.length > 0 ? line.segments.map((segment, segmentIndex) => (
             <span
               key={`${line.key}-${segmentIndex}`}
-              className={segment.changed ? `wrap-break-words rounded px-0.5 ${changedToneClassName}` : undefined}
+              className={segment.changed ? `rounded px-0.5 ${changedToneClassName}` : undefined}
             >
               {segment.text || ' '}
             </span>
           )) : line.value ? (
-            <span className="wrap-break-words">{line.value}</span>
+            <span>{line.value}</span>
           ) : (
-            <span className={`wrap-break-words rounded px-0.5 ${changedToneClassName}`}>{line.compareValue || ' '}</span>
+            <span className={`rounded px-0.5 ${changedToneClassName}`}>{line.compareValue || ' '}</span>
           )}
         </div>
       )) : (
+        <div className="rounded px-2 py-1 text-sm text-vault-400 dark:text-vault-500">Empty</div>
+      )}
+    </div>
+  );
+}
+
+function HunkedHighlightedText({
+  lines,
+  changedToneClassName,
+  contextLines = 2,
+}: {
+  lines: HighlightedLine[];
+  changedToneClassName: string;
+  contextLines?: number;
+}): React.ReactElement {
+  const renderableLines = useMemo(
+    () => buildRenderableDiffLines(lines, contextLines),
+    [contextLines, lines],
+  );
+
+  return (
+    <div className="space-y-1">
+      {renderableLines.length > 0 ? renderableLines.map((item) => {
+        if (item.type === 'gap') {
+          return (
+            <div
+              key={item.gap.key}
+              className="rounded border border-dashed border-vault-200 bg-vault-100/60 px-2 py-1 text-[11px] font-medium text-vault-500 dark:border-vault-700 dark:bg-vault-800/50 dark:text-vault-400"
+            >
+              {item.gap.hiddenLineCount} unchanged {item.gap.hiddenLineCount === 1 ? 'line' : 'lines'} hidden
+            </div>
+          );
+        }
+
+        const line = item.line;
+        return (
+          <div
+            key={line.key}
+            className={`min-w-0 rounded px-1.5 py-0.5 font-mono text-[12px] leading-5 whitespace-pre-wrap break-all wrap-anywhere text-vault-700 dark:text-vault-200 ${
+              line.changed ? 'bg-vault-100/80 dark:bg-vault-800/60' : ''
+            }`}
+          >
+            {line.segments.length > 0 ? line.segments.map((segment, segmentIndex) => (
+              <span
+                key={`${line.key}-${segmentIndex}`}
+                className={segment.changed ? `rounded px-0.5 ${changedToneClassName}` : undefined}
+              >
+                {segment.text || ' '}
+              </span>
+            )) : line.value ? (
+              <span>{line.value}</span>
+            ) : (
+              <span className={`rounded px-0.5 ${changedToneClassName}`}>{line.compareValue || ' '}</span>
+            )}
+          </div>
+        );
+      }) : (
         <div className="rounded px-2 py-1 text-sm text-vault-400 dark:text-vault-500">Empty</div>
       )}
     </div>
@@ -400,11 +560,13 @@ function SyncedDiffView({
   currentValue,
   isSnapshotMissing,
   hasAttemptedLoad,
+  isCode = false,
 }: {
   snapshotValue: string;
   currentValue: string;
   isSnapshotMissing?: boolean;
   hasAttemptedLoad?: boolean;
+  isCode?: boolean;
 }): React.ReactElement {
   const snapshotLines = useMemo(() => buildHighlightedLines(snapshotValue, currentValue), [currentValue, snapshotValue]);
   const currentLines = useMemo(() => buildHighlightedLines(currentValue, snapshotValue), [currentValue, snapshotValue]);
@@ -429,33 +591,148 @@ function SyncedDiffView({
 
   return (
     <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
-      <div className="grid lg:grid-cols-2">
+      <div className="grid min-w-0 lg:grid-cols-2">
         {/* Revision snapshot */}
-        <div className="border-b border-vault-200 p-3 dark:border-vault-800 lg:border-b-0 lg:border-r">
+        <div className="min-w-0 border-b border-vault-200 p-3 dark:border-vault-800 lg:border-b-0 lg:border-r">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
             Revision snapshot · {changedLineCountLeft} {changedLineCountLeft === 1 ? 'line' : 'lines'} changed
           </p>
-          <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
+          <div className="space-y-1 overflow-x-auto rounded bg-white/50 p-2 dark:bg-vault-950/50">
             <HighlightedText
               lines={snapshotLines}
               changedToneClassName="bg-amber-200/80 text-amber-950 dark:bg-amber-700/40 dark:text-amber-50"
+              isCode={isCode}
             />
           </div>
         </div>
 
         {/* Current draft */}
-        <div className="p-3">
+        <div className="min-w-0 p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
             Current draft · {changedLineCountRight} {changedLineCountRight === 1 ? 'line' : 'lines'} changed
           </p>
-          <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
+          <div className="space-y-1 overflow-x-auto rounded bg-white/50 p-2 dark:bg-vault-950/50">
             <HighlightedText
               lines={currentLines}
               changedToneClassName="bg-emerald-200/80 text-emerald-950 dark:bg-emerald-700/40 dark:text-emerald-50"
+              isCode={isCode}
             />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CreatorNotesDiffView({
+  snapshotValue,
+  currentValue,
+  isSnapshotMissing,
+  hasAttemptedLoad,
+}: {
+  snapshotValue: string;
+  currentValue: string;
+  isSnapshotMissing?: boolean;
+  hasAttemptedLoad?: boolean;
+}): React.ReactElement {
+  const [viewMode, setViewMode] = useState<'css' | 'full'>('css');
+  const snapshotCss = useMemo(() => formatCreatorNotesCss(snapshotValue), [snapshotValue]);
+  const currentCss = useMemo(() => formatCreatorNotesCss(currentValue), [currentValue]);
+  const hasCssDiffView = snapshotCss.length > 0 || currentCss.length > 0;
+  const resolvedViewMode = hasCssDiffView ? viewMode : 'full';
+  const snapshotCssLines = useMemo(() => buildHighlightedLines(snapshotCss, currentCss), [currentCss, snapshotCss]);
+  const currentCssLines = useMemo(() => buildHighlightedLines(currentCss, snapshotCss), [currentCss, snapshotCss]);
+  const changedCssLineCountLeft = useMemo(() => snapshotCssLines.filter(line => line.changed).length, [snapshotCssLines]);
+  const changedCssLineCountRight = useMemo(() => currentCssLines.filter(line => line.changed).length, [currentCssLines]);
+
+  if (isSnapshotMissing && hasAttemptedLoad) {
+    return (
+      <SyncedDiffView
+        snapshotValue={snapshotValue}
+        currentValue={currentValue}
+        isSnapshotMissing={isSnapshotMissing}
+        hasAttemptedLoad={hasAttemptedLoad}
+        isCode
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-vault-900 dark:text-vault-100">Creator Notes diff</p>
+          <p className="text-xs text-vault-500 dark:text-vault-400">
+            {hasCssDiffView
+              ? 'Changed CSS is shown with nearby context so large style blocks stay readable.'
+              : 'No embedded CSS blocks were found, so the full document diff is shown.'}
+          </p>
+        </div>
+        <div className="inline-flex rounded-lg border border-vault-200 bg-white p-1 dark:border-vault-800 dark:bg-vault-900">
+          {hasCssDiffView ? (
+            <button
+              type="button"
+              onClick={() => setViewMode('css')}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                resolvedViewMode === 'css'
+                  ? 'bg-vault-900 text-white dark:bg-vault-100 dark:text-vault-900'
+                  : 'text-vault-600 hover:bg-vault-100 dark:text-vault-300 dark:hover:bg-vault-800'
+              }`}
+            >
+              Changed CSS
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setViewMode('full')}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              resolvedViewMode === 'full'
+                ? 'bg-vault-900 text-white dark:bg-vault-100 dark:text-vault-900'
+                : 'text-vault-600 hover:bg-vault-100 dark:text-vault-300 dark:hover:bg-vault-800'
+            }`}
+          >
+            Full document
+          </button>
+        </div>
+      </div>
+
+      {resolvedViewMode === 'css' && hasCssDiffView ? (
+        <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
+          <div className="grid min-w-0 lg:grid-cols-2">
+            <div className="min-w-0 border-b border-vault-200 p-3 dark:border-vault-800 lg:border-b-0 lg:border-r">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+                Revision Snapshot · {changedCssLineCountLeft} {changedCssLineCountLeft === 1 ? 'line' : 'lines'} changed
+              </p>
+              <div className="space-y-1 overflow-x-auto rounded bg-white/50 p-2 dark:bg-vault-950/50">
+                <HunkedHighlightedText
+                  lines={snapshotCssLines}
+                  changedToneClassName="bg-amber-200/80 text-amber-950 dark:bg-amber-700/40 dark:text-amber-50"
+                />
+              </div>
+            </div>
+
+            <div className="min-w-0 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+                Current CSS · {changedCssLineCountRight} {changedCssLineCountRight === 1 ? 'line' : 'lines'} changed
+              </p>
+              <div className="space-y-1 overflow-x-auto rounded bg-white/50 p-2 dark:bg-vault-950/50">
+                <HunkedHighlightedText
+                  lines={currentCssLines}
+                  changedToneClassName="bg-emerald-200/80 text-emerald-950 dark:bg-emerald-700/40 dark:text-emerald-50"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <SyncedDiffView
+          snapshotValue={snapshotValue}
+          currentValue={currentValue}
+          isSnapshotMissing={isSnapshotMissing}
+          hasAttemptedLoad={hasAttemptedLoad}
+          isCode
+        />
+      )}
     </div>
   );
 }
@@ -551,7 +828,25 @@ function SectionPreview({
       ? formatChangedGreetings(currentGreetingsValue ?? [], snapshotGreetingsValue ?? [])
     : formatValue(entry.currentValue);
 
-  return <SyncedDiffView snapshotValue={snapshotValue} currentValue={currentValue} isSnapshotMissing={isSnapshotMissing} hasAttemptedLoad={hasAttemptedLoad} />;
+  if (isCreatorNotesEntry(entry)) {
+    return (
+      <CreatorNotesDiffView
+        snapshotValue={snapshotValue}
+        currentValue={currentValue}
+        isSnapshotMissing={isSnapshotMissing}
+        hasAttemptedLoad={hasAttemptedLoad}
+      />
+    );
+  }
+
+  return (
+    <SyncedDiffView
+      snapshotValue={snapshotValue}
+      currentValue={currentValue}
+      isSnapshotMissing={isSnapshotMissing}
+      hasAttemptedLoad={hasAttemptedLoad}
+    />
+  );
 }
 
 function ConfirmationDialog({
