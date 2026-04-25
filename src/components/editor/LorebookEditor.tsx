@@ -19,8 +19,11 @@ import {
   X,
   Eye,
   EyeOff,
+  Upload,
+  Download,
 } from 'lucide-react';
 import { AIService } from '../../services/AIService';
+import { importLorebook, convertToSTLorebook } from '../../services/LorebookConverter';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
 import type { CharacterSection, LorebookEntry, CharacterBook } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
@@ -709,6 +712,116 @@ function LorebookEditorInner({
     persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
   }, [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook]);
 
+  // File input ref for import
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle import lorebook from file
+  const handleImportClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as unknown;
+      const importedBook = importLorebook(data);
+
+      if (!importedBook) {
+        alert('Could not recognize the lorebook format. Please ensure it is a valid SillyTavern or CharacterVault export.');
+        return;
+      }
+
+      // Check if we have existing entries
+      if (entries.length > 0) {
+        const confirmed = window.confirm(
+          `This will replace all ${entries.length} existing entries with ${importedBook.entries.length} imported entries. Continue?`
+        );
+        if (!confirmed) return;
+      }
+
+      // Replace all entries with imported ones
+      persistLorebook({
+        name: importedBook.name || bookName,
+        description: importedBook.description || bookDescription,
+        entries: importedBook.entries,
+        extensions: importedBook.extensions || {},
+      });
+
+      // Reset selection
+      setSelectedEntryIndex(0);
+
+      // Show success feedback
+      alert(`Successfully imported ${importedBook.entries.length} entries.`);
+    } catch (err) {
+      console.error('Import error:', err);
+      alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      // Reset file input
+      e.target.value = '';
+    }
+  }, [entries.length, bookName, bookDescription, persistLorebook]);
+
+  /**
+   * Sanitize a string for use as a Windows filename
+   * - Removes reserved characters: < > : " / \ | ? *
+   * - Removes control characters (0x00-0x1F)
+   * - Trims trailing spaces and periods
+   * - Avoids reserved names by appending underscore
+   * - Limits to 200 chars (leaving room for extension)
+   */
+  const sanitizeFilename = useCallback((name: string, suffix: string): string => {
+    // Windows reserved characters + control characters (use unicode escape to avoid linter issues)
+    // eslint-disable-next-line no-control-regex
+    let sanitized = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_');
+
+    // Trim trailing spaces and periods (Windows doesn't allow these)
+    sanitized = sanitized.replace(/[.\s]+$/, '');
+
+    // Windows reserved names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+    const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+    if (reservedNames.test(sanitized)) {
+      sanitized += '_';
+    }
+
+    // Limit length (leave room for suffix)
+    const maxLength = 200 - suffix.length;
+    if (sanitized.length > maxLength) {
+      sanitized = sanitized.slice(0, maxLength);
+      // Re-trim trailing spaces/periods after truncation
+      sanitized = sanitized.replace(/[.\s]+$/, '');
+    }
+
+    return (sanitized || 'lorebook') + suffix;
+  }, []);
+
+  // Handle export lorebook to file
+  const handleExport = useCallback(() => {
+    const exportData = convertToSTLorebook(draftLorebook);
+    const blob = new Blob([JSON.stringify(exportData)], { type: 'application/json' });
+    let url: string | null = null;
+
+    try {
+      url = URL.createObjectURL(blob);
+
+      const suffix = "'s Lorebook.json";
+      const filename = sanitizeFilename(bookName || 'character', suffix);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    }
+  }, [draftLorebook, bookName, sanitizeFilename]);
+
   return (
     <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
       {/* Left Sidebar - Hidden on mobile when viewing detail */}
@@ -866,8 +979,43 @@ function LorebookEditorInner({
           )}
         </div>
 
-        {/* Add Button at Bottom */}
-        <div className="shrink-0 p-3 border-t border-vault-200 dark:border-vault-700">
+        {/* Import/Export/Add Buttons at Bottom */}
+        <div className="shrink-0 p-3 border-t border-vault-200 dark:border-vault-700 space-y-2">
+          {/* Import/Export Row */}
+          <div className="flex gap-2">
+            {/* Hidden file input for import */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleImportFile}
+              className="hidden"
+            />
+            <button
+              onClick={handleImportClick}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-vault-200 dark:border-vault-700
+                text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200
+                hover:bg-vault-50 dark:hover:bg-vault-700/30
+                rounded-lg text-sm transition-colors"
+              title="Import lorebook from JSON file"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">Import</span>
+            </button>
+            <button
+              onClick={handleExport}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-vault-200 dark:border-vault-700
+                text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200
+                hover:bg-vault-50 dark:hover:bg-vault-700/30
+                rounded-lg text-sm transition-colors"
+              title="Export lorebook to JSON file"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          </div>
+
+          {/* New Entry Button */}
           <button
             onClick={handleAddEntry}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-vault-300 dark:border-vault-600

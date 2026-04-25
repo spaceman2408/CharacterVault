@@ -28,3 +28,14 @@ export { CharacterSettingsService, characterSettingsService } from './CharacterS
 export { CharacterImportService, characterImportService } from './CharacterImportService';
 export { CharacterExportService, characterExportService } from './CharacterExportService';
 export { CharacterSnapshotService, characterSnapshotService, type SnapshotRestoreAction } from './CharacterSnapshotService';
+
+// Lorebook format converter
+export {
+  detectLorebookFormat,
+  importLorebook,
+  exportLorebook,
+  convertSTLorebook,
+  convertToSTLorebook,
+  type STLorebookEntry,
+  type STLorebookExport,
+} from './LorebookConverter';
