@@ -222,10 +222,10 @@ function createToolbarPanel(
   instructContainer.className = 'ai-toolbar-instruct';
   instructContainer.style.cssText = 'display: none; align-items: center; gap: 6px; flex: 1; min-width: 200px;';
 
-  const instructInput = document.createElement('input');
+  const instructInput = document.createElement('textarea');
   instructInput.className = 'ai-toolbar-instruct-input';
-  instructInput.type = 'text';
   instructInput.placeholder = 'What would you like me to do?';
+  instructInput.rows = 1;
   instructInput.style.cssText = `
     flex: 1;
     padding: 6px 10px;
@@ -235,6 +235,12 @@ function createToolbarPanel(
     border-radius: 6px;
     color: var(--ai-toolbar-text);
     outline: none;
+    resize: none;
+    overflow-y: auto;
+    min-height: 34px;
+    max-height: 120px;
+    font-family: inherit;
+    line-height: 1.4;
   `;
 
   const instructSendBtn = document.createElement('button');
@@ -337,12 +343,22 @@ function createToolbarPanel(
 
   instructSendBtn.addEventListener('click', sendInstruct);
   instructInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendInstruct();
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendInstruct();
+    }
     if (e.key === 'Escape') {
       isInstructMode = false;
       instructInput.value = '';
       updateState();
     }
+  });
+
+  // Auto-grow textarea as user types
+  instructInput.addEventListener('input', () => {
+    instructInput.style.height = 'auto';
+    const newHeight = Math.min(instructInput.scrollHeight, 120);
+    instructInput.style.height = `${newHeight}px`;
   });
 
   // Handle instruct cancel
