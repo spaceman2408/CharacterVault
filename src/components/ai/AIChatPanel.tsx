@@ -41,7 +41,7 @@ export function AIChatPanel({
   const [askQuestion, setAskQuestion] = useState('');
   const [resolvedContext, setResolvedContext] = useState<string[]>([]);
   const [isStreamingReasoningExpanded, setIsStreamingReasoningExpanded] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamingReasoningRef = useRef<HTMLDivElement>(null);
   const wasTypingRef = useRef(false);
 

@@ -1345,6 +1345,8 @@ export function CharacterHistoryModal({
     setIsLoadingDiff(true);
     setHasAttemptedLoad(false);
     let cancelled = false;
+    const startTime = performance.now();
+    const MIN_LOADING_MS = 300; // Minimum time to show loading for smooth transition
 
     void (async () => {
       try {
@@ -1366,8 +1368,15 @@ export function CharacterHistoryModal({
         setSelectedSnapshot(null);
       } finally {
         if (!cancelled) {
-          setIsLoadingDiff(false);
-          setHasAttemptedLoad(true);
+          const elapsed = performance.now() - startTime;
+          const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+          // Ensure minimum loading time for smooth fade transition
+          setTimeout(() => {
+            if (!cancelled) {
+              setIsLoadingDiff(false);
+              setHasAttemptedLoad(true);
+            }
+          }, remaining);
         }
       }
     })();
@@ -1571,7 +1580,7 @@ export function CharacterHistoryModal({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="animate-fade-in space-y-6">
                   {/* Snapshot summary - Flattened, no card wrapper */}
                   {selectedMetadata && (
                     <SnapshotSummary
