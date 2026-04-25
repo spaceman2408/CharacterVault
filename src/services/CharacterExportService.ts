@@ -403,12 +403,21 @@ export class CharacterExportService {
    *   (which reads `comment`, not `name`) can display the entry label
    * - Coerces `case_sensitive` to a boolean for spec compliance
    *   (ST may store it as null or omit it, using extensions.case_sensitive instead)
+   * - Strips empty character books (no name, description, entries, or extensions)
+   *   to prevent SillyTavern from creating unnecessary lorebooks on import
    */
   private sanitizeLorebookForExport(book: CharacterBook | undefined): CharacterBook | undefined {
     if (!book) return undefined;
 
+    // Strip empty character books to avoid creating unnecessary lorebooks on import
+    const hasContent = book.name || book.description || book.entries.length > 0;
+    const hasExtensions = book.extensions && Object.keys(book.extensions).length > 0;
+    if (!hasContent && !hasExtensions) {
+      return undefined;
+    }
+
     const entries = book.entries.map((entry: LorebookEntry) => {
-      const { insertion_order, ...rest } = entry;
+      const { ...rest } = entry;
       const extCaseSensitive = rest.extensions?.case_sensitive as boolean | null | undefined;
       return {
         ...rest,
