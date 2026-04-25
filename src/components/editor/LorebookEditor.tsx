@@ -50,6 +50,7 @@ interface LorebookEditorProps {
   activeSection: string;
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
+  characterName?: string;
 }
 
 interface LorebookEntryListItemProps {
@@ -545,6 +546,7 @@ function LorebookEditorInner({
   getContextContent,
   fontSize,
   onFontSizeChange,
+  characterName,
 }: LorebookEditorInnerProps): React.ReactElement {
   const normalizedPropLorebook = useMemo<CharacterBook>(() => ({
     name: lorebook?.name || '',
@@ -806,8 +808,9 @@ function LorebookEditorInner({
     try {
       url = URL.createObjectURL(blob);
 
-      const suffix = "'s Lorebook.json";
-      const filename = sanitizeFilename(bookName || 'character', suffix);
+      // Use bookName if set, otherwise fall back to "{characterName}'s Lorebook.json"
+      const name = bookName.trim() || `${characterName || 'character'}'s Lorebook`;
+      const filename = sanitizeFilename(name, '.json');
 
       const a = document.createElement('a');
       a.href = url;
@@ -820,7 +823,7 @@ function LorebookEditorInner({
         URL.revokeObjectURL(url);
       }
     }
-  }, [draftLorebook, bookName, sanitizeFilename]);
+  }, [draftLorebook, bookName, characterName, sanitizeFilename]);
 
   return (
     <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
