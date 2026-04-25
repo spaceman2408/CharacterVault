@@ -14,6 +14,7 @@ import type {
   UpdateCharacterInput,
   SnapshotMetadata,
   CharacterListItem,
+  StoredImage,
 } from './characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
 import { v4 as uuidv4 } from 'uuid';
@@ -78,6 +79,9 @@ export class CharacterDatabase extends Dexie {
   /** Table storing settings */
   settings!: Table<CharacterVaultSettings, string>;
 
+  /** Table storing images - content-addressed storage */
+  storedImages!: Table<StoredImage, string>;
+
   constructor() {
     super('character-vault-db');
 
@@ -113,11 +117,12 @@ export class CharacterDatabase extends Dexie {
       }));
     });
 
-    // Version 4: Add thumbnailData field (no migration needed - app is unreleased)
+    // Version 4: Add thumbnailData field and storedImages table (no migration needed - app is unreleased)
     this.version(4).stores({
       characters: 'id, name, updatedAt, createdAt',
       settings: 'id',
       snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+      storedImages: 'id',
     });
   }
 
@@ -456,33 +461,36 @@ export class CharacterDatabase extends Dexie {
   // ============================================================================
 
   async createSnapshot(input: CreateSnapshotInput): Promise<CharacterSnapshot | null> {
-    // Enforce single "open" snapshot per character - return existing if already present
-    if (input.source === 'open') {
-      const existingOpen = await this.snapshots
-        .where('characterId')
-        .equals(input.characterId)
-        .filter(s => s.source === 'open')
-        .first();
-      if (existingOpen) {
-        return existingOpen;
-      }
-    }
-
     const latestSnapshot = await this.getLatestSnapshot(input.characterId);
     if (latestSnapshot?.payloadHash === input.payloadHash) {
       return null;
     }
 
+    // Create snapshot with empty image data in payload (stored separately in storedImages)
     const snapshot: CharacterSnapshot = {
       id: uuidv4(),
       characterId: input.characterId,
       source: input.source,
       createdAt: new Date().toISOString(),
-      payload: input.payload,
+      payload: {
+        ...input.payload,
+        imageData: '', // Stored in storedImages via imageHash
+        thumbnailData: '',
+      },
       payloadHash: input.payloadHash,
+      imageHash: input.imageHash,
     };
 
-    await this.transaction('rw', this.snapshots, async () => {
+    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
+      // Store the image in content-addressed storage if provided
+      if (input.imageHash && input.payload.imageData) {
+        await this.storedImages.put({
+          id: input.imageHash,
+          imageData: input.payload.imageData,
+          thumbnailData: input.payload.thumbnailData,
+        });
+      }
+
       await this.snapshots.add(snapshot);
       await this.pruneSnapshotsForCharacter(input.characterId, 10);
     });
@@ -506,22 +514,16 @@ export class CharacterDatabase extends Dexie {
     return snapshots.at(-1);
   }
 
-  async getLatestSnapshotWithImage(characterId: string): Promise<CharacterSnapshot | undefined> {
-    const snapshots = await this.snapshots
-      .where('characterId')
-      .equals(characterId)
-      .sortBy('createdAt');
-    // Search from newest (end of array) to find the most recent one with image data
-    for (let index = snapshots.length - 1; index >= 0; index -= 1) {
-      if (snapshots[index].payload.imageData) {
-        return snapshots[index];
-      }
-    }
-    return undefined;
-  }
-
   async deleteSnapshot(snapshotId: string): Promise<void> {
-    await this.snapshots.delete(snapshotId);
+    const snapshot = await this.snapshots.get(snapshotId);
+    if (!snapshot) {
+      return;
+    }
+
+    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
+      await this.snapshots.delete(snapshotId);
+      await this.cleanOrphanedImages(snapshot.characterId);
+    });
   }
 
   async pruneSnapshotsForCharacter(characterId: string, limit: number): Promise<void> {
@@ -530,15 +532,15 @@ export class CharacterDatabase extends Dexie {
       .equals(characterId)
       .sortBy('createdAt');
 
-    // Separate baseline (open) snapshots from deletable ones - baseline is protected
-    const deletableSnapshots = snapshots.filter(s => s.source !== 'open');
-
-    if (deletableSnapshots.length <= limit) {
+    if (snapshots.length <= limit) {
       return;
     }
 
-    const snapshotsToDelete = deletableSnapshots.slice(0, deletableSnapshots.length - limit);
-    await Promise.all(snapshotsToDelete.map(snapshot => this.snapshots.delete(snapshot.id)));
+    const snapshotsToDelete = snapshots.slice(0, snapshots.length - limit);
+    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
+      await Promise.all(snapshotsToDelete.map(snapshot => this.snapshots.delete(snapshot.id)));
+      await this.cleanOrphanedImages(characterId);
+    });
   }
 
   /**
@@ -552,13 +554,65 @@ export class CharacterDatabase extends Dexie {
       .where('characterId')
       .equals(characterId)
       .sortBy('createdAt');
-    return snapshots.reverse().map(({ id, characterId: cId, source, createdAt, payloadHash }) => ({
+    return snapshots.reverse().map(({ id, characterId: cId, source, createdAt, payloadHash, imageHash }) => ({
       id,
       characterId: cId,
       source,
       createdAt,
       payloadHash,
+      imageHash,
     }));
+  }
+
+  /**
+   * Resolve the actual image data for a snapshot from the storedImages table
+   * @param {string} imageHash - The image hash stored on the snapshot
+   * @returns {Promise<{ imageData: string; thumbnailData: string } | null>} Image data or null
+   */
+  async resolveSnapshotImage(imageHash: string | null): Promise<{ imageData: string; thumbnailData: string } | null> {
+    if (!imageHash) {
+      return null;
+    }
+    const storedImage = await this.storedImages.get(imageHash);
+    if (!storedImage) {
+      return null;
+    }
+    return { imageData: storedImage.imageData, thumbnailData: storedImage.thumbnailData };
+  }
+
+  /**
+   * Clean up orphaned stored images that are no longer referenced by any snapshot
+   * @param {string} characterId - The character ID to check (optional - if not provided, checks all)
+   * @returns {Promise<void>}
+   */
+  async cleanOrphanedImages(characterId?: string): Promise<void> {
+    let snapshots: CharacterSnapshot[];
+
+    if (characterId) {
+      snapshots = await this.snapshots
+        .where('characterId')
+        .equals(characterId)
+        .toArray();
+    } else {
+      snapshots = await this.snapshots.toArray();
+    }
+
+    // Get all image hashes that are still referenced
+    const referencedHashes = new Set(
+      snapshots.map(s => s.imageHash).filter((hash): hash is string => hash !== null)
+    );
+
+    // Get all stored image IDs
+    const allStoredImages = await this.storedImages.toArray();
+    const storedImageIds = allStoredImages.map(img => img.id);
+
+    // Find orphaned images (stored but not referenced)
+    const orphanedIds = storedImageIds.filter(id => !referencedHashes.has(id));
+
+    // Delete orphaned images
+    if (orphanedIds.length > 0) {
+      await Promise.all(orphanedIds.map(id => this.storedImages.delete(id)));
+    }
   }
 
   /**

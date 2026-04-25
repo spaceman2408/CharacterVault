@@ -105,7 +105,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     await refreshSnapshotsForCharacter(currentCharacterId);
   }, [currentCharacterId, refreshSnapshotsForCharacter]);
 
-  const createSnapshotFromCharacter = useCallback(async (character: Character, source: 'open' | 'manual' | 'rollback') => {
+  const createSnapshotFromCharacter = useCallback(async (character: Character, source: 'manual' | 'rollback') => {
     try {
       const snapshot = await characterSnapshotService.createSnapshot(character, source);
       if (isHistoryOpenRef.current) {
@@ -304,13 +304,14 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
 
     openedCharacterIdRef.current = currentCharacterId;
-    void createSnapshotFromCharacter(currentCharacter, 'open');
+    // Note: 'open' snapshots are created by openCharacter() in useCharacter.ts
+    // We don't create them here to avoid creating snapshots for newly created blank characters
     if (isHistoryOpenRef.current) {
       void refreshSnapshots();
     } else {
       setSnapshotMetadata([]);
     }
-  }, [createSnapshotFromCharacter, currentCharacter, currentCharacterId, refreshSnapshots]);
+  }, [currentCharacter, currentCharacterId, refreshSnapshots]);
 
   useEffect(() => {
     if (!isHistoryOpen) {

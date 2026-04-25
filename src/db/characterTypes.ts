@@ -126,6 +126,19 @@ export interface Character {
 
 export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback';
 
+/**
+ * Stored image entry - content-addressed storage for character images
+ * Images are keyed by hash so identical images are stored only once
+ */
+export interface StoredImage {
+  /** Content hash of imageData (used as primary key) */
+  id: string;
+  /** Base64 encoded PNG image data */
+  imageData: string;
+  /** Base64 encoded JPEG thumbnail */
+  thumbnailData: string;
+}
+
 export interface CharacterSnapshotPayload {
   name: string;
   imageData: string;
@@ -140,6 +153,8 @@ export interface CharacterSnapshot {
   createdAt: Timestamp;
   payload: CharacterSnapshotPayload;
   payloadHash: string;
+  /** Hash referencing the stored image in storedImages table */
+  imageHash: string | null;
 }
 
 /**
@@ -152,6 +167,8 @@ export interface SnapshotMetadata {
   source: SnapshotSource;
   createdAt: Timestamp;
   payloadHash: string;
+  /** Hash referencing the stored image in storedImages table */
+  imageHash: string | null;
 }
 
 export interface CreateSnapshotInput {
@@ -159,6 +176,8 @@ export interface CreateSnapshotInput {
   source: SnapshotSource;
   payload: CharacterSnapshotPayload;
   payloadHash: string;
+  /** Hash referencing the stored image in storedImages table */
+  imageHash: string | null;
 }
 
 export interface SnapshotDiffEntry {
