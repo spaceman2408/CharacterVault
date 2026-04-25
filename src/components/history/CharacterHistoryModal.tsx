@@ -1161,6 +1161,7 @@ export function CharacterHistoryModal({
   );
   const [isVisible, setIsVisible] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+  const [isContentReady, setIsContentReady] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -1182,6 +1183,7 @@ export function CharacterHistoryModal({
     setCollapsedSections({});
     setHighlightedSnapshotIds([]);
     setHasAttemptedLoad(false);
+    setIsContentReady(false);
     previousSnapshotIdsRef.current = [];
     clearSnapshotHighlightTimeouts();
   }, [clearSnapshotHighlightTimeouts]);
@@ -1190,7 +1192,11 @@ export function CharacterHistoryModal({
     if (isOpen) {
       setIsVisible(true);
       setIsClosing(false);
-      return;
+      // Delay showing content to prevent flash during modal entrance animation
+      const readyTimeoutId = window.setTimeout(() => {
+        setIsContentReady(true);
+      }, 100);
+      return () => window.clearTimeout(readyTimeoutId);
     }
 
     if (!isVisible) {
@@ -1199,6 +1205,7 @@ export function CharacterHistoryModal({
     }
 
     setIsClosing(true);
+    setIsContentReady(false);
     const timeoutId = window.setTimeout(() => {
       setIsVisible(false);
       setIsClosing(false);
@@ -1456,6 +1463,7 @@ export function CharacterHistoryModal({
       setSelectedSnapshotId(snapshotId);
       setDiffEntries([]);
       setSelectedSnapshot(null);
+      setIsLoadingDiff(true);
       setHasAttemptedLoad(false);
     }
   };
@@ -1513,7 +1521,7 @@ export function CharacterHistoryModal({
             <div className="flex items-center justify-between border-b border-vault-200 px-4 py-2.5 dark:border-vault-800">
               <span className="text-sm font-medium text-vault-900 dark:text-vault-100">{snapshotMetadata.length} revisions</span>
             </div>
-            <div className="flex-1 overflow-y-auto p-3">
+            <div className={`flex-1 overflow-y-auto p-3 transition-opacity duration-200 ${isContentReady ? 'opacity-100' : 'opacity-0'}`}>
               {isSnapshotsLoading && snapshotMetadata.length === 0 ? (
                 <div className="space-y-2">
                   {[0, 1, 2].map(index => (
@@ -1552,7 +1560,8 @@ export function CharacterHistoryModal({
           <section className="flex min-h-0 flex-1 flex-col">
             {/* Mobile scroller - no header duplication */}
             {isSnapshotsLoading && snapshotMetadata.length === 0 ? null : snapshotMetadata.length > 0 ? (
-              <MobileRevisionScroller
+              <div className={`transition-opacity duration-200 ${isContentReady ? 'opacity-100' : 'opacity-0'}`}>
+                <MobileRevisionScroller
                 metadata={snapshotMetadata}
                 selectedSnapshotId={selectedSnapshotId}
                 highlightedSnapshotIds={highlightedSnapshotIds}
@@ -1560,11 +1569,12 @@ export function CharacterHistoryModal({
                 onSelect={handleSelectSnapshot}
                 onDelete={(meta) => setConfirmAction({ kind: 'delete', metadata: meta })}
               />
+              </div>
             ) : null}
 
-            <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4 sm:px-6">
+            <div className={`flex-1 overflow-y-auto px-4 pb-6 pt-4 sm:px-6 transition-opacity duration-200 ${isContentReady ? 'opacity-100' : 'opacity-0'}`}>
               {!selectedSnapshotId ? (
-                <div className="flex min-h-full items-center justify-center rounded-2xl border border-dashed border-vault-300 bg-vault-50/50 p-8 text-center dark:border-vault-700 dark:bg-vault-900/40">
+                <div className="animate-fade-in flex min-h-full items-center justify-center rounded-2xl border border-dashed border-vault-300 bg-vault-50/50 p-8 text-center dark:border-vault-700 dark:bg-vault-900/40">
                   <div className="max-w-md">
                     <h3 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Select a revision</h3>
                     <p className="mt-1 text-sm text-vault-500 dark:text-vault-400">
