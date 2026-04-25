@@ -47,6 +47,16 @@ Exports a JSON file using the V3 specification. Includes name, description, pers
 | Creator notes | ✓ | ✓ |
 | Character image | ✓ | — |
 
+## Lorebook Import & Export
+
+You can also import and export lorebooks independently within the **Lorebook Editor**. Lorebook export produces a JSON file. This lets you:
+
+- Share world info between characters
+- Import standalone lorebook files from SillyTavern
+- Back up lorebooks separately from character cards
+
+See [Lorebook Editor → Import & Export](/features/lorebook-editor#import--export) for details.
+
 ## Next Steps
 
 - [Organize your vault](/features/vault-organization)

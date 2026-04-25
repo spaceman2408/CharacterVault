@@ -49,7 +49,9 @@ nav: [
       {
         text: 'More',
         items: [
+          { text: "What's New", link: '/whats-new' },
           { text: 'FAQ', link: '/faq' },
+          { text: 'Changelog', link: '/changelog' },
         ],
       },
     ],

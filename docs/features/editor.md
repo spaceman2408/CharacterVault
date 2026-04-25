@@ -22,6 +22,10 @@ These are always visible in the toolbar:
 
 The **Custom** button opens an inline text input instead of running immediately. Type your instruction, then press **Enter** or click **Send**. Press **Escape** or **Cancel** to close it without running.
 
+::: tip Multi-line Input
+All AI toolbar inputs support multi-line text. Press **Shift+Enter** to insert line breaks when writing detailed custom instructions.
+:::
+
 ::: tip
 Custom works even without a selection — you can give instructions about the whole section. For example, type "add more detail" to enhance the entire field at once.
 :::

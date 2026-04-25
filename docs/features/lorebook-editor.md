@@ -88,6 +88,36 @@ The eye icon on each entry in the sidebar controls whether that entry is include
 
 An entry can be enabled for roleplay but excluded from Orion's context, or vice versa.
 
+## Import & Export
+
+You can import and export lorebooks independently of character cards. This is useful for:
+
+- Sharing lorebooks between characters
+- Backing up world info separately
+- Importing lorebooks from other tools
+
+### Exporting a Lorebook
+
+1. Open the character with the lorebook you want to export.
+2. Go to the **Lorebook** tab.
+3. Click **Export** in the lorebook toolbar.
+4. The lorebook is exported as a JSON file compatible with SillyTavern and other tools.
+
+Empty character books are automatically filtered out during export.
+
+### Importing a Lorebook
+
+1. Open the character where you want to import the lorebook.
+2. Go to the **Lorebook** tab.
+3. Click **Import** in the lorebook toolbar.
+4. Select a JSON file containing lorebook data.
+
+::: tip Supported Formats
+Lorebook import accepts JSON files with either:
+- A `character_book` object
+- An `entries` array
+:::
+
 ## Next Steps
 
 - [Creator Notes preview](/features/creator-notes)

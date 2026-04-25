@@ -29,7 +29,12 @@ This gives Orion the background it needs to give relevant suggestions without se
 
 1. Open the **Ask AI** panel on the right.
 2. Type your question or request in the input field.
-3. Orion responds — if streaming is enabled, you'll see the output appear in real-time.
+3. Press **Enter** to send, or **Shift+Enter** to add a new line for multi-line messages.
+4. Orion responds — if streaming is enabled, you'll see the output appear in real-time.
+
+::: tip Multi-line Input
+The chat input supports multi-line text. Use **Shift+Enter** to insert line breaks when you want to format longer requests or provide structured input to Orion.
+:::
 
 Orion uses a fixed system prompt that defines its persona: it knows about Character Vault's features, the V2/V3 character card spec, and is designed to be clear, beginner-friendly, and non-judgmental of all content types.
 
