@@ -225,7 +225,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           activeSection={activeSection}
           fontSize={fontSize}
           onFontSizeChange={setFontSize}
-          characterName={currentCharacter?.data?.spec?.name}
+          characterName={currentCharacter?.name}
         />
       </div>
     );

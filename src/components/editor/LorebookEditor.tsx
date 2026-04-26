@@ -512,6 +512,7 @@ export function LorebookEditor({
   activeSection,
   fontSize,
   onFontSizeChange,
+  characterName,
 }: LorebookEditorProps): React.ReactElement {
   return (
     <LorebookEditorInner
@@ -526,6 +527,7 @@ export function LorebookEditor({
       activeSection={activeSection}
       fontSize={fontSize}
       onFontSizeChange={onFontSizeChange}
+      characterName={characterName}
     />
   );
 }
@@ -801,6 +803,8 @@ function LorebookEditorInner({
 
   // Handle export lorebook to file
   const handleExport = useCallback(() => {
+    if (entries.length === 0) return;
+
     const exportData = convertToSTLorebook(draftLorebook);
     const blob = new Blob([JSON.stringify(exportData)], { type: 'application/json' });
     let url: string | null = null;
@@ -823,7 +827,7 @@ function LorebookEditorInner({
         URL.revokeObjectURL(url);
       }
     }
-  }, [draftLorebook, bookName, characterName, sanitizeFilename]);
+  }, [draftLorebook, bookName, characterName, sanitizeFilename, entries.length]);
 
   return (
     <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
@@ -1007,9 +1011,11 @@ function LorebookEditorInner({
             </button>
             <button
               onClick={handleExport}
+              disabled={entries.length === 0}
               className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-vault-200 dark:border-vault-700
                 text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200
                 hover:bg-vault-50 dark:hover:bg-vault-700/30
+                disabled:opacity-40 disabled:cursor-not-allowed
                 rounded-lg text-sm transition-colors"
               title="Export lorebook to JSON file"
             >
