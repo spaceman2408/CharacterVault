@@ -950,7 +950,6 @@ function LorebookEditorInner({
             <div className="text-center py-8 text-vault-400 dark:text-vault-500">
               <Book className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p className="text-xs">No entries yet</p>
-              <p className="text-[10px] mt-0.5">Click "Add Entry" to start</p>
             </div>
           ) : filteredEntries.length === 0 ? (
             <div className="text-center py-8 text-vault-400 dark:text-vault-500">
