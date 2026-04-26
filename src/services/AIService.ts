@@ -476,8 +476,8 @@ Provide only the generated text without any additional commentary.`;
     };
 
     //DEBUG: Uncomment to log request details
-    console.log('[AIService] Sending request with model:', this.config.modelId);
-    console.log('[AIService] Full request:', JSON.stringify(request, null, 2));
+    //console.log('[AIService] Sending request with model:', this.config.modelId);
+    //console.log('[AIService] Full request:', JSON.stringify(request, null, 2));
 
     try {
       let currentRequest = request;
