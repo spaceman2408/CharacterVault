@@ -9,7 +9,8 @@ import { Decoration, EditorView, drawSelection, keymap, ViewUpdate } from '@code
 import type { DecorationSet } from '@codemirror/view';
 import { EditorState, StateEffect, StateField } from '@codemirror/state';
 import type { Extension } from '@codemirror/state';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, insertTab, indentLess } from '@codemirror/commands';
+import { indentUnit } from '@codemirror/language';
 import type { CharacterSection } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings, AIOperation } from '../db/types';
 import { aiToolbarPanel, getPanelUpdateFunction } from '../editor/extensions/aiToolbarPanel';
@@ -560,6 +561,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     const state = EditorState.create({
       doc: value,
       extensions: [
+        keymap.of([
+          { key: 'Tab', run: insertTab },
+          { key: 'Shift-Tab', run: indentLess },
+        ]),
+        EditorState.tabSize.of(4),
+        indentUnit.of('    '),
         keymap.of(defaultKeymap),
         keymap.of(historyKeymap),
         history(),
