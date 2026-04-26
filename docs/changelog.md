@@ -2,8 +2,10 @@
 
 ## Recent Changes
 
-### Latest Commits
+### Latest Commits (Newest to Oldest)
 
+- `9a014e0` - fix(ai): resolve context at call time to prevent stale system prompt
+- `1992244` - feat(editor): add custom tab handling and indentation settings in useAIEditor
 - `9722bba` - feat(editor): add lorebook import and export functionality
 - `640e573` - refactor(lorebook): filter out empty character books during export
 - `9d0d662` - refactor(history): prevent content flash during modal entrance with delayed visibility
