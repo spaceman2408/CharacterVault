@@ -28,6 +28,10 @@ export interface UseAIChatOptions {
   showReasoning: boolean;
   /** Typewriter hook instance for streaming display */
   typewriter: UseTypewriterReturn;
+  /** Function to resolve context entry IDs to content */
+  getContextContent?: (entryIds: string[]) => Promise<string[]>;
+  /** Context entry IDs (will be resolved to content at call time) */
+  contextEntryIds: string[];
 }
 
 /**
@@ -103,6 +107,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     resolvedContext,
     enableStreaming,
     typewriter,
+    getContextContent,
+    contextEntryIds,
   } = options;
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -183,10 +189,17 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           content: msg.content,
         }));
 
-      // Build context array
-      const contextArray: string[] = [];
-      if (resolvedContext.length > 0) {
-        contextArray.push(...resolvedContext);
+      // Build context array - resolve at call time for fresh context
+      let contextArray: string[] = [];
+      if (getContextContent && contextEntryIds.length > 0) {
+        try {
+          contextArray = await getContextContent(contextEntryIds);
+        } catch {
+          // Fallback to resolvedContext state on error
+          contextArray = resolvedContext.length > 0 ? [...resolvedContext] : [];
+        }
+      } else if (resolvedContext.length > 0) {
+        contextArray = [...resolvedContext];
       }
 
       // Streaming callback
@@ -250,6 +263,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     isAIConfigured,
     enableStreaming,
     typewriter,
+    getContextContent,
+    contextEntryIds,
   ]);
 
   /**
@@ -301,10 +316,17 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           content: msg.content,
         }));
 
-        // Build context array - only include resolved context, not selectedText automatically
-        const contextArray: string[] = [];
-        if (resolvedContext.length > 0) {
-          contextArray.push(...resolvedContext);
+        // Build context array - resolve at call time for fresh context
+        let contextArray: string[] = [];
+        if (getContextContent && contextEntryIds.length > 0) {
+          try {
+            contextArray = await getContextContent(contextEntryIds);
+          } catch {
+            // Fallback to resolvedContext state on error
+            contextArray = resolvedContext.length > 0 ? [...resolvedContext] : [];
+          }
+        } else if (resolvedContext.length > 0) {
+          contextArray = [...resolvedContext];
         }
 
         // Streaming callback for conversation - queues chunks for smooth display
@@ -370,6 +392,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       enableStreaming,
       handleRegenerate,
       typewriter,
+      getContextContent,
+      contextEntryIds,
     ]
   );
 

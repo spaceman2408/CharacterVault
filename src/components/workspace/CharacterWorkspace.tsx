@@ -4,7 +4,7 @@
  * @module @components/workspace/CharacterWorkspace
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
 import type { CharacterSection } from '../../db/characterTypes';
@@ -778,6 +778,11 @@ function CharacterWorkspaceInner({
     getContextContent,
   } = useCharacterEditorContext();
 
+  const stableGetContextContent = useCallback(
+    async (ids: string[]) => getContextContent(ids as CharacterSection[]),
+    [getContextContent]
+  );
+
   const toggleContext = () => setIsContextOpen(!isContextOpen);
   const toggleChat = () => setIsChatOpen(!isChatOpen);
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
@@ -906,7 +911,7 @@ function CharacterWorkspaceInner({
             samplerSettings={samplerSettings}
             promptSettings={promptSettings}
             onComplete={(result) => handleAIOperation(result, 'ask', selectedText)}
-            getContextContent={async (ids) => getContextContent(ids as CharacterSection[])}
+            getContextContent={stableGetContextContent}
             activeSection={activeSection}
             onClose={() => setIsChatOpen(false)}
             isMobile={isMobile}

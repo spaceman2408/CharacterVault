@@ -67,6 +67,8 @@ export function AIChatPanel({
     enableStreaming: aiConfig.enableStreaming ?? true,
     showReasoning: aiConfig.showReasoning ?? true,
     typewriter,
+    getContextContent,
+    contextEntryIds,
   });
 
   // Use auto-scroll hook - get the container ref directly
