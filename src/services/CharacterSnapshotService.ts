@@ -170,6 +170,24 @@ class CharacterSnapshotService {
   }
 
   async createSnapshot(character: Character, source: SnapshotSource): Promise<CharacterSnapshot | null> {
+    // 'open' snapshots are the original baseline — there should only ever be one per character.
+    // If an 'open' snapshot already exists, skip creation and clean up any legacy duplicates.
+    if (source === 'open') {
+      const existingMetadata = await characterDb.getSnapshotMetadataForCharacter(character.id);
+      const openSnapshots = existingMetadata.filter(m => m.source === 'open');
+
+      if (openSnapshots.length > 0) {
+        // Metadata is sorted newest-first; keep the oldest (last element), delete the rest
+        if (openSnapshots.length > 1) {
+          const oldestId = openSnapshots[openSnapshots.length - 1].id;
+          const toDelete = openSnapshots.filter(m => m.id !== oldestId);
+          await Promise.all(toDelete.map(m => characterDb.deleteSnapshot(m.id)));
+        }
+
+        return null;
+      }
+    }
+
     // Build the full payload (with image) for hashing
     const fullPayload: CharacterSnapshotPayload = {
       name: character.name,
