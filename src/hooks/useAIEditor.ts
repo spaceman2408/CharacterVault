@@ -211,11 +211,21 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     contextSectionIdsRef.current = contextSectionIds;
   }, [contextSectionIds]);
 
-  // Use a ref to always have access to the latest aiConfig
+  // Use refs to always have access to the latest config/sampler/prompts
+  // These avoid stale closures when the CodeMirror toolbar panel captures
+  // handleAIOperation during editor initialization and doesn't re-capture it.
   const aiConfigRef = useRef(aiConfig);
+  const samplerSettingsRef = useRef(samplerSettings);
+  const promptSettingsRef = useRef(promptSettings);
   useEffect(() => {
     aiConfigRef.current = aiConfig;
   }, [aiConfig]);
+  useEffect(() => {
+    samplerSettingsRef.current = samplerSettings;
+  }, [samplerSettings]);
+  useEffect(() => {
+    promptSettingsRef.current = promptSettings;
+  }, [promptSettings]);
 
   // Use refs to always have access to the latest callbacks/options
   const onImmediateChangeRef = useRef(onImmediateChange);
@@ -290,8 +300,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     sel: { from: number; to: number },
     customPrompt?: string
   ) => {
-    // Get the latest config from ref to avoid stale closure
+    // Read latest values from refs to avoid stale closures
+    // (the CodeMirror toolbar panel captures this callback during init
+    // and doesn't re-capture when settings change)
     const currentConfig = aiConfigRef.current;
+    const currentSampler = samplerSettingsRef.current;
+    const currentPrompts = promptSettingsRef.current;
 
     // Reset streaming refs (not state, to avoid re-render thrashing)
     streamingContentRef.current = '';
@@ -330,7 +344,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     try {
       // Debug: Log the model being used
       console.log('[useAIEditor] Using model:', currentConfig.modelId, 'Base URL:', currentConfig.baseUrl);
-      const aiService = new AIService(currentConfig, samplerSettings, promptSettings);
+      const aiService = new AIService(currentConfig, currentSampler, currentPrompts);
       aiServiceRef.current = aiService;
       const context = getContextContent(contextSectionIdsRef.current);
 
