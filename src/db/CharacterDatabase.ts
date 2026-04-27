@@ -633,6 +633,27 @@ export class CharacterDatabase extends Dexie {
   async deleteSnapshotById(snapshotId: string): Promise<void> {
     await this.snapshots.delete(snapshotId);
   }
+
+  /**
+   * Repair a snapshot's image reference by storing the image in content-addressed
+   * storage and updating the snapshot's imageHash. Used for snapshots created
+   * before v4 (storedImages) that have null imageHash.
+   * @param {string} snapshotId - Snapshot ID to repair
+   * @param {string} imageHash - Computed image hash
+   * @param {string} imageData - Base64 image data
+   * @param {string} thumbnailData - Base64 thumbnail data
+   */
+  async repairSnapshotImage(
+    snapshotId: string,
+    imageHash: string,
+    imageData: string,
+    thumbnailData: string,
+  ): Promise<void> {
+    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
+      await this.storedImages.put({ id: imageHash, imageData, thumbnailData });
+      await this.snapshots.update(snapshotId, { imageHash });
+    });
+  }
 }
 
 /**

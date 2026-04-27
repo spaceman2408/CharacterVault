@@ -177,11 +177,33 @@ class CharacterSnapshotService {
       const openSnapshots = existingMetadata.filter(m => m.source === 'open');
 
       if (openSnapshots.length > 0) {
-        // Metadata is sorted newest-first; keep the oldest (last element), delete the rest
+        // Metadata is sorted newest-first; keep the oldest (last element), delete the rest.
+        // Use deleteSnapshotById (no per-deletion cleanup) to avoid race conditions from
+        // parallel cleanOrphanedImages calls. Cleanup runs once after all deletions.
         if (openSnapshots.length > 1) {
           const oldestId = openSnapshots[openSnapshots.length - 1].id;
           const toDelete = openSnapshots.filter(m => m.id !== oldestId);
-          await Promise.all(toDelete.map(m => characterDb.deleteSnapshot(m.id)));
+
+          for (const meta of toDelete) {
+            await characterDb.deleteSnapshotById(meta.id);
+          }
+        }
+
+        // Repair the kept snapshot's image if it was created before content-addressed
+        // storage (v4) and has a null imageHash — the image can't be resolved otherwise.
+        // Note: The original image data is unrecoverable (payload stores empty string),
+        // so we use the current character's image as a fallback. This may cause the diff
+        // to incorrectly show "image changed" if the character's image differs from the
+        // snapshot's original image.
+        const kept = openSnapshots[openSnapshots.length - 1];
+        if (kept.imageHash === null && character.imageData) {
+          const imageHash = await this.computeImageHash(character.imageData, character.thumbnailData);
+          await characterDb.repairSnapshotImage(kept.id, imageHash, character.imageData, character.thumbnailData);
+        }
+
+        // Clean up orphaned images after deletions and repair for memory efficiency.
+        if (openSnapshots.length > 1) {
+          await characterDb.cleanOrphanedImages(character.id);
         }
 
         return null;
