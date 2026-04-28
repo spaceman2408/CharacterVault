@@ -3,10 +3,11 @@
  * @module editor/extensions/toolbarSearch
  */
 
-import { EditorView, keymap, ViewPlugin } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
 import type { ViewUpdate } from '@codemirror/view';
 import { StateEffect, StateField } from '@codemirror/state';
 import {
+  search,
   openSearchPanel,
   closeSearchPanel,
   findNext,
@@ -180,8 +181,12 @@ function queryEquals(a: SearchQuery, b: SearchQuery): boolean {
 }
 
 function applyQueryToControls(query: SearchQuery, controls: SearchPanelControls): void {
-  controls.searchInput.value = query.search || '';
-  controls.replaceInput.value = query.replace || '';
+  if (document.activeElement !== controls.searchInput) {
+    controls.searchInput.value = query.search || '';
+  }
+  if (document.activeElement !== controls.replaceInput) {
+    controls.replaceInput.value = query.replace || '';
+  }
   controls.caseCb.checked = query.caseSensitive;
   controls.wordCb.checked = query.wholeWord;
   controls.regexpCb.checked = query.regexp;
@@ -197,7 +202,7 @@ const isDarkMode = () => {
 };
 
 // Create search panel DOM
-function createSearchPanel(view: EditorView): SearchPanelControls {
+function createSearchPanelControls(view: EditorView): SearchPanelControls {
   const dom = document.createElement('div');
   dom.className = 'cm-toolbar-search-panel';
   dom.style.cssText = `
@@ -205,6 +210,9 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
     border-bottom: 1px solid ${cssVar('--ai-toolbar-border', '#e5e7eb')};
     padding: 8px 12px;
   `;
+  dom.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+  });
 
   const container = document.createElement('div');
   container.className = 'search-container';
@@ -237,6 +245,7 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
   searchInput.type = 'text';
   searchInput.className = 'search-input';
   searchInput.placeholder = 'Find...';
+  searchInput.setAttribute('main-field', 'true');
   searchInput.style.cssText = `
     flex: 1;
     padding: 6px 10px;
@@ -592,70 +601,37 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
   };
 }
 
-// View plugin to manage search panel
-const searchPlugin = ViewPlugin.fromClass(
-  class {
-    panel: HTMLElement | null = null;
-    controls: SearchPanelControls | null = null;
-
-    constructor(view: EditorView) {
-      if (view.state.field(searchPanelOpen)) {
-        this.openPanel(view);
-      }
-    }
-
+function createSearchPanel(view: EditorView) {
+  const controls = createSearchPanelControls(view);
+  return {
+    dom: controls.dom,
+    top: true,
     update(update: ViewUpdate) {
-      const wasOpen = update.startState.field(searchPanelOpen);
-      const isOpen = update.state.field(searchPanelOpen);
+      const prevQuery = getSearchQuery(update.startState);
+      const currentQuery = getSearchQuery(update.state);
+      const queryChanged = !queryEquals(prevQuery, currentQuery);
 
-      if (isOpen && !wasOpen) {
-        this.openPanel(update.view);
-      } else if (!isOpen && wasOpen) {
-        this.closePanel();
-      } else if (isOpen && this.controls) {
-        const prevQuery = getSearchQuery(update.startState);
-        const currentQuery = getSearchQuery(update.state);
-        const queryChanged = !queryEquals(prevQuery, currentQuery);
-
-        if (queryChanged) {
-          applyQueryToControls(currentQuery, this.controls);
-        }
-
-        if (queryChanged || update.docChanged || update.selectionSet) {
-          this.controls.refreshCount();
-        }
+      if (queryChanged) {
+        applyQueryToControls(currentQuery, controls);
       }
-    }
 
-    openPanel(view: EditorView) {
-      if (this.panel) return;
-      this.controls = createSearchPanel(view);
-      this.panel = this.controls.dom;
-      // Insert panel at the beginning of view.dom (CodeMirror's wrapper element)
-      // This places it before the scroller, so CodeMirror accounts for it in layout
-      if (view.dom.firstChild) {
-        view.dom.insertBefore(this.panel, view.dom.firstChild);
-      } else {
-        view.dom.appendChild(this.panel);
+      if (queryChanged || update.docChanged || update.selectionSet) {
+        controls.refreshCount();
       }
-    }
-
-    closePanel() {
-      this.panel?.remove();
-      this.panel = null;
-      this.controls = null;
-    }
-
+    },
     destroy() {
-      this.closePanel();
-    }
-  }
-);
+      controls.dom.remove();
+    },
+  };
+}
 
 export function toolbarSearch() {
   return [
+    search({
+      top: true,
+      createPanel: (view) => createSearchPanel(view),
+    }),
     searchPanelOpen,
-    searchPlugin,
     keymap.of([
       { key: 'Mod-f', run: openToolbarSearch },
       { key: 'Mod-h', run: openToolbarSearch },
