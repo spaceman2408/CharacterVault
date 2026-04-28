@@ -4,6 +4,8 @@
 
 ### Latest Commits (Newest to Oldest)
 
+- `281be66` - fix(editor): integrate toolbar search with CodeMirror panel lifecycle to stop selection scroll oscillation
+- `324ce81` - feat(editor): enhance search navigation with auto-scroll and panel positioning
 - `9a014e0` - fix(ai): resolve context at call time to prevent stale system prompt
 - `1992244` - feat(editor): add custom tab handling and indentation settings in useAIEditor
 - `9722bba` - feat(editor): add lorebook import and export functionality
