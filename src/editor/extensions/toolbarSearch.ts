@@ -524,6 +524,7 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
       } else {
         findNext(view);
       }
+      view.dispatch({ scrollIntoView: true });
       refreshCount();
     } else if (e.key === 'Escape') {
       closeToolbarSearch(view);
@@ -540,10 +541,12 @@ function createSearchPanel(view: EditorView): SearchPanelControls {
 
   prevBtn.addEventListener('click', () => {
     findPrevious(view);
+    view.dispatch({ scrollIntoView: true });
     refreshCount();
   });
   nextBtn.addEventListener('click', () => {
     findNext(view);
+    view.dispatch({ scrollIntoView: true });
     refreshCount();
   });
   closeBtn.addEventListener('click', () => { closeToolbarSearch(view); view.focus(); });
@@ -594,19 +597,17 @@ const searchPlugin = ViewPlugin.fromClass(
   class {
     panel: HTMLElement | null = null;
     controls: SearchPanelControls | null = null;
-    parent: HTMLElement | null = null;
 
     constructor(view: EditorView) {
-      this.parent = view.dom.parentElement;
       if (view.state.field(searchPanelOpen)) {
         this.openPanel(view);
       }
     }
-    
+
     update(update: ViewUpdate) {
       const wasOpen = update.startState.field(searchPanelOpen);
       const isOpen = update.state.field(searchPanelOpen);
-      
+
       if (isOpen && !wasOpen) {
         this.openPanel(update.view);
       } else if (!isOpen && wasOpen) {
@@ -630,8 +631,12 @@ const searchPlugin = ViewPlugin.fromClass(
       if (this.panel) return;
       this.controls = createSearchPanel(view);
       this.panel = this.controls.dom;
-      if (this.parent?.firstChild) {
-        this.parent.insertBefore(this.panel, this.parent.firstChild);
+      // Insert panel at the beginning of view.dom (CodeMirror's wrapper element)
+      // This places it before the scroller, so CodeMirror accounts for it in layout
+      if (view.dom.firstChild) {
+        view.dom.insertBefore(this.panel, view.dom.firstChild);
+      } else {
+        view.dom.appendChild(this.panel);
       }
     }
 
@@ -661,7 +666,9 @@ export function toolbarSearch() {
 
 export function toolbarSearchTheme() {
   return EditorView.theme({
+    // Hide CodeMirror's native search UI but keep match highlighting
     '& .cm-search': { display: 'none !important' },
+    '& .cm-panels.cm-panels-bottom': { display: 'none !important' },
     '& .cm-searchMatch': {
       backgroundColor: 'var(--vault-search-match-bg, rgba(253, 224, 71, 0.4))',
       borderRadius: '2px',
