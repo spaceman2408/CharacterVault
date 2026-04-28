@@ -160,6 +160,10 @@ export function AIChatPanel({
 
     const question = askQuestion.trim();
     setAskQuestion('');
+    // Reset textarea height since React doesn't clear imperative DOM styles
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
     await handleAsk(question);
   };
 
@@ -313,7 +317,7 @@ export function AIChatPanel({
             onChange={(e) => setAskQuestion(e.target.value)}
             placeholder="Ask a question..."
             rows={1}
-            className="flex-1 px-3 py-2 text-sm border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-700 text-vault-900 dark:text-vault-100 placeholder-vault-400 focus:outline-none focus:ring-2 focus:ring-vault-500 resize-none overflow-y-auto min-h-[38px] max-h-[120px]"
+            className="flex-1 px-3 py-2 text-sm border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-700 text-vault-900 dark:text-vault-100 placeholder-vault-400 focus:outline-none focus:ring-2 focus:ring-vault-500 resize-none overflow-y-auto min-h-9.5 max-h-30"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey && !isProcessing && askQuestion.trim()) {
                 e.preventDefault();
@@ -330,7 +334,7 @@ export function AIChatPanel({
           <button
             onClick={() => void (isProcessing ? handleAbort() : handleSubmit())}
             disabled={!isProcessing && !askQuestion.trim() && (!chatHistory.length || chatHistory[chatHistory.length - 1]?.role !== 'user')}
-            className={`px-3 py-2 h-[38px] text-white text-sm rounded-lg transition-colors flex items-center gap-1.5 self-center ${
+            className={`px-3 py-2 h-9.5] text-white text-sm rounded-lg transition-colors flex items-center gap-1.5 self-center ${
               isProcessing
                 ? 'bg-red-600 hover:bg-red-700'
                 : 'bg-vault-600 hover:bg-vault-700 disabled:opacity-50'
