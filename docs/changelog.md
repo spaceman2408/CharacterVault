@@ -4,6 +4,8 @@
 
 ### Latest Commits (Newest to Oldest)
 
+- `52de543` - feat(character): implement imported character flag for conditional snapshot creation
+- `cce7d44` - feat(ui): add create new button and improve create form layout for mobile
 - `281be66` - fix(editor): integrate toolbar search with CodeMirror panel lifecycle to stop selection scroll oscillation
 - `324ce81` - feat(editor): enhance search navigation with auto-scroll and panel positioning
 - `9a014e0` - fix(ai): resolve context at call time to prevent stale system prompt
