@@ -14,6 +14,8 @@ import type {
   CharacterListItem,
 } from '../db/characterTypes';
 
+const IMPORTED_CHARACTER_FLAG = 'character_vault_imported';
+
 /**
  * Result type for character operations
  */
@@ -138,9 +140,11 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
         });
         
         await characterDb.updateLastOpened(characterId);
-        await characterSnapshotService.createSnapshot(character, 'open').catch(error => {
-          console.error('Failed to create baseline snapshot:', error);
-        });
+        if (character.data.extensions?.[IMPORTED_CHARACTER_FLAG] === true) {
+          await characterSnapshotService.createSnapshot(character, 'open').catch(error => {
+            console.error('Failed to create baseline snapshot:', error);
+          });
+        }
         setCurrentCharacterId(characterId);
 
         // Update last active character in settings

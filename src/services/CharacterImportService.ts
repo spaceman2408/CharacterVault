@@ -15,6 +15,8 @@ import type {
 import { characterDb } from '../db/CharacterDatabase';
 import { generateThumbnail } from '../utils/thumbnail';
 
+const IMPORTED_CHARACTER_FLAG = 'character_vault_imported';
+
 /**
  * Character Import Service
  */
@@ -313,7 +315,10 @@ export class CharacterImportService {
           data: {
             spec: extractedSpec,
             characterBook: this.normalizeLorebookEntries(data.character_book as import('../db/characterTypes').CharacterBook | undefined),
-            extensions: data.extensions as import('../db/characterTypes').CharacterExtensions | undefined,
+            extensions: {
+              ...((data.extensions as import('../db/characterTypes').CharacterExtensions | undefined) ?? {}),
+              [IMPORTED_CHARACTER_FLAG]: true,
+            },
           },
         });
 
@@ -563,7 +568,10 @@ export class CharacterImportService {
       data: {
         spec,
         characterBook: this.normalizeLorebookEntries(data.character_book),
-        extensions: data.extensions,
+        extensions: {
+          ...(data.extensions ?? {}),
+          [IMPORTED_CHARACTER_FLAG]: true,
+        },
       },
     });
 
@@ -585,7 +593,13 @@ export class CharacterImportService {
       name: data.name,
       imageData: data.imageData,
       thumbnailData,
-      data: data.data,
+      data: {
+        ...data.data,
+        extensions: {
+          ...(data.data.extensions ?? {}),
+          [IMPORTED_CHARACTER_FLAG]: true,
+        },
+      },
     });
 
     return character;
