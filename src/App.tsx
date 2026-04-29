@@ -435,12 +435,20 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               Import
             </button>
             
-            <button 
+            <button
               onClick={() => fileInputRef.current?.click()}
               className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
               title="Import"
             >
               <Upload className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => setIsCreating(true)}
+              className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+              title="Create New"
+            >
+              <Plus className="w-4 h-4" />
             </button>
 
             <div className="h-6 w-px bg-vault-200 dark:bg-vault-800 mx-1 hidden sm:block" />
@@ -502,21 +510,21 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
         {/* Create Modal/Inline Area */}
         {isCreating && (
           <div className="mb-8 animate-in fade-in slide-in-from-top-2">
-            <form onSubmit={handleCreate} className="bg-white dark:bg-vault-900 p-4 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-lg max-w-lg mx-auto flex gap-2 items-center">
+            <form onSubmit={handleCreate} className="bg-white dark:bg-vault-900 p-4 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-lg max-w-lg mx-auto flex flex-col sm:flex-row gap-3 sm:gap-2 sm:items-center">
               <input
                 autoFocus
                 type="text"
                 placeholder="Character Name..."
                 value={newCharacterName}
                 onChange={(e) => setNewCharacterName(e.target.value)}
-                className="flex-1 bg-transparent border-none focus:ring-0 text-lg font-medium placeholder:text-vault-300 dark:placeholder:text-vault-700"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-base sm:text-lg font-medium placeholder:text-vault-300 dark:placeholder:text-vault-700 min-w-0"
               />
-              <div className="flex gap-2">
+              <div className="flex gap-2 shrink-0">
                 <IconButton icon={X} onClick={() => setIsCreating(false)} title="Cancel" />
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={!newCharacterName.trim()}
-                  className="px-4 py-2 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 rounded-lg text-sm font-medium disabled:opacity-50"
+                  className="px-4 py-2 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
                 >
                   Create
                 </button>
