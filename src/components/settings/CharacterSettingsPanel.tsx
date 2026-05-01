@@ -53,6 +53,11 @@ interface ToastNotification {
   message: string;
 }
 
+interface CachedModels {
+  models: AIModelInfo[];
+  fetchedAt: number;
+}
+
 const AI_BASE_URL_PRESETS = [
   {
     id: 'nano-gpt',
@@ -73,6 +78,8 @@ const AI_BASE_URL_PRESETS = [
     helper: 'Default local endpoint for LM Studio.',
   },
 ] as const;
+
+const STALENESS_MS = 5 * 60 * 1000;
 
 // Slider control component with value display
 interface SliderControlProps {
@@ -705,6 +712,8 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [modelsByBaseUrl, setModelsByBaseUrl] = useState<Record<string, CachedModels>>({});
+  const [fetchingModelsByBaseUrl, setFetchingModelsByBaseUrl] = useState<Record<string, boolean>>({});
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const [activeTab, setActiveTab] = useState<'ai' | 'sampler' | 'prompts'>('ai');
   const [expandedPrompts, setExpandedPrompts] = useState<Record<string, boolean>>({});
@@ -730,6 +739,43 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
   // Remove toast
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  const localAIConfigRef = useRef(localAIConfig);
+  localAIConfigRef.current = localAIConfig;
+  const localSamplerRef = useRef(localSampler);
+  localSamplerRef.current = localSampler;
+  const modelsByBaseUrlRef = useRef(modelsByBaseUrl);
+  modelsByBaseUrlRef.current = modelsByBaseUrl;
+
+  const isCacheStale = (normalizedUrl: string): boolean => {
+    const cached = modelsByBaseUrlRef.current[normalizedUrl];
+    if (!cached) return true;
+    return Date.now() - cached.fetchedAt > STALENESS_MS;
+  };
+
+  const fetchModelsForUrl = useCallback(async (baseUrl: string, apiKey: string): Promise<AIModelInfo[]> => {
+    const normalizedUrl = normalizeBaseUrl(baseUrl);
+    setFetchingModelsByBaseUrl(prev => ({ ...prev, [normalizedUrl]: true }));
+    try {
+      const aiService = new AIService(
+        { ...localAIConfigRef.current, baseUrl, apiKey },
+        localSamplerRef.current
+      );
+      const models = await aiService.fetchModels({
+        subscriptionOnly: localAIConfigRef.current.subscriptionModelsOnly,
+        detailed: true,
+      });
+      setModelsByBaseUrl(prev => ({
+        ...prev,
+        [normalizedUrl]: { models, fetchedAt: Date.now() },
+      }));
+      return models;
+    } catch {
+      return [];
+    } finally {
+      setFetchingModelsByBaseUrl(prev => ({ ...prev, [normalizedUrl]: false }));
+    }
   }, []);
 
   // Reset transient toast UI when panel closes.
@@ -811,6 +857,41 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
     
     void loadSettings();
   }, [isOpen, addToast]);
+
+  useEffect(() => {
+    if (!isOpen || isLoading) return;
+
+    const autoFetch = async () => {
+      const fetches: Promise<void>[] = [];
+
+      for (const preset of AI_BASE_URL_PRESETS) {
+        const normalizedUrl = normalizeBaseUrl(preset.baseUrl);
+        const apiKey = localAIConfigRef.current.apiKeysByBaseUrl?.[normalizedUrl];
+
+        if (!apiKey) continue;
+
+        if (!isCacheStale(normalizedUrl)) {
+          const cached = modelsByBaseUrlRef.current[normalizedUrl];
+          if (normalizeBaseUrl(localAIConfigRef.current.baseUrl) === normalizedUrl && cached) {
+            setLocalAIConfig(prev => ({ ...prev, availableModels: cached.models }));
+          }
+          continue;
+        }
+
+        fetches.push(
+          fetchModelsForUrl(preset.baseUrl, apiKey).then(models => {
+            if (normalizeBaseUrl(localAIConfigRef.current.baseUrl) === normalizedUrl) {
+              setLocalAIConfig(prev => ({ ...prev, availableModels: models }));
+            }
+          })
+        );
+      }
+
+      await Promise.allSettled(fetches);
+    };
+
+    void autoFetch();
+  }, [isOpen, isLoading, fetchModelsForUrl]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -897,7 +978,12 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
         subscriptionOnly: localAIConfig.subscriptionModelsOnly,
         detailed: true,
       });
+      const normalizedUrl = normalizeBaseUrl(localAIConfig.baseUrl);
       setLocalAIConfig(prev => ({ ...prev, availableModels: models }));
+      setModelsByBaseUrl(prev => ({
+        ...prev,
+        [normalizedUrl]: { models, fetchedAt: Date.now() },
+      }));
       addToast('success', `Fetched ${models.length} models`);
     } catch (err) {
       if (err instanceof AIError) {
@@ -923,7 +1009,8 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
       if (providerInfo.supportsProviderSelection) {
         setModelProviders(providerInfo.providers);
       } else {
-        setModelProviders([]);
+      setModelProviders([]);
+      setModelsByBaseUrl({});
       }
     } catch (err) {
       console.error('Failed to fetch model providers:', err);
@@ -950,36 +1037,57 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
   };
 
   const handleBaseUrlChange = (baseUrl: string, loadStoredProfile: boolean) => {
+    const normalizedUrl = normalizeBaseUrl(baseUrl);
+    const cached = modelsByBaseUrl[normalizedUrl];
+    const cachedModels = (!cached || isCacheStale(normalizedUrl)) ? [] : cached.models;
+
     setLocalAIConfig(prev => {
-      // If switching to a preset URL, save current URL as lastCustomBaseUrl (if it was a custom URL)
       const shouldSaveAsCustom = prev.baseUrl && !isPresetUrl(prev.baseUrl) && baseUrl !== prev.baseUrl;
 
       return {
         ...prev,
         baseUrl,
-        // Save the last custom URL when switching away from a custom URL to a preset
         lastCustomBaseUrl: shouldSaveAsCustom ? normalizeBaseUrl(prev.baseUrl) : prev.lastCustomBaseUrl,
         modelId: loadStoredProfile ? getStoredModelId(prev, baseUrl) : prev.modelId,
         apiKey: loadStoredProfile ? getStoredApiKey(prev, baseUrl) : prev.apiKey,
-        availableModels: [],
+        availableModels: cachedModels,
       };
     });
+
+    if (cachedModels.length === 0) {
+      const apiKey = localAIConfig.apiKeysByBaseUrl?.[normalizedUrl];
+      if (apiKey) {
+        void fetchModelsForUrl(baseUrl, apiKey).then(models => {
+          setLocalAIConfig(prev => ({ ...prev, availableModels: models }));
+        });
+      }
+    }
   };
 
   const handleCustomUrlChange = (baseUrl: string) => {
-    setLocalAIConfig(prev => {
-      const normalizedUrl = normalizeBaseUrl(baseUrl);
+    const normalizedUrl = normalizeBaseUrl(baseUrl);
+    const cached = modelsByBaseUrl[normalizedUrl];
+    const cachedModels = (!cached || isCacheStale(normalizedUrl)) ? [] : cached.models;
 
+    setLocalAIConfig(prev => {
       return {
         ...prev,
         baseUrl,
-        // Always save the custom URL being typed
         lastCustomBaseUrl: normalizedUrl,
         modelId: normalizedUrl ? getStoredModelId(prev, normalizedUrl) : prev.modelId,
         apiKey: normalizedUrl ? getStoredApiKey(prev, normalizedUrl) : prev.apiKey,
-        availableModels: [],
+        availableModels: cachedModels,
       };
     });
+
+    if (cachedModels.length === 0 && normalizedUrl) {
+      const apiKey = localAIConfig.apiKeysByBaseUrl?.[normalizedUrl];
+      if (apiKey) {
+        void fetchModelsForUrl(baseUrl, apiKey).then(models => {
+          setLocalAIConfig(prev => ({ ...prev, availableModels: models }));
+        });
+      }
+    }
   };
 
   const handleApiKeyChange = (apiKey: string) => {
@@ -1391,7 +1499,7 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
                       selectedModelId={localAIConfig.modelId}
                       onSelect={handleModelChange}
                       onFetch={fetchModels}
-                      isFetching={isFetchingModels}
+                      isFetching={isFetchingModels || !!fetchingModelsByBaseUrl[normalizeBaseUrl(localAIConfig.baseUrl)]}
                       disabled={false}
                     />
 
