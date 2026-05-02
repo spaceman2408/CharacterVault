@@ -38,7 +38,7 @@ export const RegenerateButton: React.FC<RegenerateButtonProps> = memo(({
     <button
       onClick={() => void onRegenerate()}
       disabled={isProcessing}
-      className="p-1.5 rounded-md text-vault-400 hover:text-vault-600 dark:hover:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700/50 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+      className="p-1.5 rounded-md text-vault-400 hover:text-vault-600 dark:hover:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700/50 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
       title="Regenerate response"
     >
       <RotateCcw className="w-3.5 h-3.5" />

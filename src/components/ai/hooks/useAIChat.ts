@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { AIService, AIError } from '../../../services/AIService';
+import { AIService, AIError, estimateTokens } from '../../../services/AIService';
 import type { AIConfig, SamplerSettings, PromptSettings } from '../../../db/types';
 import type { ChatMessage, ConversationMessage } from '../types';
 import { generateMessageId } from '../utils';
@@ -178,6 +178,10 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     setIsStreaming(enableStreaming);
     typewriter.startStreaming();
 
+    const requestStartTime = Date.now();
+    let firstTokenTime: number | null = null;
+    let totalTokens = 0;
+
     try {
       const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
       aiServiceRef.current = aiService;
@@ -205,6 +209,10 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       // Streaming callback
       const onChunk = enableStreaming
         ? (chunk: { content?: string; reasoning?: string }) => {
+            if (firstTokenTime === null) {
+              firstTokenTime = Date.now();
+            }
+
             if (chunk.reasoning) {
               typewriter.queueReasoningChunk(chunk.reasoning);
             }
@@ -227,12 +235,32 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         onChunk
       );
 
+      // Compute stats
+      const contentTokens = estimateTokens(result.content);
+      const reasoningTokens = estimateTokens(result.reasoning ?? '');
+      totalTokens = contentTokens + reasoningTokens;
+      const completionTime = firstTokenTime !== null
+        ? Date.now() - firstTokenTime
+        : Date.now() - requestStartTime;
+      const ttft = firstTokenTime !== null
+        ? firstTokenTime - requestStartTime
+        : completionTime;
+      const tokensPerSecond = completionTime > 0
+        ? totalTokens / (completionTime / 1000)
+        : undefined;
+
       const assistantMessage: ChatMessage = {
         id: generateMessageId(),
         role: 'assistant',
         content: result.content,
         reasoning: result.reasoning,
         timestamp: Date.now(),
+        stats: {
+          ttft,
+          tokensPerSecond,
+          modelId: aiConfig.modelId,
+          providerId: aiConfig.selectedProvider ?? aiConfig.providerByModelId?.[aiConfig.modelId],
+        },
       };
 
       setChatHistory(prev => [...prev, assistantMessage]);
@@ -306,6 +334,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       setIsStreaming(enableStreaming);
       typewriter.startStreaming();
 
+      const requestStartTime = Date.now();
+      let firstTokenTime: number | null = null;
+
       try {
         const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
         aiServiceRef.current = aiService;
@@ -332,6 +363,10 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         // Streaming callback for conversation - queues chunks for smooth display
         const onChunk = enableStreaming
           ? (chunk: { content?: string; reasoning?: string }) => {
+              if (firstTokenTime === null) {
+                firstTokenTime = Date.now();
+              }
+
               if (chunk.reasoning) {
                 typewriter.queueReasoningChunk(chunk.reasoning);
               }
@@ -354,12 +389,32 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           onChunk
         );
 
+        // Compute stats
+        const contentTokens = estimateTokens(result.content);
+        const reasoningTokens = estimateTokens(result.reasoning ?? '');
+        const totalTokens = contentTokens + reasoningTokens;
+        const completionTime = firstTokenTime !== null
+          ? Date.now() - firstTokenTime
+          : Date.now() - requestStartTime;
+        const ttft = firstTokenTime !== null
+          ? firstTokenTime - requestStartTime
+          : completionTime;
+        const tokensPerSecond = completionTime > 0
+          ? totalTokens / (completionTime / 1000)
+          : undefined;
+
         const assistantMessage: ChatMessage = {
           id: generateMessageId(),
           role: 'assistant',
           content: result.content,
           reasoning: result.reasoning,
           timestamp: Date.now(),
+          stats: {
+            ttft,
+            tokensPerSecond,
+            modelId: aiConfig.modelId,
+            providerId: aiConfig.selectedProvider ?? aiConfig.providerByModelId?.[aiConfig.modelId],
+          },
         };
 
         setChatHistory(prev => [...prev, assistantMessage]);

@@ -6,6 +6,20 @@
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../../db/types';
 
 /**
+ * Response statistics for an AI message
+ */
+export interface ResponseStats {
+  /** Time to First Token in milliseconds */
+  ttft?: number;
+  /** Estimated tokens per second */
+  tokensPerSecond?: number;
+  /** Model ID that generated the response */
+  modelId?: string;
+  /** Provider ID used for provider-selection models */
+  providerId?: string;
+}
+
+/**
  * Chat message in a conversation
  */
 export interface ChatMessage {
@@ -14,6 +28,7 @@ export interface ChatMessage {
   content: string;
   reasoning?: string;
   timestamp: number;
+  stats?: ResponseStats;
 }
 
 /**
