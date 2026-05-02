@@ -73,7 +73,11 @@ Limits token selection to the K most likely candidates. Lower values restrict ou
 | 50 | Permissive (Creative preset) |
 | 100 | Very permissive — nearly all tokens considered |
 
-**Range**: 1 – 100 (step: 1)
+**Range**: 0 – 100 (step: 1)
+
+::: tip
+Set Top K to `0` to disable top-k filtering entirely and rely purely on Top P / Min P sampling. Or to let providers use their default behavior.
+:::
 
 ## Secondary Samplers
 
@@ -99,7 +103,7 @@ The maximum number of tokens the AI will generate in a single response.
 - Medium values (1024–2048) work well for most character content.
 - Higher values (4096–8192) allow detailed, long-form responses.
 
-**Range**: 100 – 8,192 (step: 100)
+**Range**: 100 – 8,100 (step: 100)
 
 ### Context Length
 
