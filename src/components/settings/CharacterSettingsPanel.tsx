@@ -253,7 +253,7 @@ const SamplerSettingsSection: React.FC<SamplerSettingsSectionProps> = ({
             label="Top K"
             icon={<Layers className="w-4 h-4" />}
             value={settings.topK}
-            min={1}
+            min={0}
             max={100}
             step={1}
             onChange={(v) => updateSetting('topK', v)}
@@ -289,7 +289,7 @@ const SamplerSettingsSection: React.FC<SamplerSettingsSectionProps> = ({
             icon={<Hash className="w-4 h-4" />}
             value={settings.maxTokens}
             min={100}
-            max={8192}
+            max={8100}
             step={100}
             onChange={(v) => updateSetting('maxTokens', Math.round(v))}
             formatValue={(v) => Math.round(v).toString()}
