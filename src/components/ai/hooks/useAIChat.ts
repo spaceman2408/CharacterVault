@@ -180,7 +180,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
     const requestStartTime = Date.now();
     let firstTokenTime: number | null = null;
-    let totalTokens = 0;
 
     try {
       const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
@@ -238,7 +237,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       // Compute stats
       const contentTokens = estimateTokens(result.content);
       const reasoningTokens = estimateTokens(result.reasoning ?? '');
-      totalTokens = contentTokens + reasoningTokens;
+      const totalTokens = contentTokens + reasoningTokens;
       const completionTime = firstTokenTime !== null
         ? Date.now() - firstTokenTime
         : Date.now() - requestStartTime;

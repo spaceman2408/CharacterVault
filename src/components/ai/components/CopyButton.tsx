@@ -3,7 +3,7 @@
  * @module components/ai/components/CopyButton
  */
 
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useRef, useEffect } from 'react';
 import { Check, Copy } from 'lucide-react';
 
 /**
@@ -20,12 +20,28 @@ export interface CopyButtonProps {
  */
 export const CopyButton: React.FC<CopyButtonProps> = memo(({ content }) => {
   const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up pending timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(content);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      timeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        timeoutRef.current = null;
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
     }
