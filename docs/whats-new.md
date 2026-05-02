@@ -16,9 +16,10 @@ The **Character Settings** panel now caches available AI models and providers, s
 
 ### Response Performance Stats
 
-AI responses now show a small stats tooltip — look for the info badge on generated messages to see generation speed and performance details at a glance.
+AI responses now show performance metrics when complete — look for **TTFT** (time to first token) and **T/S** (tokens per second) in the result header. Available in both the **AI Assistant** chat and the **AI Toolbar** result panel.
 
-[AI Assistant →](/features/ai-assistant)
+[AI Assistant →](/features/ai-assistant)  
+[Text Editor →](/features/editor)
 
 ---
 

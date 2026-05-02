@@ -67,6 +67,13 @@ While an AI operation is running, a **⏹ Stop** button replaces the toolbar but
 
 If the AI model produces reasoning (thinking) output, a collapsible **"✨ Thinking process"** section appears in the result panel. It auto-expands during streaming and can be toggled after the operation completes.
 
+**Performance Stats**
+
+When an AI operation completes, performance metrics appear in the top-right corner of the result panel:
+
+- **TTFT** — Time to First Token. How long the AI took to start responding (in milliseconds). Lower is better.
+- **T/S** — Tokens per Second. How fast the AI generated tokens after the first one. Higher is better.
+
 ## Search & Replace
 
 Click the 🔍 button in the toolbar, or press `Ctrl+F` / `Cmd+F`.
