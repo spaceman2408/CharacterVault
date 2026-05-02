@@ -79,7 +79,7 @@ const AI_BASE_URL_PRESETS = [
   },
 ] as const;
 
-const STALENESS_MS = 5 * 60 * 1000;
+const STALENESS_MS = 10 * 60 * 1000;
 
 // Slider control component with value display
 interface SliderControlProps {
@@ -747,6 +747,8 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
   localSamplerRef.current = localSampler;
   const modelsByBaseUrlRef = useRef(modelsByBaseUrl);
   modelsByBaseUrlRef.current = modelsByBaseUrl;
+  const fetchingModelsByBaseUrlRef = useRef(fetchingModelsByBaseUrl);
+  fetchingModelsByBaseUrlRef.current = fetchingModelsByBaseUrl;
 
   const isCacheStale = (normalizedUrl: string): boolean => {
     const cached = modelsByBaseUrlRef.current[normalizedUrl];
@@ -756,6 +758,8 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
 
   const fetchModelsForUrl = useCallback(async (baseUrl: string, apiKey: string): Promise<AIModelInfo[]> => {
     const normalizedUrl = normalizeBaseUrl(baseUrl);
+    // Prevent duplicate in-flight fetches for the same URL
+    if (fetchingModelsByBaseUrlRef.current[normalizedUrl]) return modelsByBaseUrlRef.current[normalizedUrl]?.models ?? [];
     setFetchingModelsByBaseUrl(prev => ({ ...prev, [normalizedUrl]: true }));
     try {
       const aiService = new AIService(
@@ -1008,9 +1012,17 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
 
       if (providerInfo.supportsProviderSelection) {
         setModelProviders(providerInfo.providers);
+        // If the currently selected provider is not in the new list, reset to platform default
+        const currentProvider = localAIConfigRef.current.selectedProvider;
+        if (currentProvider && !providerInfo.providers.some(p => p.provider === currentProvider)) {
+          setLocalAIConfig(prev => ({
+            ...prev,
+            selectedProvider: '',
+            providerByModelId: { ...(prev.providerByModelId ?? {}) },
+          }));
+        }
       } else {
-      setModelProviders([]);
-      setModelsByBaseUrl({});
+        setModelProviders([]);
       }
     } catch (err) {
       console.error('Failed to fetch model providers:', err);
@@ -1124,14 +1136,16 @@ export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPan
         }
       }
 
-      // Check if this model has a saved provider preference
-      const savedProvider = prev.providerByModelId?.[modelId] ?? prev.selectedProvider;
+      // Only restore a saved provider preference specific to this model.
+      // Default to platform default ('') to avoid carrying over a provider
+      // from a previously selected model that doesn't host this one.
+      const savedProvider = prev.providerByModelId?.[modelId] ?? '';
 
       return {
         ...prev,
         modelId,
         modelIdsByBaseUrl,
-        selectedProvider: savedProvider ?? '',
+        selectedProvider: savedProvider,
       };
     });
   };
