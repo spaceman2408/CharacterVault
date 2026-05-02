@@ -19,7 +19,7 @@ import { normalizeHtmlEntitiesInView } from '../editor/extensions/normalizeHtmlE
 import { toolbarSearch, toolbarSearchTheme } from '../editor/extensions/toolbarSearch';
 import { themeSync } from '../editor/extensions/themeSync';
 import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
-import { AIService, AIError } from '../services/AIService';
+import { AIService, AIError, estimateTokens } from '../services/AIService';
 
 const setAcceptedEditHighlight = StateEffect.define<{ from: number; to: number } | null>();
 
@@ -171,6 +171,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     currentOperation?: AIOperation | null;
     error?: string | null;
     instructPrompt?: string | null;
+    stats?: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string };
   }) => void) | null>(null);
   const aiServiceRef = useRef<AIService | null>(null);
 
@@ -341,6 +342,9 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     setSelection(selectionInfo);
     setSelectedText(text);
 
+    const requestStartTime = Date.now();
+    let firstTokenTime: number | null = null;
+
     try {
       // Debug: Log the model being used
       console.log('[useAIEditor] Using model:', currentConfig.modelId, 'Base URL:', currentConfig.baseUrl);
@@ -349,6 +353,9 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       const context = getContextContent(contextSectionIdsRef.current);
 
       const onChunk = currentConfig.enableStreaming ? (chunk: { content?: string; reasoning?: string }) => {
+        if (firstTokenTime === null) {
+          firstTokenTime = Date.now();
+        }
         if (chunk.reasoning) {
           streamingReasoningRef.current += chunk.reasoning;
           panelUpdateRef.current?.({ streamingReasoning: streamingReasoningRef.current });
@@ -390,6 +397,20 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           throw new Error('Unknown operation');
       }
 
+      // Compute stats
+      const contentTokens = estimateTokens(response.content);
+      const reasoningTokens = estimateTokens(response.reasoning ?? '');
+      const totalTokens = contentTokens + reasoningTokens;
+      const completionTime = firstTokenTime !== null
+        ? Date.now() - firstTokenTime
+        : Date.now() - requestStartTime;
+      const ttft = firstTokenTime !== null
+        ? firstTokenTime - requestStartTime
+        : completionTime;
+      const tokensPerSecond = completionTime > 0
+        ? totalTokens / (completionTime / 1000)
+        : undefined;
+
       // Update result
       aiResultRef.current = response.content;
       aiReasoningRef.current = response.reasoning || '';
@@ -404,6 +425,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         isStreaming: false,
         aiResult: response.content,
         aiReasoning: response.reasoning || '',
+        stats: {
+          ttft,
+          tokensPerSecond,
+          modelId: currentConfig.modelId,
+          providerId: currentConfig.selectedProvider ?? currentConfig.providerByModelId?.[currentConfig.modelId],
+        },
       });
     } catch (err) {
       // Check if this was an abort/cancellation

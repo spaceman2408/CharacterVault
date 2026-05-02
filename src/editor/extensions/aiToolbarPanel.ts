@@ -42,6 +42,7 @@ export type AIStreamingCallback = (update: {
   currentOperation?: AIOperation | null;
   error?: string | null;
   instructPrompt?: string | null;
+  stats?: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string };
 }) => void;
 
 /**
@@ -85,6 +86,7 @@ interface AIPanelState {
   error: string | null;
   showReasoning: boolean;
   instructPrompt: string | null;
+  stats: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string } | null;
 }
 
 /**
@@ -123,6 +125,7 @@ function createToolbarPanel(
     error: null,
     showReasoning: false,
     instructPrompt: null,
+    stats: null,
   };
   
   let currentSampler = sampler;
@@ -471,7 +474,7 @@ function createToolbarPanel(
   });
   
   // Defer the dispatch to avoid "update in progress" error
-  setTimeout(() => {
+  const searchPanelTimer = setTimeout(() => {
     view.dispatch({ effects: StateEffect.appendConfig.of([searchPanelListener]) });
   }, 0);
 
@@ -557,11 +560,12 @@ function createToolbarPanel(
   });
 
   // Close dropdown when clicking outside
-  document.addEventListener('click', (e) => {
+  const closeDropdownOnOutsideClick = (e: MouseEvent) => {
     if (!moreContainer.contains(e.target as Node)) {
       dropdown.style.display = 'none';
     }
-  });
+  };
+  document.addEventListener('click', closeDropdownOnOutsideClick);
 
   // Separator
   const separator = document.createElement('div');
@@ -585,7 +589,7 @@ function createToolbarPanel(
   resultHeader.style.cssText = `
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 8px;
     margin-bottom: 8px;
   `;
   resultContainer.appendChild(resultHeader);
@@ -599,6 +603,18 @@ function createToolbarPanel(
     letter-spacing: 0.5px;
   `;
   resultHeader.appendChild(resultTitle);
+
+  // Stats display (shown when result is complete)
+  const resultStats = document.createElement('span');
+  resultStats.style.cssText = `
+    display: none;
+    font-size: 11px;
+    color: var(--ai-toolbar-text-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    margin-left: auto;
+    white-space: nowrap;
+  `;
+  resultHeader.appendChild(resultStats);
 
   const resultCloseBtn = document.createElement('button');
   resultCloseBtn.innerHTML = '✕';
@@ -924,6 +940,19 @@ function createToolbarPanel(
       contentDisplay.style.display = 'none';
     }
 
+    // Stats display (only when complete and has result)
+    const hasStats = state.stats && !state.isProcessing && !state.isStreaming && state.aiResult && !state.error;
+    if (hasStats) {
+      const s = state.stats!;
+      const parts: string[] = [];
+      if (typeof s.ttft === 'number') parts.push(`TTFT: ${s.ttft}ms`);
+      if (typeof s.tokensPerSecond === 'number') parts.push(`T/S: ${s.tokensPerSecond.toFixed(2)}`);
+      resultStats.textContent = parts.join(' ');
+      resultStats.style.display = 'inline';
+    } else {
+      resultStats.style.display = 'none';
+    }
+
     // Action buttons (only when complete and has result)
     const showActions = !state.isProcessing && !state.isStreaming && state.aiResult && !state.error;
     actionButtons.style.display = showActions ? 'flex' : 'none';
@@ -1070,6 +1099,9 @@ function createToolbarPanel(
     if (update.currentOperation !== undefined) state.currentOperation = update.currentOperation;
     if (update.error !== undefined) state.error = update.error;
     if (update.instructPrompt !== undefined) state.instructPrompt = update.instructPrompt;
+    if (update.stats !== undefined) state.stats = update.stats;
+    // Clear stats when a new operation starts
+    if (update.isProcessing === true) state.stats = null;
 
     // If there's an error and we have a stored instruct prompt, restore instruct mode
     let restoredInstructMode = false;
@@ -1107,6 +1139,8 @@ function createToolbarPanel(
       updateState();
     },
     destroy: () => {
+      document.removeEventListener('click', closeDropdownOnOutsideClick);
+      window.clearTimeout(searchPanelTimer);
       if (fontSizeCleanup) {
         fontSizeCleanup();
       }
