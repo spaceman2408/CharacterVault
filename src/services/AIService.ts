@@ -475,9 +475,9 @@ Provide only the generated text without any additional commentary.`;
         : undefined,
     };
 
-    //DEBUG: Uncomment to log request details
-    //console.log('[AIService] Sending request with model:', this.config.modelId);
-    //console.log('[AIService] Full request:', JSON.stringify(request, null, 2));
+    //DEBUG: Log request details for troubleshooting
+    console.log('[AIService] Sending request with model:', this.config.modelId);
+    // console.log('[AIService] Full request:', JSON.stringify(request, null, 2));
 
     try {
       let currentRequest = request;
@@ -487,29 +487,48 @@ Provide only the generated text without any additional commentary.`;
         if (response.status !== 400) break;
 
         const errorText = await response.text().catch(() => '');
+        console.warn(`[AIService] Attempt ${attempt + 1} failed with 400. Response body:`, errorText);
         let errorData: Record<string, unknown>;
         try { errorData = JSON.parse(errorText); } catch { errorData = {}; }
 
         const stripped = this.stripRejectedParams(currentRequest, errorData);
-        if (!stripped) {
-          throw new AIError(
-            (errorData.error as { message?: string } | undefined)?.message || 'Invalid request',
-            'invalid_request',
-            400
+        if (stripped) {
+          console.warn(
+            `[AIService] Model "${this.config.modelId}" rejected parameters: ${stripped.removed.join(', ')}. ` +
+            `Retrying without them...`
           );
+          // console.log('[AIService] Retrying with cleaned request:', JSON.stringify(stripped.request, null, 2));
+          this.abortController = new AbortController();
+          currentRequest = stripped.request;
+          response = await this.sendRequest(currentRequest, this.abortController.signal);
+          continue;
         }
 
-        console.warn(
-          `[AIService] Model "${this.config.modelId}" rejected parameters: ${stripped.removed.join(', ')}. ` +
-          `Retrying without them...`
+        // Fallback: if error message is generic or doesn't name params, strip all non-standard params proactively
+        const fallbackStripped = this.stripAllNonStandardParams(currentRequest);
+        if (fallbackStripped.removed.length > 0) {
+          console.warn(
+            `[AIService] Generic 400 error. Proactively stripping non-standard params: ${fallbackStripped.removed.join(', ')}. ` +
+            `Retrying without them...`
+          );
+          // console.log('[AIService] Retrying with cleaned request:', JSON.stringify(fallbackStripped.request, null, 2));
+          this.abortController = new AbortController();
+          currentRequest = fallbackStripped.request;
+          response = await this.sendRequest(currentRequest, this.abortController.signal);
+          continue;
+        }
+
+        console.error('[AIService] No stripRejectedParams match. Throwing invalid_request.');
+        throw new AIError(
+          (errorData.error as { message?: string } | undefined)?.message || 'Invalid request',
+          'invalid_request',
+          400
         );
-        this.abortController = new AbortController();
-        currentRequest = stripped.request;
-        response = await this.sendRequest(currentRequest, this.abortController.signal);
       }
 
       if (response.status === 400) {
         const errorText = await response.text().catch(() => '');
+        console.error('[AIService] Final 400 after retries. Response body:', errorText);
         let errorData: Record<string, unknown>;
         try { errorData = JSON.parse(errorText); } catch { errorData = {}; }
         throw new AIError(
@@ -564,6 +583,28 @@ Provide only the generated text without any additional commentary.`;
     }
 
     if (removed.length === 0) return null;
+
+    const cleaned = { ...request };
+    for (const param of removed) {
+      delete cleaned[param];
+    }
+    return { request: cleaned, removed };
+  }
+
+  private stripAllNonStandardParams(
+    request: ChatCompletionRequest
+  ): { request: ChatCompletionRequest; removed: string[] } {
+    const removed: string[] = [];
+    for (const param of NON_STANDARD_PARAMS) {
+      if (request[param] !== undefined) {
+        removed.push(param);
+      }
+    }
+    if (request.logit_bias !== undefined) {
+      removed.push('logit_bias');
+    }
+
+    if (removed.length === 0) return { request, removed };
 
     const cleaned = { ...request };
     for (const param of removed) {
