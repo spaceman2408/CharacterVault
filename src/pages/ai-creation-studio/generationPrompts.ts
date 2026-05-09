@@ -25,7 +25,7 @@ Instructions:
 - Use "- " bullet lists for list items (not asterisks).
 - Do NOT use *asterisks* for emphasis or actions anywhere in the output.
 - Create headings appropriate to the character; include the ones below where relevant.
-- The "## Sexual Kinks (if any)" heading should be omitted entirely if it does not fit the character.
+- The "## Sexual Kinks" heading should be omitted entirely if it does not fit the character.
 - Output ONLY the description content, no extra commentary.
 
 Template:
@@ -50,7 +50,7 @@ Template:
 ## Goals
 - ...
 
-## Sexual Kinks (if any)
+## Sexual Kinks
 - ...
 
 ## Background
