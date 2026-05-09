@@ -14,6 +14,7 @@ import {
   CheckCircle,
   ExternalLink,
   Library,
+  Wand2,
 } from 'lucide-react';
 import { useCharacterContext } from '../../context';
 import { CharacterSettingsPanel } from '../../components/settings/CharacterSettingsPanel';
@@ -125,6 +126,7 @@ export const AICreationStudio: React.FC = () => {
 
   const hasGeneratedContent = Object.keys(state.generatedData).length > 0;
   const canSave = state.status === 'complete' || (hasGeneratedContent && state.generatedData.name);
+  const showEmptyState = !hasGeneratedContent && !saveSuccess && !isLoading;
 
   return (
     <div className="h-dvh flex flex-col bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 overflow-hidden">
@@ -203,10 +205,11 @@ export const AICreationStudio: React.FC = () => {
 
           {/* Main Layout */}
           {!saveSuccess && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className={`grid gap-6 ${showEmptyState ? 'max-w-2xl mx-auto' : 'grid-cols-1 lg:grid-cols-2'}`}>
               {/* Left Panel - Input & Progress */}
               <div className="space-y-6">
-                <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
+                {/* Concept Input */}
+                <div className={`bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm ${showEmptyState ? 'p-8' : 'p-6'}`}>
                   <ConceptInput
                     concept={concept}
                     onConceptChange={setConcept}
@@ -217,6 +220,21 @@ export const AICreationStudio: React.FC = () => {
                     onOpenSettings={handleOpenSettings}
                   />
                 </div>
+
+                {/* Empty state illustration — centered when no content yet */}
+                {showEmptyState && (
+                  <div className="hidden lg:flex flex-col items-center justify-center py-8 text-center opacity-50">
+                    <div className="w-14 h-14 rounded-2xl bg-vault-100 dark:bg-vault-800 flex items-center justify-center mb-3">
+                      <Wand2 className="w-7 h-7 text-vault-400 dark:text-vault-500" />
+                    </div>
+                    <p className="text-sm font-medium text-vault-600 dark:text-vault-400">
+                      Your generated character will appear here
+                    </p>
+                    <p className="text-xs text-vault-500 dark:text-vault-500 mt-1 max-w-xs">
+                      Enter a concept and click Generate to create name, description, first message, and examples.
+                    </p>
+                  </div>
+                )}
 
                 {hasGeneratedContent && (
                   <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
@@ -229,34 +247,38 @@ export const AICreationStudio: React.FC = () => {
               </div>
 
               {/* Right Panel - Preview */}
-              <div className="space-y-6">
-                {hasGeneratedContent && (
-                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
-                    <GeneratedCardPreview
-                      generatedData={state.generatedData}
-                      onFieldChange={updateGeneratedField}
-                    />
-                  </div>
-                )}
+              {!showEmptyState && (
+                <div className="space-y-6">
+                  {hasGeneratedContent && (
+                    <>
+                      <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
+                        <GeneratedCardPreview
+                          generatedData={state.generatedData}
+                          onFieldChange={updateGeneratedField}
+                        />
+                      </div>
 
-                {/* Save button area */}
-                {canSave && (
-                  <div className="flex justify-end">
-                    <button
-                      onClick={handleSaveToVault}
-                      disabled={isSaving || !state.generatedData.name}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isSaving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
+                      {/* Save button area */}
+                      {canSave && (
+                        <div className="flex justify-end">
+                          <button
+                            onClick={handleSaveToVault}
+                            disabled={isSaving || !state.generatedData.name}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isSaving ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            {isSaving ? 'Saving...' : 'Save to Vault'}
+                          </button>
+                        </div>
                       )}
-                      {isSaving ? 'Saving...' : 'Save to Vault'}
-                    </button>
-                  </div>
-                )}
-              </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
