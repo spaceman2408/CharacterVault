@@ -10,7 +10,7 @@ export function buildNamePrompt(concept: string): string {
 
 Rules:
 - If the user already provided a name in the concept, output that exact name and nothing else.
-- Never reuse common fantasy/SF names like Elara, Elysia, Seraphina, Lyra, Aurora, Celeste, Isabella, Sarah, Sara, Blackwood, Kestrel, Raven, Shadow, Moon, Frost, Storm, Silver, or any obvious combination of these (e.g., "Silvermoon", "Blackwood", "Stormrider").
+- Never reuse common fantasy/SF names like Elara, Elysia, Seraphina, Lyra, Aurora, Celeste, Isabella, Sarah, Sara, Blackwood, Kestrel, Raven, Shadow, Moon, Frost, Storm, Silver, Vespara, Vaelithra, Vae, or any obvious combination of these (e.g., "Silvermoon", "Blackwood", "Stormrider").
 - Do NOT be literal: if the character is a snow elf, do NOT output a name like "Velora Snowwhisper" or "Aelindra Icewhisper" that directly describes their trait in the prompt.
 - Instead, be creative: extrapolate from the concept, not just mash two thematic words together.
 - Consider the implied culture, era, region, or language when inventing the name.
