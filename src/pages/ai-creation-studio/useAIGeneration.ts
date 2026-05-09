@@ -3,7 +3,7 @@
  * @module @pages/ai-creation-studio/useAIGeneration
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { AIService, AIError } from '../../services/AIService';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import type { AIConfig, SamplerSettings } from '../../db/types';
@@ -80,6 +80,11 @@ export function useAIGeneration(): UseAIGenerationResult {
 
   const reloadConfig = useCallback(async () => {
     await loadConfig();
+  }, [loadConfig]);
+
+  // Pre-check saved config on mount so `isConfigured` reflects reality immediately
+  useEffect(() => {
+    void loadConfig();
   }, [loadConfig]);
 
   const buildMessages = useCallback(
