@@ -10,4 +10,5 @@ export { CharacterProvider, CharacterContext } from './CharacterContext';
 export { useCharacterContext } from './useCharacterContext';
 export { CharacterEditorProvider } from './CharacterEditorContext';
 export { useCharacterEditorContext } from './useCharacterEditorContext';
+export { CharacterEditorContext } from './characterEditorContextTypes';
 export type { CharacterEditorContextValue } from './characterEditorContextTypes';

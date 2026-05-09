@@ -9,6 +9,7 @@ import { CharacterProvider, useCharacterContext } from './context';
 import { CharacterWorkspace } from './components/workspace';
 import { WelcomeTutorial } from './components/WelcomeTutorial';
 import { ImportPage } from './pages/ImportPage';
+import { AICreationStudio } from './pages/ai-creation-studio/AICreationStudio';
 import { characterImportService } from './services/CharacterImportService';
 import {
   Users,
@@ -24,7 +25,8 @@ import {
   Play,
   X,
   HelpCircle,
-  BookOpen
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 import { PromoBanner } from './components/PromoBanner';
 import type { CharacterListItem } from './db';
@@ -452,8 +454,27 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             </button>
 
             <div className="h-6 w-px bg-vault-200 dark:bg-vault-800 mx-1 hidden sm:block" />
-            
-            <button 
+
+            <a
+              href="#/ai-create"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
+              text-vault-700 dark:text-vault-300
+              hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+              transition-colors duration-200"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">AI Create</span>
+            </a>
+
+            <a
+              href="#/ai-create"
+              className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+              title="AI Create"
+            >
+              <Sparkles className="w-4 h-4" />
+            </a>
+
+            <button
               onClick={() => setIsCreating(true)}
               className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
             text-vault-700 dark:text-vault-300
@@ -464,10 +485,10 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               <span className="hidden sm:inline">Create New</span>
             </button>
 
-            <IconButton 
-              icon={isDark ? Sun : Moon} 
-              onClick={toggleTheme} 
-              title="Toggle Theme" 
+            <IconButton
+              icon={isDark ? Sun : Moon}
+              onClick={toggleTheme}
+              title="Toggle Theme"
             />
 
             <IconButton 
@@ -793,6 +814,7 @@ function App(): React.ReactElement {
       <Routes>
         <Route path="/" element={<AppContent />} />
         <Route path="/import" element={<ImportPage />} />
+        <Route path="/ai-create" element={<AICreationStudio />} />
       </Routes>
     </CharacterProvider>
   );

@@ -1097,6 +1097,18 @@ Provide only the generated text without any additional commentary.`;
   }
 
   /**
+   * Make a chat completion request with custom messages
+   * Public wrapper around chatCompletion for custom prompt generation
+   */
+  async chat(
+    messages: ChatMessage[],
+    customSampler?: Partial<SamplerSettings>,
+    onChunk?: (chunk: { content?: string; reasoning?: string }) => void
+  ): Promise<AIResponse> {
+    return this.chatCompletion(messages, customSampler, onChunk);
+  }
+
+  /**
    * Check if the service is configured and ready
    */
   isReady(): boolean {

@@ -38,13 +38,14 @@ import {
 import type { AIConfig, SamplerSettings, PromptSettings, AIModelInfo } from '../../db/types';
 import { DEFAULT_SETTINGS } from '../../db/types';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
-import { useCharacterEditorContext } from '../../context';
+import { CharacterEditorContext } from '../../context';
 import { AIService, AIError } from '../../services/AIService';
 import type { ModelProvider } from '../../services/providers';
 
 interface CharacterSettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  reloadSettings?: () => Promise<void>;
 }
 
 interface ToastNotification {
@@ -651,8 +652,9 @@ const ToastContainer: React.FC<{
   );
 };
 
-export function CharacterSettingsPanel({ isOpen, onClose }: CharacterSettingsPanelProps): React.ReactElement | null {
-  const { reloadSettings } = useCharacterEditorContext();
+export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propReloadSettings }: CharacterSettingsPanelProps): React.ReactElement | null {
+  const editorContext = React.useContext(CharacterEditorContext);
+  const reloadSettings = propReloadSettings ?? editorContext?.reloadSettings ?? (async () => {});
   const normalizeBaseUrl = (value: string): string => value.trim().replace(/\/$/, '');
   const getStoredApiKey = (config: AIConfig, baseUrl: string): string => {
     const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
