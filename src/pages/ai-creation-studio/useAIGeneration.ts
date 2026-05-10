@@ -58,6 +58,7 @@ export function useAIGeneration(): UseAIGenerationResult {
   const configRef = useRef<{ config: AIConfig; sampler: SamplerSettings } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const stateRef = useRef<GenerationState>(state);
+  const isAbortedRef = useRef<boolean>(false);
   stateRef.current = state;
 
   const loadConfig = useCallback(async (): Promise<boolean> => {
@@ -148,6 +149,9 @@ export function useAIGeneration(): UseAIGenerationResult {
           messages,
           undefined,
           (chunk: { content?: string; reasoning?: string }) => {
+            // Don't update state if aborted
+            if (isAbortedRef.current) return;
+            
             if (chunk.content) {
               accumulatedContent += chunk.content;
               setState((prev) => ({
@@ -168,11 +172,14 @@ export function useAIGeneration(): UseAIGenerationResult {
 
         return content;
       } catch (err) {
-        setState((prev) => ({
-          ...prev,
-          failedField: field,
-          generatedData: { ...prev.generatedData, [field]: undefined },
-        }));
+        // Don't update state if aborted
+        if (!isAbortedRef.current) {
+          setState((prev) => ({
+            ...prev,
+            failedField: field,
+            generatedData: { ...prev.generatedData, [field]: undefined },
+          }));
+        }
         throw err;
       }
     },
@@ -196,6 +203,7 @@ export function useAIGeneration(): UseAIGenerationResult {
         return;
       }
 
+      isAbortedRef.current = false;
       setIsLoading(true);
       setState({
         ...INITIAL_STATE,
@@ -208,7 +216,7 @@ export function useAIGeneration(): UseAIGenerationResult {
       try {
         for (const field of FIELD_ORDER) {
           // Check if aborted
-          if (abortControllerRef.current?.signal.aborted) {
+          if (abortControllerRef.current?.signal.aborted || isAbortedRef.current) {
             throw new AIError('Request was cancelled', 'unknown');
           }
 
@@ -219,6 +227,12 @@ export function useAIGeneration(): UseAIGenerationResult {
           }));
 
           const result = await generateField(field, trimmedConcept, generatedData);
+          
+          // Check again after async operation
+          if (isAbortedRef.current) {
+            throw new AIError('Request was cancelled', 'unknown');
+          }
+          
           generatedData[field] = result;
 
           setState((prev) => ({
@@ -228,22 +242,28 @@ export function useAIGeneration(): UseAIGenerationResult {
           }));
         }
 
-        setState((prev) => ({
-          ...prev,
-          status: 'complete',
-          currentField: null,
-        }));
+        // Don't update to complete if aborted
+        if (!isAbortedRef.current) {
+          setState((prev) => ({
+            ...prev,
+            status: 'complete',
+            currentField: null,
+          }));
+        }
       } catch (err) {
-        const errorMessage =
-          err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
+        // Don't update state if aborted
+        if (!isAbortedRef.current) {
+          const errorMessage =
+            err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
 
-        setState((prev) => ({
-          ...prev,
-          status: 'error',
-          error: errorMessage,
-          failedField: prev.failedField ?? prev.currentField,
-          currentField: null,
-        }));
+          setState((prev) => ({
+            ...prev,
+            status: 'error',
+            error: errorMessage,
+            failedField: prev.failedField ?? prev.currentField,
+            currentField: null,
+          }));
+        }
       } finally {
         setIsLoading(false);
         abortControllerRef.current = null;
@@ -253,6 +273,7 @@ export function useAIGeneration(): UseAIGenerationResult {
   );
 
   const abort = useCallback(() => {
+    isAbortedRef.current = true;
     if (aiServiceRef.current) {
       aiServiceRef.current.abort();
     }
@@ -278,6 +299,7 @@ export function useAIGeneration(): UseAIGenerationResult {
         return;
       }
 
+      isAbortedRef.current = false;
       setIsLoading(true);
       setState((prev) => ({
         ...prev,
@@ -292,26 +314,32 @@ export function useAIGeneration(): UseAIGenerationResult {
         const effectiveConcept = concept || currentData.name || 'Character';
         const result = await generateField(field, effectiveConcept, currentData);
 
-        setState((prev) => ({
-          ...prev,
-          status: 'complete',
-          currentField: null,
-          generatedData: { ...prev.generatedData, [field]: result },
-          completedFields: Array.from(new Set([...prev.completedFields, field])),
-          error: null,
-          failedField: null,
-        }));
+        // Don't update state if aborted
+        if (!isAbortedRef.current) {
+          setState((prev) => ({
+            ...prev,
+            status: 'complete',
+            currentField: null,
+            generatedData: { ...prev.generatedData, [field]: result },
+            completedFields: Array.from(new Set([...prev.completedFields, field])),
+            error: null,
+            failedField: null,
+          }));
+        }
       } catch (err) {
-        const errorMessage =
-          err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
+        // Don't update state if aborted
+        if (!isAbortedRef.current) {
+          const errorMessage =
+            err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
 
-        setState((prev) => ({
-          ...prev,
-          status: 'error',
-          error: errorMessage,
-          failedField: field,
-          currentField: null,
-        }));
+          setState((prev) => ({
+            ...prev,
+            status: 'error',
+            error: errorMessage,
+            failedField: field,
+            currentField: null,
+          }));
+        }
       } finally {
         setIsLoading(false);
         abortControllerRef.current = null;
@@ -332,6 +360,7 @@ export function useAIGeneration(): UseAIGenerationResult {
         return;
       }
 
+      isAbortedRef.current = false;
       setIsLoading(true);
       setState((prev) => ({
         ...prev,
@@ -349,26 +378,32 @@ export function useAIGeneration(): UseAIGenerationResult {
         const contextData = { ...currentData, [field]: undefined };
         const result = await generateField(field, effectiveConcept, contextData);
 
-        setState((prev) => ({
-          ...prev,
-          status: 'complete',
-          currentField: null,
-          generatedData: { ...prev.generatedData, [field]: result },
-          completedFields: Array.from(new Set([...prev.completedFields, field])),
-          error: null,
-          failedField: null,
-        }));
+        // Don't update state if aborted
+        if (!isAbortedRef.current) {
+          setState((prev) => ({
+            ...prev,
+            status: 'complete',
+            currentField: null,
+            generatedData: { ...prev.generatedData, [field]: result },
+            completedFields: Array.from(new Set([...prev.completedFields, field])),
+            error: null,
+            failedField: null,
+          }));
+        }
       } catch (err) {
-        const errorMessage =
-          err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
+        // Don't update state if aborted
+        if (!isAbortedRef.current) {
+          const errorMessage =
+            err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
 
-        setState((prev) => ({
-          ...prev,
-          status: 'error',
-          error: errorMessage,
-          failedField: field,
-          currentField: null,
-        }));
+          setState((prev) => ({
+            ...prev,
+            status: 'error',
+            error: errorMessage,
+            failedField: field,
+            currentField: null,
+          }));
+        }
       } finally {
         setIsLoading(false);
         abortControllerRef.current = null;
@@ -392,6 +427,7 @@ export function useAIGeneration(): UseAIGenerationResult {
     const remaining = FIELD_ORDER.filter((f) => !currentState.completedFields.includes(f));
     if (remaining.length === 0) return;
 
+    isAbortedRef.current = false;
     setIsLoading(true);
     setState((prev) => ({
       ...prev,
@@ -405,7 +441,7 @@ export function useAIGeneration(): UseAIGenerationResult {
 
     try {
       for (const field of remaining) {
-        if (abortControllerRef.current?.signal.aborted) {
+        if (abortControllerRef.current?.signal.aborted || isAbortedRef.current) {
           throw new AIError('Request was cancelled', 'unknown');
         }
 
@@ -416,6 +452,12 @@ export function useAIGeneration(): UseAIGenerationResult {
         }));
 
         const result = await generateField(field, trimmedConcept, generatedData);
+        
+        // Check again after async operation
+        if (isAbortedRef.current) {
+          throw new AIError('Request was cancelled', 'unknown');
+        }
+        
         generatedData[field] = result;
 
         setState((prev) => ({
@@ -425,22 +467,28 @@ export function useAIGeneration(): UseAIGenerationResult {
         }));
       }
 
-      setState((prev) => ({
-        ...prev,
-        status: 'complete',
-        currentField: null,
-      }));
+      // Don't update to complete if aborted
+      if (!isAbortedRef.current) {
+        setState((prev) => ({
+          ...prev,
+          status: 'complete',
+          currentField: null,
+        }));
+      }
     } catch (err) {
-      const errorMessage =
-        err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
+      // Don't update state if aborted
+      if (!isAbortedRef.current) {
+        const errorMessage =
+          err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
 
-      setState((prev) => ({
-        ...prev,
-        status: 'error',
-        error: errorMessage,
-        failedField: prev.failedField ?? prev.currentField,
-        currentField: null,
-      }));
+        setState((prev) => ({
+          ...prev,
+          status: 'error',
+          error: errorMessage,
+          failedField: prev.failedField ?? prev.currentField,
+          currentField: null,
+        }));
+      }
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
@@ -455,6 +503,7 @@ export function useAIGeneration(): UseAIGenerationResult {
   }, []);
 
   const reset = useCallback(() => {
+    isAbortedRef.current = true;
     setState(INITIAL_STATE);
     setIsLoading(false);
     setConcept('');

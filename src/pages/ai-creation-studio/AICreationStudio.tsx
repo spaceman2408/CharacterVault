@@ -225,6 +225,10 @@ export const AICreationStudio: React.FC = () => {
   }, [reset]);
 
   const handleGoBack = useCallback(() => {
+    // Abort any ongoing generation first
+    if (isLoading) {
+      abort();
+    }
     reset();
     setConcept('');
     setTagSelections({});
@@ -232,7 +236,7 @@ export const AICreationStudio: React.FC = () => {
     setVortexActive(false);
     setVortexTags([]);
     setFadeInputModal(false);
-  }, [reset]);
+  }, [reset, abort, isLoading]);
 
   const hasGeneratedContent = Object.keys(state.generatedData).length > 0;
   const canSave = state.status === 'complete' || (hasGeneratedContent && state.generatedData.name);
