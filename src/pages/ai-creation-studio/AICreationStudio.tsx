@@ -335,7 +335,7 @@ export const AICreationStudio: React.FC = () => {
                 {/* Concept Input — hidden during generation or when results exist */}
                 {showEmptyState && (
                   <div 
-                    className={`bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-8 transition-opacity duration-700 ${
+                    className={`bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-8 transition-opacity duration-200 ${
                       fadeInputModal ? 'opacity-0' : 'opacity-100'
                     }`}
                   >
@@ -478,7 +478,7 @@ export const AICreationStudio: React.FC = () => {
                 {/* Empty state illustration */}
                 {showEmptyState && (
                   <div 
-                    className={`hidden lg:flex flex-col items-center justify-center py-8 text-center opacity-50 transition-opacity duration-700 ${
+                    className={`hidden lg:flex flex-col items-center justify-center py-8 text-center opacity-50 transition-opacity duration-200 ${
                       fadeInputModal ? 'opacity-0' : ''
                     }`}
                   >

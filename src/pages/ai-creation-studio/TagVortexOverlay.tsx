@@ -129,7 +129,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
     onAnimationStart?.();
 
     // Wait for modal to fade out before starting animation
-    const MODAL_FADE_DELAY = 800; // Give modal time to fade out
+    const MODAL_FADE_DELAY = 250; // Give modal time to fade out (reduced for faster transition)
 
     // Use microtask to avoid synchronous setState during effect execution
     queueMicrotask(() => {
@@ -181,12 +181,13 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-700 ${
-        fadeOut ? 'opacity-0' : 'opacity-100'
-      }`}
+      className="fixed inset-0 flex items-center justify-center"
       style={{ 
+        zIndex: 9999,
         backgroundColor: 'rgba(0,0,0,0.85)',
         backdropFilter: 'blur(8px)',
+        opacity: fadeOut ? 0 : 1,
+        transition: 'opacity 700ms ease-in-out',
       }}
     >
       {/* Radial gradient background pulse */}
