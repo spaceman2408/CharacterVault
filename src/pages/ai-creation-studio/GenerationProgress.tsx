@@ -4,18 +4,22 @@
  */
 
 import React from 'react';
-import { Loader2, Check, AlertCircle, RotateCcw } from 'lucide-react';
+import { Loader2, Check, AlertCircle, RotateCcw, Sparkles, RefreshCw } from 'lucide-react';
 import type { GenerationField, GenerationState } from './types';
 import { GENERATION_FIELDS } from './types';
 
 interface GenerationProgressProps {
   state: GenerationState;
-  onRetryField: (field: GenerationField) => void;
+  isLoading: boolean;
+  onGenerateField: (field: GenerationField) => void;
+  onRegenerateField: (field: GenerationField) => void;
 }
 
 export const GenerationProgress: React.FC<GenerationProgressProps> = ({
   state,
-  onRetryField,
+  isLoading,
+  onGenerateField,
+  onRegenerateField,
 }) => {
   const { status, currentField, completedFields, error, failedField } = state;
 
@@ -31,6 +35,7 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
         const isDone = completedFields.includes(field.key);
         const isActive = currentField === field.key;
         const isFailed = failedField === field.key;
+        const isPending = !isDone && !isActive && !isFailed;
 
         return (
           <div
@@ -85,12 +90,37 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
 
             {isFailed && (
               <button
-                onClick={() => onRetryField(field.key)}
-                className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-md transition-colors"
+                onClick={() => onGenerateField(field.key)}
+                disabled={isLoading}
+                className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Retry this field"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Retry
+              </button>
+            )}
+
+            {isDone && !isFailed && (
+              <button
+                onClick={() => onRegenerateField(field.key)}
+                disabled={isLoading}
+                className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Regenerate this field"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Regenerate
+              </button>
+            )}
+
+            {isPending && (
+              <button
+                onClick={() => onGenerateField(field.key)}
+                disabled={isLoading}
+                className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium text-vault-500 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Generate this field"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Generate
               </button>
             )}
           </div>

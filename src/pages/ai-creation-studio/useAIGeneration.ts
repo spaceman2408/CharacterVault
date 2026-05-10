@@ -41,8 +41,11 @@ export interface UseAIGenerationResult {
   start: (concept: string) => Promise<void>;
   abort: () => void;
   retryField: (field: GenerationField) => Promise<void>;
+  regenerateField: (field: GenerationField) => Promise<void>;
+  continueGeneration: () => Promise<void>;
   reloadConfig: () => Promise<void>;
   updateGeneratedField: (field: GenerationField, value: string) => void;
+  reset: () => void;
 }
 
 export function useAIGeneration(): UseAIGenerationResult {
@@ -54,6 +57,8 @@ export function useAIGeneration(): UseAIGenerationResult {
   const aiServiceRef = useRef<AIService | null>(null);
   const configRef = useRef<{ config: AIConfig; sampler: SamplerSettings } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const stateRef = useRef<GenerationState>(state);
+  stateRef.current = state;
 
   const loadConfig = useCallback(async (): Promise<boolean> => {
     try {
@@ -138,21 +143,38 @@ export function useAIGeneration(): UseAIGenerationResult {
 
       let accumulatedContent = '';
 
-      const response = await service.chat(
-        messages,
-        undefined,
-        (chunk: { content?: string; reasoning?: string }) => {
-          if (chunk.content) {
-            accumulatedContent += chunk.content;
-            setState((prev) => ({
-              ...prev,
-              generatedData: { ...prev.generatedData, [field]: accumulatedContent },
-            }));
+      try {
+        const response = await service.chat(
+          messages,
+          undefined,
+          (chunk: { content?: string; reasoning?: string }) => {
+            if (chunk.content) {
+              accumulatedContent += chunk.content;
+              setState((prev) => ({
+                ...prev,
+                generatedData: { ...prev.generatedData, [field]: accumulatedContent },
+              }));
+            }
           }
-        }
-      );
+        );
 
-      return response.content || '';
+        const content = response.content || '';
+        if (!content.trim()) {
+          throw new AIError(
+            `Generation returned empty content for "${field}". The model may have errored during generation.`,
+            'unknown'
+          );
+        }
+
+        return content;
+      } catch (err) {
+        setState((prev) => ({
+          ...prev,
+          failedField: field,
+          generatedData: { ...prev.generatedData, [field]: undefined },
+        }));
+        throw err;
+      }
     },
     [buildMessages]
   );
@@ -219,7 +241,7 @@ export function useAIGeneration(): UseAIGenerationResult {
           ...prev,
           status: 'error',
           error: errorMessage,
-          failedField: prev.currentField,
+          failedField: prev.failedField ?? prev.currentField,
           currentField: null,
         }));
       } finally {
@@ -266,8 +288,9 @@ export function useAIGeneration(): UseAIGenerationResult {
       }));
 
       try {
-        const effectiveConcept = concept || state.generatedData.name || 'Character';
-        const result = await generateField(field, effectiveConcept, state.generatedData);
+        const currentData = stateRef.current.generatedData;
+        const effectiveConcept = concept || currentData.name || 'Character';
+        const result = await generateField(field, effectiveConcept, currentData);
 
         setState((prev) => ({
           ...prev,
@@ -294,14 +317,149 @@ export function useAIGeneration(): UseAIGenerationResult {
         abortControllerRef.current = null;
       }
     },
-    [loadConfig, generateField, state.generatedData, concept]
+    [loadConfig, generateField, concept]
   );
+
+  const regenerateField = useCallback(
+    async (field: GenerationField) => {
+      const hasConfig = await loadConfig();
+      if (!hasConfig) {
+        setState((prev) => ({
+          ...prev,
+          status: 'error',
+          error: 'AI is not configured. Please configure your AI settings first.',
+        }));
+        return;
+      }
+
+      setIsLoading(true);
+      setState((prev) => ({
+        ...prev,
+        status: 'generating',
+        currentField: field,
+        error: null,
+        failedField: null,
+        completedFields: prev.completedFields.filter((f) => f !== field),
+        generatedData: { ...prev.generatedData, [field]: undefined },
+      }));
+
+      try {
+        const currentData = stateRef.current.generatedData;
+        const effectiveConcept = concept || currentData.name || 'Character';
+        const contextData = { ...currentData, [field]: undefined };
+        const result = await generateField(field, effectiveConcept, contextData);
+
+        setState((prev) => ({
+          ...prev,
+          status: 'complete',
+          currentField: null,
+          generatedData: { ...prev.generatedData, [field]: result },
+          completedFields: Array.from(new Set([...prev.completedFields, field])),
+          error: null,
+          failedField: null,
+        }));
+      } catch (err) {
+        const errorMessage =
+          err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
+
+        setState((prev) => ({
+          ...prev,
+          status: 'error',
+          error: errorMessage,
+          failedField: field,
+          currentField: null,
+        }));
+      } finally {
+        setIsLoading(false);
+        abortControllerRef.current = null;
+      }
+    },
+    [loadConfig, generateField, concept]
+  );
+
+  const continueGeneration = useCallback(async () => {
+    const hasConfig = await loadConfig();
+    if (!hasConfig) {
+      setState((prev) => ({
+        ...prev,
+        status: 'error',
+        error: 'AI is not configured. Please configure your AI settings first.',
+      }));
+      return;
+    }
+
+    const currentState = stateRef.current;
+    const remaining = FIELD_ORDER.filter((f) => !currentState.completedFields.includes(f));
+    if (remaining.length === 0) return;
+
+    setIsLoading(true);
+    setState((prev) => ({
+      ...prev,
+      status: 'generating',
+      error: null,
+      failedField: null,
+    }));
+
+    const generatedData: Partial<CharacterSpec> = { ...currentState.generatedData };
+    const trimmedConcept = concept || currentState.generatedData.name || 'Character';
+
+    try {
+      for (const field of remaining) {
+        if (abortControllerRef.current?.signal.aborted) {
+          throw new AIError('Request was cancelled', 'unknown');
+        }
+
+        setState((prev) => ({
+          ...prev,
+          currentField: field,
+          generatedData: { ...generatedData },
+        }));
+
+        const result = await generateField(field, trimmedConcept, generatedData);
+        generatedData[field] = result;
+
+        setState((prev) => ({
+          ...prev,
+          completedFields: Array.from(new Set([...prev.completedFields, field])),
+          generatedData: { ...generatedData },
+        }));
+      }
+
+      setState((prev) => ({
+        ...prev,
+        status: 'complete',
+        currentField: null,
+      }));
+    } catch (err) {
+      const errorMessage =
+        err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
+
+      setState((prev) => ({
+        ...prev,
+        status: 'error',
+        error: errorMessage,
+        failedField: prev.failedField ?? prev.currentField,
+        currentField: null,
+      }));
+    } finally {
+      setIsLoading(false);
+      abortControllerRef.current = null;
+    }
+  }, [loadConfig, generateField, concept]);
 
   const updateGeneratedField = useCallback((field: GenerationField, value: string) => {
     setState((prev) => ({
       ...prev,
       generatedData: { ...prev.generatedData, [field]: value },
     }));
+  }, []);
+
+  const reset = useCallback(() => {
+    setState(INITIAL_STATE);
+    setIsLoading(false);
+    setConcept('');
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
   }, []);
 
   return {
@@ -312,7 +470,10 @@ export function useAIGeneration(): UseAIGenerationResult {
     start,
     abort,
     retryField,
+    regenerateField,
+    continueGeneration,
     reloadConfig,
     updateGeneratedField,
+    reset,
   };
 }

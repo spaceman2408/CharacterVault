@@ -29,6 +29,7 @@ import { randomizeTags } from './tags/tagData';
 import { buildConceptFromTags, formatTag, TAG_CATEGORIES } from './tags/tagData';
 import type { GenerationField } from './types';
 import type { InputMode } from './types';
+import { GENERATION_FIELDS } from './types';
 
 export const AICreationStudio: React.FC = () => {
   const navigate = useNavigate();
@@ -41,8 +42,11 @@ export const AICreationStudio: React.FC = () => {
     start,
     abort,
     retryField,
+    regenerateField,
+    continueGeneration,
     reloadConfig,
     updateGeneratedField,
+    reset,
   } = useAIGeneration();
 
   const [concept, setConcept] = useState('');
@@ -56,7 +60,6 @@ export const AICreationStudio: React.FC = () => {
   const [vortexTags, setVortexTags] = useState<string[]>([]);
   const [showLuckyVortexSetting, setShowLuckyVortexSetting] = useState(true);
   const [fadeInputModal, setFadeInputModal] = useState(false);
-  const [isCreatingAnother, setIsCreatingAnother] = useState(false);
 
   // Load "Show Lucky Vortex" setting on mount
   useEffect(() => {
@@ -87,8 +90,6 @@ export const AICreationStudio: React.FC = () => {
       setSaveSuccess(false);
       setSavedCharacterId(null);
     }
-    // Clear the "creating another" flag when starting a new generation
-    setIsCreatingAnother(false);
     const text = inputMode === 'tags' ? buildConceptFromTags(tagSelections) : concept;
     void start(text);
   }, [start, concept, tagSelections, inputMode, saveSuccess]);
@@ -139,6 +140,13 @@ export const AICreationStudio: React.FC = () => {
       void retryField(field);
     },
     [retryField]
+  );
+
+  const handleRegenerateField = useCallback(
+    (field: GenerationField) => {
+      void regenerateField(field);
+    },
+    [regenerateField]
   );
 
   const handleOpenSettings = useCallback(() => {
@@ -202,36 +210,35 @@ export const AICreationStudio: React.FC = () => {
     setConcept('');
     setTagSelections({});
     setInputMode('write');
-    
+
     // Clear success state
     setSaveSuccess(false);
     setSavedCharacterId(null);
-    
+
     // Reset vortex state
     setVortexActive(false);
     setVortexTags([]);
     setFadeInputModal(false);
-    
-    // Set flag to show empty state even if generatedData exists
-    setIsCreatingAnother(true);
-    
-    // Abort any ongoing generation
-    abort();
-  }, [abort]);
+
+    // Fully reset generation state
+    reset();
+  }, [reset]);
 
   const handleGoBack = useCallback(() => {
-    abort();
+    reset();
     setConcept('');
     setTagSelections({});
-    setInputMode('write'); // Reset to write mode for a clean slate
-    setVortexActive(false); // Stop any active vortex animation
-    setVortexTags([]); // Clear vortex tags
-    setFadeInputModal(false); // Reset modal fade state
-  }, [abort]);
+    setInputMode('write');
+    setVortexActive(false);
+    setVortexTags([]);
+    setFadeInputModal(false);
+  }, [reset]);
 
   const hasGeneratedContent = Object.keys(state.generatedData).length > 0;
   const canSave = state.status === 'complete' || (hasGeneratedContent && state.generatedData.name);
-  const showEmptyState = (!hasGeneratedContent || isCreatingAnother) && !saveSuccess && !isLoading;
+  const showEmptyState = state.status === 'idle' && !saveSuccess;
+  const remainingFields = GENERATION_FIELDS.filter((f) => !state.completedFields.includes(f.key));
+  const hasRemainingFields = remainingFields.length > 0;
 
   return (
     <div className="h-dvh flex flex-col bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 overflow-hidden">
@@ -318,7 +325,7 @@ export const AICreationStudio: React.FC = () => {
 
           {/* Main Layout */}
           {!saveSuccess && (
-            <div className={`grid gap-6 ${showEmptyState ? 'max-w-2xl mx-auto' : 'grid-cols-1 lg:grid-cols-2'}`}>
+            <div className={`grid gap-6 ${hasGeneratedContent ? 'grid-cols-1 lg:grid-cols-2' : 'max-w-2xl mx-auto'}`}>
               {/* Left Panel - Input & Progress */}
               <div className="space-y-6">
                 {/* Concept Input — hidden during generation or when results exist */}
@@ -406,26 +413,60 @@ export const AICreationStudio: React.FC = () => {
                   </div>
                 )}
 
-                {/* Go Back card when generation is done */}
-                {hasGeneratedContent && !isLoading && (
+                {/* Status card when generation is done or errored */}
+                {!showEmptyState && !isLoading && (
                   <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
-                          Character Complete
-                        </p>
-                        <p className="text-xs text-vault-500 dark:text-vault-400">
-                          Review or save your character, or start over.
-                        </p>
+                        {state.status === 'error' ? (
+                          <>
+                            <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                              Generation Failed
+                            </p>
+                            <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                              {state.error || 'Something went wrong during generation.'}
+                            </p>
+                          </>
+                        ) : hasRemainingFields ? (
+                          <>
+                            <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
+                              Partially Complete
+                            </p>
+                            <p className="text-xs text-vault-500 dark:text-vault-400">
+                              {remainingFields.length} field{remainingFields.length > 1 ? 's' : ''} remaining: {remainingFields.map((f) => f.label).join(', ')}.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
+                              Character Complete
+                            </p>
+                            <p className="text-xs text-vault-500 dark:text-vault-400">
+                              Review or save your character, or start over.
+                            </p>
+                          </>
+                        )}
                       </div>
-                      <button
-                        onClick={handleGoBack}
-                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-800 active:scale-[0.98] transition-all"
-                        title="Start a new character"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        Go Back
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {hasRemainingFields && (
+                          <button
+                            onClick={() => void continueGeneration()}
+                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-700 dark:text-vault-200 bg-vault-100 dark:bg-vault-800 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-200 dark:hover:bg-vault-700 active:scale-[0.98] transition-all"
+                            title="Continue generating remaining fields"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            Continue
+                          </button>
+                        )}
+                        <button
+                          onClick={handleGoBack}
+                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-800 active:scale-[0.98] transition-all"
+                          title="Start a new character"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          Go Back
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -449,46 +490,44 @@ export const AICreationStudio: React.FC = () => {
                   </div>
                 )}
 
-                {hasGeneratedContent && (
+                {state.status !== 'idle' && (
                   <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
                     <GenerationProgress
                       state={state}
-                      onRetryField={handleRetryField}
+                      isLoading={isLoading}
+                      onGenerateField={handleRetryField}
+                      onRegenerateField={handleRegenerateField}
                     />
                   </div>
                 )}
               </div>
 
               {/* Right Panel - Preview */}
-              {!showEmptyState && (
+              {hasGeneratedContent && (
                 <div className="space-y-6">
-                  {hasGeneratedContent && (
-                    <>
-                      <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
-                        <GeneratedCardPreview
-                          generatedData={state.generatedData}
-                          onFieldChange={updateGeneratedField}
-                        />
-                      </div>
+                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
+                    <GeneratedCardPreview
+                      generatedData={state.generatedData}
+                      onFieldChange={updateGeneratedField}
+                    />
+                  </div>
 
-                      {/* Save button area */}
-                      {canSave && (
-                        <div className="flex justify-end">
-                          <button
-                            onClick={handleSaveToVault}
-                            disabled={isSaving || !state.generatedData.name}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isSaving ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Save className="w-4 h-4" />
-                            )}
-                            {isSaving ? 'Saving...' : 'Save to Vault'}
-                          </button>
-                        </div>
-                      )}
-                    </>
+                  {/* Save button area */}
+                  {canSave && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleSaveToVault}
+                        disabled={isSaving || !state.generatedData.name}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                        {isSaving ? 'Saving...' : 'Save to Vault'}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
