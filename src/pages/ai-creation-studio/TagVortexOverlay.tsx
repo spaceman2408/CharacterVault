@@ -71,6 +71,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
 }) => {
   const [phase, setPhase] = useState<'waiting' | 'swirl' | 'converge' | 'reveal' | 'done'>('waiting');
   const [fadeOut, setFadeOut] = useState(false);
+  const [isSwirlExiting, setIsSwirlExiting] = useState(false);
   const reducedMotion = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     []
@@ -120,7 +121,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
   useEffect(() => {
     if (!isVisible) {
       // When becoming invisible, schedule a reset for next render
-      const timer = setTimeout(() => setPhase('waiting'), 0);
+      const timer = setTimeout(() => { setPhase('waiting'); setIsSwirlExiting(false); }, 0);
       return () => clearTimeout(timer);
     }
 
@@ -157,7 +158,12 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
     timers.push(setTimeout(() => setPhase('swirl'), MODAL_FADE_DELAY));
 
     // Phase 2: converge (after modal fade + 4s swirl)
-    timers.push(setTimeout(() => setPhase('converge'), MODAL_FADE_DELAY + 4000));
+    timers.push(setTimeout(() => {
+      setPhase('converge');
+      setIsSwirlExiting(true);
+      // Clear swirl exit flag after fade-out completes
+      timers.push(setTimeout(() => setIsSwirlExiting(false), 700));
+    }, MODAL_FADE_DELAY + 4000));
 
     // Phase 3: reveal (after modal fade + 5.8s)
     timers.push(setTimeout(() => setPhase('reveal'), MODAL_FADE_DELAY + 5800));
@@ -194,36 +200,42 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
       {/* Vortex container */}
       <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
         {/* Swirling tags */}
-        {phase === 'swirl' && !reducedMotion &&
-          tags.map((tag) => (
-            <div
-              key={tag.id}
-              className="absolute pointer-events-none select-none"
-              style={{
-                animation: `vortexOrbit ${tag.duration}s ease-out forwards`,
-                animationDelay: `${tag.startDelay}s`,
-              }}
-            >
+        {(phase === 'swirl' || isSwirlExiting) && !reducedMotion && (
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={isSwirlExiting ? { transition: 'opacity 600ms ease-out', opacity: 0 } : undefined}
+          >
+            {tags.map((tag) => (
               <div
-                className="whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium"
+                key={tag.id}
+                className="absolute pointer-events-none select-none"
                 style={{
-                  transform: `rotate(${tag.startAngle}deg) translateX(${tag.orbitRadius}px)`,
-                  fontSize: `${tag.fontSize}rem`,
-                  opacity: tag.opacity,
-                  backgroundColor: tag.isSelected
-                    ? 'rgba(139,92,246,0.35)'
-                    : 'rgba(120,113,108,0.2)',
-                  color: tag.isSelected ? '#e9d5ff' : '#a8a29e',
-                  border: `2px solid ${tag.isSelected ? 'rgba(139,92,246,0.6)' : 'rgba(120,113,108,0.3)'}`,
-                  boxShadow: tag.isSelected 
-                    ? '0 0 20px rgba(139,92,246,0.4), 0 0 40px rgba(139,92,246,0.2)' 
-                    : 'none',
+                  animation: `vortexOrbit ${tag.duration}s cubic-bezier(0.33, 0, 0.2, 1) forwards`,
+                  animationDelay: `${tag.startDelay}s`,
                 }}
               >
-                {formatTag(tag.label)}
+                <div
+                  className="whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium"
+                  style={{
+                    transform: `rotate(${tag.startAngle}deg) translateX(${tag.orbitRadius}px)`,
+                    fontSize: `${tag.fontSize}rem`,
+                    opacity: tag.opacity,
+                    backgroundColor: tag.isSelected
+                      ? 'rgba(139,92,246,0.35)'
+                      : 'rgba(120,113,108,0.2)',
+                    color: tag.isSelected ? '#e9d5ff' : '#a8a29e',
+                    border: `2px solid ${tag.isSelected ? 'rgba(139,92,246,0.6)' : 'rgba(120,113,108,0.3)'}`,
+                    boxShadow: tag.isSelected 
+                      ? '0 0 20px rgba(139,92,246,0.4), 0 0 40px rgba(139,92,246,0.2)' 
+                      : 'none',
+                  }}
+                >
+                  {formatTag(tag.label)}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
 
         {/* Converge phase: selected tags drift to center */}
         {phase === 'converge' && !reducedMotion && (
@@ -337,20 +349,22 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
         @keyframes vortexOrbit {
           0% {
             opacity: 0;
-            transform: scale(0.2) rotate(0deg);
+            transform: scale(0.05) rotate(0deg);
+            filter: blur(8px);
           }
-          10% {
-            opacity: 0.6;
+          15% {
+            opacity: 0.4;
+            filter: blur(3px);
           }
-          20% {
+          30% {
             opacity: 1;
-          }
-          85% {
-            opacity: 0.9;
+            transform: scale(1) rotate(360deg);
+            filter: blur(0px);
           }
           100% {
-            opacity: 0;
-            transform: scale(0.5) rotate(1080deg);
+            opacity: 1;
+            transform: scale(1) rotate(1080deg);
+            filter: blur(0px);
           }
         }
         @keyframes vortexReject {
