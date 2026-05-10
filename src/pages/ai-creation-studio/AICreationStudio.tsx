@@ -3,7 +3,7 @@
  * @module @pages/ai-creation-studio/AICreationStudio
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,14 +15,20 @@ import {
   ExternalLink,
   Library,
   Wand2,
+  RotateCcw,
 } from 'lucide-react';
 import { useCharacterContext } from '../../context';
 import { CharacterSettingsPanel } from '../../components/settings/CharacterSettingsPanel';
+import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { useAIGeneration } from './useAIGeneration';
 import { ConceptInput } from './ConceptInput';
 import { GenerationProgress } from './GenerationProgress';
 import { GeneratedCardPreview } from './GeneratedCardPreview';
+import { TagVortexOverlay } from './TagVortexOverlay';
+import { randomizeTags } from './tags/tagData';
+import { buildConceptFromTags, formatTag, TAG_CATEGORIES } from './tags/tagData';
 import type { GenerationField } from './types';
+import type { InputMode } from './types';
 
 export const AICreationStudio: React.FC = () => {
   const navigate = useNavigate();
@@ -40,22 +46,84 @@ export const AICreationStudio: React.FC = () => {
   } = useAIGeneration();
 
   const [concept, setConcept] = useState('');
+  const [inputMode, setInputMode] = useState<InputMode>('write');
+  const [tagSelections, setTagSelections] = useState<Record<string, string[]>>({});
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [savedCharacterId, setSavedCharacterId] = useState<string | null>(null);
+  const [vortexActive, setVortexActive] = useState(false);
+  const [vortexTags, setVortexTags] = useState<string[]>([]);
+  const [showLuckyVortexSetting, setShowLuckyVortexSetting] = useState(true);
+
+  // Load "Show Lucky Vortex" setting on mount
+  useEffect(() => {
+    void characterSettingsService.getSettings().then((settings) => {
+      setShowLuckyVortexSetting(settings.ui?.showLuckyVortex ?? true);
+    });
+  }, []);
+
+  const handleReloadSettings = useCallback(async () => {
+    await reloadConfig();
+    const settings = await characterSettingsService.getSettings();
+    setShowLuckyVortexSetting(settings.ui?.showLuckyVortex ?? true);
+  }, [reloadConfig]);
+
+  const handleInputModeChange = useCallback(
+    (mode: InputMode) => {
+      if (mode === 'write' && inputMode === 'tags') {
+        const derived = buildConceptFromTags(tagSelections);
+        if (derived) setConcept(derived);
+      }
+      setInputMode(mode);
+    },
+    [inputMode, tagSelections]
+  );
 
   const handleGenerate = useCallback(() => {
     if (saveSuccess) {
       setSaveSuccess(false);
       setSavedCharacterId(null);
     }
-    void start(concept);
-  }, [start, concept, saveSuccess]);
+    const text = inputMode === 'tags' ? buildConceptFromTags(tagSelections) : concept;
+    void start(text);
+  }, [start, concept, tagSelections, inputMode, saveSuccess]);
 
   const handleAbort = useCallback(() => {
     abort();
   }, [abort]);
+
+  const handleFeelingLucky = useCallback(() => {
+    const randomized = randomizeTags(tagSelections);
+    setTagSelections(randomized);
+
+    if (showLuckyVortexSetting) {
+      const allSelected = Object.values(randomized).flat();
+      setVortexTags(allSelected);
+      setVortexActive(true);
+    } else {
+      const text = buildConceptFromTags(randomized);
+      if (text) {
+        if (saveSuccess) {
+          setSaveSuccess(false);
+          setSavedCharacterId(null);
+        }
+        void start(text);
+      }
+    }
+  }, [tagSelections, showLuckyVortexSetting, start, saveSuccess]);
+
+  const handleVortexComplete = useCallback(() => {
+    setVortexActive(false);
+    const text = buildConceptFromTags(tagSelections);
+    if (text) {
+      if (saveSuccess) {
+        setSaveSuccess(false);
+        setSavedCharacterId(null);
+      }
+      void start(text);
+    }
+  }, [tagSelections, start, saveSuccess]);
 
   const handleRetryField = useCallback(
     (field: GenerationField) => {
@@ -73,8 +141,8 @@ export const AICreationStudio: React.FC = () => {
   }, []);
 
   const handleSettingsSaved = useCallback(async () => {
-    await reloadConfig();
-  }, [reloadConfig]);
+    await handleReloadSettings();
+  }, [handleReloadSettings]);
 
   const handleSaveToVault = useCallback(async () => {
     if (!state.generatedData.name) return;
@@ -102,7 +170,7 @@ export const AICreationStudio: React.FC = () => {
       setSavedCharacterId(character.id);
       setSaveSuccess(true);
     } catch {
-      // Error is handled by UI state, but we could add toast here
+      // Error is handled by UI state
     } finally {
       setIsSaving(false);
     }
@@ -120,9 +188,16 @@ export const AICreationStudio: React.FC = () => {
 
   const handleCreateAnother = useCallback(() => {
     setConcept('');
+    setTagSelections({});
     setSaveSuccess(false);
     setSavedCharacterId(null);
   }, []);
+
+  const handleGoBack = useCallback(() => {
+    abort();
+    setConcept('');
+    setTagSelections({});
+  }, [abort]);
 
   const hasGeneratedContent = Object.keys(state.generatedData).length > 0;
   const canSave = state.status === 'complete' || (hasGeneratedContent && state.generatedData.name);
@@ -130,6 +205,13 @@ export const AICreationStudio: React.FC = () => {
 
   return (
     <div className="h-dvh flex flex-col bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 overflow-hidden">
+      {/* Vortex Animation Overlay */}
+      <TagVortexOverlay
+        selectedTags={vortexTags}
+        isVisible={vortexActive}
+        onComplete={handleVortexComplete}
+      />
+
       {/* Header */}
       <header className="shrink-0 w-full backdrop-blur-xl bg-white/80 dark:bg-vault-950/80 border-b border-vault-200 dark:border-vault-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -208,20 +290,112 @@ export const AICreationStudio: React.FC = () => {
             <div className={`grid gap-6 ${showEmptyState ? 'max-w-2xl mx-auto' : 'grid-cols-1 lg:grid-cols-2'}`}>
               {/* Left Panel - Input & Progress */}
               <div className="space-y-6">
-                {/* Concept Input */}
-                <div className={`bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm ${showEmptyState ? 'p-8' : 'p-6'}`}>
-                  <ConceptInput
-                    concept={concept}
-                    onConceptChange={setConcept}
-                    onGenerate={handleGenerate}
-                    onAbort={handleAbort}
-                    isConfigured={isConfigured}
-                    isGenerating={isLoading}
-                    onOpenSettings={handleOpenSettings}
-                  />
-                </div>
+                {/* Concept Input — hidden during generation or when results exist */}
+                {showEmptyState && (
+                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-8">
+                    <ConceptInput
+                      concept={concept}
+                      onConceptChange={setConcept}
+                      tagSelections={tagSelections}
+                      onTagSelectionsChange={setTagSelections}
+                      onFeelingLucky={handleFeelingLucky}
+                      inputMode={inputMode}
+                      onInputModeChange={handleInputModeChange}
+                      onGenerate={handleGenerate}
+                      onAbort={handleAbort}
+                      isConfigured={isConfigured}
+                      isGenerating={isLoading}
+                      onOpenSettings={handleOpenSettings}
+                    />
+                  </div>
+                )}
 
-                {/* Empty state illustration — centered when no content yet */}
+                {/* Compact generation-progress card with Go Back */}
+                {isLoading && (
+                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 text-violet-600 dark:text-violet-400 animate-spin" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
+                            Generating character...
+                          </p>
+                          <p className="text-xs text-vault-500 dark:text-vault-400">
+                            This may take a moment.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleGoBack}
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-800 active:scale-[0.98] transition-all"
+                        title="Cancel and start over"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Go Back
+                      </button>
+                    </div>
+
+                    {/* Tags used for this generation */}
+                    {inputMode === 'tags' && (
+                      <div className="pt-3 border-t border-vault-100 dark:border-vault-800">
+                        <p className="text-[10px] font-semibold text-vault-500 dark:text-vault-400 uppercase tracking-wider mb-2">
+                          Tags used
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {TAG_CATEGORIES.flatMap((cat) =>
+                            (tagSelections[cat.key] ?? []).map((tag) => (
+                              <span
+                                key={`${cat.key}-${tag}`}
+                                className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-200 dark:border-violet-800"
+                              >
+                                {formatTag(tag)}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {inputMode === 'write' && concept && (
+                      <div className="pt-3 border-t border-vault-100 dark:border-vault-800">
+                        <p className="text-[10px] font-semibold text-vault-500 dark:text-vault-400 uppercase tracking-wider mb-1">
+                          Concept
+                        </p>
+                        <p className="text-sm text-vault-700 dark:text-vault-300 italic">
+                          &ldquo;{concept}&rdquo;
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Go Back card when generation is done */}
+                {hasGeneratedContent && !isLoading && (
+                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
+                          Character Complete
+                        </p>
+                        <p className="text-xs text-vault-500 dark:text-vault-400">
+                          Review or save your character, or start over.
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleGoBack}
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-800 active:scale-[0.98] transition-all"
+                        title="Start a new character"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Go Back
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state illustration */}
                 {showEmptyState && (
                   <div className="hidden lg:flex flex-col items-center justify-center py-8 text-center opacity-50">
                     <div className="w-14 h-14 rounded-2xl bg-vault-100 dark:bg-vault-800 flex items-center justify-center mb-3">

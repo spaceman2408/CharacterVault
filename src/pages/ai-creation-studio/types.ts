@@ -30,3 +30,9 @@ export const GENERATION_FIELDS: FieldConfig[] = [
   { key: 'first_mes', label: 'First Message', icon: 'MessageCircle' },
   { key: 'mes_example', label: 'Examples', icon: 'MessagesSquare' },
 ];
+
+/** Input mode for the creation studio concept area */
+export type InputMode = 'write' | 'tags';
+
+/** Tag selections grouped by category */
+export type TagSelections = Record<string, string[]>;

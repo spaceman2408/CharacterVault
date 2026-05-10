@@ -34,6 +34,7 @@ import {
   Trash2,
   CreditCard,
   Zap,
+  Palette,
 } from 'lucide-react';
 import type { AIConfig, SamplerSettings, PromptSettings, AIModelInfo } from '../../db/types';
 import { DEFAULT_SETTINGS } from '../../db/types';
@@ -717,7 +718,8 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
   const [modelsByBaseUrl, setModelsByBaseUrl] = useState<Record<string, CachedModels>>({});
   const [fetchingModelsByBaseUrl, setFetchingModelsByBaseUrl] = useState<Record<string, boolean>>({});
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
-  const [activeTab, setActiveTab] = useState<'ai' | 'sampler' | 'prompts'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'sampler' | 'prompts' | 'studio'>('ai');
+  const [showLuckyVortex, setShowLuckyVortex] = useState(true);
   const [expandedPrompts, setExpandedPrompts] = useState<Record<string, boolean>>({});
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -808,11 +810,14 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
     const loadSettings = async () => {
       setIsLoading(true);
       try {
-        const [config, sampler, prompts] = await Promise.all([
+        const [config, sampler, prompts, fullSettings] = await Promise.all([
           characterSettingsService.getAISettings(),
           characterSettingsService.getSamplerSettings(),
           characterSettingsService.getPromptSettings(),
+          characterSettingsService.getSettings(),
         ]);
+
+        setShowLuckyVortex(fullSettings.ui?.showLuckyVortex ?? true);
         
         setLocalAIConfig(prev => {
           const mergedConfig = {
@@ -910,7 +915,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
       
       // Tab navigation between tabs
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        const tabs: ('ai' | 'sampler' | 'prompts')[] = ['ai', 'sampler', 'prompts'];
+        const tabs: ('ai' | 'sampler' | 'prompts' | 'studio')[] = ['ai', 'sampler', 'prompts', 'studio'];
         const currentIndex = tabs.indexOf(activeTab);
         let newIndex: number;
         
@@ -1237,6 +1242,16 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
         clampedSampler,
         localPrompts
       );
+
+      // Save UI settings (Lucky Vortex toggle)
+      const currentSettings = await characterSettingsService.getSettings();
+      await characterSettingsService.saveSettings({
+        ...currentSettings,
+        ui: {
+          ...currentSettings.ui,
+          showLuckyVortex,
+        },
+      });
       
       await reloadSettings();
       
@@ -1332,7 +1347,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
 
           {/* Tabs */}
           <div className="flex border-b border-vault-200 dark:border-vault-800 px-6 bg-vault-50 dark:bg-vault-900/50">
-            {(['ai', 'sampler', 'prompts'] as const).map((tab) => (
+            {(['ai', 'sampler', 'prompts', 'studio'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1348,7 +1363,8 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                   {tab === 'ai' && <Brain className="w-4 h-4" />}
                   {tab === 'sampler' && <Sliders className="w-4 h-4" />}
                   {tab === 'prompts' && <MessageSquare className="w-4 h-4" />}
-                  {tab === 'ai' ? 'AI Config' : tab}
+                  {tab === 'studio' && <Palette className="w-4 h-4" />}
+                  {tab === 'ai' ? 'AI Config' : tab === 'studio' ? 'Studio' : tab}
                 </span>
               </button>
             ))}
@@ -1790,6 +1806,44 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                       )}
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Studio Tab */}
+            {activeTab === 'studio' && (
+              <div className="space-y-5">
+                <div className="bg-white dark:bg-vault-800/50 rounded-xl p-4 border border-vault-200 dark:border-vault-700 shadow-sm">
+                  <h3 className="text-xs font-bold text-vault-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Wand2 className="w-4 h-4" />
+                    AI Creation Studio
+                  </h3>
+
+                  {/* Lucky Vortex Toggle */}
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-3 text-sm text-vault-700 dark:text-vault-300 cursor-pointer group">
+                      <div className="relative mt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={showLuckyVortex}
+                          onChange={(e) => setShowLuckyVortex(e.target.checked)}
+                          className="peer sr-only"
+                        />
+                        <div className="w-10 h-6 bg-vault-300 dark:bg-vault-700 rounded-full peer-checked:bg-vault-600 dark:peer-checked:bg-vault-500 transition-colors duration-200" />
+                        <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="group-hover:text-vault-900 dark:group-hover:text-vault-100 transition-colors">
+                          Show &quot;I&apos;m Feeling Lucky&quot; vortex animation
+                        </span>
+                        <p className="text-xs text-vault-500 dark:text-vault-400 mt-1 leading-relaxed">
+                          When enabled, pressing the &quot;I&apos;m Feeling Lucky&quot; button plays a
+                          swirling tag vortex animation before generating. When disabled, random tags are
+                          chosen instantly without any visual effect.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
                 </div>
               </div>
             )}

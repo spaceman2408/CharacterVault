@@ -378,6 +378,8 @@ export interface CharacterVaultSettings {
     editorFontSize: number;
     /** Sidebar width in pixels */
     sidebarWidth: number;
+    /** Show the "I'm Feeling Lucky" vortex animation in AI Creation Studio */
+    showLuckyVortex?: boolean;
   };
 
   /** AI configuration */
