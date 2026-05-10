@@ -56,6 +56,7 @@ export const AICreationStudio: React.FC = () => {
   const [vortexTags, setVortexTags] = useState<string[]>([]);
   const [showLuckyVortexSetting, setShowLuckyVortexSetting] = useState(true);
   const [fadeInputModal, setFadeInputModal] = useState(false);
+  const [isCreatingAnother, setIsCreatingAnother] = useState(false);
 
   // Load "Show Lucky Vortex" setting on mount
   useEffect(() => {
@@ -86,6 +87,8 @@ export const AICreationStudio: React.FC = () => {
       setSaveSuccess(false);
       setSavedCharacterId(null);
     }
+    // Clear the "creating another" flag when starting a new generation
+    setIsCreatingAnother(false);
     const text = inputMode === 'tags' ? buildConceptFromTags(tagSelections) : concept;
     void start(text);
   }, [start, concept, tagSelections, inputMode, saveSuccess]);
@@ -189,16 +192,32 @@ export const AICreationStudio: React.FC = () => {
   }, [savedCharacterId, navigate]);
 
   const handleBackToLibrary = useCallback(() => {
-    navigate('/');
-  }, [navigate]);
+    // Force full page reload to ensure fresh state and return to vault view
+    // This prevents the editor from opening with a previously selected character
+    window.location.href = import.meta.env.BASE_URL;
+  }, []);
 
   const handleCreateAnother = useCallback(() => {
+    // Clear all form state
     setConcept('');
     setTagSelections({});
-    setInputMode('write'); // Reset to write mode
+    setInputMode('write');
+    
+    // Clear success state
     setSaveSuccess(false);
     setSavedCharacterId(null);
-  }, []);
+    
+    // Reset vortex state
+    setVortexActive(false);
+    setVortexTags([]);
+    setFadeInputModal(false);
+    
+    // Set flag to show empty state even if generatedData exists
+    setIsCreatingAnother(true);
+    
+    // Abort any ongoing generation
+    abort();
+  }, [abort]);
 
   const handleGoBack = useCallback(() => {
     abort();
@@ -212,7 +231,7 @@ export const AICreationStudio: React.FC = () => {
 
   const hasGeneratedContent = Object.keys(state.generatedData).length > 0;
   const canSave = state.status === 'complete' || (hasGeneratedContent && state.generatedData.name);
-  const showEmptyState = !hasGeneratedContent && !saveSuccess && !isLoading;
+  const showEmptyState = (!hasGeneratedContent || isCreatingAnother) && !saveSuccess && !isLoading;
 
   return (
     <div className="h-dvh flex flex-col bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 overflow-hidden">
