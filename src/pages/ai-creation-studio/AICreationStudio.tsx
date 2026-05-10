@@ -195,6 +195,7 @@ export const AICreationStudio: React.FC = () => {
   const handleCreateAnother = useCallback(() => {
     setConcept('');
     setTagSelections({});
+    setInputMode('write'); // Reset to write mode
     setSaveSuccess(false);
     setSavedCharacterId(null);
   }, []);
@@ -203,6 +204,10 @@ export const AICreationStudio: React.FC = () => {
     abort();
     setConcept('');
     setTagSelections({});
+    setInputMode('write'); // Reset to write mode for a clean slate
+    setVortexActive(false); // Stop any active vortex animation
+    setVortexTags([]); // Clear vortex tags
+    setFadeInputModal(false); // Reset modal fade state
   }, [abort]);
 
   const hasGeneratedContent = Object.keys(state.generatedData).length > 0;

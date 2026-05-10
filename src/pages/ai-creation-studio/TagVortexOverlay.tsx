@@ -118,7 +118,11 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
   }, [selectedTags]);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      // When becoming invisible, schedule a reset for next render
+      const timer = setTimeout(() => setPhase('waiting'), 0);
+      return () => clearTimeout(timer);
+    }
 
     // Notify parent to start fading out the input modal immediately
     onAnimationStart?.();
@@ -128,18 +132,22 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
 
     // Use microtask to avoid synchronous setState during effect execution
     queueMicrotask(() => {
+      setPhase('waiting'); // Ensure we start from waiting state
       setFadeOut(false);
     });
 
     if (reducedMotion) {
       // Delay the phase change slightly to allow the reset above to settle
-      setTimeout(() => setPhase('reveal'), MODAL_FADE_DELAY + 50);
-      
+      const t0 = setTimeout(() => setPhase('reveal'), MODAL_FADE_DELAY + 50);
       const t1 = setTimeout(() => {
         setFadeOut(true);
       }, MODAL_FADE_DELAY + 800);
       const t2 = setTimeout(onComplete, MODAL_FADE_DELAY + 1300);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
+      return () => { 
+        clearTimeout(t0);
+        clearTimeout(t1); 
+        clearTimeout(t2); 
+      };
     }
 
     // Normal animation timing - extended for more grandiose effect
@@ -288,7 +296,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
             <div className="relative flex flex-wrap justify-center gap-2.5 mb-8 max-w-2xl">
               {selectedTags.map((tag, i) => (
                 <div
-                  key={tag}
+                  key={`reveal-${i}-${tag}`}
                   className="px-4 py-2 rounded-full text-base font-bold animate-revealScale"
                   style={{
                     animationDelay: `${i * 0.06}s`,

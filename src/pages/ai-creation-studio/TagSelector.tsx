@@ -19,6 +19,7 @@ import {
 import {
   TAG_CATEGORIES,
   formatTag,
+  getExcludedTagsForUI,
   type TagCategoryKey,
 } from './tags/tagData';
 
@@ -91,6 +92,12 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   );
 
   const searchLower = search.trim().toLowerCase();
+
+  // Get excluded tags based on current selections
+  const excludedTags = useMemo(
+    () => getExcludedTagsForUI(selections),
+    [selections]
+  );
 
   const derivedConcept = useMemo(() => {
     const parts: string[] = [];
@@ -218,14 +225,18 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                 <div className="px-3 py-3 flex flex-wrap gap-1.5 bg-white dark:bg-vault-900">
                   {filteredTags.map((tag) => {
                     const isSelected = selectedInCat.includes(tag);
+                    const isExcluded = !isSelected && excludedTags.has(tag);
                     return (
                       <button
                         key={tag}
                         onClick={() => toggleTag(category.key, tag)}
-                        disabled={isGenerating}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                        disabled={isGenerating || isExcluded}
+                        title={isExcluded ? 'This tag conflicts with your current selection' : undefined}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed ${
                           isSelected
                             ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border-violet-200 dark:border-violet-800'
+                            : isExcluded
+                            ? 'opacity-30 border-vault-200 dark:border-vault-700 text-vault-400 dark:text-vault-600 line-through'
                             : 'border-vault-200 dark:border-vault-700 text-vault-600 dark:text-vault-400 hover:border-vault-400 dark:hover:border-vault-500 hover:bg-vault-50 dark:hover:bg-vault-800/50'
                         }`}
                       >
