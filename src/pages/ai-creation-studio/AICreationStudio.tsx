@@ -55,6 +55,7 @@ export const AICreationStudio: React.FC = () => {
   const [vortexActive, setVortexActive] = useState(false);
   const [vortexTags, setVortexTags] = useState<string[]>([]);
   const [showLuckyVortexSetting, setShowLuckyVortexSetting] = useState(true);
+  const [fadeInputModal, setFadeInputModal] = useState(false);
 
   // Load "Show Lucky Vortex" setting on mount
   useEffect(() => {
@@ -113,8 +114,13 @@ export const AICreationStudio: React.FC = () => {
     }
   }, [tagSelections, showLuckyVortexSetting, start, saveSuccess]);
 
+  const handleVortexAnimationStart = useCallback(() => {
+    setFadeInputModal(true);
+  }, []);
+
   const handleVortexComplete = useCallback(() => {
     setVortexActive(false);
+    setFadeInputModal(false);
     const text = buildConceptFromTags(tagSelections);
     if (text) {
       if (saveSuccess) {
@@ -210,6 +216,7 @@ export const AICreationStudio: React.FC = () => {
         selectedTags={vortexTags}
         isVisible={vortexActive}
         onComplete={handleVortexComplete}
+        onAnimationStart={handleVortexAnimationStart}
       />
 
       {/* Header */}
@@ -292,7 +299,11 @@ export const AICreationStudio: React.FC = () => {
               <div className="space-y-6">
                 {/* Concept Input — hidden during generation or when results exist */}
                 {showEmptyState && (
-                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-8">
+                  <div 
+                    className={`bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-8 transition-opacity duration-700 ${
+                      fadeInputModal ? 'opacity-0' : 'opacity-100'
+                    }`}
+                  >
                     <ConceptInput
                       concept={concept}
                       onConceptChange={setConcept}
@@ -397,7 +408,11 @@ export const AICreationStudio: React.FC = () => {
 
                 {/* Empty state illustration */}
                 {showEmptyState && (
-                  <div className="hidden lg:flex flex-col items-center justify-center py-8 text-center opacity-50">
+                  <div 
+                    className={`hidden lg:flex flex-col items-center justify-center py-8 text-center opacity-50 transition-opacity duration-700 ${
+                      fadeInputModal ? 'opacity-0' : ''
+                    }`}
+                  >
                     <div className="w-14 h-14 rounded-2xl bg-vault-100 dark:bg-vault-800 flex items-center justify-center mb-3">
                       <Wand2 className="w-7 h-7 text-vault-400 dark:text-vault-500" />
                     </div>

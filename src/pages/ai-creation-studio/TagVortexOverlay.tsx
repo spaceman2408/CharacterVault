@@ -11,6 +11,7 @@ interface TagVortexOverlayProps {
   selectedTags: string[];
   isVisible: boolean;
   onComplete: () => void;
+  onAnimationStart?: () => void;
 }
 
 interface VortexTag {
@@ -66,8 +67,9 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
   selectedTags,
   isVisible,
   onComplete,
+  onAnimationStart,
 }) => {
-  const [phase, setPhase] = useState<'swirl' | 'converge' | 'reveal' | 'done'>('swirl');
+  const [phase, setPhase] = useState<'waiting' | 'swirl' | 'converge' | 'reveal' | 'done'>('waiting');
   const [fadeOut, setFadeOut] = useState(false);
   const reducedMotion = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -118,54 +120,73 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
   useEffect(() => {
     if (!isVisible) return;
 
+    // Notify parent to start fading out the input modal immediately
+    onAnimationStart?.();
+
+    // Wait for modal to fade out before starting animation
+    const MODAL_FADE_DELAY = 800; // Give modal time to fade out
+
     // Use microtask to avoid synchronous setState during effect execution
     queueMicrotask(() => {
-      setPhase('swirl');
       setFadeOut(false);
     });
 
     if (reducedMotion) {
       // Delay the phase change slightly to allow the reset above to settle
-      setTimeout(() => setPhase('reveal'), 50);
+      setTimeout(() => setPhase('reveal'), MODAL_FADE_DELAY + 50);
       
       const t1 = setTimeout(() => {
         setFadeOut(true);
-      }, 800);
-      const t2 = setTimeout(onComplete, 1300);
+      }, MODAL_FADE_DELAY + 800);
+      const t2 = setTimeout(onComplete, MODAL_FADE_DELAY + 1300);
       return () => { clearTimeout(t1); clearTimeout(t2); };
     }
 
-    // Normal animation timing
+    // Normal animation timing - extended for more grandiose effect
     const timers: ReturnType<typeof setTimeout>[] = [];
 
-    // Phase 2: converge (after 3.5s)
-    timers.push(setTimeout(() => setPhase('converge'), 3500));
+    // Phase 1: start swirl (after modal fades)
+    timers.push(setTimeout(() => setPhase('swirl'), MODAL_FADE_DELAY));
 
-    // Phase 3: reveal (after 5s)
-    timers.push(setTimeout(() => setPhase('reveal'), 5000));
+    // Phase 2: converge (after modal fade + 4s swirl)
+    timers.push(setTimeout(() => setPhase('converge'), MODAL_FADE_DELAY + 4000));
 
-    // Phase 4: fade out (after 7s)
-    timers.push(setTimeout(() => setFadeOut(true), 7000));
+    // Phase 3: reveal (after modal fade + 5.8s)
+    timers.push(setTimeout(() => setPhase('reveal'), MODAL_FADE_DELAY + 5800));
 
-    // Complete (after 7.5s)
-    timers.push(setTimeout(onComplete, 7500));
+    // Phase 4: fade out (after modal fade + 8.5s)
+    timers.push(setTimeout(() => setFadeOut(true), MODAL_FADE_DELAY + 8500));
+
+    // Complete (after modal fade + 9s)
+    timers.push(setTimeout(onComplete, MODAL_FADE_DELAY + 9000));
 
     return () => timers.forEach(clearTimeout);
-  }, [isVisible, onComplete, reducedMotion]);
+  }, [isVisible, onComplete, onAnimationStart, reducedMotion]);
 
   if (!isVisible) return null;
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-500 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-700 ${
         fadeOut ? 'opacity-0' : 'opacity-100'
       }`}
-      style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}
+      style={{ 
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        backdropFilter: 'blur(8px)',
+      }}
     >
+      {/* Radial gradient background pulse */}
+      <div 
+        className="absolute inset-0 animate-pulse-slow"
+        style={{
+          background: 'radial-gradient(circle at center, rgba(139,92,246,0.15) 0%, transparent 70%)',
+        }}
+      />
+      
       {/* Vortex container */}
       <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
         {/* Swirling tags */}
-        {phase === 'swirl' &&
+        {phase === 'swirl' && !reducedMotion &&
           tags.map((tag) => (
             <div
               key={tag.id}
@@ -182,10 +203,13 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
                   fontSize: `${tag.fontSize}rem`,
                   opacity: tag.opacity,
                   backgroundColor: tag.isSelected
-                    ? 'rgba(139,92,246,0.25)'
-                    : 'rgba(120,113,108,0.15)',
-                  color: tag.isSelected ? '#c4b5fd' : '#a8a29e',
-                  border: `1px solid ${tag.isSelected ? 'rgba(139,92,246,0.4)' : 'rgba(120,113,108,0.3)'}`,
+                    ? 'rgba(139,92,246,0.35)'
+                    : 'rgba(120,113,108,0.2)',
+                  color: tag.isSelected ? '#e9d5ff' : '#a8a29e',
+                  border: `2px solid ${tag.isSelected ? 'rgba(139,92,246,0.6)' : 'rgba(120,113,108,0.3)'}`,
+                  boxShadow: tag.isSelected 
+                    ? '0 0 20px rgba(139,92,246,0.4), 0 0 40px rgba(139,92,246,0.2)' 
+                    : 'none',
                 }}
               >
                 {formatTag(tag.label)}
@@ -194,7 +218,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
           ))}
 
         {/* Converge phase: selected tags drift to center */}
-        {phase === 'converge' && (
+        {phase === 'converge' && !reducedMotion && (
           <>
             {tags
               .filter((t) => !t.isSelected)
@@ -236,9 +260,10 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
                     className="whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-semibold"
                     style={{
                       fontSize: `${tag.fontSize}rem`,
-                      backgroundColor: 'rgba(139,92,246,0.3)',
-                      color: '#ddd6fe',
-                      border: '1px solid rgba(139,92,246,0.5)',
+                      backgroundColor: 'rgba(139,92,246,0.4)',
+                      color: '#e9d5ff',
+                      border: '2px solid rgba(139,92,246,0.7)',
+                      boxShadow: '0 0 25px rgba(139,92,246,0.5), 0 0 50px rgba(139,92,246,0.3)',
                     }}
                   >
                     {formatTag(tag.label)}
@@ -251,25 +276,47 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
         {/* Reveal phase: selected tags settled + Good luck text */}
         {(phase === 'reveal' || phase === 'done') && (
           <div className="z-10 flex flex-col items-center justify-center text-center px-6">
-            <div className="flex flex-wrap justify-center gap-2 mb-6 max-w-lg">
+            {/* Glowing orb behind tags */}
+            <div 
+              className="absolute w-96 h-96 rounded-full animate-pulse-glow"
+              style={{
+                background: 'radial-gradient(circle, rgba(139,92,246,0.3) 0%, rgba(139,92,246,0.1) 40%, transparent 70%)',
+                filter: 'blur(40px)',
+              }}
+            />
+            
+            <div className="relative flex flex-wrap justify-center gap-2.5 mb-8 max-w-2xl">
               {selectedTags.map((tag, i) => (
                 <div
                   key={tag}
-                  className="px-3 py-1.5 rounded-full text-sm font-semibold animate-revealScale"
+                  className="px-4 py-2 rounded-full text-base font-bold animate-revealScale"
                   style={{
-                    animationDelay: `${i * 0.05}s`,
-                    backgroundColor: 'rgba(139,92,246,0.35)',
-                    color: '#ddd6fe',
-                    border: '1px solid rgba(139,92,246,0.55)',
+                    animationDelay: `${i * 0.06}s`,
+                    backgroundColor: 'rgba(139,92,246,0.45)',
+                    color: '#f3e8ff',
+                    border: '2px solid rgba(139,92,246,0.7)',
+                    boxShadow: '0 0 30px rgba(139,92,246,0.6), 0 0 60px rgba(139,92,246,0.3), inset 0 0 20px rgba(139,92,246,0.2)',
                   }}
                 >
                   {formatTag(tag)}
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-2 animate-revealText">
-              <Dices className="w-5 h-5 text-violet-300" />
-              <span className="text-lg font-medium text-violet-200">
+            
+            <div className="relative flex flex-col items-center gap-3 animate-revealText">
+              <div className="relative">
+                <Dices className="w-8 h-8 text-violet-200 animate-dice-spin" />
+                <div 
+                  className="absolute inset-0 animate-ping-slow"
+                  style={{
+                    background: 'radial-gradient(circle, rgba(139,92,246,0.6) 0%, transparent 70%)',
+                    filter: 'blur(10px)',
+                  }}
+                />
+              </div>
+              <span className="text-2xl font-bold text-violet-100 tracking-wide" style={{
+                textShadow: '0 0 20px rgba(139,92,246,0.8), 0 0 40px rgba(139,92,246,0.4)',
+              }}>
                 Good luck...
               </span>
             </div>
@@ -282,68 +329,147 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
         @keyframes vortexOrbit {
           0% {
             opacity: 0;
-            transform: scale(0.3);
+            transform: scale(0.2) rotate(0deg);
           }
-          15% {
+          10% {
+            opacity: 0.6;
+          }
+          20% {
             opacity: 1;
           }
-          80% {
-            opacity: 0.8;
+          85% {
+            opacity: 0.9;
           }
           100% {
             opacity: 0;
-            transform: scale(0.6);
+            transform: scale(0.5) rotate(1080deg);
           }
         }
         @keyframes vortexReject {
           0% {
             opacity: 0.6;
+            filter: blur(0px);
+          }
+          50% {
+            opacity: 0.3;
+            filter: blur(2px);
           }
           100% {
             opacity: 0;
-            transform: translateX(600px) translateY(300px) rotate(720deg) scale(0.2);
+            transform: translateX(800px) translateY(400px) rotate(1080deg) scale(0.1);
+            filter: blur(4px);
           }
         }
         @keyframes vortexConverge {
           0% {
             opacity: 0.8;
+            filter: blur(0px);
+          }
+          50% {
+            opacity: 0.9;
+            transform: translateX(0) translateY(0) scale(1.15);
+            filter: blur(1px);
           }
           100% {
             opacity: 1;
             transform: translateX(0) translateY(0) scale(1);
+            filter: blur(0px);
           }
         }
         @keyframes revealScale {
           0% {
             opacity: 0;
-            transform: scale(0.5);
+            transform: scale(0.3) rotate(-10deg);
           }
-          60% {
+          50% {
             opacity: 1;
-            transform: scale(1.05);
+            transform: scale(1.15) rotate(2deg);
+          }
+          70% {
+            transform: scale(0.95) rotate(-1deg);
           }
           100% {
             opacity: 1;
-            transform: scale(1);
+            transform: scale(1) rotate(0deg);
           }
         }
         @keyframes revealText {
           0% {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(20px) scale(0.9);
+          }
+          60% {
+            opacity: 1;
+            transform: translateY(-5px) scale(1.05);
           }
           100% {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes pulse-slow {
+          0%, 100% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.6;
+            transform: scale(1.1);
+          }
+        }
+        @keyframes pulse-glow {
+          0%, 100% {
+            opacity: 0.4;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.2);
+          }
+        }
+        @keyframes ping-slow {
+          0% {
+            opacity: 0.8;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(2.5);
+          }
+        }
+        @keyframes dice-spin {
+          0%, 100% {
+            transform: rotate(0deg);
+          }
+          25% {
+            transform: rotate(90deg) scale(1.1);
+          }
+          50% {
+            transform: rotate(180deg);
+          }
+          75% {
+            transform: rotate(270deg) scale(1.1);
           }
         }
         .animate-revealScale {
-          animation: revealScale 0.5s ease-out forwards;
+          animation: revealScale 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
           opacity: 0;
         }
         .animate-revealText {
-          animation: revealText 0.6s ease-out 0.3s forwards;
+          animation: revealText 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s forwards;
           opacity: 0;
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 3s ease-in-out infinite;
+        }
+        .animate-pulse-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+        .animate-ping-slow {
+          animation: ping-slow 2s ease-out infinite;
+        }
+        .animate-dice-spin {
+          animation: dice-spin 3s ease-in-out infinite;
         }
       `}</style>
     </div>
