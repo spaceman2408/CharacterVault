@@ -14,7 +14,6 @@ import {
   CheckCircle,
   ExternalLink,
   Library,
-  Wand2,
   RotateCcw,
 } from 'lucide-react';
 import { useCharacterContext } from '../../context';
@@ -472,25 +471,6 @@ export const AICreationStudio: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Empty state illustration */}
-                {showEmptyState && (
-                  <div 
-                    className={`hidden lg:flex flex-col items-center justify-center py-8 text-center opacity-50 transition-opacity duration-200 ${
-                      fadeInputModal ? 'opacity-0' : ''
-                    }`}
-                  >
-                    <div className="w-14 h-14 rounded-2xl bg-vault-100 dark:bg-vault-800 flex items-center justify-center mb-3">
-                      <Wand2 className="w-7 h-7 text-vault-400 dark:text-vault-500" />
-                    </div>
-                    <p className="text-sm font-medium text-vault-600 dark:text-vault-400">
-                      Your generated character will appear here
-                    </p>
-                    <p className="text-xs text-vault-500 dark:text-vault-500 mt-1 max-w-xs">
-                      Enter a concept and click Generate to create name, description, first message, and examples.
-                    </p>
                   </div>
                 )}
 

@@ -10,7 +10,6 @@ import {
   Settings2,
   Loader2,
   X,
-  Wand2,
   PenLine,
   Tag,
 } from 'lucide-react';
@@ -88,9 +87,6 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
         <>
           {/* Header */}
           <div className="text-center sm:text-left">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-vault-100 dark:bg-vault-800 mb-3">
-              <Wand2 className="w-5 h-5 text-vault-600 dark:text-vault-400" />
-            </div>
             <h2 className="text-lg font-bold text-vault-900 dark:text-vault-100">
               What character do you want to create?
             </h2>
@@ -122,25 +118,6 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
               )}
             </div>
           </div>
-
-          {/* Guidance chips — only when configured and not generating */}
-          {isConfigured && !isGenerating && !trimmed && (
-            <div className="flex flex-wrap gap-2">
-              {[
-                'Fantasy warrior with a tragic past',
-                'Cheerful android barista on Mars',
-                'Mysterious detective in 1920s London',
-              ].map((example) => (
-                <button
-                  key={example}
-                  onClick={() => onConceptChange(example)}
-                  className="px-3 py-1.5 text-xs font-medium text-vault-600 dark:text-vault-400 bg-vault-100 dark:bg-vault-800/60 hover:bg-vault-200 dark:hover:bg-vault-700 rounded-lg transition-colors"
-                >
-                  {example}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Not Configured State */}
           {!isConfigured && (
