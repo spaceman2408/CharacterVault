@@ -210,6 +210,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
                 key={tag.id}
                 className="absolute pointer-events-none select-none"
                 style={{
+                  opacity: 0,
                   animation: `vortexOrbit ${tag.duration}s cubic-bezier(0.33, 0, 0.2, 1) forwards`,
                   animationDelay: `${tag.startDelay}s`,
                 }}
