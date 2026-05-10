@@ -28,9 +28,37 @@ interface VortexTag {
 
 const TOTAL_VORTEX_TAGS = 36;
 
-function sampleTags(pool: readonly string[], count: number, exclude: readonly string[]): string[] {
+/** Simple string hash for deterministic seeding */
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return hash || 1;
+}
+
+/** Seeded pseudo-random generator (LCG) — deterministic per seed */
+function seededRandom(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) % 4294967296;
+    return s / 4294967296;
+  };
+}
+
+function sampleTags(
+  pool: readonly string[],
+  count: number,
+  exclude: readonly string[],
+  rand: () => number
+): string[] {
   const filtered = pool.filter((t) => !exclude.includes(t));
-  const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+  // Fisher-Yates shuffle using seeded RNG
+  const shuffled = [...filtered];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   return shuffled.slice(0, count);
 }
 
@@ -47,9 +75,10 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
   );
 
   const tags = useMemo((): VortexTag[] => {
+    const rand = seededRandom(hashString(selectedTags.join(',')));
     const all = getAllTags();
     const fillerCount = Math.max(0, TOTAL_VORTEX_TAGS - selectedTags.length);
-    const filler = sampleTags(all, fillerCount, selectedTags);
+    const filler = sampleTags(all, fillerCount, selectedTags, rand);
 
     const items: VortexTag[] = [];
 
@@ -58,13 +87,13 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
         id: i,
         label,
         isSelected: true,
-        startAngle: Math.random() * 360,
-        orbitRadius: 120 + Math.random() * 180,
-        spinDegrees: 360 + Math.random() * 720,
-        startDelay: Math.random() * 0.5,
-        fontSize: 0.9 + Math.random() * 0.4,
-        opacity: 0.6 + Math.random() * 0.4,
-        duration: 2.5 + Math.random() * 1,
+        startAngle: rand() * 360,
+        orbitRadius: 120 + rand() * 180,
+        spinDegrees: 360 + rand() * 720,
+        startDelay: rand() * 0.5,
+        fontSize: 0.9 + rand() * 0.4,
+        opacity: 0.6 + rand() * 0.4,
+        duration: 2.5 + rand() * 1,
       });
     });
 
@@ -73,13 +102,13 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
         id: selectedTags.length + i,
         label,
         isSelected: false,
-        startAngle: Math.random() * 360,
-        orbitRadius: 100 + Math.random() * 220,
-        spinDegrees: 360 + Math.random() * 1080,
-        startDelay: Math.random() * 0.8,
-        fontSize: 0.75 + Math.random() * 0.35,
-        opacity: 0.4 + Math.random() * 0.4,
-        duration: 2.5 + Math.random() * 1,
+        startAngle: rand() * 360,
+        orbitRadius: 100 + rand() * 220,
+        spinDegrees: 360 + rand() * 1080,
+        startDelay: rand() * 0.8,
+        fontSize: 0.75 + rand() * 0.35,
+        opacity: 0.4 + rand() * 0.4,
+        duration: 2.5 + rand() * 1,
       });
     });
 
@@ -87,14 +116,18 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
   }, [selectedTags]);
 
   useEffect(() => {
-    if (!isVisible) {
+    if (!isVisible) return;
+
+    // Use microtask to avoid synchronous setState during effect execution
+    queueMicrotask(() => {
       setPhase('swirl');
       setFadeOut(false);
-      return;
-    }
+    });
 
     if (reducedMotion) {
-      setPhase('reveal');
+      // Delay the phase change slightly to allow the reset above to settle
+      setTimeout(() => setPhase('reveal'), 50);
+      
       const t1 = setTimeout(() => {
         setFadeOut(true);
       }, 800);

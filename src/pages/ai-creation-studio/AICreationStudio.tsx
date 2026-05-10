@@ -97,10 +97,10 @@ export const AICreationStudio: React.FC = () => {
     const randomized = randomizeTags(tagSelections);
     setTagSelections(randomized);
 
-    if (showLuckyVortexSetting) {
-      const allSelected = Object.values(randomized).flat();
-      setVortexTags(allSelected);
-      setVortexActive(true);
+       if (showLuckyVortexSetting) {
+        const allSelected = Object.values(randomized).flat();
+        setVortexTags(allSelected);
+        setVortexActive(true);
     } else {
       const text = buildConceptFromTags(randomized);
       if (text) {
