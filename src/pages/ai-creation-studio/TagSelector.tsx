@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  Wand2,
   Shuffle,
   AlertCircle,
   Settings2,
@@ -115,9 +114,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     <div className="space-y-5">
       {/* Header */}
       <div className="text-center sm:text-left">
-        <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-vault-100 dark:bg-vault-800 mb-3">
-          <Wand2 className="w-5 h-5 text-vault-600 dark:text-vault-400" />
-        </div>
         <h2 className="text-lg font-bold text-vault-900 dark:text-vault-100">
           Build a character from tags
         </h2>
@@ -125,16 +121,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           Pick tags that describe your character, or let fate decide.
         </p>
       </div>
-
-      {/* I'm Feeling Lucky */}
-      <button
-        onClick={onFeelingLucky}
-        disabled={isGenerating}
-        className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
-      >
-        <Shuffle className="w-4 h-4" />
-        I&apos;m Feeling Lucky
-      </button>
 
       {/* Search */}
       <div className="relative">
@@ -321,6 +307,16 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           </button>
         )}
       </div>
+
+      {/* I'm Feeling Lucky */}
+      <button
+        onClick={onFeelingLucky}
+        disabled={isGenerating}
+        className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
+      >
+        <Shuffle className="w-4 h-4" />
+        I'm Feeling Lucky
+      </button>
     </div>
   );
 };
