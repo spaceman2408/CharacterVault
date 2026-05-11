@@ -264,6 +264,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         })}
       </div>
 
+      {/* API call cost notice */}
+      <p className="text-xs text-vault-400 dark:text-vault-500 text-center">
+        Generation uses a minimum of 4 API calls. At least one per field.
+      </p>
+
       {/* Action Bar */}
       <div className="flex gap-3 pt-1">
         <button
