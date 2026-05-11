@@ -3,7 +3,7 @@
  * @module @pages/ai-creation-studio/GeneratedCardPreview
  */
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Type, FileText, MessageCircle, MessagesSquare } from 'lucide-react';
 import type { GenerationField } from './types';
 import { GENERATION_FIELDS } from './types';
@@ -26,6 +26,45 @@ const FIELD_PLACEHOLDERS: Record<GenerationField, string> = {
   description: 'Character description...',
   first_mes: 'First message...',
   mes_example: 'Example dialogues...',
+};
+
+/** Auto-scrolling textarea that follows streamed content to the bottom */
+const StreamingTextarea: React.FC<{
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder: string;
+  rows: number;
+  className: string;
+}> = ({ value, onChange, placeholder, rows, className }) => {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const userScrolledUp = useRef(false);
+
+  // Detect if the user has scrolled up manually
+  const handleScroll = () => {
+    const el = ref.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
+    userScrolledUp.current = !atBottom;
+  };
+
+  // Auto-scroll to bottom when value changes, unless user scrolled up
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || userScrolledUp.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={onChange}
+      onScroll={handleScroll}
+      placeholder={placeholder}
+      rows={rows}
+      className={className}
+    />
+  );
 };
 
 export const GeneratedCardPreview: React.FC<GeneratedCardPreviewProps> = ({
@@ -65,12 +104,14 @@ export const GeneratedCardPreview: React.FC<GeneratedCardPreviewProps> = ({
                 className="w-full px-3 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-lg text-sm text-vault-900 dark:text-vault-100 focus:outline-none focus:ring-2 focus:ring-vault-500 dark:focus:ring-vault-400 transition-all"
               />
             ) : (
-              <textarea
+              <StreamingTextarea
                 value={value}
                 onChange={(e) => onFieldChange(field.key, e.target.value)}
                 placeholder={FIELD_PLACEHOLDERS[field.key]}
                 rows={field.key === 'description' ? 6 : 4}
-                className="w-full px-3 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-lg text-sm text-vault-900 dark:text-vault-100 resize-y focus:outline-none focus:ring-2 focus:ring-vault-500 dark:focus:ring-vault-400 transition-all"
+                className={`w-full px-3 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-lg text-sm text-vault-900 dark:text-vault-100 resize-y overflow-y-auto focus:outline-none focus:ring-2 focus:ring-vault-500 dark:focus:ring-vault-400 transition-all ${
+                  field.key === 'description' ? 'max-h-48' : 'max-h-36'
+                }`}
               />
             )}
           </div>
