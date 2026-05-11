@@ -19,7 +19,6 @@ import {
   TAG_CATEGORIES,
   formatTag,
   getExcludedTagsForUI,
-  type TagCategoryKey,
 } from './tags/tagData';
 
 interface TagSelectorProps {
@@ -98,30 +97,10 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     [selections]
   );
 
-  const derivedConcept = useMemo(() => {
-    const parts: string[] = [];
-    const order: TagCategoryKey[] = ['identity', 'role', 'personality', 'genre', 'appearance', 'tone'];
-    for (const key of order) {
-      const tags = selections[key] ?? [];
-      for (const tag of tags) parts.push(formatTag(tag));
-    }
-    return parts.join(', ');
-  }, [selections]);
-
   const canGenerate = isConfigured && hasSelection && !isGenerating;
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="text-center sm:text-left">
-        <h2 className="text-lg font-bold text-vault-900 dark:text-vault-100">
-          Build a character from tags
-        </h2>
-        <p className="text-sm text-vault-500 dark:text-vault-400 mt-1">
-          Pick tags that describe your character, or let fate decide.
-        </p>
-      </div>
-
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-vault-400 dark:text-vault-500" />
@@ -166,6 +145,49 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           </button>
         </div>
       )}
+
+      {/* Selected summary */}
+      <div className="space-y-3 p-4 bg-vault-50 dark:bg-vault-900/50 border border-vault-200 dark:border-vault-800 rounded-xl">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-vault-600 dark:text-vault-400 uppercase tracking-wider">
+            Selected {hasSelection && `(${selectedCount})`}
+          </span>
+          {hasSelection && (
+            <button
+              onClick={() => onSelectionsChange({})}
+              className="text-xs text-vault-500 dark:text-vault-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+        {hasSelection ? (
+          <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+            {TAG_CATEGORIES.flatMap((cat) =>
+              (selections[cat.key] ?? []).map((tag) => (
+                <span
+                  key={`${cat.key}-${tag}`}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border-violet-200 dark:border-violet-800"
+                >
+                  {formatTag(tag)}
+                  <button
+                    onClick={() => removeTag(cat.key, tag)}
+                    disabled={isGenerating}
+                    className="ml-0.5 hover:opacity-75 transition-opacity disabled:opacity-40"
+                    aria-label={`Remove ${formatTag(tag)}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-vault-400 dark:text-vault-600 italic transition-opacity duration-200">
+            Select a tag for it to appear here.
+          </p>
+        )}
+      </div>
 
       {/* Category sections */}
       <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
@@ -242,47 +264,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         })}
       </div>
 
-      {/* Selected summary */}
-      {hasSelection && (
-        <div className="space-y-3 p-4 bg-vault-50 dark:bg-vault-900/50 border border-vault-200 dark:border-vault-800 rounded-xl">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-vault-600 dark:text-vault-400 uppercase tracking-wider">
-              Selected ({selectedCount})
-            </span>
-            <button
-              onClick={() => onSelectionsChange({})}
-              className="text-xs text-vault-500 dark:text-vault-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-            >
-              Clear all
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {TAG_CATEGORIES.flatMap((cat) =>
-              (selections[cat.key] ?? []).map((tag) => (
-                <span
-                  key={`${cat.key}-${tag}`}
-                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border-violet-200 dark:border-violet-800`}
-                >
-                  {formatTag(tag)}
-                  <button
-                    onClick={() => removeTag(cat.key, tag)}
-                    disabled={isGenerating}
-                    className="ml-0.5 hover:opacity-75 transition-opacity disabled:opacity-40"
-                    aria-label={`Remove ${formatTag(tag)}`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))
-            )}
-          </div>
-          <div className="text-xs text-vault-500 dark:text-vault-500 pt-1">
-            <span className="font-medium text-vault-600 dark:text-vault-400">Concept preview:</span>{' '}
-            {derivedConcept || 'No tags selected'}
-          </div>
-        </div>
-      )}
-
       {/* Action Bar */}
       <div className="flex gap-3 pt-1">
         <button
@@ -309,14 +290,19 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       </div>
 
       {/* I'm Feeling Lucky */}
-      <button
-        onClick={onFeelingLucky}
-        disabled={isGenerating}
-        className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
-      >
-        <Shuffle className="w-4 h-4" />
-        I'm Feeling Lucky
-      </button>
+      <div className="space-y-1.5">
+        <button
+          onClick={onFeelingLucky}
+          disabled={isGenerating}
+          className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
+        >
+          <Shuffle className="w-4 h-4" />
+          I'm Feeling Lucky
+        </button>
+        <p className="text-xs text-center text-vault-500 dark:text-vault-400">
+          Let fate decide. This can get wild.
+        </p>
+      </div>
     </div>
   );
 };
