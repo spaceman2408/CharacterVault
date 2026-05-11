@@ -72,6 +72,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
   const [phase, setPhase] = useState<'waiting' | 'swirl' | 'converge' | 'reveal' | 'done'>('waiting');
   const [fadeOut, setFadeOut] = useState(false);
   const [isSwirlExiting, setIsSwirlExiting] = useState(false);
+  const [backgroundOpacity, setBackgroundOpacity] = useState(1); // Start fully opaque
   const reducedMotion = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     []
@@ -121,21 +122,32 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
   useEffect(() => {
     if (!isVisible) {
       // When becoming invisible, schedule a reset for next render
-      const timer = setTimeout(() => { setPhase('waiting'); setIsSwirlExiting(false); }, 0);
+      const timer = setTimeout(() => { 
+        setPhase('waiting'); 
+        setIsSwirlExiting(false);
+        setBackgroundOpacity(1); // Reset to fully opaque for next time
+      }, 0);
       return () => clearTimeout(timer);
     }
 
     // Notify parent to start fading out the input modal immediately
     onAnimationStart?.();
 
-    // Wait for modal to fade out before starting animation
+    // Start fully opaque, then fade to semi-transparent after UI has hidden
     const MODAL_FADE_DELAY = 250; // Give modal time to fade out (reduced for faster transition)
+    const BACKGROUND_FADE_DELAY = 300; // When to start lightening the background
 
     // Use microtask to avoid synchronous setState during effect execution
     queueMicrotask(() => {
       setPhase('waiting'); // Ensure we start from waiting state
       setFadeOut(false);
+      setBackgroundOpacity(1); // Start fully opaque
     });
+
+    // Fade background to semi-transparent after UI is hidden
+    const bgTimer = setTimeout(() => {
+      setBackgroundOpacity(0.85);
+    }, BACKGROUND_FADE_DELAY);
 
     if (reducedMotion) {
       // Delay the phase change slightly to allow the reset above to settle
@@ -145,6 +157,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
       }, MODAL_FADE_DELAY + 800);
       const t2 = setTimeout(onComplete, MODAL_FADE_DELAY + 1300);
       return () => { 
+        clearTimeout(bgTimer);
         clearTimeout(t0);
         clearTimeout(t1); 
         clearTimeout(t2); 
@@ -152,7 +165,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
     }
 
     // Normal animation timing - extended for more grandiose effect
-    const timers: ReturnType<typeof setTimeout>[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = [bgTimer];
 
     // Phase 1: start swirl (after modal fades)
     timers.push(setTimeout(() => setPhase('swirl'), MODAL_FADE_DELAY));
@@ -184,10 +197,10 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
       className="fixed inset-0 flex items-center justify-center"
       style={{ 
         zIndex: 9999,
-        backgroundColor: 'rgba(0,0,0,0.85)',
+        backgroundColor: `rgba(0,0,0,${backgroundOpacity})`,
         backdropFilter: 'blur(8px)',
         opacity: fadeOut ? 0 : 1,
-        transition: 'opacity 700ms ease-in-out',
+        transition: 'opacity 700ms ease-in-out, background-color 500ms ease-in-out',
       }}
     >
       {/* Radial gradient background pulse */}
