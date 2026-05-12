@@ -64,13 +64,13 @@ const TAG_EXCLUSIONS: Record<string, string[]> = {
   
   // Family role exclusions (female roles also exclude male appendages)
   'mother': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'father': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', ...MALE_APPENDAGE_EXCLUSIONS],
+  'father': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   'daughter': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'son': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', ...MALE_APPENDAGE_EXCLUSIONS],
+  'son': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   'sister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', ...MALE_APPENDAGE_EXCLUSIONS],
+  'brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   'big_sister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'big_brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', ...MALE_APPENDAGE_EXCLUSIONS],
+  'big_brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   'aunt': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'stepmother': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'stepsister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
@@ -80,16 +80,16 @@ const TAG_EXCLUSIONS: Record<string, string[]> = {
   'loving_wife': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'husband': ['wife', 'girlfriend', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   'girlfriend': ['boyfriend', 'husband', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'boyfriend': ['girlfriend', 'wife', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', ...MALE_APPENDAGE_EXCLUSIONS],
+  'boyfriend': ['girlfriend', 'wife', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   
   // Specific gendered roles
   'mommy_dom': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'dommy_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'daddy': ['mother', 'mommy_dom', 'dommy_mommy', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'loving_wife', ...MALE_APPENDAGE_EXCLUSIONS],
+  'daddy': ['mother', 'mommy_dom', 'dommy_mommy', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'loving_wife', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   'muscle_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'sugar_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'milf': ['dilf', 'father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'dilf': ['milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'loving_wife', ...MALE_APPENDAGE_EXCLUSIONS],
+  'dilf': ['milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'loving_wife', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   'gilf': ['dilf', 'father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'widow': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
   
