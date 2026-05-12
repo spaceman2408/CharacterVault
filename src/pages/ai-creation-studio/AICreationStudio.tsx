@@ -359,18 +359,13 @@ export const AICreationStudio: React.FC = () => {
                 {isLoading && (
                   <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6 space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                          <Loader2 className="w-5 h-5 text-violet-600 dark:text-violet-400 animate-spin" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
-                            Generating character...
-                          </p>
-                          <p className="text-xs text-vault-500 dark:text-vault-400">
-                            This may take a moment.
-                          </p>
-                        </div>
+                      <div>
+                        <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
+                          Generating character...
+                        </p>
+                        <p className="text-xs text-vault-500 dark:text-vault-400">
+                          This may take a moment.
+                        </p>
                       </div>
                       <button
                         onClick={handleGoBack}
@@ -471,6 +466,37 @@ export const AICreationStudio: React.FC = () => {
                         </button>
                       </div>
                     </div>
+
+                    {/* Tags used — persisted after generation completes */}
+                    {inputMode === 'tags' && Object.values(tagSelections).some((t) => t.length > 0) && (
+                      <div className="pt-3 mt-3 border-t border-vault-100 dark:border-vault-800">
+                        <p className="text-[10px] font-semibold text-vault-500 dark:text-vault-400 uppercase tracking-wider mb-2">
+                          Tags used
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {TAG_CATEGORIES.flatMap((cat) =>
+                            (tagSelections[cat.key] ?? []).map((tag) => (
+                              <span
+                                key={`${cat.key}-${tag}`}
+                                className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-200 dark:border-violet-800"
+                              >
+                                {formatTag(tag)}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {inputMode === 'write' && concept && (
+                      <div className="pt-3 mt-3 border-t border-vault-100 dark:border-vault-800">
+                        <p className="text-[10px] font-semibold text-vault-500 dark:text-vault-400 uppercase tracking-wider mb-1">
+                          Concept
+                        </p>
+                        <p className="text-sm text-vault-700 dark:text-vault-300 italic">
+                          &ldquo;{concept}&rdquo;
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
