@@ -39,8 +39,8 @@ const TAG_EXCLUSIONS: Record<string, string[]> = {
   'female': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'girl': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'strong_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'grown_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'strong_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', 'dilf', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'grown_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', 'dilf', ...FEMALE_APPENDAGE_EXCLUSIONS],
   
   // Male-related tags exclude female-related tags + female appendages
   'male': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
@@ -78,7 +78,7 @@ const TAG_EXCLUSIONS: Record<string, string[]> = {
   // Relationship exclusions (female roles also exclude male appendages)
   'wife': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'loving_wife': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'husband': ['wife', 'girlfriend', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', ...MALE_APPENDAGE_EXCLUSIONS],
+  'husband': ['wife', 'girlfriend', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   'girlfriend': ['boyfriend', 'husband', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
   'boyfriend': ['girlfriend', 'wife', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', ...MALE_APPENDAGE_EXCLUSIONS],
   
