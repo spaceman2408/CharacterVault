@@ -199,10 +199,14 @@ export const AICreationStudio: React.FC = () => {
   }, [savedCharacterId, navigate]);
 
   const handleBackToLibrary = useCallback(() => {
+    // Abort any ongoing generation before navigating away
+    if (isLoading) {
+      abort();
+    }
     // Force full page reload to ensure fresh state and return to vault view
     // This prevents the editor from opening with a previously selected character
     window.location.href = import.meta.env.BASE_URL;
-  }, []);
+  }, [isLoading, abort]);
 
   const handleCreateAnother = useCallback(() => {
     // Clear all form state

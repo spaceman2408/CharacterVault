@@ -56,10 +56,15 @@ export function useAIGeneration(): UseAIGenerationResult {
 
   const aiServiceRef = useRef<AIService | null>(null);
   const configRef = useRef<{ config: AIConfig; sampler: SamplerSettings } | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const stateRef = useRef<GenerationState>(state);
   const isAbortedRef = useRef<boolean>(false);
   stateRef.current = state;
+
+  /** Cancel any in-flight request on the AIService and mark the current run as aborted. */
+  const abortCurrent = useCallback(() => {
+    isAbortedRef.current = true;
+    aiServiceRef.current?.abort();
+  }, []);
 
   const loadConfig = useCallback(async (): Promise<boolean> => {
     try {
@@ -92,6 +97,13 @@ export function useAIGeneration(): UseAIGenerationResult {
   useEffect(() => {
     void loadConfig();
   }, [loadConfig]);
+
+  // Abort any in-flight generation when the hook unmounts (e.g. navigating away)
+  useEffect(() => {
+    return () => {
+      abortCurrent();
+    };
+  }, [abortCurrent]);
 
   const buildMessages = useCallback(
     (field: GenerationField, concept: string, data: Partial<CharacterSpec>): ChatMessage[] => {
@@ -138,9 +150,6 @@ export function useAIGeneration(): UseAIGenerationResult {
       if (!service) throw new Error('AI service not initialized');
 
       const messages = buildMessages(field, concept, currentData);
-
-      // Create a local abort controller for this field generation
-      abortControllerRef.current = new AbortController();
 
       let accumulatedContent = '';
 
@@ -193,6 +202,9 @@ export function useAIGeneration(): UseAIGenerationResult {
       const trimmedConcept = newConcept.trim();
       setConcept(trimmedConcept);
 
+      // Cancel any in-flight request before starting a new one
+      abortCurrent();
+
       const hasConfig = await loadConfig();
       if (!hasConfig) {
         setState({
@@ -216,7 +228,7 @@ export function useAIGeneration(): UseAIGenerationResult {
       try {
         for (const field of FIELD_ORDER) {
           // Check if aborted
-          if (abortControllerRef.current?.signal.aborted || isAbortedRef.current) {
+          if (isAbortedRef.current) {
             throw new AIError('Request was cancelled', 'unknown');
           }
 
@@ -266,18 +278,13 @@ export function useAIGeneration(): UseAIGenerationResult {
         }
       } finally {
         setIsLoading(false);
-        abortControllerRef.current = null;
       }
     },
-    [loadConfig, generateField]
+    [loadConfig, generateField, abortCurrent]
   );
 
   const abort = useCallback(() => {
-    isAbortedRef.current = true;
-    if (aiServiceRef.current) {
-      aiServiceRef.current.abort();
-    }
-    abortControllerRef.current?.abort();
+    abortCurrent();
     setIsLoading(false);
     setState((prev) => ({
       ...prev,
@@ -285,10 +292,13 @@ export function useAIGeneration(): UseAIGenerationResult {
       currentField: null,
       error: 'Generation aborted by user.',
     }));
-  }, []);
+  }, [abortCurrent]);
 
   const retryField = useCallback(
     async (field: GenerationField) => {
+      // Cancel any in-flight request before starting a new one
+      abortCurrent();
+
       const hasConfig = await loadConfig();
       if (!hasConfig) {
         setState((prev) => ({
@@ -342,14 +352,16 @@ export function useAIGeneration(): UseAIGenerationResult {
         }
       } finally {
         setIsLoading(false);
-        abortControllerRef.current = null;
       }
     },
-    [loadConfig, generateField, concept]
+    [loadConfig, generateField, concept, abortCurrent]
   );
 
   const regenerateField = useCallback(
     async (field: GenerationField) => {
+      // Cancel any in-flight request before starting a new one
+      abortCurrent();
+
       const hasConfig = await loadConfig();
       if (!hasConfig) {
         setState((prev) => ({
@@ -406,13 +418,15 @@ export function useAIGeneration(): UseAIGenerationResult {
         }
       } finally {
         setIsLoading(false);
-        abortControllerRef.current = null;
       }
     },
-    [loadConfig, generateField, concept]
+    [loadConfig, generateField, concept, abortCurrent]
   );
 
   const continueGeneration = useCallback(async () => {
+    // Cancel any in-flight request before starting a new one
+    abortCurrent();
+
     const hasConfig = await loadConfig();
     if (!hasConfig) {
       setState((prev) => ({
@@ -441,7 +455,7 @@ export function useAIGeneration(): UseAIGenerationResult {
 
     try {
       for (const field of remaining) {
-        if (abortControllerRef.current?.signal.aborted || isAbortedRef.current) {
+        if (isAbortedRef.current) {
           throw new AIError('Request was cancelled', 'unknown');
         }
 
@@ -491,9 +505,8 @@ export function useAIGeneration(): UseAIGenerationResult {
       }
     } finally {
       setIsLoading(false);
-      abortControllerRef.current = null;
     }
-  }, [loadConfig, generateField, concept]);
+  }, [loadConfig, generateField, concept, abortCurrent]);
 
   const updateGeneratedField = useCallback((field: GenerationField, value: string) => {
     setState((prev) => ({
@@ -503,13 +516,11 @@ export function useAIGeneration(): UseAIGenerationResult {
   }, []);
 
   const reset = useCallback(() => {
-    isAbortedRef.current = true;
+    abortCurrent();
     setState(INITIAL_STATE);
     setIsLoading(false);
     setConcept('');
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-  }, []);
+  }, [abortCurrent]);
 
   return {
     state,
