@@ -28,6 +28,7 @@ nav: [
 {
         text: 'Features',
         items: [
+          { text: 'AI Creation Studio', link: '/features/ai-creation-studio' },
           { text: 'AI Assistant Orion', link: '/features/ai-assistant' },
           { text: 'AI Context Panel', link: '/features/ai-context' },
           { text: 'Editor & AI Toolkit', link: '/features/editor' },

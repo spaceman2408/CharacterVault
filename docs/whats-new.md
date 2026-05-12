@@ -6,6 +6,21 @@ Quick overview of recent updates to CharacterVault.
 
 ## May 2026
 
+### AI Creation Studio
+
+The new **AI Creation Studio** lets you generate complete character cards from scratch using AI. Describe your concept or select from curated tags, and the AI creates a name, description, first message, and example dialogue in one flow.
+
+**Features:**
+- **Write Mode** — Free-form concept descriptions
+- **Tags Mode** — Visual tag selection across 6 categories (Identity, Personality, Role, Genre, Tone, Appearance)
+- **Feeling Lucky** — Random tag generation with visual vortex animation
+- **Live Preview** — Edit generated fields in real-time
+- **Field Regeneration** — Retry or regenerate individual fields
+
+[Learn more →](/features/ai-creation-studio)
+
+---
+
 ### Model Caching in Settings
 
 The **Character Settings** panel now caches available AI models and providers, so the model list loads instantly on repeat visits. No more waiting for your model provider to respond every time you switch back.

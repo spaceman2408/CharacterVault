@@ -1,14 +1,34 @@
 # Creating & Editing Characters
 
-Character Vault provides a tabbed editor for managing every aspect of a character card. This guide walks you through creating a new character and editing each section.
+Character Vault provides two ways to create characters: generate them with AI or build them manually in the tabbed editor.
 
 ## Creating a New Character
+
+### Option 1: AI Creation Studio
+
+Generate a complete character card from scratch using AI:
+
+1. Click the **✨ AI Creation Studio** button in the vault header.
+2. Choose your input mode:
+   - **Write Mode** — Describe your character concept in free-form text
+   - **Tags Mode** — Select from curated tags across 6 categories
+3. Click **Generate Character** (or **🎲 Feeling Lucky** for random tags).
+4. Review and edit the generated fields in the preview panel.
+5. Click **Save to Vault** when ready.
+
+The AI generates a name, description, first message, and example dialogue automatically.
+
+[Learn more about AI Creation Studio →](/features/ai-creation-studio)
+
+### Option 2: Manual Creation
+
+Build a character from scratch in the editor:
 
 1. Click the **New** button in the top right of the character library.
 2. Enter a name for your character.
 3. Click **Create**.
 
-Your new character opens in the workspace immediately.
+Your new character opens in the workspace immediately, ready for editing.
 
 ## The Tabbed Editor
 
