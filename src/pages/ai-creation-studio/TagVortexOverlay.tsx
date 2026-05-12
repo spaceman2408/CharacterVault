@@ -205,7 +205,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
     >
       {/* Radial gradient background pulse */}
       <div 
-        className="absolute inset-0 animate-pulse-slow"
+        className="absolute inset-0 animate-vortex-pulse-slow"
         style={{
           background: 'radial-gradient(circle at center, rgba(139,92,246,0.15) 0%, transparent 70%)',
         }}
@@ -313,7 +313,7 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
           <div className="z-10 flex flex-col items-center justify-center text-center px-6">
             {/* Glowing orb behind tags */}
             <div 
-              className="absolute w-96 h-96 rounded-full animate-pulse-glow"
+              className="absolute w-96 h-96 rounded-full animate-vortex-pulse-glow"
               style={{
                 background: 'radial-gradient(circle, rgba(139,92,246,0.3) 0%, rgba(139,92,246,0.1) 40%, transparent 70%)',
                 filter: 'blur(40px)',
@@ -340,9 +340,9 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
             
             <div className="relative flex flex-col items-center gap-3 animate-revealText">
               <div className="relative">
-                <Dices className="w-8 h-8 text-violet-200 animate-dice-spin" />
+                <Dices className="w-8 h-8 text-violet-200 animate-vortex-dice-spin" />
                 <div 
-                  className="absolute inset-0 animate-ping-slow"
+                  className="absolute inset-0 animate-vortex-ping-slow"
                   style={{
                     background: 'radial-gradient(circle, rgba(139,92,246,0.6) 0%, transparent 70%)',
                     filter: 'blur(10px)',
@@ -358,157 +358,6 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
           </div>
         )}
       </div>
-
-      {/* Keyframes injected via style tag */}
-      <style>{`
-        @keyframes vortexOrbit {
-          0% {
-            opacity: 0;
-            transform: scale(0.05) rotate(0deg);
-            filter: blur(8px);
-          }
-          15% {
-            opacity: 0.4;
-            filter: blur(3px);
-          }
-          30% {
-            opacity: 1;
-            transform: scale(1) rotate(360deg);
-            filter: blur(0px);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1) rotate(1080deg);
-            filter: blur(0px);
-          }
-        }
-        @keyframes vortexReject {
-          0% {
-            opacity: 0.6;
-            filter: blur(0px);
-          }
-          50% {
-            opacity: 0.3;
-            filter: blur(2px);
-          }
-          100% {
-            opacity: 0;
-            transform: translateX(800px) translateY(400px) rotate(1080deg) scale(0.1);
-            filter: blur(4px);
-          }
-        }
-        @keyframes vortexConverge {
-          0% {
-            opacity: 0.8;
-            filter: blur(0px);
-          }
-          50% {
-            opacity: 0.9;
-            transform: translateX(0) translateY(0) scale(1.15);
-            filter: blur(1px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateX(0) translateY(0) scale(1);
-            filter: blur(0px);
-          }
-        }
-        @keyframes revealScale {
-          0% {
-            opacity: 0;
-            transform: scale(0.3) rotate(-10deg);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.15) rotate(2deg);
-          }
-          70% {
-            transform: scale(0.95) rotate(-1deg);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1) rotate(0deg);
-          }
-        }
-        @keyframes revealText {
-          0% {
-            opacity: 0;
-            transform: translateY(20px) scale(0.9);
-          }
-          60% {
-            opacity: 1;
-            transform: translateY(-5px) scale(1.05);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        @keyframes pulse-slow {
-          0%, 100% {
-            opacity: 0.3;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.6;
-            transform: scale(1.1);
-          }
-        }
-        @keyframes pulse-glow {
-          0%, 100% {
-            opacity: 0.4;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.8;
-            transform: scale(1.2);
-          }
-        }
-        @keyframes ping-slow {
-          0% {
-            opacity: 0.8;
-            transform: scale(1);
-          }
-          100% {
-            opacity: 0;
-            transform: scale(2.5);
-          }
-        }
-        @keyframes dice-spin {
-          0%, 100% {
-            transform: rotate(0deg);
-          }
-          25% {
-            transform: rotate(90deg) scale(1.1);
-          }
-          50% {
-            transform: rotate(180deg);
-          }
-          75% {
-            transform: rotate(270deg) scale(1.1);
-          }
-        }
-        .animate-revealScale {
-          animation: revealScale 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-          opacity: 0;
-        }
-        .animate-revealText {
-          animation: revealText 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s forwards;
-          opacity: 0;
-        }
-        .animate-pulse-slow {
-          animation: pulse-slow 3s ease-in-out infinite;
-        }
-        .animate-pulse-glow {
-          animation: pulse-glow 2s ease-in-out infinite;
-        }
-        .animate-ping-slow {
-          animation: ping-slow 2s ease-out infinite;
-        }
-        .animate-dice-spin {
-          animation: dice-spin 3s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 };
