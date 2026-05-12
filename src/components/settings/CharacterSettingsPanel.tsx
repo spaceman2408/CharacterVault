@@ -1313,7 +1313,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
       >
         <div 
           ref={panelRef}
-          className={`bg-vault-50 dark:bg-vault-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden ring-1 ring-vault-200 dark:ring-vault-800 transition-transform duration-300 scale-100 ${
+          className={`bg-vault-50 dark:bg-vault-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] h-[90vh] sm:h-auto flex flex-col overflow-hidden ring-1 ring-vault-200 dark:ring-vault-800 transition-transform duration-300 scale-100 ${
             isVisible ? 'scale-100' : 'scale-95'
           }`}
           role="dialog"
@@ -1346,12 +1346,12 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-vault-200 dark:border-vault-800 px-6 bg-vault-50 dark:bg-vault-900/50">
+          <div className="flex overflow-x-auto border-b border-vault-200 dark:border-vault-800 px-6 bg-vault-50 dark:bg-vault-900/50 scrollbar-thin scrollbar-thumb-vault-300 dark:scrollbar-thumb-vault-700">
             {(['ai', 'sampler', 'prompts', 'studio'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-3 text-sm font-medium capitalize transition-all duration-200 border-b-2 -mb-px focus:outline-none focus:ring-2 focus:ring-vault-500/50 focus:ring-inset ${
+                className={`px-4 py-3 text-sm font-medium capitalize transition-all duration-200 border-b-2 -mb-px focus:outline-none focus:ring-2 focus:ring-vault-500/50 focus:ring-inset whitespace-nowrap flex-shrink-0 ${
                   activeTab === tab
                     ? 'border-vault-600 text-vault-600 dark:border-vault-400 dark:text-vault-400'
                     : 'border-transparent text-vault-500 dark:text-vault-400 hover:text-vault-700 dark:hover:text-vault-300 hover:bg-vault-100/50 dark:hover:bg-vault-800/50'
