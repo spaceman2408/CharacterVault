@@ -22,57 +22,76 @@ export type TagSelections = Record<TagCategoryKey, string[]>;
 
 /**
  * Tag exclusion rules - if a tag is selected, these tags should be excluded from random selection
+ *
+ * Appendage logic:
+ *   - Female-coded tags exclude penis/balls appearance tags (large_penis, small_penis, huge_balls)
+ *   - Male-coded tags exclude breast appearance tags (huge_breasts, small_breasts)
+ *   - futanari / futasub are intentionally exempt — they have both
+ *   - femboy / trap / twink / catboy are male but keep breast exclusion removed (crossdressing context)
  */
+
+// Shared appendage exclusion lists
+const FEMALE_APPENDAGE_EXCLUSIONS = ['large_penis', 'small_penis', 'huge_balls'];
+const MALE_APPENDAGE_EXCLUSIONS = ['huge_breasts', 'small_breasts'];
+
 const TAG_EXCLUSIONS: Record<string, string[]> = {
-  // Female-related tags exclude male-related tags
-  'female': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man'],
-  'woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man'],
-  'girl': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man'],
-  'strong_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man'],
-  'grown_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man'],
+  // Female-related tags exclude male-related tags + male appendages
+  'female': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'girl': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'strong_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'grown_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
   
-  // Male-related tags exclude female-related tags
-  'male': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
-  'boy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
-  'man': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
+  // Male-related tags exclude female-related tags + female appendages
+  'male': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
+  'boy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
+  'man': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
+  // femboy/catboy/twink/trap: male identity but crossdressing context — exclude female identity tags but NOT breast tags
   'femboy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
   'catboy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
-  'monster_boy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
+  'monster_boy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
   'twink': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
   'trap': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
-  'incubus': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
-  'old_man': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
+  'incubus': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
+  'old_man': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
+
+  // Appendage tags themselves — exclude conflicting appendages and mismatched gender identities
+  'large_penis': ['female', 'woman', 'girl', 'strong_woman', 'grown_woman', 'milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'widow', 'muscle_mommy', 'sugar_mommy', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'small_penis'],
+  'small_penis': ['female', 'woman', 'girl', 'strong_woman', 'grown_woman', 'milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'widow', 'muscle_mommy', 'sugar_mommy', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'large_penis'],
+  'huge_balls': ['female', 'woman', 'girl', 'strong_woman', 'grown_woman', 'milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'widow', 'muscle_mommy', 'sugar_mommy', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother'],
+  'huge_breasts': ['male', 'boy', 'man', 'monster_boy', 'incubus', 'old_man', 'small_breasts'],
+  'small_breasts': ['male', 'boy', 'man', 'monster_boy', 'incubus', 'old_man', 'huge_breasts'],
   
-  // Family role exclusions
-  'mother': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend'],
-  'father': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy'],
-  'daughter': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend'],
-  'son': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother'],
-  'sister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend'],
-  'brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother'],
-  'big_sister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend'],
-  'big_brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother'],
-  'aunt': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend'],
-  'stepmother': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend'],
-  'stepsister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend'],
+  // Family role exclusions (female roles also exclude male appendages)
+  'mother': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'father': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', ...MALE_APPENDAGE_EXCLUSIONS],
+  'daughter': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'son': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', ...MALE_APPENDAGE_EXCLUSIONS],
+  'sister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', ...MALE_APPENDAGE_EXCLUSIONS],
+  'big_sister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'big_brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', ...MALE_APPENDAGE_EXCLUSIONS],
+  'aunt': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'stepmother': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'stepsister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
   
-  // Relationship exclusions
-  'wife': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy'],
-  'loving_wife': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy'],
-  'husband': ['wife', 'girlfriend', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife'],
-  'girlfriend': ['boyfriend', 'husband', 'father', 'son', 'brother', 'big_brother', 'daddy'],
-  'boyfriend': ['girlfriend', 'wife', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife'],
+  // Relationship exclusions (female roles also exclude male appendages)
+  'wife': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'loving_wife': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'husband': ['wife', 'girlfriend', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', ...MALE_APPENDAGE_EXCLUSIONS],
+  'girlfriend': ['boyfriend', 'husband', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'boyfriend': ['girlfriend', 'wife', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', ...MALE_APPENDAGE_EXCLUSIONS],
   
   // Specific gendered roles
-  'mommy_dom': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend'],
-  'dommy_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend'],
-  'daddy': ['mother', 'mommy_dom', 'dommy_mommy', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'loving_wife'],
-  'muscle_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend'],
-  'sugar_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend'],
-  'milf': ['dilf', 'father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', 'old_man'],
-  'dilf': ['milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'loving_wife'],
-  'gilf': ['dilf', 'father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', 'old_man'],
-  'widow': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy'],
+  'mommy_dom': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'dommy_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'daddy': ['mother', 'mommy_dom', 'dommy_mommy', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'loving_wife', ...MALE_APPENDAGE_EXCLUSIONS],
+  'muscle_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'sugar_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'milf': ['dilf', 'father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'dilf': ['milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'loving_wife', ...MALE_APPENDAGE_EXCLUSIONS],
+  'gilf': ['dilf', 'father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
+  'widow': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
   
   // Sexual orientation exclusions
   'lesbian': ['gay', 'mlm'],
