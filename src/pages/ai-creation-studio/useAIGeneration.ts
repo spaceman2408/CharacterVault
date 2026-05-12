@@ -288,9 +288,9 @@ export function useAIGeneration(): UseAIGenerationResult {
     setIsLoading(false);
     setState((prev) => ({
       ...prev,
-      status: prev.completedFields.length > 0 ? 'error' : 'idle',
+      status: 'error',
       currentField: null,
-      error: 'Generation aborted by user.',
+      error: 'Generation stopped by user.',
     }));
   }, [abortCurrent]);
 

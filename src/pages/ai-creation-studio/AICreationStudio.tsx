@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Library,
   RotateCcw,
+  X,
 } from 'lucide-react';
 import { useCharacterContext } from '../../context';
 import { CharacterSettingsPanel } from '../../components/settings/CharacterSettingsPanel';
@@ -359,7 +360,7 @@ export const AICreationStudio: React.FC = () => {
                   </div>
                 )}
 
-                {/* Compact generation-progress card with Go Back */}
+                {/* Compact generation-progress card with Stop & Go Back */}
                 {isLoading && (
                   <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6 space-y-4">
                     <div className="flex items-center justify-between">
@@ -371,14 +372,24 @@ export const AICreationStudio: React.FC = () => {
                           This may take a moment.
                         </p>
                       </div>
-                      <button
-                        onClick={handleGoBack}
-                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-800 active:scale-[0.98] transition-all"
-                        title="Cancel and start over"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        Go Back
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleAbort}
+                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-[0.98] transition-all"
+                          title="Stop generation and keep what's been generated"
+                        >
+                          <X className="w-4 h-4" />
+                          Stop
+                        </button>
+                        <button
+                          onClick={handleGoBack}
+                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-800 active:scale-[0.98] transition-all"
+                          title="Cancel and return to concept input"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          Go Back
+                        </button>
+                      </div>
                     </div>
 
                     {/* Tags used for this generation */}
