@@ -1143,16 +1143,25 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
         }
       }
 
+      // If the model hasn't changed, keep the current provider
+      if (modelId === prev.modelId) {
+        return {
+          ...prev,
+          modelIdsByBaseUrl,
+        };
+      }
+
       // Only restore a saved provider preference specific to this model.
-      // Default to platform default ('') to avoid carrying over a provider
-      // from a previously selected model that doesn't host this one.
-      const savedProvider = prev.providerByModelId?.[modelId] ?? '';
+      // If no saved preference exists, keep the current provider (it will be validated
+      // when providers are fetched and reset if not available for the new model)
+      const savedProvider = prev.providerByModelId?.[modelId];
+      const providerToUse = savedProvider !== undefined ? savedProvider : prev.selectedProvider;
 
       return {
         ...prev,
         modelId,
         modelIdsByBaseUrl,
-        selectedProvider: savedProvider,
+        selectedProvider: providerToUse,
       };
     });
   };
