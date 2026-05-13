@@ -1346,7 +1346,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
           </div>
 
           {/* Tabs */}
-          <div className="flex overflow-x-auto border-b border-vault-200 dark:border-vault-800 px-6 bg-vault-50 dark:bg-vault-900/50 scrollbar-thin scrollbar-thumb-vault-300 dark:scrollbar-thumb-vault-700">
+          <div className="flex overflow-x-auto overflow-y-hidden border-b border-vault-200 dark:border-vault-800 px-6 py-1 bg-vault-50 dark:bg-vault-900/50 scrollbar-thin scrollbar-thumb-vault-300 dark:scrollbar-thumb-vault-700">
             {(['ai', 'sampler', 'prompts', 'studio'] as const).map((tab) => (
               <button
                 key={tab}
