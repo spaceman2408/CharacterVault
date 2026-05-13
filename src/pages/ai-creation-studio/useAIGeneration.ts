@@ -73,7 +73,18 @@ export function useAIGeneration(): UseAIGenerationResult {
         characterSettingsService.getSamplerSettings(),
       ]);
 
-      const hasConfig = !!(config.apiKey && config.baseUrl && config.modelId);
+      // For local endpoints (localhost, 127.0.0.1), API key is optional
+      const isLocalEndpoint = config.baseUrl && (
+        config.baseUrl.includes('localhost') ||
+        config.baseUrl.includes('127.0.0.1') ||
+        config.baseUrl.includes('0.0.0.0')
+      );
+
+      const hasConfig = !!(
+        config.baseUrl && 
+        config.modelId && 
+        (config.apiKey || isLocalEndpoint)
+      );
       setIsConfigured(hasConfig);
 
       if (hasConfig) {

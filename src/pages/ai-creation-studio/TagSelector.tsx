@@ -133,7 +133,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
               AI Provider Not Configured
             </p>
             <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-              Add your API key and choose a model to start generating characters.
+              Configure your AI provider and choose a model to start generating characters.
             </p>
           </div>
           <button

@@ -1513,6 +1513,9 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                           <Key className="w-4 h-4" />
                         </span>
                         API Key
+                        {selectedBaseUrlPreset === 'lmstudio' && (
+                          <span className="text-xs font-normal text-vault-500">(optional for local)</span>
+                        )}
                       </label>
                       <input
                         type="password"
@@ -1522,7 +1525,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                         data-lpignore="true"
                         data-form-type="other"
                         className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
-                        placeholder="Enter your API key"
+                        placeholder={selectedBaseUrlPreset === 'lmstudio' ? 'Optional for local endpoints' : 'Enter your API key'}
                       />
                     </div>
 
