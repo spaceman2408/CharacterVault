@@ -14,6 +14,7 @@ export interface GenerationState {
   currentField: GenerationField | null;
   completedFields: GenerationField[];
   generatedData: Partial<Pick<CharacterSpec, GenerationField>>;
+  generatedReasoning: Partial<Record<GenerationField, string>>;
   error: string | null;
   failedField: GenerationField | null;
 }

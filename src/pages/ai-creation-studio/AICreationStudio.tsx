@@ -533,6 +533,7 @@ export const AICreationStudio: React.FC = () => {
                   <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
                     <GeneratedCardPreview
                       generatedData={state.generatedData}
+                      generatedReasoning={state.generatedReasoning}
                       onFieldChange={updateGeneratedField}
                     />
                   </div>

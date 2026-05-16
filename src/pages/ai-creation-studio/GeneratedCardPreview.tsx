@@ -3,14 +3,41 @@
  * @module @pages/ai-creation-studio/GeneratedCardPreview
  */
 
-import React, { useRef, useEffect } from 'react';
-import { Type, FileText, MessageCircle, MessagesSquare } from 'lucide-react';
+import React, { useRef, useEffect, useState, memo } from 'react';
+import { Type, FileText, MessageCircle, MessagesSquare, Sparkles } from 'lucide-react';
 import type { GenerationField } from './types';
 import { GENERATION_FIELDS } from './types';
 import { estimateTokens } from '../../services/AIService';
 
+const FieldReasoning: React.FC<{ reasoning: string }> = memo(({ reasoning }) => {
+  const [open, setOpen] = useState(false);
+
+  if (!reasoning.trim()) return null;
+
+  return (
+    <div className="flex items-start gap-1">
+      <button
+        onClick={() => setOpen(!open)}
+        className="mt-0.5 flex items-center gap-1 p-0.5 rounded text-vault-300 dark:text-vault-600 hover:text-vault-500 dark:hover:text-vault-300 transition-colors"
+        title={open ? 'Hide thinking' : 'Show thinking'}
+      >
+        <Sparkles className="w-3 h-3" />
+        <span className="text-[11px]">Thinking</span>
+      </button>
+      {open && (
+        <pre className="flex-1 text-[11px] font-mono text-vault-400 dark:text-vault-500 whitespace-pre-wrap leading-relaxed">
+          {reasoning}
+        </pre>
+      )}
+    </div>
+  );
+});
+
+FieldReasoning.displayName = 'FieldReasoning';
+
 interface GeneratedCardPreviewProps {
   generatedData: Record<string, string | undefined>;
+  generatedReasoning: Partial<Record<GenerationField, string>>;
   onFieldChange: (field: GenerationField, value: string) => void;
 }
 
@@ -69,6 +96,7 @@ const StreamingTextarea: React.FC<{
 
 export const GeneratedCardPreview: React.FC<GeneratedCardPreviewProps> = ({
   generatedData,
+  generatedReasoning,
   onFieldChange,
 }) => {
   return (
@@ -80,6 +108,7 @@ export const GeneratedCardPreview: React.FC<GeneratedCardPreviewProps> = ({
       {GENERATION_FIELDS.map((field) => {
         const value = generatedData[field.key] || '';
         const tokenCount = estimateTokens(value);
+        const reasoning = generatedReasoning[field.key];
 
         return (
           <div key={field.key} className="space-y-1.5">
@@ -94,6 +123,8 @@ export const GeneratedCardPreview: React.FC<GeneratedCardPreviewProps> = ({
                 </span>
               )}
             </div>
+
+            {reasoning && <FieldReasoning reasoning={reasoning} />}
 
             {field.key === 'name' ? (
               <input

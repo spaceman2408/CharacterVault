@@ -29,6 +29,7 @@ const INITIAL_STATE: GenerationState = {
   currentField: null,
   completedFields: [],
   generatedData: {},
+  generatedReasoning: {},
   error: null,
   failedField: null,
 };
@@ -163,22 +164,27 @@ export function useAIGeneration(): UseAIGenerationResult {
       const messages = buildMessages(field, concept, currentData);
 
       let accumulatedContent = '';
+      let accumulatedReasoning = '';
 
       try {
         const response = await service.chat(
           messages,
           undefined,
           (chunk: { content?: string; reasoning?: string }) => {
-            // Don't update state if aborted
             if (isAbortedRef.current) return;
             
             if (chunk.content) {
               accumulatedContent += chunk.content;
-              setState((prev) => ({
-                ...prev,
-                generatedData: { ...prev.generatedData, [field]: accumulatedContent },
-              }));
             }
+            if (chunk.reasoning) {
+              accumulatedReasoning += chunk.reasoning;
+            }
+
+            setState((prev) => ({
+              ...prev,
+              generatedData: { ...prev.generatedData, [field]: accumulatedContent },
+              generatedReasoning: { ...prev.generatedReasoning, [field]: accumulatedReasoning },
+            }));
           }
         );
 
@@ -198,6 +204,7 @@ export function useAIGeneration(): UseAIGenerationResult {
             ...prev,
             failedField: field,
             generatedData: { ...prev.generatedData, [field]: undefined },
+            generatedReasoning: { ...prev.generatedReasoning, [field]: undefined },
           }));
         }
         throw err;
@@ -393,6 +400,7 @@ export function useAIGeneration(): UseAIGenerationResult {
         failedField: null,
         completedFields: prev.completedFields.filter((f) => f !== field),
         generatedData: { ...prev.generatedData, [field]: undefined },
+        generatedReasoning: { ...prev.generatedReasoning, [field]: undefined },
       }));
 
       try {
