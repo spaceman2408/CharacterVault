@@ -26,7 +26,7 @@ import { GenerationProgress } from './GenerationProgress';
 import { GeneratedCardPreview } from './GeneratedCardPreview';
 import { TagVortexOverlay } from './TagVortexOverlay';
 import { randomizeTags } from './tags/tagData';
-import { buildConceptFromTags, formatTag, TAG_CATEGORIES } from './tags/tagData';
+import { buildConceptFromTags, formatTag, getGenerationTags, TAG_CATEGORIES } from './tags/tagData';
 import type { GenerationField } from './types';
 import type { InputMode } from './types';
 import { GENERATION_FIELDS } from './types';
@@ -91,7 +91,8 @@ export const AICreationStudio: React.FC = () => {
       setSavedCharacterId(null);
     }
     const text = inputMode === 'tags' ? buildConceptFromTags(tagSelections) : concept;
-    void start(text);
+    const tags = getGenerationTags(tagSelections);
+    void start(text, tags);
   }, [start, concept, tagSelections, inputMode, saveSuccess]);
 
   const handleAbort = useCallback(() => {
@@ -102,10 +103,13 @@ export const AICreationStudio: React.FC = () => {
     const randomized = randomizeTags(tagSelections);
     setTagSelections(randomized);
 
-       if (showLuckyVortexSetting) {
-        const allSelected = Object.values(randomized).flat();
-        setVortexTags(allSelected);
-        setVortexActive(true);
+    if (showLuckyVortexSetting) {
+      // Exclude generation tags from the vortex display — they are not randomized
+      const allSelected = Object.entries(randomized)
+        .filter(([key]) => key !== 'generation')
+        .flatMap(([, tags]) => tags);
+      setVortexTags(allSelected);
+      setVortexActive(true);
     } else {
       const text = buildConceptFromTags(randomized);
       if (text) {
@@ -113,7 +117,8 @@ export const AICreationStudio: React.FC = () => {
           setSaveSuccess(false);
           setSavedCharacterId(null);
         }
-        void start(text);
+        const tags = getGenerationTags(randomized);
+        void start(text, tags);
       }
     }
   }, [tagSelections, showLuckyVortexSetting, start, saveSuccess]);
@@ -131,7 +136,8 @@ export const AICreationStudio: React.FC = () => {
         setSaveSuccess(false);
         setSavedCharacterId(null);
       }
-      void start(text);
+      const tags = getGenerationTags(tagSelections);
+      void start(text, tags);
     }
   }, [tagSelections, start, saveSuccess]);
 

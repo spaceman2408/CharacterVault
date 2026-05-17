@@ -63,10 +63,37 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     (categoryKey: string, tag: string) => {
       const current = selections[categoryKey] ?? [];
       const exists = current.includes(tag);
-      const updated = exists
-        ? current.filter((t) => t !== tag)
-        : [...current, tag];
-      onSelectionsChange({ ...selections, [categoryKey]: updated });
+
+      if (categoryKey === 'generation') {
+        const perspectiveTags = ['first_person', 'second_person', 'third_person', 'first_person_you'];
+        const tenseTags = ['present_tense', 'past_tense'];
+
+        let updated: string[];
+
+        if (perspectiveTags.includes(tag)) {
+          // Remove any existing perspective tag, then add/remove this one
+          updated = current.filter((t) => !perspectiveTags.includes(t));
+          if (!exists) {
+            updated.push(tag);
+          }
+        } else if (tenseTags.includes(tag)) {
+          // Remove any existing tense tag, then add/remove this one
+          updated = current.filter((t) => !tenseTags.includes(t));
+          if (!exists) {
+            updated.push(tag);
+          }
+        } else {
+          updated = current;
+        }
+
+        onSelectionsChange({ ...selections, [categoryKey]: updated });
+      } else {
+        // Existing logic for other categories
+        const updated = exists
+          ? current.filter((t) => t !== tag)
+          : [...current, tag];
+        onSelectionsChange({ ...selections, [categoryKey]: updated });
+      }
     },
     [selections, onSelectionsChange]
   );

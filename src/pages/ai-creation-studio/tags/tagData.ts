@@ -9,8 +9,17 @@ import roleTags from './role.json';
 import genreTags from './genre.json';
 import toneTags from './tone.json';
 import appearanceTags from './appearance.json';
+import generationTags from './generation.json';
 
-export type TagCategoryKey = 'identity' | 'personality' | 'role' | 'genre' | 'tone' | 'appearance';
+export type TagCategoryKey = 'identity' | 'personality' | 'role' | 'genre' | 'tone' | 'appearance' | 'generation';
+
+export type GenerationTagKey = 
+  | 'first_person'
+  | 'second_person'
+  | 'third_person'
+  | 'first_person_you'
+  | 'present_tense'
+  | 'past_tense';
 
 export interface TagCategory {
   key: TagCategoryKey;
@@ -107,6 +116,7 @@ export const TAG_CATEGORIES: readonly TagCategory[] = [
   { key: 'genre', label: 'Genre', tags: genreTags },
   { key: 'tone', label: 'Tone', tags: toneTags },
   { key: 'appearance', label: 'Appearance', tags: appearanceTags },
+  { key: 'generation', label: 'Generation', tags: generationTags },
 ] as const;
 
 const TAG_CATEGORY_MAP: Record<TagCategoryKey, string[]> = {
@@ -116,12 +126,19 @@ const TAG_CATEGORY_MAP: Record<TagCategoryKey, string[]> = {
   genre: genreTags,
   tone: toneTags,
   appearance: appearanceTags,
+  generation: generationTags,
 };
 
 /**
- * Format a snake_case tag to human-readable Title Case
+ * Format a snake_case tag to human-readable Title Case.
+ * Handles special cases for generation tags.
  */
 export function formatTag(tag: string): string {
+  // Special case for first_person_you generation tag
+  if (tag === 'first_person_you') {
+    return "1st person (refer to {{user}} as 'you')";
+  }
+
   return tag
     .split('_')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -252,4 +269,33 @@ export function randomizeTags(
   }
 
   return next;
+}
+
+/**
+ * Extract perspective and tense generation tags from tag selections.
+ * Returns null for each if no matching tag is selected.
+ */
+export function getGenerationTags(selections: Record<string, string[]>): {
+  perspective: string | null;
+  tense: string | null;
+} {
+  const generationTags = selections['generation'] ?? [];
+  const perspectiveTags = ['first_person', 'second_person', 'third_person', 'first_person_you'];
+  const tenseTags = ['present_tense', 'past_tense'];
+  const perspective = generationTags.find(tag => perspectiveTags.includes(tag)) ?? null;
+  const tense = generationTags.find(tag => tenseTags.includes(tag)) ?? null;
+  return { perspective, tense };
+}
+
+/**
+ * Return the default generation tag values used when no generation tags are selected.
+ */
+export function getDefaultGenerationTags(): {
+  perspective: string;
+  tense: string;
+} {
+  return {
+    perspective: 'third_person',
+    tense: 'present_tense',
+  };
 }
