@@ -14,6 +14,7 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
+.kiro
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -36,3 +37,4 @@ exampleCharacterJson.json
 BUGLIST.md
 FIXEDBUGS.md
 discord-release.md
+
