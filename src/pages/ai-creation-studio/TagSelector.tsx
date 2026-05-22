@@ -19,6 +19,8 @@ import {
   TAG_CATEGORIES,
   formatTag,
   getExcludedTagsForUI,
+  hasRequiredGenerationTags,
+  toggleGenerationTagSelection,
 } from './tags/tagData';
 
 interface TagSelectorProps {
@@ -65,27 +67,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       const exists = current.includes(tag);
 
       if (categoryKey === 'generation') {
-        const perspectiveTags = ['first_person', 'second_person', 'third_person', 'first_person_you'];
-        const tenseTags = ['present_tense', 'past_tense'];
-
-        let updated: string[];
-
-        if (perspectiveTags.includes(tag)) {
-          // Remove any existing perspective tag, then add/remove this one
-          updated = current.filter((t) => !perspectiveTags.includes(t));
-          if (!exists) {
-            updated.push(tag);
-          }
-        } else if (tenseTags.includes(tag)) {
-          // Remove any existing tense tag, then add/remove this one
-          updated = current.filter((t) => !tenseTags.includes(t));
-          if (!exists) {
-            updated.push(tag);
-          }
-        } else {
-          updated = current;
-        }
-
+        const updated = toggleGenerationTagSelection(current, tag);
         onSelectionsChange({ ...selections, [categoryKey]: updated });
       } else {
         // Existing logic for other categories
@@ -111,6 +93,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     [selections]
   );
 
+  const hasGenerationTags = useMemo(
+    () => hasRequiredGenerationTags(selections),
+    [selections]
+  );
+
   const selectedCount = useMemo(
     () => Object.values(selections).reduce((sum, arr) => sum + arr.length, 0),
     [selections]
@@ -124,7 +111,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     [selections]
   );
 
-  const canGenerate = isConfigured && hasSelection && !isGenerating;
+  const canGenerate = isConfigured && hasSelection && hasGenerationTags && !isGenerating;
 
   return (
     <div className="space-y-5">
@@ -243,6 +230,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                   <span className="text-sm font-semibold text-vault-800 dark:text-vault-200">
                     {category.label}
                   </span>
+                  {category.key === 'generation' && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                      Required
+                    </span>
+                  )}
                   {selectedInCat.length > 0 && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-vault-200 dark:bg-vault-700 text-vault-700 dark:text-vault-300">
                       {selectedInCat.length}
@@ -296,6 +288,12 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         Generation uses a minimum of 4 API calls. At least one per field.
       </p>
 
+      {isConfigured && !isGenerating && !hasGenerationTags && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+          Choose one perspective and one tense before generating.
+        </p>
+      )}
+
       {/* Action Bar */}
       <div className="flex gap-3 pt-1">
         <button
@@ -325,14 +323,14 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       <div className="space-y-1.5">
         <button
           onClick={onFeelingLucky}
-          disabled={isGenerating}
+          disabled={isGenerating || !hasGenerationTags}
           className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
         >
           <Shuffle className="w-4 h-4" />
           I'm Feeling Lucky
         </button>
         <p className="text-xs text-center text-vault-500 dark:text-vault-400">
-          Let fate decide. This can get wild.
+          {hasGenerationTags ? 'Let fate decide. This can get wild.' : 'Choose generation style first.'}
         </p>
       </div>
     </div>

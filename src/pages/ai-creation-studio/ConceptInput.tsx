@@ -15,6 +15,14 @@ import {
 } from 'lucide-react';
 import { TagSelector } from './TagSelector';
 import type { InputMode } from './types';
+import {
+  formatTag,
+  getGenerationTags,
+  hasRequiredGenerationTags,
+  PERSPECTIVE_TAGS,
+  TENSE_TAGS,
+  toggleGenerationTagSelection,
+} from './tags/tagData';
 
 interface ConceptInputProps {
   /* Write mode state */
@@ -36,6 +44,85 @@ interface ConceptInputProps {
 
 const WORD_COUNT_MIN = 3;
 
+interface GenerationStyleSelectorProps {
+  selections: Record<string, string[]>;
+  onSelectionsChange: (s: Record<string, string[]>) => void;
+  isGenerating: boolean;
+}
+
+const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
+  selections,
+  onSelectionsChange,
+  isGenerating,
+}) => {
+  const generationSelections = selections.generation ?? [];
+  const generationTags = getGenerationTags(selections);
+
+  const toggleTag = (tag: string) => {
+    onSelectionsChange({
+      ...selections,
+      generation: toggleGenerationTagSelection(generationSelections, tag),
+    });
+  };
+
+  const renderTagButton = (tag: string) => {
+    const isSelected = generationSelections.includes(tag);
+    return (
+      <button
+        key={tag}
+        type="button"
+        onClick={() => toggleTag(tag)}
+        disabled={isGenerating}
+        className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+          isSelected
+            ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border-violet-200 dark:border-violet-800'
+            : 'border-vault-200 dark:border-vault-700 text-vault-600 dark:text-vault-400 hover:border-vault-400 dark:hover:border-vault-500 hover:bg-vault-50 dark:hover:bg-vault-800/50'
+        }`}
+      >
+        {formatTag(tag)}
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-3 p-4 bg-vault-50 dark:bg-vault-900/50 border border-vault-200 dark:border-vault-800 rounded-xl">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-semibold text-vault-600 dark:text-vault-400 uppercase tracking-wider">
+          Generation Style
+        </span>
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+          Required
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        <div>
+          <p className="text-[11px] font-medium text-vault-500 dark:text-vault-400 mb-1.5">
+            Perspective
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {PERSPECTIVE_TAGS.map(renderTagButton)}
+          </div>
+        </div>
+        <div>
+          <p className="text-[11px] font-medium text-vault-500 dark:text-vault-400 mb-1.5">
+            Tense
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {TENSE_TAGS.map(renderTagButton)}
+          </div>
+        </div>
+      </div>
+
+      {(!generationTags.perspective || !generationTags.tense) && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          Choose one perspective and one tense before generating.
+        </p>
+      )}
+    </div>
+  );
+};
+
 export const ConceptInput: React.FC<ConceptInputProps> = ({
   concept,
   onConceptChange,
@@ -53,7 +140,8 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
   const trimmed = concept.trim();
   const wordCount = trimmed ? trimmed.split(/\s+/).length : 0;
   const hasMinimumWords = wordCount >= WORD_COUNT_MIN;
-  const canGenerate = isConfigured && hasMinimumWords && !isGenerating;
+  const hasGenerationTags = hasRequiredGenerationTags(tagSelections);
+  const canGenerate = isConfigured && hasMinimumWords && hasGenerationTags && !isGenerating;
 
   return (
     <div className="space-y-5">
@@ -85,6 +173,12 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
 
       {inputMode === 'write' ? (
         <>
+          <GenerationStyleSelector
+            selections={tagSelections}
+            onSelectionsChange={onTagSelectionsChange}
+            isGenerating={isGenerating}
+          />
+
           {/* Header */}
           <div className="text-center sm:text-left">
             <h2 className="text-lg font-bold text-vault-900 dark:text-vault-100">
@@ -177,6 +271,12 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
           {isConfigured && !isGenerating && trimmed && !hasMinimumWords && (
             <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
               Add a few more words to help the AI understand your concept.
+            </p>
+          )}
+
+          {isConfigured && !isGenerating && hasMinimumWords && !hasGenerationTags && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+              Choose a generation style before creating the character.
             </p>
           )}
         </>

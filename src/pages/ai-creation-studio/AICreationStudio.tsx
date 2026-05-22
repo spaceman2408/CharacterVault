@@ -26,7 +26,7 @@ import { GenerationProgress } from './GenerationProgress';
 import { GeneratedCardPreview } from './GeneratedCardPreview';
 import { TagVortexOverlay } from './TagVortexOverlay';
 import { randomizeTags } from './tags/tagData';
-import { buildConceptFromTags, formatTag, getGenerationTags, TAG_CATEGORIES } from './tags/tagData';
+import { buildConceptFromTags, formatTag, getGenerationTags, hasRequiredGenerationTags, TAG_CATEGORIES } from './tags/tagData';
 import type { GenerationField } from './types';
 import type { InputMode } from './types';
 import { GENERATION_FIELDS } from './types';
@@ -86,6 +86,7 @@ export const AICreationStudio: React.FC = () => {
   );
 
   const handleGenerate = useCallback(() => {
+    if (!hasRequiredGenerationTags(tagSelections)) return;
     if (saveSuccess) {
       setSaveSuccess(false);
       setSavedCharacterId(null);
@@ -100,6 +101,7 @@ export const AICreationStudio: React.FC = () => {
   }, [abort]);
 
   const handleFeelingLucky = useCallback(() => {
+    if (!hasRequiredGenerationTags(tagSelections)) return;
     const randomized = randomizeTags(tagSelections);
     setTagSelections(randomized);
 
@@ -130,6 +132,7 @@ export const AICreationStudio: React.FC = () => {
   const handleVortexComplete = useCallback(() => {
     setVortexActive(false);
     setFadeInputModal(false);
+    if (!hasRequiredGenerationTags(tagSelections)) return;
     const text = buildConceptFromTags(tagSelections);
     if (text) {
       if (saveSuccess) {

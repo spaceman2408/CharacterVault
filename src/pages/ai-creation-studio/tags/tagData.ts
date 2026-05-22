@@ -29,6 +29,18 @@ export interface TagCategory {
 
 export type TagSelections = Record<TagCategoryKey, string[]>;
 
+export const PERSPECTIVE_TAGS: readonly GenerationTagKey[] = [
+  'first_person',
+  'second_person',
+  'third_person',
+  'first_person_you',
+];
+
+export const TENSE_TAGS: readonly GenerationTagKey[] = [
+  'present_tense',
+  'past_tense',
+];
+
 /**
  * Tag exclusion rules - if a tag is selected, these tags should be excluded from random selection
  *
@@ -110,13 +122,13 @@ const TAG_EXCLUSIONS: Record<string, string[]> = {
 };
 
 export const TAG_CATEGORIES: readonly TagCategory[] = [
+  { key: 'generation', label: 'Generation', tags: generationTags },
   { key: 'identity', label: 'Identity', tags: identityTags },
   { key: 'personality', label: 'Personality', tags: personalityTags },
   { key: 'role', label: 'Role', tags: roleTags },
   { key: 'genre', label: 'Genre', tags: genreTags },
   { key: 'tone', label: 'Tone', tags: toneTags },
   { key: 'appearance', label: 'Appearance', tags: appearanceTags },
-  { key: 'generation', label: 'Generation', tags: generationTags },
 ] as const;
 
 const TAG_CATEGORY_MAP: Record<TagCategoryKey, string[]> = {
@@ -280,11 +292,37 @@ export function getGenerationTags(selections: Record<string, string[]>): {
   tense: string | null;
 } {
   const generationTags = selections['generation'] ?? [];
-  const perspectiveTags = ['first_person', 'second_person', 'third_person', 'first_person_you'];
-  const tenseTags = ['present_tense', 'past_tense'];
-  const perspective = generationTags.find(tag => perspectiveTags.includes(tag)) ?? null;
-  const tense = generationTags.find(tag => tenseTags.includes(tag)) ?? null;
+  const perspective = generationTags.find((tag): tag is GenerationTagKey =>
+    PERSPECTIVE_TAGS.includes(tag as GenerationTagKey)
+  ) ?? null;
+  const tense = generationTags.find((tag): tag is GenerationTagKey =>
+    TENSE_TAGS.includes(tag as GenerationTagKey)
+  ) ?? null;
   return { perspective, tense };
+}
+
+export function hasRequiredGenerationTags(selections: Record<string, string[]>): boolean {
+  const { perspective, tense } = getGenerationTags(selections);
+  return Boolean(perspective && tense);
+}
+
+export function toggleGenerationTagSelection(
+  current: readonly string[],
+  tag: string
+): string[] {
+  const exists = current.includes(tag);
+
+  if (PERSPECTIVE_TAGS.includes(tag as GenerationTagKey)) {
+    const updated = current.filter((t) => !PERSPECTIVE_TAGS.includes(t as GenerationTagKey));
+    return exists ? updated : [...updated, tag];
+  }
+
+  if (TENSE_TAGS.includes(tag as GenerationTagKey)) {
+    const updated = current.filter((t) => !TENSE_TAGS.includes(t as GenerationTagKey));
+    return exists ? updated : [...updated, tag];
+  }
+
+  return [...current];
 }
 
 /**
