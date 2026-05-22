@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { AIService, AIError, estimateTokens } from '../../../services/AIService';
+import { getProviderSelectionId } from '../../../services/providers';
 import type { AIConfig, SamplerSettings, PromptSettings } from '../../../db/types';
 import type { ChatMessage, ConversationMessage } from '../types';
 import { generateMessageId } from '../utils';
@@ -259,7 +260,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           ttft,
           tokensPerSecond,
           modelId: aiConfig.modelId,
-          providerId: aiConfig.selectedProvider ?? aiConfig.providerByModelId?.[aiConfig.modelId],
+          providerId: getProviderSelectionId(aiConfig),
         },
       };
 
@@ -421,7 +422,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
             ttft,
             tokensPerSecond,
             modelId: aiConfig.modelId,
-            providerId: aiConfig.selectedProvider ?? aiConfig.providerByModelId?.[aiConfig.modelId],
+            providerId: getProviderSelectionId(aiConfig),
           },
         };
 

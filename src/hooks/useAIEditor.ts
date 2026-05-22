@@ -20,6 +20,7 @@ import { toolbarSearch, toolbarSearchTheme } from '../editor/extensions/toolbarS
 import { themeSync } from '../editor/extensions/themeSync';
 import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
 import { AIService, AIError, estimateTokens } from '../services/AIService';
+import { getProviderSelectionId } from '../services/providers';
 
 const setAcceptedEditHighlight = StateEffect.define<{ from: number; to: number } | null>();
 
@@ -429,7 +430,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           ttft,
           tokensPerSecond,
           modelId: currentConfig.modelId,
-          providerId: currentConfig.selectedProvider ?? currentConfig.providerByModelId?.[currentConfig.modelId],
+          providerId: getProviderSelectionId(currentConfig),
         },
       });
     } catch (err) {

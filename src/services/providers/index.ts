@@ -16,6 +16,7 @@ export type {
 import { NanoGPTProvider } from './NanoGPTProvider';
 import { OpenAICompatProvider } from './OpenAICompatProvider';
 import type { IProviderAdapter } from './types';
+import type { AIConfig } from '../../db/types';
 
 // Ordered list: more specific providers first, fallback last
 const providers: IProviderAdapter[] = [
@@ -29,4 +30,22 @@ const providers: IProviderAdapter[] = [
  */
 export function resolveProvider(baseUrl: string): IProviderAdapter {
   return providers.find((p) => p.matches(baseUrl)) ?? new OpenAICompatProvider();
+}
+
+/**
+ * Return the configured provider-selection ID only for APIs that support it.
+ * Generic OpenAI-compatible endpoints like LM Studio should not display stale
+ * NanoGPT provider selections in response stats.
+ */
+export function getProviderSelectionId(config: AIConfig): string | undefined {
+  if (!config.modelId) {
+    return undefined;
+  }
+
+  const provider = resolveProvider(config.baseUrl);
+  if (!provider.maySupportProviderSelection(config.modelId)) {
+    return undefined;
+  }
+
+  return (config.providerByModelId?.[config.modelId] ?? config.selectedProvider) || undefined;
 }
