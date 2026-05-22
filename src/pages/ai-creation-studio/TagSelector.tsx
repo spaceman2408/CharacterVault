@@ -46,7 +46,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    () => new Set(TAG_CATEGORIES.map((c) => c.key))
+    () => new Set(['generation'])
   );
 
   const toggleCategory = useCallback((key: string) => {
@@ -301,7 +301,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
       {isConfigured && !isGenerating && hasGenerationTags && !hasConceptSelection && (
         <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-          Select at least one character tag before generating.
+          Select at least one character tag before generating, or press I'm Feeling Lucky.
         </p>
       )}
 
