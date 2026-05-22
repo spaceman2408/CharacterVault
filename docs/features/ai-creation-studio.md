@@ -28,14 +28,16 @@ Type a free-form description of your character idea. The AI uses your text as th
 
 **Requirements:**
 - Minimum 3 words
+- Choose a generation style before generating
 - The more detail you provide, the better the AI can capture your vision
 
 ### Tags Mode
 
-Select from curated tag categories to build your concept visually. Tags are organized into six categories:
+Select from curated tag categories to build your concept visually. The **Generation** category appears first, followed by character tags:
 
 | Category | Purpose | Examples |
 | :--- | :--- | :--- |
+| **Generation** | Writing perspective and tense | First Person, Third Person, Present Tense |
 | **Identity** | Core identity traits | Female, Male, Elf, Android, Vampire |
 | **Personality** | Character traits | Tsundere, Yandere, Kuudere, Cheerful, Cynical |
 | **Role** | Relationship or occupation | Teacher, Knight, Barista, Mother, Rival |
@@ -46,6 +48,7 @@ Select from curated tag categories to build your concept visually. Tags are orga
 **Tag Selection:**
 - Click tags to select or deselect them
 - Select multiple tags per category
+- Choose one perspective and one tense from **Generation**
 - Tags automatically convert to a readable concept (e.g., `female_knight` → "Female, Knight")
 - Conflicting tags are automatically excluded (e.g., selecting "female" disables "male" and related tags)
 
@@ -53,9 +56,20 @@ Select from curated tag categories to build your concept visually. Tags are orga
 When switching from Tags to Write mode, your selected tags are automatically converted to text and populate the concept field. You can then edit or expand on them.
 :::
 
+## Generation Style
+
+Every character needs a generation style before the AI can start. Choose:
+
+- **Perspective** — first person, second person, third person, or first person with `{{user}}`
+- **Tense** — present tense or past tense
+
+Only one perspective and one tense can be selected at a time.
+
+Descriptions are written like character-card reference material. If you choose **First Person with `{{user}}`**, descriptions use `{{user}}` instead of talking directly to "you." First messages and example dialogue still follow the style you selected.
+
 ## Feeling Lucky
 
-The **🎲 Feeling Lucky** button (Tags mode only) randomly selects tags across all categories and starts generation immediately.
+The **🎲 Feeling Lucky** button (Tags mode only) randomly selects character tags and starts generation immediately. Choose a generation style first.
 
 **How it works:**
 - Core categories (Identity, Role, Personality): 1–2 tags each
