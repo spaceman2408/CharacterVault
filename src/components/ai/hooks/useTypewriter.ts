@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 const TYPEWRITER_INTERVAL_MS = 24;
-const CONTENT_CHARS_PER_TICK = 4;
+const CONTENT_CHARS_PER_TICK = 10;
 const REASONING_CHARS_PER_TICK = 10;
 const LARGE_BACKLOG_THRESHOLD = 1200;
 
