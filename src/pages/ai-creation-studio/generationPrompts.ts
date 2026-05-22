@@ -59,6 +59,39 @@ export function buildGenerationStyleInstructions(
   return `\n\n<generation_style>\n${perspectiveInstruction}\n${tenseInstruction}\n</generation_style>`;
 }
 
+function buildDescriptionStyleInstructions(
+  perspective: PerspectiveTag | null,
+  tense: TenseTag | null
+): string {
+  if (!perspective || !tense) {
+    throw new Error('Generation style requires one perspective tag and one tense tag.');
+  }
+
+  let perspectiveInstruction = '';
+  switch (perspective) {
+    case 'first_person':
+      perspectiveInstruction =
+        "Write description content in first person from the character's perspective (I, me, my).";
+      break;
+    case 'first_person_you':
+      perspectiveInstruction =
+        'Write description content in first person from the character\'s perspective, but refer to the player only as {{user}}. Do not address {{user}} as "you" in the description. Example: write "{{user}} is the only thing that feels stable in my life," not "You are the only thing that feels stable in my life."';
+      break;
+    case 'second_person':
+    case 'third_person':
+      perspectiveInstruction =
+        'Write description content in third-person omniscient style (he, she, they, the character), describing the character rather than addressing the reader.';
+      break;
+  }
+
+  const tenseInstruction =
+    tense === 'present_tense'
+      ? 'Use present tense throughout.'
+      : 'Use past tense throughout.';
+
+  return `\n\n<generation_style>\n${perspectiveInstruction}\n${tenseInstruction}\nDescriptions are character-card reference material, not an opening message. Do not write directly to the reader in description sections.</generation_style>`;
+}
+
 function buildNarrationFormatInstruction(perspective: PerspectiveTag | null): string {
   switch (perspective) {
     case 'first_person':
@@ -80,7 +113,7 @@ export function buildDescriptionPrompt(
   perspective: PerspectiveTag | null,
   tense: TenseTag | null
 ): string {
-  const styleInstructions = buildGenerationStyleInstructions(perspective, tense);
+  const styleInstructions = buildDescriptionStyleInstructions(perspective, tense);
   return `Write a character description for "${name}" based on this concept: "${concept}"${styleInstructions}
 
 <format>
@@ -89,6 +122,7 @@ export function buildDescriptionPrompt(
 - Bullet items: "- " (hyphen + space). Never use asterisks for bullets or bold.
 - Background section: 2-4 sentence prose paragraph (no bullets).
 - Tone: direct and specific. No flowery prose, no vague placeholders — write actual content in every bullet.
+- Do not address the reader as "you" in the description. Use {{user}} when referring to the player.
 </format>
 
 <sections>
