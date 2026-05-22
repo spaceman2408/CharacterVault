@@ -9,6 +9,7 @@ import { characterSettingsService } from '../../services/CharacterSettingsServic
 import type { AIConfig, SamplerSettings } from '../../db/types';
 import type { CharacterSpec } from '../../db/characterTypes';
 import type { GenerationField, GenerationState } from './types';
+import type { GenerationStyleTags } from './tags/tagData';
 import {
   GENERATION_SYSTEM_PROMPT,
   buildNamePrompt,
@@ -39,7 +40,8 @@ export interface UseAIGenerationResult {
   isConfigured: boolean;
   isLoading: boolean;
   concept: string;
-  start: (concept: string) => Promise<void>;
+  generationTags: GenerationStyleTags;
+  start: (concept: string, tags: GenerationStyleTags) => Promise<void>;
   abort: () => void;
   retryField: (field: GenerationField) => Promise<void>;
   regenerateField: (field: GenerationField) => Promise<void>;
@@ -54,6 +56,8 @@ export function useAIGeneration(): UseAIGenerationResult {
   const [isConfigured, setIsConfigured] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [concept, setConcept] = useState('');
+  const [generationTags, setGenerationTags] = useState<GenerationStyleTags>({ perspective: null, tense: null });
+  const generationTagsRef = useRef<GenerationStyleTags>({ perspective: null, tense: null });
 
   const aiServiceRef = useRef<AIService | null>(null);
   const configRef = useRef<{ config: AIConfig; sampler: SamplerSettings } | null>(null);
@@ -120,6 +124,7 @@ export function useAIGeneration(): UseAIGenerationResult {
   const buildMessages = useCallback(
     (field: GenerationField, concept: string, data: Partial<CharacterSpec>): ChatMessage[] => {
       const systemPrompt: ChatMessage = { role: 'system', content: GENERATION_SYSTEM_PROMPT };
+      const { perspective, tense } = generationTagsRef.current;
       let userPrompt: string;
 
       switch (field) {
@@ -127,20 +132,24 @@ export function useAIGeneration(): UseAIGenerationResult {
           userPrompt = buildNamePrompt(concept);
           break;
         case 'description':
-          userPrompt = buildDescriptionPrompt(concept, data.name || '');
+          userPrompt = buildDescriptionPrompt(concept, data.name || '', perspective, tense);
           break;
         case 'first_mes':
           userPrompt = buildFirstMessagePrompt(
             concept,
             data.name || '',
-            data.description || ''
+            data.description || '',
+            perspective,
+            tense
           );
           break;
         case 'mes_example':
           userPrompt = buildExamplesPrompt(
             concept,
             data.name || '',
-            data.description || ''
+            data.description || '',
+            perspective,
+            tense
           );
           break;
         default:
@@ -149,7 +158,7 @@ export function useAIGeneration(): UseAIGenerationResult {
 
       return [systemPrompt, { role: 'user', content: userPrompt }];
     },
-    []
+    [] // ref reads are always current — no dependency needed
   );
 
   const generateField = useCallback(
@@ -214,11 +223,22 @@ export function useAIGeneration(): UseAIGenerationResult {
   );
 
   const start = useCallback(
-    async (newConcept: string) => {
+    async (newConcept: string, tags: GenerationStyleTags) => {
       if (!newConcept.trim()) return;
+      if (!tags.perspective || !tags.tense) {
+        setState({
+          ...INITIAL_STATE,
+          status: 'error',
+          error: 'Choose one perspective and one tense before generating.',
+        });
+        return;
+      }
 
       const trimmedConcept = newConcept.trim();
       setConcept(trimmedConcept);
+
+      generationTagsRef.current = tags;
+      setGenerationTags(tags);
 
       // Cancel any in-flight request before starting a new one
       abortCurrent();
@@ -539,6 +559,8 @@ export function useAIGeneration(): UseAIGenerationResult {
     setState(INITIAL_STATE);
     setIsLoading(false);
     setConcept('');
+    generationTagsRef.current = { perspective: null, tense: null };
+    setGenerationTags({ perspective: null, tense: null });
   }, [abortCurrent]);
 
   return {
@@ -546,6 +568,7 @@ export function useAIGeneration(): UseAIGenerationResult {
     isConfigured,
     isLoading,
     concept,
+    generationTags,
     start,
     abort,
     retryField,

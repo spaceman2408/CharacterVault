@@ -9,8 +9,17 @@ import roleTags from './role.json';
 import genreTags from './genre.json';
 import toneTags from './tone.json';
 import appearanceTags from './appearance.json';
+import generationTags from './generation.json';
 
-export type TagCategoryKey = 'identity' | 'personality' | 'role' | 'genre' | 'tone' | 'appearance';
+export type TagCategoryKey = 'identity' | 'personality' | 'role' | 'genre' | 'tone' | 'appearance' | 'generation';
+
+export type GenerationTagKey = 
+  | 'first_person'
+  | 'second_person'
+  | 'third_person'
+  | 'first_person_you'
+  | 'present_tense'
+  | 'past_tense';
 
 export interface TagCategory {
   key: TagCategoryKey;
@@ -19,6 +28,34 @@ export interface TagCategory {
 }
 
 export type TagSelections = Record<TagCategoryKey, string[]>;
+
+export const PERSPECTIVE_TAGS = [
+  'first_person',
+  'second_person',
+  'third_person',
+  'first_person_you',
+] as const satisfies readonly GenerationTagKey[];
+
+export const TENSE_TAGS = [
+  'present_tense',
+  'past_tense',
+] as const satisfies readonly GenerationTagKey[];
+
+export type PerspectiveTag = typeof PERSPECTIVE_TAGS[number];
+export type TenseTag = typeof TENSE_TAGS[number];
+
+export interface GenerationStyleTags {
+  perspective: PerspectiveTag | null;
+  tense: TenseTag | null;
+}
+
+function isPerspectiveTag(tag: string): tag is PerspectiveTag {
+  return PERSPECTIVE_TAGS.includes(tag as PerspectiveTag);
+}
+
+function isTenseTag(tag: string): tag is TenseTag {
+  return TENSE_TAGS.includes(tag as TenseTag);
+}
 
 /**
  * Tag exclusion rules - if a tag is selected, these tags should be excluded from random selection
@@ -101,6 +138,7 @@ const TAG_EXCLUSIONS: Record<string, string[]> = {
 };
 
 export const TAG_CATEGORIES: readonly TagCategory[] = [
+  { key: 'generation', label: 'Generation', tags: generationTags },
   { key: 'identity', label: 'Identity', tags: identityTags },
   { key: 'personality', label: 'Personality', tags: personalityTags },
   { key: 'role', label: 'Role', tags: roleTags },
@@ -116,12 +154,19 @@ const TAG_CATEGORY_MAP: Record<TagCategoryKey, string[]> = {
   genre: genreTags,
   tone: toneTags,
   appearance: appearanceTags,
+  generation: generationTags,
 };
 
 /**
- * Format a snake_case tag to human-readable Title Case
+ * Format a snake_case tag to human-readable Title Case.
+ * Handles special cases for generation tags.
  */
 export function formatTag(tag: string): string {
+  // Special case for first_person_you generation tag
+  if (tag === 'first_person_you') {
+    return "1st person (refer to {{user}} as 'you')";
+  }
+
   return tag
     .split('_')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -252,4 +297,55 @@ export function randomizeTags(
   }
 
   return next;
+}
+
+/**
+ * Extract perspective and tense generation tags from tag selections.
+ * Returns null for each if no matching tag is selected.
+ */
+export function getGenerationTags(selections: Record<string, string[]>): {
+  perspective: PerspectiveTag | null;
+  tense: TenseTag | null;
+} {
+  const generationTags = selections['generation'] ?? [];
+  const perspective = generationTags.find(isPerspectiveTag) ?? null;
+  const tense = generationTags.find(isTenseTag) ?? null;
+  return { perspective, tense };
+}
+
+export function hasRequiredGenerationTags(selections: Record<string, string[]>): boolean {
+  const { perspective, tense } = getGenerationTags(selections);
+  return Boolean(perspective && tense);
+}
+
+export function toggleGenerationTagSelection(
+  current: readonly string[],
+  tag: string
+): string[] {
+  const exists = current.includes(tag);
+
+  if (isPerspectiveTag(tag)) {
+    const updated = current.filter((t) => !isPerspectiveTag(t));
+    return exists ? updated : [...updated, tag];
+  }
+
+  if (isTenseTag(tag)) {
+    const updated = current.filter((t) => !isTenseTag(t));
+    return exists ? updated : [...updated, tag];
+  }
+
+  return [...current];
+}
+
+/**
+ * Return the default generation tag values used when no generation tags are selected.
+ */
+export function getDefaultGenerationTags(): {
+  perspective: string;
+  tense: string;
+} {
+  return {
+    perspective: 'third_person',
+    tense: 'present_tense',
+  };
 }
