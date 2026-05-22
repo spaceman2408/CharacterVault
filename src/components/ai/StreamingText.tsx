@@ -69,6 +69,7 @@ export function StreamingText({
 
   const previousContentRef = useRef(content);
   const animationKeyRef = useRef(0);
+  const wasStreamingRef = useRef(isStreaming);
 
   // Track content changes and trigger animations for new chunks
   useEffect(() => {
@@ -101,9 +102,10 @@ export function StreamingText({
     }
   }, [content, isStreaming]);
 
-  // Reset when streaming starts
+  // Reset only when a new streaming session starts. Resetting on every content
+  // update makes appended text look like a full replacement.
   useEffect(() => {
-    if (isStreaming) {
+    if (isStreaming && !wasStreamingRef.current) {
       previousContentRef.current = '';
       setAnimatedContent({
         previous: '',
@@ -111,6 +113,8 @@ export function StreamingText({
         key: animationKeyRef.current,
       });
     }
+
+    wasStreamingRef.current = isStreaming;
   }, [isStreaming, content]);
 
   const cursorElement = showCursor && isStreaming ? (
@@ -120,18 +124,9 @@ export function StreamingText({
   if (renderMarkdown) {
     return (
       <div className={className}>
-        {animatedContent.previous && (
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-            {animatedContent.previous}
-          </ReactMarkdown>
-        )}
-        {animatedContent.new && (
-          <span key={animatedContent.key} className="animate-fade-in-fast">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-              {animatedContent.new}
-            </ReactMarkdown>
-          </span>
-        )}
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+          {content}
+        </ReactMarkdown>
         {cursorElement}
       </div>
     );

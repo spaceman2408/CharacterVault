@@ -180,6 +180,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
     const requestStartTime = Date.now();
     let firstTokenTime: number | null = null;
+    let completedSuccessfully = false;
 
     try {
       const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
@@ -262,7 +263,12 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         },
       };
 
+      if (enableStreaming) {
+        await typewriter.drainQueues();
+      }
+
       setChatHistory(prev => [...prev, assistantMessage]);
+      completedSuccessfully = true;
     } catch (err) {
       if (err instanceof AIError && err.message === 'Request was cancelled') {
         console.log('[useAIChat] AI request cancelled by user');
@@ -275,7 +281,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         }
       }
     } finally {
-      typewriter.flushQueues();
+      if (!completedSuccessfully) {
+        typewriter.flushQueues();
+      }
       typewriter.stopStreaming();
       setIsProcessing(false);
       setIsStreaming(false);
@@ -335,6 +343,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
       const requestStartTime = Date.now();
       let firstTokenTime: number | null = null;
+      let completedSuccessfully = false;
 
       try {
         const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
@@ -416,7 +425,12 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           },
         };
 
+        if (enableStreaming) {
+          await typewriter.drainQueues();
+        }
+
         setChatHistory(prev => [...prev, assistantMessage]);
+        completedSuccessfully = true;
       } catch (err) {
         if (err instanceof AIError && err.message === 'Request was cancelled') {
           console.log('[useAIChat] AI request cancelled by user');
@@ -429,7 +443,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           }
         }
       } finally {
-        typewriter.flushQueues();
+        if (!completedSuccessfully) {
+          typewriter.flushQueues();
+        }
         typewriter.stopStreaming();
         setIsProcessing(false);
         setIsStreaming(false);

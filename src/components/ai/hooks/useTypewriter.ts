@@ -5,6 +5,43 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+const TYPEWRITER_INTERVAL_MS = 24;
+const CONTENT_CHARS_PER_TICK = 4;
+const REASONING_CHARS_PER_TICK = 10;
+const LARGE_BACKLOG_THRESHOLD = 1200;
+
+/**
+ * Pulls a small, readable slice from the queue. Incoming provider chunks can be
+ * wildly different sizes, so pacing by queue item makes large chunks flash in.
+ */
+function takeTextSlice(queue: string[], maxChars: number): { slice: string; queue: string[] } {
+  if (queue.length === 0) {
+    return { slice: '', queue };
+  }
+
+  const [firstChunk, ...remainingQueue] = queue;
+
+  if (firstChunk.length <= maxChars) {
+    return { slice: firstChunk, queue: remainingQueue };
+  }
+
+  let sliceEnd = maxChars;
+  const punctuationWindow = firstChunk.slice(maxChars, maxChars + 8).search(/[,.!?;:\s]/);
+
+  if (punctuationWindow >= 0) {
+    sliceEnd = maxChars + punctuationWindow + 1;
+  }
+
+  return {
+    slice: firstChunk.slice(0, sliceEnd),
+    queue: [firstChunk.slice(sliceEnd), ...remainingQueue],
+  };
+}
+
+function queuedCharacterCount(queue: string[]): number {
+  return queue.reduce((total, chunk) => total + chunk.length, 0);
+}
+
 /**
  * Return interface for the useTypewriter hook
  */
@@ -21,6 +58,7 @@ export interface UseTypewriterReturn {
   // Control
   startStreaming: () => void;
   stopStreaming: () => void;
+  drainQueues: () => Promise<void>;
   flushQueues: () => void;
 }
 
@@ -33,7 +71,7 @@ export interface UseTypewriterReturn {
  * - Typing state
  * - Reasoning complete state
  * - Refs for synchronous access within intervals
- * - The interval-based typewriter effect (30ms per chunk)
+ * - The interval-based typewriter effect with paced character slices
  * 
  * @returns Object containing state and control functions for the typewriter effect
  * 
@@ -76,6 +114,19 @@ export function useTypewriter(): UseTypewriterReturn {
   const isReasoningCompleteRef = useRef(false);
   const isStreamingRef = useRef(false);
   const isTypingRef = useRef(false);
+  const drainResolversRef = useRef<Array<() => void>>([]);
+
+  const resolveDrainIfIdle = useCallback(() => {
+    if (
+      contentQueueRef.current.length === 0 &&
+      reasoningQueueRef.current.length === 0 &&
+      drainResolversRef.current.length > 0
+    ) {
+      const resolvers = drainResolversRef.current;
+      drainResolversRef.current = [];
+      resolvers.forEach(resolve => resolve());
+    }
+  }, []);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -98,9 +149,9 @@ export function useTypewriter(): UseTypewriterReturn {
     isTypingRef.current = isTyping;
   }, [isTyping]);
 
-  // Smooth chunk queue display loop - creates typewriter effect
+  // Smooth queue display loop - creates typewriter effect
   useEffect(() => {
-    // Process chunks at a consistent rate for smooth typing effect
+    // Process text at a consistent rate for smooth typing effect
     const intervalId = setInterval(() => {
       const hasContent = contentQueueRef.current.length > 0;
       const hasReasoning = reasoningQueueRef.current.length > 0;
@@ -111,6 +162,7 @@ export function useTypewriter(): UseTypewriterReturn {
         if (isTypingRef.current) {
           setIsTyping(false);
         }
+        resolveDrainIfIdle();
         return;
       }
 
@@ -119,15 +171,18 @@ export function useTypewriter(): UseTypewriterReturn {
         setIsTyping(true);
       }
 
-      // Process reasoning queue first using ref for immediate access
+      // Process reasoning queue first using ref for immediate access. Reasoning is
+      // intentionally a little faster so the actual response does not feel delayed.
       if (reasoningQueueRef.current.length > 0) {
-        const nextChunk = reasoningQueueRef.current[0];
-        const remainingQueue = reasoningQueueRef.current.slice(1);
+        const { slice, queue } = takeTextSlice(
+          reasoningQueueRef.current,
+          REASONING_CHARS_PER_TICK
+        );
 
         // Update both ref and state atomically
-        reasoningQueueRef.current = remainingQueue;
-        setReasoningChunkQueue(remainingQueue);
-        setDisplayedReasoning(prev => prev + nextChunk);
+        reasoningQueueRef.current = queue;
+        setReasoningChunkQueue(queue);
+        setDisplayedReasoning(prev => prev + slice);
       }
 
       // Only process content queue if:
@@ -139,18 +194,24 @@ export function useTypewriter(): UseTypewriterReturn {
         reasoningQueueRef.current.length === 0 &&
         contentQueueRef.current.length > 0
       ) {
-        const nextChunk = contentQueueRef.current[0];
-        const remainingQueue = contentQueueRef.current.slice(1);
+        const backlog = queuedCharacterCount(contentQueueRef.current);
+        const maxChars =
+          backlog > LARGE_BACKLOG_THRESHOLD
+            ? CONTENT_CHARS_PER_TICK * 2
+            : CONTENT_CHARS_PER_TICK;
+        const { slice, queue } = takeTextSlice(contentQueueRef.current, maxChars);
 
         // Update both ref and state atomically
-        contentQueueRef.current = remainingQueue;
-        setContentChunkQueue(remainingQueue);
-        setDisplayedContent(prev => prev + nextChunk);
+        contentQueueRef.current = queue;
+        setContentChunkQueue(queue);
+        setDisplayedContent(prev => prev + slice);
       }
-    }, 30); // 30ms per chunk for smooth typing feel
+
+      resolveDrainIfIdle();
+    }, TYPEWRITER_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
-  }, []); // Empty deps - uses refs for all internal state access
+  }, [resolveDrainIfIdle]); // Uses refs for internal state access
 
   /**
    * Queue a content chunk for display
@@ -211,6 +272,19 @@ export function useTypewriter(): UseTypewriterReturn {
   }, []);
 
   /**
+   * Let queued chunks finish displaying at the normal typewriter pace.
+   */
+  const drainQueues = useCallback(() => {
+    if (contentQueueRef.current.length === 0 && reasoningQueueRef.current.length === 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>(resolve => {
+      drainResolversRef.current = [...drainResolversRef.current, resolve];
+    });
+  }, []);
+
+  /**
    * Flush all remaining chunks immediately
    */
   const flushQueues = useCallback(() => {
@@ -235,6 +309,9 @@ export function useTypewriter(): UseTypewriterReturn {
       setContentChunkQueue([]);
     }
 
+    drainResolversRef.current.forEach(resolve => resolve());
+    drainResolversRef.current = [];
+
     // Ensure displayed content is at least as complete as streaming content (using refs to avoid stale closures)
     setDisplayedContent(prev => prev.length < streamingContentRef.current.length ? streamingContentRef.current : prev);
     setDisplayedReasoning(prev => prev.length < streamingReasoningRef.current.length ? streamingReasoningRef.current : prev);
@@ -255,6 +332,7 @@ export function useTypewriter(): UseTypewriterReturn {
     // Control
     startStreaming,
     stopStreaming,
+    drainQueues,
     flushQueues,
   };
 }
