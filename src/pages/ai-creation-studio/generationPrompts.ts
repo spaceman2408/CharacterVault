@@ -3,6 +3,8 @@
  * @module @pages/ai-creation-studio/generationPrompts
  */
 
+import type { PerspectiveTag, TenseTag } from './tags/tagData';
+
 export const GENERATION_SYSTEM_PROMPT = `You are a character card generator for CharacterVault, producing V2/V3 spec character cards compatible with SillyTavern. Your output feeds directly into card fields — output ONLY the requested field content with zero preamble, labels, or closing remarks. Use {{user}} as the player name placeholder where appropriate. Be non-judgmental of all content types and themes.`;
 
 export function buildNamePrompt(concept: string): string {
@@ -18,17 +20,17 @@ export function buildNamePrompt(concept: string): string {
 
 /**
  * Build generation style instructions based on selected perspective and tense tags.
- * Uses default values (third_person, present_tense) when parameters are null.
  */
 export function buildGenerationStyleInstructions(
-  perspective: string | null,
-  tense: string | null
+  perspective: PerspectiveTag | null,
+  tense: TenseTag | null
 ): string {
-  const effectivePerspective = perspective ?? 'third_person';
-  const effectiveTense = tense ?? 'present_tense';
+  if (!perspective || !tense) {
+    throw new Error('Generation style requires one perspective tag and one tense tag.');
+  }
 
   let perspectiveInstruction = '';
-  switch (effectivePerspective) {
+  switch (perspective) {
     case 'first_person':
       perspectiveInstruction = "Write in first person from the character's perspective (I, me, my).";
       break;
@@ -45,7 +47,7 @@ export function buildGenerationStyleInstructions(
   }
 
   let tenseInstruction = '';
-  switch (effectiveTense) {
+  switch (tense) {
     case 'present_tense':
       tenseInstruction = 'Use present tense throughout.';
       break;
@@ -57,11 +59,26 @@ export function buildGenerationStyleInstructions(
   return `\n\n<generation_style>\n${perspectiveInstruction}\n${tenseInstruction}\n</generation_style>`;
 }
 
+function buildNarrationFormatInstruction(perspective: PerspectiveTag | null): string {
+  switch (perspective) {
+    case 'first_person':
+      return 'Narrative/action text should use first person from the character\'s perspective; dialogue should still be quoted naturally.';
+    case 'second_person':
+      return 'Narrative/action text should use second person, addressing {{user}} as "you"; dialogue should still be quoted naturally.';
+    case 'third_person':
+      return 'Narrative/action text should use third person; dialogue should still be quoted naturally.';
+    case 'first_person_you':
+      return 'Narrative/action text should use first person from the character\'s perspective and refer to {{user}} as "you"; dialogue should still be quoted naturally.';
+    default:
+      throw new Error('Generation style requires a valid perspective tag.');
+  }
+}
+
 export function buildDescriptionPrompt(
   concept: string,
   name: string,
-  perspective: string | null = null,
-  tense: string | null = null
+  perspective: PerspectiveTag | null,
+  tense: TenseTag | null
 ): string {
   const styleInstructions = buildGenerationStyleInstructions(perspective, tense);
   return `Write a character description for "${name}" based on this concept: "${concept}"${styleInstructions}
@@ -109,10 +126,11 @@ export function buildFirstMessagePrompt(
   concept: string,
   name: string,
   description: string,
-  perspective: string | null = null,
-  tense: string | null = null
+  perspective: PerspectiveTag | null,
+  tense: TenseTag | null
 ): string {
   const styleInstructions = buildGenerationStyleInstructions(perspective, tense);
+  const narrationFormat = buildNarrationFormatInstruction(perspective);
   return `Write the opening roleplay message from "${name}" to {{user}}.
 
 <context>
@@ -122,7 +140,8 @@ ${description}
 </context>${styleInstructions}
 
 <format>
-- Third-person narrative: blend *actions/emotes* (asterisks) with "spoken dialogue" (quotes).
+- ${narrationFormat}
+- Blend *actions/emotes* (asterisks) with "spoken dialogue" (quotes).
 - Naturally address or acknowledge {{user}} by name at least once.
 - 3-5 sentences. Hook the reader without overwhelming them.
 </format>
@@ -141,10 +160,11 @@ export function buildExamplesPrompt(
   concept: string,
   name: string,
   description: string,
-  perspective: string | null = null,
-  tense: string | null = null
+  perspective: PerspectiveTag | null,
+  tense: TenseTag | null
 ): string {
   const styleInstructions = buildGenerationStyleInstructions(perspective, tense);
+  const narrationFormat = buildNarrationFormatInstruction(perspective);
   return `Write exactly 3 example dialogue exchanges for "${name}".
 
 <context>
@@ -156,10 +176,11 @@ ${description}
 <format>
 - Each exchange opens with <START> on its own line.
 - Two turns per exchange: one {{user}} line, then one {{char}} line.
+- ${narrationFormat}
 - Inline actions use *asterisks*. Spoken words use "quotes".
 - Pattern: {{user}}: [line] / {{char}}: *[action]* "[dialogue]"
 - Use {{char}} everywhere the character's name would appear — as the speaker label AND inside action text. Never write the character's actual name anywhere in the output.
-</format>>
+</format>
 
 <content>
 Cover these three distinct beats, one per exchange:

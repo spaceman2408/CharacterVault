@@ -29,17 +29,33 @@ export interface TagCategory {
 
 export type TagSelections = Record<TagCategoryKey, string[]>;
 
-export const PERSPECTIVE_TAGS: readonly GenerationTagKey[] = [
+export const PERSPECTIVE_TAGS = [
   'first_person',
   'second_person',
   'third_person',
   'first_person_you',
-];
+] as const satisfies readonly GenerationTagKey[];
 
-export const TENSE_TAGS: readonly GenerationTagKey[] = [
+export const TENSE_TAGS = [
   'present_tense',
   'past_tense',
-];
+] as const satisfies readonly GenerationTagKey[];
+
+export type PerspectiveTag = typeof PERSPECTIVE_TAGS[number];
+export type TenseTag = typeof TENSE_TAGS[number];
+
+export interface GenerationStyleTags {
+  perspective: PerspectiveTag | null;
+  tense: TenseTag | null;
+}
+
+function isPerspectiveTag(tag: string): tag is PerspectiveTag {
+  return PERSPECTIVE_TAGS.includes(tag as PerspectiveTag);
+}
+
+function isTenseTag(tag: string): tag is TenseTag {
+  return TENSE_TAGS.includes(tag as TenseTag);
+}
 
 /**
  * Tag exclusion rules - if a tag is selected, these tags should be excluded from random selection
@@ -288,16 +304,12 @@ export function randomizeTags(
  * Returns null for each if no matching tag is selected.
  */
 export function getGenerationTags(selections: Record<string, string[]>): {
-  perspective: string | null;
-  tense: string | null;
+  perspective: PerspectiveTag | null;
+  tense: TenseTag | null;
 } {
   const generationTags = selections['generation'] ?? [];
-  const perspective = generationTags.find((tag): tag is GenerationTagKey =>
-    PERSPECTIVE_TAGS.includes(tag as GenerationTagKey)
-  ) ?? null;
-  const tense = generationTags.find((tag): tag is GenerationTagKey =>
-    TENSE_TAGS.includes(tag as GenerationTagKey)
-  ) ?? null;
+  const perspective = generationTags.find(isPerspectiveTag) ?? null;
+  const tense = generationTags.find(isTenseTag) ?? null;
   return { perspective, tense };
 }
 
@@ -312,13 +324,13 @@ export function toggleGenerationTagSelection(
 ): string[] {
   const exists = current.includes(tag);
 
-  if (PERSPECTIVE_TAGS.includes(tag as GenerationTagKey)) {
-    const updated = current.filter((t) => !PERSPECTIVE_TAGS.includes(t as GenerationTagKey));
+  if (isPerspectiveTag(tag)) {
+    const updated = current.filter((t) => !isPerspectiveTag(t));
     return exists ? updated : [...updated, tag];
   }
 
-  if (TENSE_TAGS.includes(tag as GenerationTagKey)) {
-    const updated = current.filter((t) => !TENSE_TAGS.includes(t as GenerationTagKey));
+  if (isTenseTag(tag)) {
+    const updated = current.filter((t) => !isTenseTag(t));
     return exists ? updated : [...updated, tag];
   }
 

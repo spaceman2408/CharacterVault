@@ -9,6 +9,7 @@ import { characterSettingsService } from '../../services/CharacterSettingsServic
 import type { AIConfig, SamplerSettings } from '../../db/types';
 import type { CharacterSpec } from '../../db/characterTypes';
 import type { GenerationField, GenerationState } from './types';
+import type { GenerationStyleTags } from './tags/tagData';
 import {
   GENERATION_SYSTEM_PROMPT,
   buildNamePrompt,
@@ -39,8 +40,8 @@ export interface UseAIGenerationResult {
   isConfigured: boolean;
   isLoading: boolean;
   concept: string;
-  generationTags: { perspective: string | null; tense: string | null };
-  start: (concept: string, tags?: { perspective: string | null; tense: string | null }) => Promise<void>;
+  generationTags: GenerationStyleTags;
+  start: (concept: string, tags: GenerationStyleTags) => Promise<void>;
   abort: () => void;
   retryField: (field: GenerationField) => Promise<void>;
   regenerateField: (field: GenerationField) => Promise<void>;
@@ -55,8 +56,8 @@ export function useAIGeneration(): UseAIGenerationResult {
   const [isConfigured, setIsConfigured] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [concept, setConcept] = useState('');
-  const [generationTags, setGenerationTags] = useState<{ perspective: string | null; tense: string | null }>({ perspective: null, tense: null });
-  const generationTagsRef = useRef<{ perspective: string | null; tense: string | null }>({ perspective: null, tense: null });
+  const [generationTags, setGenerationTags] = useState<GenerationStyleTags>({ perspective: null, tense: null });
+  const generationTagsRef = useRef<GenerationStyleTags>({ perspective: null, tense: null });
 
   const aiServiceRef = useRef<AIService | null>(null);
   const configRef = useRef<{ config: AIConfig; sampler: SamplerSettings } | null>(null);
@@ -222,16 +223,22 @@ export function useAIGeneration(): UseAIGenerationResult {
   );
 
   const start = useCallback(
-    async (newConcept: string, tags?: { perspective: string | null; tense: string | null }) => {
+    async (newConcept: string, tags: GenerationStyleTags) => {
       if (!newConcept.trim()) return;
+      if (!tags.perspective || !tags.tense) {
+        setState({
+          ...INITIAL_STATE,
+          status: 'error',
+          error: 'Choose one perspective and one tense before generating.',
+        });
+        return;
+      }
 
       const trimmedConcept = newConcept.trim();
       setConcept(trimmedConcept);
 
-      if (tags !== undefined) {
-        generationTagsRef.current = tags;
-        setGenerationTags(tags);
-      }
+      generationTagsRef.current = tags;
+      setGenerationTags(tags);
 
       // Cancel any in-flight request before starting a new one
       abortCurrent();

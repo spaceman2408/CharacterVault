@@ -93,6 +93,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     [selections]
   );
 
+  const hasConceptSelection = useMemo(
+    () => Object.entries(selections).some(([key, arr]) => key !== 'generation' && arr.length > 0),
+    [selections]
+  );
+
   const hasGenerationTags = useMemo(
     () => hasRequiredGenerationTags(selections),
     [selections]
@@ -111,7 +116,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     [selections]
   );
 
-  const canGenerate = isConfigured && hasSelection && hasGenerationTags && !isGenerating;
+  const canGenerate = isConfigured && hasConceptSelection && hasGenerationTags && !isGenerating;
 
   return (
     <div className="space-y-5">
@@ -291,6 +296,12 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       {isConfigured && !isGenerating && !hasGenerationTags && (
         <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
           Choose one perspective and one tense before generating.
+        </p>
+      )}
+
+      {isConfigured && !isGenerating && hasGenerationTags && !hasConceptSelection && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+          Select at least one character tag before generating.
         </p>
       )}
 
