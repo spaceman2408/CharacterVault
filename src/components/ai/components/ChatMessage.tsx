@@ -109,11 +109,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(({
   onRegenerate
 }) => {
   const isUser = message.role === 'user';
+  const animationClass = message.suppressInitialAnimation ? '' : 'message-animate';
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`relative max-w-[90%] rounded-lg px-3 py-2 group message-animate ${
+        className={`relative max-w-[90%] rounded-lg px-3 py-2 group ${animationClass} ${
           isUser
             ? 'bg-vault-600 text-white rounded-br-none'
             : 'bg-white dark:bg-vault-800 border border-vault-200 dark:border-vault-700 text-vault-900 dark:text-vault-100 rounded-bl-none'

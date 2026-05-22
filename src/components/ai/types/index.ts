@@ -29,6 +29,8 @@ export interface ChatMessage {
   reasoning?: string;
   timestamp: number;
   stats?: ResponseStats;
+  /** Internal UI hint to skip the entrance animation after a streamed handoff */
+  suppressInitialAnimation?: boolean;
 }
 
 /**

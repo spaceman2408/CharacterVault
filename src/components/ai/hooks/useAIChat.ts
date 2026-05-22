@@ -262,6 +262,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           modelId: aiConfig.modelId,
           providerId: getProviderSelectionId(aiConfig),
         },
+        suppressInitialAnimation: enableStreaming,
       };
 
       if (enableStreaming) {
@@ -424,6 +425,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
             modelId: aiConfig.modelId,
             providerId: getProviderSelectionId(aiConfig),
           },
+          suppressInitialAnimation: enableStreaming,
         };
 
         if (enableStreaming) {
