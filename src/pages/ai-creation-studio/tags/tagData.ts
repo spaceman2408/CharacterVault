@@ -67,75 +67,118 @@ function isTenseTag(tag: string): tag is TenseTag {
  *   - femboy / trap / twink / catboy are male but keep breast exclusion removed (crossdressing context)
  */
 
-// Shared appendage exclusion lists
-const FEMALE_APPENDAGE_EXCLUSIONS = ['large_penis', 'small_penis', 'huge_balls'];
-const MALE_APPENDAGE_EXCLUSIONS = ['huge_breasts', 'small_breasts'];
+const FEMALE_APPENDAGE_EXCLUSIONS = ['large_penis', 'small_penis', 'huge_balls'] as const;
+const MALE_APPENDAGE_EXCLUSIONS = ['huge_breasts', 'small_breasts'] as const;
 
-const TAG_EXCLUSIONS: Record<string, string[]> = {
-  // Female-related tags exclude male-related tags + male appendages
-  'female': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'girl': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'strong_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', 'dilf', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'grown_woman': ['male', 'boy', 'man', 'father', 'son', 'brother', 'big_brother', 'daddy', 'dilf', 'husband', 'boyfriend', 'femboy', 'catboy', 'monster_boy', 'twink', 'trap', 'incubus', 'old_man', 'dilf', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  
-  // Male-related tags exclude female-related tags + female appendages
-  'male': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'boy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'man': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  // femboy/catboy/twink/trap: male identity but crossdressing context — exclude female identity tags but NOT breast tags
-  'femboy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
-  'catboy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
-  'monster_boy': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'twink': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
-  'trap': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman'],
-  'incubus': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'old_man': ['female', 'woman', 'girl', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'milf', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
+const FEMALE_IDENTITY_TAGS = [
+  'female',
+  'woman',
+  'girl',
+  'strong_woman',
+  'grown_woman',
+] as const;
 
-  // Appendage tags themselves — exclude conflicting appendages and mismatched gender identities
-  'large_penis': ['female', 'woman', 'girl', 'strong_woman', 'grown_woman', 'milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'widow', 'muscle_mommy', 'sugar_mommy', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'small_penis'],
-  'small_penis': ['female', 'woman', 'girl', 'strong_woman', 'grown_woman', 'milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'widow', 'muscle_mommy', 'sugar_mommy', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'large_penis'],
-  'huge_balls': ['female', 'woman', 'girl', 'strong_woman', 'grown_woman', 'milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'widow', 'muscle_mommy', 'sugar_mommy', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother'],
-  'huge_breasts': ['male', 'boy', 'man', 'monster_boy', 'incubus', 'old_man', 'small_breasts'],
-  'small_breasts': ['male', 'boy', 'man', 'monster_boy', 'incubus', 'old_man', 'huge_breasts'],
-  
-  // Family role exclusions (female roles also exclude male appendages)
-  'mother': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'father': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'daughter': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'son': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'sister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'big_sister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'big_brother': ['mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'aunt': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'stepmother': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'stepsister': ['father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  
-  // Relationship exclusions (female roles also exclude male appendages)
-  'wife': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'loving_wife': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'husband': ['wife', 'girlfriend', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'girlfriend': ['boyfriend', 'husband', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'boyfriend': ['girlfriend', 'wife', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'aunt', 'stepmother', 'loving_wife', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  
-  // Specific gendered roles
-  'mommy_dom': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'dommy_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'daddy': ['mother', 'mommy_dom', 'dommy_mommy', 'daughter', 'sister', 'big_sister', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'loving_wife', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'muscle_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'sugar_mommy': ['daddy', 'father', 'son', 'brother', 'big_brother', 'husband', 'boyfriend', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'milf': ['dilf', 'father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'dilf': ['milf', 'gilf', 'mother', 'daughter', 'sister', 'big_sister', 'mommy_dom', 'dommy_mommy', 'wife', 'girlfriend', 'aunt', 'stepmother', 'muscle_mommy', 'sugar_mommy', 'widow', 'loving_wife', 'strong_woman', 'grown_woman', ...MALE_APPENDAGE_EXCLUSIONS],
-  'gilf': ['dilf', 'father', 'son', 'brother', 'big_brother', 'daddy', 'husband', 'boyfriend', 'old_man', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  'widow': ['husband', 'boyfriend', 'father', 'son', 'brother', 'big_brother', 'daddy', ...FEMALE_APPENDAGE_EXCLUSIONS],
-  
-  // Sexual orientation exclusions
-  'lesbian': ['gay', 'mlm'],
-  'wlw': ['gay', 'mlm'],
-  'gay': ['lesbian', 'wlw'],
-  'mlm': ['lesbian', 'wlw'],
+const FEMALE_ROLE_TAGS = [
+  'mother',
+  'daughter',
+  'sister',
+  'big_sister',
+  'mommy_dom',
+  'dommy_mommy',
+  'milf',
+  'gilf',
+  'wife',
+  'loving_wife',
+  'girlfriend',
+  'aunt',
+  'stepmother',
+  'stepsister',
+  'muscle_mommy',
+  'sugar_mommy',
+  'widow',
+] as const;
+
+const MALE_IDENTITY_TAGS = [
+  'male',
+  'boy',
+  'man',
+  'monster_boy',
+  'incubus',
+  'old_man',
+] as const;
+
+const MALE_CROSSDRESSING_TAGS = ['femboy', 'catboy', 'twink', 'trap'] as const;
+
+const MALE_ROLE_TAGS = [
+  'father',
+  'son',
+  'brother',
+  'big_brother',
+  'daddy',
+  'dilf',
+  'husband',
+  'boyfriend',
+] as const;
+
+const FEMALE_CODED_TAGS = [...FEMALE_IDENTITY_TAGS, ...FEMALE_ROLE_TAGS] as const;
+const MALE_CODED_TAGS = [...MALE_IDENTITY_TAGS, ...MALE_CROSSDRESSING_TAGS, ...MALE_ROLE_TAGS] as const;
+
+const MALE_BREAST_ALLOWED_TAGS = MALE_CROSSDRESSING_TAGS;
+
+type TagExclusionRule = {
+  when: readonly string[];
+  exclude: readonly string[];
 };
+
+const exclusionRules: readonly TagExclusionRule[] = [
+  {
+    when: FEMALE_CODED_TAGS,
+    exclude: [...MALE_CODED_TAGS, ...FEMALE_APPENDAGE_EXCLUSIONS],
+  },
+  {
+    when: [...FEMALE_APPENDAGE_EXCLUSIONS],
+    exclude: FEMALE_CODED_TAGS,
+  },
+  {
+    when: [...MALE_IDENTITY_TAGS, ...MALE_ROLE_TAGS],
+    exclude: [...FEMALE_CODED_TAGS, ...MALE_APPENDAGE_EXCLUSIONS],
+  },
+  {
+    when: MALE_BREAST_ALLOWED_TAGS,
+    exclude: FEMALE_CODED_TAGS,
+  },
+  {
+    when: MALE_APPENDAGE_EXCLUSIONS,
+    exclude: [...MALE_IDENTITY_TAGS, ...MALE_ROLE_TAGS],
+  },
+  { when: ['large_penis'], exclude: ['small_penis'] },
+  { when: ['small_penis'], exclude: ['large_penis'] },
+  { when: ['huge_breasts'], exclude: ['small_breasts'] },
+  { when: ['small_breasts'], exclude: ['huge_breasts'] },
+  { when: ['lesbian', 'wlw'], exclude: ['gay', 'mlm'] },
+  { when: ['gay', 'mlm'], exclude: ['lesbian', 'wlw'] },
+];
+
+function buildTagExclusions(rules: readonly TagExclusionRule[]): Record<string, string[]> {
+  const map: Record<string, Set<string>> = {};
+
+  for (const { when, exclude } of rules) {
+    for (const tag of when) {
+      map[tag] ??= new Set<string>();
+      for (const excludedTag of exclude) {
+        if (excludedTag !== tag) {
+          map[tag].add(excludedTag);
+        }
+      }
+    }
+  }
+
+  return Object.fromEntries(
+    Object.entries(map).map(([tag, exclusions]) => [tag, [...exclusions]])
+  );
+}
+
+const TAG_EXCLUSIONS = buildTagExclusions(exclusionRules);
 
 export const TAG_CATEGORIES: readonly TagCategory[] = [
   { key: 'generation', label: 'Generation', tags: generationTags },
@@ -232,6 +275,15 @@ function getExcludedTags(currentSelections: Record<string, string[]>): Set<strin
   return excluded;
 }
 
+function addExclusionsForTag(excludedTags: Set<string>, tag: string): void {
+  const exclusions = TAG_EXCLUSIONS[tag];
+  if (!exclusions) return;
+
+  for (const excludedTag of exclusions) {
+    excludedTags.add(excludedTag);
+  }
+}
+
 /**
  * Get all tags that should be excluded based on currently selected tags (exported for UI)
  */
@@ -250,14 +302,18 @@ function drawTags(
 ): string[] {
   const count = Math.floor(Math.random() * (max - min + 1)) + min;
   if (count <= 0) return [];
-  
-  // Filter out excluded tags
-  const availablePool = pool.filter(tag => !excludedTags.has(tag));
-  
-  if (availablePool.length === 0) return [];
-  
-  const shuffled = shuffle(availablePool);
-  return shuffled.slice(0, Math.min(count, shuffled.length));
+
+  const selected: string[] = [];
+
+  for (const tag of shuffle(pool)) {
+    if (selected.length >= count) break;
+    if (excludedTags.has(tag)) continue;
+
+    selected.push(tag);
+    addExclusionsForTag(excludedTags, tag);
+  }
+
+  return selected;
 }
 
 /**
@@ -278,6 +334,13 @@ export function randomizeTags(
 
   const coreCategoryKeys: TagCategoryKey[] = ['identity', 'role', 'personality'];
   const supportingKeys: TagCategoryKey[] = ['genre', 'appearance', 'tone'];
+  const randomizedKeys: TagCategoryKey[] = [...coreCategoryKeys, ...supportingKeys];
+
+  for (const key of randomizedKeys) {
+    if (!lockedKeys.includes(key)) {
+      next[key] = [];
+    }
+  }
 
   // Build exclusion set incrementally as we select tags
   let excludedTags = getExcludedTags(next);
