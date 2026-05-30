@@ -19,6 +19,176 @@ interface SectionEditorProps {
   section: CharacterSection;
 }
 
+interface MinimalSectionHeaderProps {
+  label?: string;
+  description?: string;
+}
+
+interface NameFieldEditorProps extends MinimalSectionHeaderProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+interface TagsFieldEditorProps extends MinimalSectionHeaderProps {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+}
+
+function MinimalSectionHeader({ label, description }: MinimalSectionHeaderProps): React.ReactElement {
+  return (
+    <div className="mb-4 shrink-0">
+      <h2 className="text-xl font-bold text-vault-900 dark:text-vault-50">
+        {label}
+      </h2>
+      {description && (
+        <p className="text-sm text-vault-500 dark:text-vault-400">
+          {description}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function NameFieldEditor({ value, onChange, label, description }: NameFieldEditorProps): React.ReactElement {
+  const [draftName, setDraftName] = React.useState(value);
+
+  React.useEffect(() => {
+    setDraftName(value);
+  }, [value]);
+
+  const handleChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value;
+    setDraftName(nextValue);
+    onChange(nextValue);
+  }, [onChange]);
+
+  return (
+    <div className="h-full flex flex-col min-h-0 overflow-hidden animate-fade-in-slow">
+      <MinimalSectionHeader label={label} description={description} />
+      <input
+        type="text"
+        value={draftName}
+        onChange={handleChange}
+        className="w-full rounded-xl border border-vault-200 bg-white px-4 py-3 text-base text-vault-900 outline-none transition-all placeholder:text-vault-400 focus:border-vault-400 focus:ring-2 focus:ring-vault-500/20 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-100 dark:placeholder:text-vault-600 dark:focus:border-vault-500 dark:focus:ring-vault-400/20"
+        placeholder="Character name"
+      />
+    </div>
+  );
+}
+
+function splitTagInput(value: string): string[] {
+  return value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function mergeTags(currentTags: string[], incomingTags: string[]): string[] {
+  const seen = new Set(currentTags.map((tag) => tag.toLocaleLowerCase()));
+  const next = [...currentTags];
+
+  for (const tag of incomingTags) {
+    const normalized = tag.toLocaleLowerCase();
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    next.push(tag);
+  }
+
+  return next;
+}
+
+function TagsFieldEditor({ tags, onChange, label, description }: TagsFieldEditorProps): React.ReactElement {
+  const [currentTags, setCurrentTags] = React.useState(tags);
+  const [draftTag, setDraftTag] = React.useState('');
+
+  React.useEffect(() => {
+    setCurrentTags(tags);
+  }, [tags]);
+
+  const persistTags = React.useCallback((nextTags: string[]) => {
+    setCurrentTags(nextTags);
+    onChange(nextTags);
+  }, [onChange]);
+
+  const addTags = React.useCallback((rawValue: string) => {
+    const nextTags = mergeTags(currentTags, splitTagInput(rawValue));
+    if (nextTags.length !== currentTags.length) {
+      persistTags(nextTags);
+    }
+  }, [currentTags, persistTags]);
+
+  const removeTag = React.useCallback((tagToRemove: string) => {
+    persistTags(currentTags.filter((tag) => tag !== tagToRemove));
+  }, [currentTags, persistTags]);
+
+  const handleInputChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    if (value.includes(',')) {
+      addTags(value);
+      setDraftTag('');
+      return;
+    }
+
+    setDraftTag(value);
+  }, [addTags]);
+
+  const handleKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addTags(draftTag);
+      setDraftTag('');
+      return;
+    }
+
+    if (event.key === 'Backspace' && draftTag === '' && currentTags.length > 0) {
+      event.preventDefault();
+      persistTags(currentTags.slice(0, -1));
+    }
+  }, [addTags, currentTags, draftTag, persistTags]);
+
+  const handlePaste = React.useCallback((event: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = event.clipboardData.getData('text');
+    if (!pastedText.includes(',')) return;
+
+    event.preventDefault();
+    addTags(pastedText);
+    setDraftTag('');
+  }, [addTags]);
+
+  return (
+    <div className="h-full flex flex-col min-h-0 overflow-hidden animate-fade-in-slow">
+      <MinimalSectionHeader label={label} description={description} />
+      <div className="flex min-h-28 flex-wrap content-start gap-2 rounded-xl border border-vault-200 bg-white p-3 transition-all focus-within:border-vault-400 focus-within:ring-2 focus-within:ring-vault-500/20 dark:border-vault-700 dark:bg-vault-900/60 dark:focus-within:border-vault-500 dark:focus-within:ring-vault-400/20">
+        {currentTags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md bg-vault-100 px-2 text-xs font-medium text-vault-700 dark:bg-vault-800 dark:text-vault-200"
+          >
+            <span className="truncate">{tag}</span>
+            <button
+              type="button"
+              onClick={() => removeTag(tag)}
+              className="rounded-sm text-vault-400 transition-colors hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-vault-500/30 dark:text-vault-500 dark:hover:text-red-400"
+              aria-label={`Remove ${tag}`}
+            >
+              x
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={draftTag}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          className="min-w-36 flex-1 bg-transparent px-1 py-1 text-sm text-vault-900 outline-none placeholder:text-vault-400 dark:text-vault-100 dark:placeholder:text-vault-600"
+          placeholder={currentTags.length === 0 ? 'Type a tag and press Enter' : 'Add tag'}
+        />
+      </div>
+    </div>
+  );
+}
+
 /**
  * Get value from character spec based on section
  */
@@ -137,7 +307,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     contextSectionIds,
     minHeight: 'clamp(180px, 40vh, 400px)',
     editorStyles: { padding: 'clamp(8px, 2vw, 16px)' },
-    isActive: section !== 'image' && section !== 'alternate_greetings' && section !== 'lorebook' && !!currentCharacter,
+    isActive: section !== 'image' && section !== 'name' && section !== 'tags' && section !== 'alternate_greetings' && section !== 'lorebook' && !!currentCharacter,
     fontSize,
     onFontSizeChange: setFontSize,
     additionalExtensions: creatorNotesExts,
@@ -150,6 +320,28 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
 
   const sectionMeta = CHARACTER_SECTIONS.find(s => s.id === section);
   const isCreatorNotesSection = section === 'creator_notes';
+
+  if (section === 'name') {
+    return (
+      <NameFieldEditor
+        value={currentValue}
+        onChange={(value) => void updateSpecField('name', value)}
+        label={sectionMeta?.label}
+        description={sectionMeta?.description}
+      />
+    );
+  }
+
+  if (section === 'tags') {
+    return (
+      <TagsFieldEditor
+        tags={currentCharacter.data.spec.tags ?? []}
+        onChange={(tags) => void updateSpecField('tags', tags)}
+        label={sectionMeta?.label}
+        description={sectionMeta?.description}
+      />
+    );
+  }
 
   // Handle image section specially
   if (section === 'image') {

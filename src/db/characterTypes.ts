@@ -276,7 +276,7 @@ export const CHARACTER_SECTIONS: SectionMeta[] = [
   { id: 'lorebook', label: 'Lorebook', icon: 'Book', description: 'Character lore entries' },
   { id: 'creator', label: 'Creator', icon: 'UserCircle', description: 'Character creator name' },
   { id: 'creator_notes', label: 'Creator Notes', icon: 'NotebookPen', description: 'Notes from the creator (supports CSS)' },
-  { id: 'tags', label: 'Tags', icon: 'Tags', description: 'Character tags (comma-separated)' },
+  { id: 'tags', label: 'Tags', icon: 'Tags', description: 'Character tags' },
   { id: 'character_version', label: 'Version', icon: 'Tag', description: 'Character version identifier' },
   { id: 'extensions', label: 'Extensions', icon: 'Puzzle', description: 'Extension data' },
   { id: 'avatar', label: 'Avatar URL', icon: 'Link', description: 'Character avatar URL (CharHub, etc.)' },
