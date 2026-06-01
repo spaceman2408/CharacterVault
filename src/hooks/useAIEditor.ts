@@ -19,6 +19,7 @@ import { normalizeHtmlEntitiesInView } from '../editor/extensions/normalizeHtmlE
 import { toolbarSearch, toolbarSearchTheme } from '../editor/extensions/toolbarSearch';
 import { themeSync } from '../editor/extensions/themeSync';
 import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
+import { characterMacroHelper } from '../editor/extensions/characterMacroHelper';
 import { AIService, AIError, estimateTokens } from '../services/AIService';
 import { getProviderSelectionId } from '../services/providers';
 
@@ -706,6 +707,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         toolbarSearchTheme(),
         // Font size extension
         fontSizeExtension(fontSize),
+        // Character card macro typing helper
+        characterMacroHelper(),
         ...(additionalExtensions ?? []),
       ],
     });

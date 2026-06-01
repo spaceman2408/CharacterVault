@@ -37,3 +37,7 @@ export {
 export {
   creatorNotesExtensions,
 } from './htmlHighlight';
+
+export {
+  characterMacroHelper,
+} from './characterMacroHelper';
