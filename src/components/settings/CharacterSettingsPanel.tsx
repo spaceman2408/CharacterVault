@@ -1322,7 +1322,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
       >
         <div 
           ref={panelRef}
-          className={`bg-vault-50 dark:bg-vault-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] h-[90vh] sm:h-auto flex flex-col overflow-hidden ring-1 ring-vault-200 dark:ring-vault-800 transition-transform duration-300 scale-100 ${
+          className={`bg-vault-50 dark:bg-vault-900 rounded-2xl shadow-2xl w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden ring-1 ring-vault-200 dark:ring-vault-800 transition-transform duration-300 scale-100 ${
             isVisible ? 'scale-100' : 'scale-95'
           }`}
           role="dialog"
@@ -1355,26 +1355,32 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
           </div>
 
           {/* Tabs */}
-          <div className="flex overflow-x-auto overflow-y-hidden border-b border-vault-200 dark:border-vault-800 px-6 py-1 bg-vault-50 dark:bg-vault-900/50 scrollbar-thin scrollbar-thumb-vault-300 dark:scrollbar-thumb-vault-700">
+          <div
+            className="flex min-h-14 overflow-x-auto overflow-y-hidden border-b border-vault-200 dark:border-vault-800 px-4 sm:px-6 pt-2 bg-vault-50 dark:bg-vault-900/50 scrollbar-thin scrollbar-thumb-vault-300 dark:scrollbar-thumb-vault-700"
+            role="tablist"
+          >
             {(['ai', 'sampler', 'prompts', 'studio'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-3 text-sm font-medium capitalize transition-all duration-200 border-b-2 -mb-px focus:outline-none focus:ring-2 focus:ring-vault-500/50 focus:ring-inset whitespace-nowrap shrink-0 ${
+                className={`relative flex min-h-12 items-center px-4 text-sm font-medium capitalize transition-all duration-200 rounded-t-lg focus:outline-none focus:ring-2 focus:ring-vault-500/50 focus:ring-inset whitespace-nowrap shrink-0 ${
                   activeTab === tab
-                    ? 'border-vault-600 text-vault-600 dark:border-vault-400 dark:text-vault-400'
-                    : 'border-transparent text-vault-500 dark:text-vault-400 hover:text-vault-700 dark:hover:text-vault-300 hover:bg-vault-100/50 dark:hover:bg-vault-800/50'
+                    ? 'text-vault-700 dark:text-vault-200'
+                    : 'text-vault-500 dark:text-vault-400 hover:text-vault-700 dark:hover:text-vault-300 hover:bg-vault-100/50 dark:hover:bg-vault-800/50'
                 }`}
                 aria-selected={activeTab === tab}
                 role="tab"
               >
                 <span className="flex items-center gap-2">
-                  {tab === 'ai' && <Brain className="w-4 h-4" />}
-                  {tab === 'sampler' && <Sliders className="w-4 h-4" />}
-                  {tab === 'prompts' && <MessageSquare className="w-4 h-4" />}
-                  {tab === 'studio' && <Palette className="w-4 h-4" />}
+                  {tab === 'ai' && <Brain className="w-4 h-4 shrink-0" />}
+                  {tab === 'sampler' && <Sliders className="w-4 h-4 shrink-0" />}
+                  {tab === 'prompts' && <MessageSquare className="w-4 h-4 shrink-0" />}
+                  {tab === 'studio' && <Palette className="w-4 h-4 shrink-0" />}
                   {tab === 'ai' ? 'AI Config' : tab === 'studio' ? 'Studio' : tab}
                 </span>
+                {activeTab === tab && (
+                  <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-vault-600 dark:bg-vault-400" />
+                )}
               </button>
             ))}
           </div>
