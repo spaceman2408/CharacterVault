@@ -307,7 +307,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     contextSectionIds,
     minHeight: 'clamp(180px, 40vh, 400px)',
     editorStyles: { padding: 'clamp(8px, 2vw, 16px)' },
-    isActive: section !== 'image' && section !== 'name' && section !== 'tags' && section !== 'alternate_greetings' && section !== 'lorebook' && !!currentCharacter,
+    isActive: section !== 'image' && section !== 'name' && section !== 'creator' && section !== 'tags' && section !== 'alternate_greetings' && section !== 'lorebook' && !!currentCharacter,
     fontSize,
     onFontSizeChange: setFontSize,
     additionalExtensions: creatorNotesExts,
@@ -326,6 +326,17 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
       <NameFieldEditor
         value={currentValue}
         onChange={(value) => void updateSpecField('name', value)}
+        label={sectionMeta?.label}
+        description={sectionMeta?.description}
+      />
+    );
+  }
+
+  if (section === 'creator') {
+    return (
+      <NameFieldEditor
+        value={currentValue}
+        onChange={(value) => void updateSpecField('creator', value)}
         label={sectionMeta?.label}
         description={sectionMeta?.description}
       />
