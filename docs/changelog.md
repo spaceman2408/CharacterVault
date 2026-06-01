@@ -2,6 +2,15 @@
 
 ## Recent Changes
 
+### Current Release Notes
+
+- Improved the AI Settings tabs so they are easier to read and no longer overlap.
+- Reduced unwanted browser password prompts when entering AI settings.
+- Improved the character history view for screen readers.
+- Added simple editing for character names and creator names.
+- Added a cleaner tag editor where you can add, paste, and remove tags quickly.
+- Improved tag choices in AI Creation Studio so related tags work together more reliably.
+
 ### Latest Commits (Newest to Oldest)
 
 - `974ff11` - refactor(ai): enhance copy button timeout handling and variable scoping

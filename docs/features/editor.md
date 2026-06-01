@@ -121,12 +121,24 @@ Each section tab shows a title, description, and the editor. Some sections have 
 
 | Section | Layout |
 | :--- | :--- |
+| **Name** and **Creator** | Simple text fields for quick edits |
+| **Tags** | Tag chips with quick add, paste, and remove controls |
 | **Description**, **Personality**, **Scenario**, etc. | Standard single editor |
 | **Creator Notes** | Editor with a **Preview CSS** button — opens a sandboxed preview modal, or click again for a side-by-side split view. See [Creator Notes Preview](/features/creator-notes). |
 | **Greetings** | Special multi-greeting editor. See [Creating & Editing Characters](/getting-started/creating-characters). |
 | **Lorebook** | Two-panel editor with search and AI key generation. See [Lorebook Editor](/features/lorebook-editor). |
 | **Image** | Image upload panel (not a text editor) |
 | **Extensions** | Raw JSON editor |
+
+## Name, Creator, and Tags
+
+Some short fields use simpler editors instead of the full writing toolbar:
+
+- **Name** — Type the character name directly.
+- **Creator** — Type the creator name directly.
+- **Tags** — Add tags with **Enter**, commas, or paste. Remove a tag with its **x** button.
+
+Tags are cleaned up as you add them. Empty tags are ignored, extra spaces are removed, and duplicates are skipped.
 
 ## Customizing AI Prompts
 

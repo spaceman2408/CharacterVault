@@ -51,6 +51,18 @@ The workspace organizes character fields into tabs. Click any tab to navigate to
 | **Creator Notes** | Notes for other users — supports HTML/CSS with live preview |
 | **Tags** | Keywords to categorize your character |
 
+## Name, Creator, and Tags
+
+The **Name** and **Creator** tabs use simple text boxes. Type directly into the field and your change is saved automatically.
+
+The **Tags** tab is built for quick editing:
+
+- Type a tag and press **Enter** to add it.
+- Type several tags separated by commas to add them at once.
+- Paste a comma-separated list to add many tags quickly.
+- Click the **x** on a tag to remove it.
+- Duplicate tags are skipped automatically.
+
 ## Auto-Save
 
 All changes are saved automatically as you type. There's no need to click a save button.
