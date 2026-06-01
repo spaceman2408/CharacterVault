@@ -1360,7 +1360,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-3 text-sm font-medium capitalize transition-all duration-200 border-b-2 -mb-px focus:outline-none focus:ring-2 focus:ring-vault-500/50 focus:ring-inset whitespace-nowrap flex-shrink-0 ${
+                className={`px-4 py-3 text-sm font-medium capitalize transition-all duration-200 border-b-2 -mb-px focus:outline-none focus:ring-2 focus:ring-vault-500/50 focus:ring-inset whitespace-nowrap shrink-0 ${
                   activeTab === tab
                     ? 'border-vault-600 text-vault-600 dark:border-vault-400 dark:text-vault-400'
                     : 'border-transparent text-vault-500 dark:text-vault-400 hover:text-vault-700 dark:hover:text-vault-300 hover:bg-vault-100/50 dark:hover:bg-vault-800/50'
@@ -1503,8 +1503,16 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                         </select>
                         <input
                           type="text"
+                          name="ai-base-url"
                           value={localAIConfig.baseUrl}
                           onChange={(e) => handleCustomUrlChange(e.target.value)}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="none"
+                          spellCheck={false}
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-form-type="other"
                           className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
                           placeholder="https://nano-gpt.com/api/v1"
                         />
@@ -1527,12 +1535,18 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                         )}
                       </label>
                       <input
-                        type="password"
+                        type="text"
+                        name="ai-api-token"
                         value={localAIConfig.apiKey}
                         onChange={(e) => handleApiKeyChange(e.target.value)}
-                        autoComplete="off"
+                        autoComplete="new-password"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         data-lpignore="true"
+                        data-1p-ignore="true"
                         data-form-type="other"
+                        style={{ WebkitTextSecurity: 'disc' } as React.CSSProperties}
                         className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
                         placeholder={selectedBaseUrlPreset === 'lmstudio' ? 'Optional for local endpoints' : 'Enter your API key'}
                       />
