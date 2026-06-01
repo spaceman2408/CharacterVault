@@ -467,7 +467,7 @@ function HighlightedText({
           )) : line.value ? (
             <span>{line.value}</span>
           ) : (
-            <span className={`rounded px-0.5 ${changedToneClassName}`}>{line.compareValue || ' '}</span>
+            <span aria-hidden="true"> </span>
           )}
         </div>
       )) : (
@@ -523,7 +523,7 @@ function HunkedHighlightedText({
             )) : line.value ? (
               <span>{line.value}</span>
             ) : (
-              <span className={`rounded px-0.5 ${changedToneClassName}`}>{line.compareValue || ' '}</span>
+              <span aria-hidden="true"> </span>
             )}
           </div>
         );
