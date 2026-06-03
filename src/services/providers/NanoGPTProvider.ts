@@ -9,7 +9,7 @@ import type {
   ExtendedAIModelInfo,
   ModelProviderInfo,
 } from './types';
-import type { AIConfig } from '../../db/types';
+import type { AIConfig } from '../../db/characterTypes';
 
 /**
  * NanoGPT API response for models endpoint with detailed=true

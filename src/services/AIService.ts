@@ -4,7 +4,7 @@
  * @module @services/AIService
  */
 
-import type { AIConfig, SamplerSettings, AIModelInfo, PromptSettings } from '../db/types';
+import type { AIConfig, SamplerSettings, AIModelInfo, PromptSettings } from '../db/characterTypes';
 import { ReasoningParser } from './ReasoningParser';
 import { resolveProvider } from './providers';
 import type { ModelProviderInfo, FetchModelsOptions } from './providers';

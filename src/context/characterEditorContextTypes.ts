@@ -5,7 +5,7 @@
 
 import { createContext } from 'react';
 import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
+import type { SamplerSettings, AIConfig, PromptSettings } from '../db/characterTypes';
 
 /**
  * Save status types

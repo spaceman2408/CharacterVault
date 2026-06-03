@@ -5,8 +5,8 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../db/types';
-import { DEFAULT_SETTINGS } from '../db/types';
+import type { SamplerSettings, AIConfig, PromptSettings } from '../db/characterTypes';
+import { DEFAULT_SETTINGS } from '../db/characterTypes';
 import { useCharacterContext } from './useCharacterContext';
 import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation, type ManualSnapshotResult } from './characterEditorContextTypes';
 import { characterSettingsService } from '../services/CharacterSettingsService';

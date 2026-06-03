@@ -16,8 +16,8 @@ export type {
   ConversationMessage,
 } from './types';
 
-// Re-export AIOperation from db/types for convenience
-export type { AIOperation } from '../../db/types';
+// Re-export AIOperation from CharacterVault db types for convenience
+export type { AIOperation } from '../../db/characterTypes';
 
 // Utils
 export { formatTime, generateMessageId } from './utils';

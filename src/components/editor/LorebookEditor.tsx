@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { AIService } from '../../services/AIService';
 import { importLorebook, convertToSTLorebook } from '../../services/LorebookConverter';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
+import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/characterTypes';
 import type { CharacterSection, LorebookEntry, CharacterBook } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
 import { estimateTokens } from '../../services/AIService';

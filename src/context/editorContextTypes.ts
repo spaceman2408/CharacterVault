@@ -4,7 +4,8 @@
  */
 
 import { createContext } from 'react';
-import type { Entry, CreateEntryInput, UpdateEntryInput, SamplerSettings, AIConfig, PromptSettings } from '../db/types';
+import type { Entry, CreateEntryInput, UpdateEntryInput } from '../db/types';
+import type { SamplerSettings, AIConfig, PromptSettings } from '../db/characterTypes';
 
 /**
  * Save status types

@@ -3,7 +3,7 @@
  * @module @services/providers/types
  */
 
-import type { AIConfig, AIModelInfo } from '../../db/types';
+import type { AIConfig, AIModelInfo } from '../../db/characterTypes';
 
 /** A single provider option for a model */
 export interface ModelProvider {

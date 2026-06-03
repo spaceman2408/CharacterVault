@@ -36,8 +36,8 @@ import {
   Zap,
   Palette,
 } from 'lucide-react';
-import type { AIConfig, SamplerSettings, PromptSettings, AIModelInfo } from '../../db/types';
-import { DEFAULT_SETTINGS } from '../../db/types';
+import type { AIConfig, SamplerSettings, PromptSettings, AIModelInfo } from '../../db/characterTypes';
+import { DEFAULT_SETTINGS } from '../../db/characterTypes';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { CharacterEditorContext } from '../../context';
 import { AIService, AIError } from '../../services/AIService';

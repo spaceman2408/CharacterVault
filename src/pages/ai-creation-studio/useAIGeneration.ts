@@ -6,7 +6,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { AIService, AIError } from '../../services/AIService';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
-import type { AIConfig, SamplerSettings } from '../../db/types';
+import type { AIConfig, SamplerSettings } from '../../db/characterTypes';
 import type { CharacterSpec } from '../../db/characterTypes';
 import type { GenerationField, GenerationState } from './types';
 import type { GenerationStyleTags } from './tags/tagData';

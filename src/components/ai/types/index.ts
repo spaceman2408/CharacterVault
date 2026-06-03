@@ -3,7 +3,7 @@
  * @module components/ai/types
  */
 
-import type { SamplerSettings, AIConfig, PromptSettings } from '../../../db/types';
+import type { SamplerSettings, AIConfig, PromptSettings } from '../../../db/characterTypes';
 
 /**
  * Response statistics for an AI message

@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Plus, Trash2, MessageSquare, ChevronLeft } from 'lucide-react';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/types';
+import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/characterTypes';
 import type { CharacterSection } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
 import { estimateTokens } from '../../services/AIService';

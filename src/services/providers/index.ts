@@ -16,7 +16,7 @@ export type {
 import { NanoGPTProvider } from './NanoGPTProvider';
 import { OpenAICompatProvider } from './OpenAICompatProvider';
 import type { IProviderAdapter } from './types';
-import type { AIConfig } from '../../db/types';
+import type { AIConfig } from '../../db/characterTypes';
 
 // Ordered list: more specific providers first, fallback last
 const providers: IProviderAdapter[] = [

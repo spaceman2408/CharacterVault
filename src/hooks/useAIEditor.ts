@@ -12,7 +12,7 @@ import type { Extension } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, insertTab, indentLess } from '@codemirror/commands';
 import { indentUnit } from '@codemirror/language';
 import type { CharacterSection } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings, AIOperation } from '../db/types';
+import type { SamplerSettings, AIConfig, PromptSettings, AIOperation } from '../db/characterTypes';
 import { aiToolbarPanel, getPanelUpdateFunction } from '../editor/extensions/aiToolbarPanel';
 import type { ToolbarActionConfig } from '../editor/extensions/aiToolbarPanel';
 import { normalizeHtmlEntitiesInView } from '../editor/extensions/normalizeHtmlEntities';

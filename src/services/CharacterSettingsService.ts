@@ -4,8 +4,8 @@
  */
 
 import type { CharacterVaultSettings } from '../db/characterTypes';
-import type { AIConfig, SamplerSettings, PromptSettings } from '../db/types';
-import { DEFAULT_SETTINGS } from '../db/types';
+import type { AIConfig, SamplerSettings, PromptSettings } from '../db/characterTypes';
+import { DEFAULT_SETTINGS } from '../db/characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS } from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
 import type { CharacterSection } from '../db/characterTypes';

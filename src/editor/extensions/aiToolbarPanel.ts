@@ -7,11 +7,11 @@
 
 import { EditorView, showPanel, type Panel, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { SelectionRange, StateEffect } from '@codemirror/state';
-import type { AIOperation } from '../../db/types';
+import type { AIOperation } from '../../db/characterTypes';
 import { toggleToolbarSearch, searchPanelOpen } from './toolbarSearch';
 import { createFontSizeControl } from './fontSizeControl';
 import { AIService } from '../../services/AIService';
-import type { SamplerSettings } from '../../db/types';
+import type { SamplerSettings } from '../../db/characterTypes';
 
 // Check if dark mode is active
 const isDarkMode = () => {

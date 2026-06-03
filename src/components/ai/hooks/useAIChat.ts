@@ -6,7 +6,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { AIService, AIError, estimateTokens } from '../../../services/AIService';
 import { getProviderSelectionId } from '../../../services/providers';
-import type { AIConfig, SamplerSettings, PromptSettings } from '../../../db/types';
+import type { AIConfig, SamplerSettings, PromptSettings } from '../../../db/characterTypes';
 import type { ChatMessage, ConversationMessage } from '../types';
 import { generateMessageId } from '../utils';
 import type { UseTypewriterReturn } from './useTypewriter';
