@@ -4,7 +4,6 @@
  */
 
 import { createContext } from 'react';
-import type { Entry, CreateEntryInput, UpdateEntryInput } from '../db/types';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../db/characterTypes';
 
 /**
@@ -21,8 +20,6 @@ export type AIOperation = 'expand' | 'rewrite' | 'instruct';
  * Editor context value interface
  */
 export interface EditorContextValue {
-  /** Current entry being edited */
-  currentEntry: Entry | null;
   /** Whether the current entry has unsaved changes */
   isDirty: boolean;
   /** Current save status */
@@ -43,12 +40,6 @@ export interface EditorContextValue {
   /** Prompt settings */
   promptSettings: PromptSettings;
   
-  /** Set the current entry */
-  setCurrentEntry: (entry: Entry | null) => void;
-  /** Create a new entry */
-  createEntry: (input: CreateEntryInput) => Promise<Entry>;
-  /** Update the current entry */
-  updateEntry: (id: string, input: UpdateEntryInput) => Promise<Entry>;
   /** Delete an entry */
   deleteEntry: (id: string) => Promise<void>;
   
