@@ -78,8 +78,9 @@ export type AIErrorType =
   | 'network' 
   | 'auth' 
   | 'rate_limit' 
-  | 'invalid_request' 
-  | 'server' 
+  | 'invalid_request'
+  | 'content_policy_violation'
+  | 'server'
   | 'unknown';
 
 /**
@@ -490,6 +491,15 @@ Provide only the generated text without any additional commentary.`;
         console.warn(`[AIService] Attempt ${attempt + 1} failed with 400. Response body:`, errorText);
         let errorData: Record<string, unknown>;
         try { errorData = JSON.parse(errorText); } catch { errorData = {}; }
+
+        const errorCode = (errorData.error as { code?: string } | undefined)?.code;
+        if (errorCode === 'content_policy_violation') {
+          throw new AIError(
+            (errorData.error as { message?: string } | undefined)?.message || 'Content blocked by safety filters',
+            'content_policy_violation',
+            400
+          );
+        }
 
         const stripped = this.stripRejectedParams(currentRequest, errorData);
         if (stripped) {
