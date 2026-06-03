@@ -107,7 +107,7 @@ const MALE_IDENTITY_TAGS = [
   'old_man',
 ] as const;
 
-const MALE_CROSSDRESSING_TAGS = ['femboy', 'catboy', 'twink', 'trap'] as const;
+const MALE_CROSSDRESSING_TAGS = ['femboy', 'catboy', 'twink', 'trap', 'sissy'] as const;
 
 const MALE_ROLE_TAGS = [
   'father',
