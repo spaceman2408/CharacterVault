@@ -11,23 +11,45 @@ import { estimateTokens } from '../../services/AIService';
 
 const FieldReasoning: React.FC<{ reasoning: string }> = memo(({ reasoning }) => {
   const [open, setOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const userScrolledUp = useRef(false);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || userScrolledUp.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [reasoning]);
 
   if (!reasoning.trim()) return null;
 
   return (
-    <div className="flex items-start gap-1">
+    <div>
       <button
-        onClick={() => setOpen(!open)}
-        className="mt-0.5 flex items-center gap-1 p-0.5 rounded text-vault-300 dark:text-vault-600 hover:text-vault-500 dark:hover:text-vault-300 transition-colors"
+        onClick={() => {
+          setOpen(!open);
+          userScrolledUp.current = false;
+        }}
+        className="flex items-center gap-1 p-0.5 rounded text-vault-300 dark:text-vault-600 hover:text-vault-500 dark:hover:text-vault-300 transition-colors"
         title={open ? 'Hide thinking' : 'Show thinking'}
       >
         <Sparkles className="w-3 h-3" />
         <span className="text-[11px]">Thinking</span>
       </button>
       {open && (
-        <pre className="flex-1 text-[11px] font-mono text-vault-400 dark:text-vault-500 whitespace-pre-wrap leading-relaxed">
-          {reasoning}
-        </pre>
+        <div
+          ref={contentRef}
+          onScroll={() => {
+            const el = contentRef.current;
+            if (!el) return;
+            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
+            userScrolledUp.current = !atBottom;
+          }}
+          className="mt-1 max-h-32 sm:max-h-40 overflow-y-auto bg-vault-50 dark:bg-vault-800/90 border border-vault-200 dark:border-vault-700 rounded-md px-2 py-1.5 shadow-sm"
+        >
+          <pre className="text-[11px] font-mono text-vault-400 dark:text-vault-500 whitespace-pre-wrap leading-relaxed">
+            {reasoning}
+          </pre>
+        </div>
       )}
     </div>
   );
