@@ -538,6 +538,11 @@ const ProviderSelect: React.FC<ProviderSelectProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedProviderInfo = providers.find((p) => p.provider === selectedProvider);
+  const sortedProviders = [...providers].sort((a, b) => {
+    const aAvail = a.available ? 0 : 1;
+    const bAvail = b.available ? 0 : 1;
+    return aAvail - bAvail;
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -606,26 +611,36 @@ const ProviderSelect: React.FC<ProviderSelectProps> = ({
             <div className="font-medium">Platform default</div>
             <div className="text-xs text-vault-500">Let NanoGPT select the best provider</div>
           </button>
-          {providers.map((provider) => (
-            <button
-              key={provider.provider}
-              onClick={() => {
-                onSelect(provider.provider);
-                setIsOpen(false);
-              }}
-              className={`w-full px-3 py-2 text-left text-sm transition-colors duration-150 ${
-                provider.provider === selectedProvider
-                  ? 'bg-vault-100 dark:bg-vault-700 text-vault-900 dark:text-vault-100 font-medium'
-                  : 'text-vault-700 dark:text-vault-300 hover:bg-vault-50 dark:hover:bg-vault-700/50'
-              }`}
-            >
-              <div className="font-medium">{provider.provider}</div>
-              <div className="text-xs text-vault-500">
-                In: {formatPrice(provider.pricing.inputPer1kTokens)}/1k tokens, Out: {formatPrice(provider.pricing.outputPer1kTokens)}/1k tokens
-                {!provider.available && <span className="text-amber-500 ml-2">(unavailable)</span>}
-              </div>
-            </button>
-          ))}
+          {sortedProviders.map((provider) => {
+            const isUnavailable = !provider.available;
+            return (
+              <button
+                key={provider.provider}
+                onClick={() => {
+                  if (isUnavailable) return;
+                  onSelect(provider.provider);
+                  setIsOpen(false);
+                }}
+                disabled={isUnavailable}
+                title={isUnavailable ? 'This provider is currently unavailable' : undefined}
+                className={`w-full px-3 py-2 text-left text-sm transition-colors duration-150 ${
+                  isUnavailable
+                    ? 'text-vault-400 dark:text-vault-500 cursor-not-allowed'
+                    : provider.provider === selectedProvider
+                    ? 'bg-vault-100 dark:bg-vault-700 text-vault-900 dark:text-vault-100 font-medium'
+                    : 'text-vault-700 dark:text-vault-300 hover:bg-vault-50 dark:hover:bg-vault-700/50'
+                }`}
+              >
+                <div className="font-medium">
+                  {provider.provider}
+                  {isUnavailable && <span className="text-amber-500 ml-2 text-xs font-normal">(unavailable)</span>}
+                </div>
+                <div className="text-xs text-vault-500">
+                  In: {formatPrice(provider.pricing.inputPer1kTokens)}/1k tokens, Out: {formatPrice(provider.pricing.outputPer1kTokens)}/1k tokens
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
