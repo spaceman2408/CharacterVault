@@ -175,6 +175,10 @@ export const AICreationStudio: React.FC = () => {
 
     setIsSaving(true);
     try {
+      const conceptTags = TAG_CATEGORIES
+        .filter((cat) => cat.key !== 'generation')
+        .flatMap((cat) => (tagSelections[cat.key] ?? []).map(formatTag));
+
       const character = await createCharacter({
         name: state.generatedData.name,
         data: {
@@ -189,6 +193,7 @@ export const AICreationStudio: React.FC = () => {
             post_history_instructions: '',
             alternate_greetings: [],
             physical_description: '',
+            tags: conceptTags.length > 0 ? conceptTags : undefined,
           },
         },
       });
@@ -200,7 +205,7 @@ export const AICreationStudio: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [state.generatedData, createCharacter]);
+  }, [state.generatedData, createCharacter, tagSelections]);
 
   const handleOpenCharacter = useCallback(() => {
     if (savedCharacterId) {
