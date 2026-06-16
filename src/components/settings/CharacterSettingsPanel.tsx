@@ -1586,17 +1586,19 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                         })()}
                       </label>
                       <input
-                        type="text"
-                        name="ai-api-token"
+                        type="password"
+                        name={`vault-ai-key-${Math.random().toString(36).slice(2)}`}
                         value={localAIConfig.apiKey}
                         onChange={(e) => handleApiKeyChange(e.target.value)}
-                        autoComplete="new-password"
+                        autoComplete="off"
                         autoCorrect="off"
                         autoCapitalize="none"
                         spellCheck={false}
                         data-lpignore="true"
                         data-1p-ignore="true"
                         data-form-type="other"
+                        readOnly={false}
+                        onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
                         style={{ WebkitTextSecurity: 'disc' } as React.CSSProperties}
                         className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
                         placeholder={selectedBaseUrlPreset === 'lmstudio' ? 'Optional for local endpoints' : 'Enter your API key'}
