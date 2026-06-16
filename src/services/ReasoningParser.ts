@@ -54,6 +54,8 @@ interface ChatCompletionDelta {
   reasoning_content?: string;
   /** NanoGPT uses 'reasoning' field for default endpoint */
   reasoning?: string;
+  /** Minimax uses 'reasoning_details' array with reasoning_split enabled */
+  reasoning_details?: Array<{ type?: string; text?: string }>;
 }
 
 /**
@@ -111,16 +113,21 @@ export class ReasoningParser {
   parseChunk(chunk: ChatCompletionChunk, modelId?: string): ReasoningParseResult {
     const format = modelId ? detectReasoningFormat(modelId) : ReasoningFormat.INLINE_TAGS;
 
-    // First, always try to extract from separate field locations (OpenRouter, DeepSeek, NanoGPT)
+    // First, always try to extract from separate field locations (OpenRouter, DeepSeek, NanoGPT, Minimax)
     // This ensures we catch reasoning regardless of model name
     const choice = chunk?.choices?.[0];
     const delta = choice?.delta;
     const content = delta?.content ?? '';
     
     // Check ALL possible separate field locations
+    const reasoningDetailsText = delta?.reasoning_details
+      ?.map(d => d.text ?? '')
+      .filter(t => t.length > 0)
+      .join('') ?? '';
     const separateFieldReasoning = delta?.reasoning_content ?? 
                                    delta?.reasoning ?? 
                                    choice?.reasoning?.content ?? 
+                                   reasoningDetailsText ??
                                    '';
     
     if (separateFieldReasoning || format === ReasoningFormat.SEPARATE_FIELD) {
@@ -129,7 +136,13 @@ export class ReasoningParser {
         this.reasoningContent += separateFieldReasoning;
       }
       if (content) {
-        this.mainContent += content;
+        // Strip any inline think tags from content to prevent duplication
+        // Some providers return reasoning in both a separate field AND in content with tags
+        const stripped = this.parseInlineTags(content);
+        this.mainContent += stripped.text;
+        if (stripped.reasoning && !separateFieldReasoning) {
+          this.reasoningContent += stripped.reasoning;
+        }
       }
       return {
         content: this.mainContent,
@@ -389,6 +402,11 @@ export function detectReasoningFormat(modelId: string): ReasoningFormat {
   // Gemma 4 models use inline tags with <|channel>thought<channel|> format
   if (lowerModelId.includes('gemma-4')) {
     return ReasoningFormat.INLINE_TAGS;
+  }
+
+  // Minimax models (MiniMax-M3, M2.x) use separate field with reasoning_details
+  if (lowerModelId.includes('minimax')) {
+    return ReasoningFormat.SEPARATE_FIELD;
   }
 
   // Default to inline tags for unknown models

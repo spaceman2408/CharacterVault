@@ -125,7 +125,7 @@ interface ChatCompletionRequest {
   [key: string]: unknown;
 }
 
-const NON_STANDARD_PARAMS = ['min_p', 'top_k', 'repetition_penalty', 'include_reasoning', 'reasoning', 'reasoning_effort'] as const;
+const NON_STANDARD_PARAMS = ['min_p', 'top_k', 'repetition_penalty', 'include_reasoning', 'reasoning', 'reasoning_effort', 'reasoning_split'] as const;
 
 /**
  * OpenAI-compatible chat completion response
@@ -173,6 +173,8 @@ interface ChatCompletionChunk {
       reasoning_content?: string;
       /** NanoGPT uses 'reasoning' field for default endpoint */
       reasoning?: string;
+      /** Minimax uses 'reasoning_details' array with reasoning_split enabled */
+      reasoning_details?: Array<{ type?: string; text?: string }>;
     };
     finish_reason: string | null;
     /** OpenRouter returns reasoning at choice level */
@@ -316,6 +318,14 @@ Provide only the generated text without any additional commentary.`;
    */
   private getBaseUrl(): string {
     return this.config.baseUrl.replace(/\/$/, '');
+  }
+
+  /**
+   * Check if the configured base URL points to the Minimax API.
+   */
+  private isMinimaxBaseUrl(): boolean {
+    const baseUrl = this.getBaseUrl().toLowerCase();
+    return baseUrl.includes('api.minimax.io');
   }
 
   /**
@@ -474,6 +484,8 @@ Provide only the generated text without any additional commentary.`;
       reasoning_effort: this.config.enableReasoning
         ? (this.config.reasoningEffort ?? 'medium')
         : undefined,
+      // Minimax: send reasoning_split to separate thinking into reasoning_details field
+      reasoning_split: this.config.enableReasoning && this.isMinimaxBaseUrl() ? true : undefined,
     };
 
     //DEBUG: Log request details for troubleshooting
@@ -668,10 +680,15 @@ Provide only the generated text without any additional commentary.`;
 
     const reasoningContent = (message as unknown as { reasoning_content?: string }).reasoning_content;
     const reasoning = (message as unknown as { reasoning?: string }).reasoning;
+    const reasoningDetails = (message as unknown as { reasoning_details?: Array<{ type?: string; text?: string }> }).reasoning_details;
+    const reasoningDetailsText = reasoningDetails
+      ?.map(d => d.text ?? '')
+      .filter(t => t.length > 0)
+      .join('') ?? undefined;
 
     return {
       content: message.content,
-      reasoning: reasoningContent ?? reasoning ?? undefined,
+      reasoning: reasoningContent ?? reasoning ?? reasoningDetailsText ?? undefined,
     };
   }
 
