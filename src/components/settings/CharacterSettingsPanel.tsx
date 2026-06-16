@@ -60,18 +60,35 @@ interface CachedModels {
   fetchedAt: number;
 }
 
-const AI_BASE_URL_PRESETS = [
+interface AIPreset {
+  id: string;
+  label: string;
+  baseUrl: string;
+  helper: string;
+  keyUrl?: string;
+}
+
+const AI_BASE_URL_PRESETS: AIPreset[] = [
   {
     id: 'nano-gpt',
     label: 'Nano-GPT',
     baseUrl: 'https://nano-gpt.com/api/v1',
     helper: 'Hosted OpenAI-compatible endpoint.',
+    keyUrl: 'https://nano-gpt.com/api',
   },
   {
     id: 'openrouter',
     label: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
     helper: 'Use the /api/v1 path for OpenRouter.',
+    keyUrl: 'https://openrouter.ai/workspaces/default/keys',
+  },
+  {
+    id: 'minimax',
+    label: 'Minimax',
+    baseUrl: 'https://api.minimax.io/v1',
+    helper: 'OpenAI-compatible endpoint. API keys start with sk-cp.',
+    keyUrl: 'https://platform.minimax.io/console/plan',
   },
   {
     id: 'lmstudio',
@@ -79,7 +96,7 @@ const AI_BASE_URL_PRESETS = [
     baseUrl: 'http://127.0.0.1:1234/v1',
     helper: 'Default local endpoint for LM Studio.',
   },
-] as const;
+];
 
 const STALENESS_MS = 10 * 60 * 1000;
 
@@ -1539,6 +1556,19 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                         {selectedBaseUrlPreset === 'lmstudio' && (
                           <span className="text-xs font-normal text-vault-500">(optional for local)</span>
                         )}
+                        {(() => {
+                          const preset = AI_BASE_URL_PRESETS.find((p) => p.id === selectedBaseUrlPreset);
+                          return preset?.keyUrl ? (
+                            <a
+                              href={preset.keyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs font-normal text-blue-500 hover:text-blue-400 hover:underline ml-1"
+                            >
+                              Get your key ↗
+                            </a>
+                          ) : null;
+                        })()}
                       </label>
                       <input
                         type="text"

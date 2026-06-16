@@ -25,6 +25,7 @@ Choose a provider preset from the dropdown, or select **Custom URL** to type in 
 | :--- | :--- | :--- |
 | **Nano-GPT** | `https://nano-gpt.com/api/v1` | NanoGPT hosted endpoint. Supports provider selection and subscription billing. |
 | **OpenRouter** | `https://openrouter.ai/api/v1` | OpenRouter multi-model gateway. |
+| **Minimax** | `https://api.minimax.io/v1` | OpenAI-compatible endpoint. API keys start with `sk-cp`. |
 | **LM Studio / localhost** | `http://127.0.0.1:1234/v1` | Local inference with LM Studio. |
 | **Custom URL** | Any URL | Any OpenAI-compatible endpoint (e.g., a self-hosted API). |
 
@@ -35,6 +36,8 @@ The helper text below the URL field changes based on the selected preset. For cu
 ### API Key
 
 Enter your API key in the password field. The key is saved per base URL — if you switch providers and come back, your key is restored.
+
+Some presets include a link to the provider's key management page — click **Get your key ↗** next to the API Key label.
 
 ::: warning
 Your API key is stored locally in your browser's storage. It could be accessed by malicious browser extensions or if someone gains physical access to your unlocked computer.

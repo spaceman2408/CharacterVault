@@ -43,6 +43,7 @@ Character Vault works with any OpenAI-compatible endpoint. Presets are available
 
 - **Nano-GPT** — hosted endpoint with provider selection
 - **OpenRouter** — multi-model gateway
+- **Minimax** — OpenAI-compatible endpoint
 - **LM Studio / localhost** — local inference
 - **Custom URL** — any compatible endpoint
 
