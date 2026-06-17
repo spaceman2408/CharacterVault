@@ -6,7 +6,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../db/characterTypes';
-import { DEFAULT_SETTINGS } from '../db/characterTypes';
+import { DEFAULT_SETTINGS, DEFAULT_SECTION_ORDER, CHARACTER_SECTIONS } from '../db/characterTypes';
+import type { SectionMeta } from '../db/characterTypes';
 import { useCharacterContext } from './useCharacterContext';
 import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation, type ManualSnapshotResult } from './characterEditorContextTypes';
 import { characterSettingsService } from '../services/CharacterSettingsService';
@@ -42,6 +43,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [isDirty, setIsDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [fontSize, setFontSizeState] = useState(16);
+  const [sectionOrder, setSectionOrder] = useState<CharacterSection[]>([...DEFAULT_SECTION_ORDER]);
+  const [hiddenSections, setHiddenSections] = useState<CharacterSection[]>([]);
   
   // AI-related state
   const [selectedText, setSelectedText] = useState('');
@@ -242,19 +245,34 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     );
   }, [activeSection, userAddedContextIds, removedSectionIds]);
 
+  /**
+   * Visible sections: sectionOrder minus hiddenSections.
+   * Any new sections not in sectionOrder are appended.
+   */
+  const visibleSections = React.useMemo<SectionMeta[]>(() => {
+    const visible = sectionOrder.filter(id => !hiddenSections.includes(id));
+    return visible
+      .map(id => CHARACTER_SECTIONS.find(s => s.id === id))
+      .filter((s): s is SectionMeta => s !== undefined);
+  }, [sectionOrder, hiddenSections]);
+
   // Function to reload settings from database
   const reloadSettings = useCallback(async () => {
     try {
-      const [config, sampler, prompts, settings] = await Promise.all([
+      const [config, sampler, prompts, settings, secOrder, secHidden] = await Promise.all([
         characterSettingsService.getAISettings(),
         characterSettingsService.getSamplerSettings(),
         characterSettingsService.getPromptSettings(),
         characterSettingsService.getSettings(),
+        characterSettingsService.getSectionOrder(),
+        characterSettingsService.getHiddenSections(),
       ]);
       setAIConfig(config);
       setSamplerSettings(sampler);
       setPromptSettings(prompts);
       setFontSizeState(settings.ui.editorFontSize);
+      setSectionOrder(secOrder);
+      setHiddenSections(secHidden);
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
@@ -451,6 +469,29 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     } catch (error) {
       console.error('Failed to save font size:', error);
     }
+  }, []);
+
+  /**
+   * Update section order and/or hidden sections (local state only; persisted on Settings Save)
+   */
+  const updateSectionLayout = useCallback((updates: {
+    sectionOrder?: CharacterSection[];
+    hiddenSections?: CharacterSection[];
+  }) => {
+    if (updates.sectionOrder !== undefined) {
+      setSectionOrder(updates.sectionOrder);
+    }
+    if (updates.hiddenSections !== undefined) {
+      setHiddenSections(updates.hiddenSections);
+    }
+  }, []);
+
+  /**
+   * Reset section layout to defaults (local state only; persisted on Settings Save)
+   */
+  const resetSectionLayoutLocal = useCallback(() => {
+    setSectionOrder([...DEFAULT_SECTION_ORDER]);
+    setHiddenSections([]);
   }, []);
 
   /**
@@ -843,6 +884,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     isHistoryOpen,
     snapshotMetadata,
     isSnapshotsLoading,
+    sectionOrder,
+    hiddenSections,
+    visibleSections,
     setActiveSection,
     updateCharacter,
     updateSpecField,
@@ -863,6 +907,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     handleAIOperation,
     getContextContent,
     reloadSettings,
+    updateSectionLayout,
+    resetSectionLayoutLocal,
   };
 
   return (

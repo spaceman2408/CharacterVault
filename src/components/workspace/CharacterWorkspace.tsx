@@ -7,8 +7,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
-import type { CharacterSection } from '../../db/characterTypes';
-import { CHARACTER_SECTIONS } from '../../db/characterTypes';
+import type { CharacterSection, SectionMeta } from '../../db/characterTypes';
 import { generateThumbnail } from '../../utils/thumbnail';
 import { SectionEditor } from '../editor/SectionEditor';
 import { ContextPanel } from '../ai/ContextPanel';
@@ -131,9 +130,10 @@ const iconMap: Record<string, React.ElementType> = {
 interface SectionTabsProps {
   activeSection: CharacterSection;
   onSectionChange: (section: CharacterSection) => void;
+  sections: SectionMeta[];
 }
 
-function SectionTabs({ activeSection, onSectionChange }: SectionTabsProps): React.ReactElement {
+function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsProps): React.ReactElement {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   const portalRef = React.useRef<HTMLDivElement>(null);
@@ -178,7 +178,7 @@ function SectionTabs({ activeSection, onSectionChange }: SectionTabsProps): Reac
     return () => document.removeEventListener('click', handleClickOutside);
   }, [isDropdownOpen]);
 
-  const activeSectionData = CHARACTER_SECTIONS.find(s => s.id === activeSection);
+  const activeSectionData = sections.find(s => s.id === activeSection);
   const ActiveIcon = activeSectionData ? iconMap[activeSectionData.icon] || FileText : FileText;
 
   return (
@@ -186,27 +186,29 @@ function SectionTabs({ activeSection, onSectionChange }: SectionTabsProps): Reac
       {/* Desktop: Horizontal tabs */}
       <div
         ref={desktopTabsRef}
-        className="hidden md:flex items-center gap-1 px-4 py-2 overflow-x-auto scrollbar-thin"
+        className="hidden md:block overflow-x-auto scrollbar-thin"
       >
-        {CHARACTER_SECTIONS.map((section) => {
-          const Icon = iconMap[section.icon] || FileText;
-          const isActive = activeSection === section.id;
-          
-          return (
-            <button
-              key={section.id}
-              onClick={() => onSectionChange(section.id)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
-                ${isActive 
-                  ? 'bg-vault-600 text-white shadow-sm' 
-                  : 'text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800/50'
-                }`}
-            >
-              <Icon className="w-4 h-4" />
-              {section.label}
-            </button>
-          );
-        })}
+        <div className="flex items-center gap-1 px-4 py-2 w-max mx-auto">
+          {sections.map((section) => {
+            const Icon = iconMap[section.icon] || FileText;
+            const isActive = activeSection === section.id;
+            
+            return (
+              <button
+                key={section.id}
+                onClick={() => onSectionChange(section.id)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
+                  ${isActive 
+                    ? 'bg-vault-600 text-white shadow-sm' 
+                    : 'text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800/50'
+                  }`}
+              >
+                <Icon className="w-4 h-4" />
+                {section.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Mobile: Dropdown */}
@@ -229,7 +231,7 @@ function SectionTabs({ activeSection, onSectionChange }: SectionTabsProps): Reac
             ref={portalRef}
             className="fixed inset-x-0 top-26.25 z-9999 bg-white dark:bg-vault-900 border-b border-vault-200 dark:border-vault-800 shadow-lg max-h-[50vh] overflow-y-auto md:hidden"
           >
-            {CHARACTER_SECTIONS.map((section) => {
+            {sections.map((section) => {
               const Icon = iconMap[section.icon] || FileText;
               const isActive = activeSection === section.id;
               
@@ -776,12 +778,20 @@ function CharacterWorkspaceInner({
     setIsHistoryOpen,
     handleAIOperation,
     getContextContent,
+    visibleSections,
   } = useCharacterEditorContext();
 
   const stableGetContextContent = useCallback(
     async (ids: string[]) => getContextContent(ids as CharacterSection[]),
     [getContextContent]
   );
+
+  // If the active section is hidden, switch to the first visible section
+  useEffect(() => {
+    if (visibleSections.length > 0 && !visibleSections.some(s => s.id === activeSection)) {
+      setActiveSection(visibleSections[0].id);
+    }
+  }, [visibleSections, activeSection, setActiveSection]);
 
   const toggleContext = () => setIsContextOpen(!isContextOpen);
   const toggleChat = () => setIsChatOpen(!isChatOpen);
@@ -842,7 +852,8 @@ function CharacterWorkspaceInner({
       {/* Section Tabs - Full Width */}
       <SectionTabs 
         activeSection={activeSection} 
-        onSectionChange={setActiveSection} 
+        onSectionChange={setActiveSection}
+        sections={visibleSections}
       />
       
       {/* Main 3-column layout */}

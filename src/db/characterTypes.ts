@@ -282,6 +282,12 @@ export const CHARACTER_SECTIONS: SectionMeta[] = [
   { id: 'avatar', label: 'Avatar URL', icon: 'Link', description: 'Character avatar URL (CharHub, etc.)' },
 ];
 
+/**
+ * Default section tab order (matches CHARACTER_SECTIONS order).
+ * Used when no custom sectionOrder is saved in settings.
+ */
+export const DEFAULT_SECTION_ORDER: CharacterSection[] = CHARACTER_SECTIONS.map(s => s.id);
+
 // ============================================================================
 // Import/Export Types
 // ============================================================================
@@ -393,6 +399,12 @@ export interface CharacterVaultSettings {
 
   /** Context section IDs for AI context */
   contextSectionIds?: CharacterSection[];
+
+  /** Custom section tab order (CharacterSection IDs in display order). Undefined = default order. */
+  sectionOrder?: CharacterSection[];
+
+  /** Sections hidden from the tab strip. Undefined = all visible. */
+  hiddenSections?: CharacterSection[];
 
   /** Last active character ID */
   lastActiveCharacterId?: UUID;

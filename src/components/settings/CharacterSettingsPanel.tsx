@@ -35,9 +35,17 @@ import {
   CreditCard,
   Zap,
   Palette,
+  LayoutGrid,
+  Eye,
+  EyeOff,
+  ArrowUp,
+  ArrowDown,
+  RotateCcw,
+  GripVertical,
 } from 'lucide-react';
 import type { AIConfig, SamplerSettings, PromptSettings, AIModelInfo } from '../../db/characterTypes';
-import { DEFAULT_SETTINGS } from '../../db/characterTypes';
+import { DEFAULT_SETTINGS, CHARACTER_SECTIONS, DEFAULT_SECTION_ORDER } from '../../db/characterTypes';
+import type { CharacterSection } from '../../db/characterTypes';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { CharacterEditorContext } from '../../context';
 import { AIService, AIError } from '../../services/AIService';
@@ -750,8 +758,10 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
   const [modelsByBaseUrl, setModelsByBaseUrl] = useState<Record<string, CachedModels>>({});
   const [fetchingModelsByBaseUrl, setFetchingModelsByBaseUrl] = useState<Record<string, boolean>>({});
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
-  const [activeTab, setActiveTab] = useState<'ai' | 'sampler' | 'prompts' | 'studio'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'sampler' | 'prompts' | 'studio' | 'sections'>('ai');
   const [showLuckyVortex, setShowLuckyVortex] = useState(true);
+  const [localSectionOrder, setLocalSectionOrder] = useState<CharacterSection[]>([]);
+  const [localHiddenSections, setLocalHiddenSections] = useState<CharacterSection[]>([]);
   const [expandedPrompts, setExpandedPrompts] = useState<Record<string, boolean>>({});
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -842,14 +852,18 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
     const loadSettings = async () => {
       setIsLoading(true);
       try {
-        const [config, sampler, prompts, fullSettings] = await Promise.all([
+        const [config, sampler, prompts, fullSettings, secOrder, secHidden] = await Promise.all([
           characterSettingsService.getAISettings(),
           characterSettingsService.getSamplerSettings(),
           characterSettingsService.getPromptSettings(),
           characterSettingsService.getSettings(),
+          characterSettingsService.getSectionOrder(),
+          characterSettingsService.getHiddenSections(),
         ]);
 
         setShowLuckyVortex(fullSettings.ui?.showLuckyVortex ?? true);
+        setLocalSectionOrder(secOrder);
+        setLocalHiddenSections(secHidden);
         
         setLocalAIConfig(prev => {
           const mergedConfig = {
@@ -947,7 +961,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
       
       // Tab navigation between tabs
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        const tabs: ('ai' | 'sampler' | 'prompts' | 'studio')[] = ['ai', 'sampler', 'prompts', 'studio'];
+        const tabs: ('ai' | 'sampler' | 'prompts' | 'studio' | 'sections')[] = ['ai', 'sampler', 'prompts', 'studio', 'sections'];
         const currentIndex = tabs.indexOf(activeTab);
         let newIndex: number;
         
@@ -1292,6 +1306,8 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
           ...currentSettings.ui,
           showLuckyVortex,
         },
+        sectionOrder: localSectionOrder,
+        hiddenSections: localHiddenSections,
       });
       
       await reloadSettings();
@@ -1391,7 +1407,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
             className="flex min-h-14 overflow-x-auto overflow-y-hidden border-b border-vault-200 dark:border-vault-800 px-4 sm:px-6 pt-2 bg-vault-50 dark:bg-vault-900/50 scrollbar-thin scrollbar-thumb-vault-300 dark:scrollbar-thumb-vault-700"
             role="tablist"
           >
-            {(['ai', 'sampler', 'prompts', 'studio'] as const).map((tab) => (
+            {(['ai', 'sampler', 'prompts', 'studio', 'sections'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1408,7 +1424,8 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                   {tab === 'sampler' && <Sliders className="w-4 h-4 shrink-0" />}
                   {tab === 'prompts' && <MessageSquare className="w-4 h-4 shrink-0" />}
                   {tab === 'studio' && <Palette className="w-4 h-4 shrink-0" />}
-                  {tab === 'ai' ? 'AI Config' : tab === 'studio' ? 'Studio' : tab}
+                  {tab === 'sections' && <LayoutGrid className="w-4 h-4 shrink-0" />}
+                  {tab === 'ai' ? 'AI Config' : tab === 'studio' ? 'Studio' : tab === 'sections' ? 'Sections' : tab}
                 </span>
                 {activeTab === tab && (
                   <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-vault-600 dark:bg-vault-400" />
@@ -1923,6 +1940,150 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                       </div>
                     </label>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sections Tab - Tab Visibility & Order */}
+            {activeTab === 'sections' && (
+              <div className="space-y-5">
+                {/* Section Visibility & Order */}
+                <div className="bg-white dark:bg-vault-800/50 rounded-xl p-4 border border-vault-200 dark:border-vault-700 shadow-sm">
+                  <h3 className="text-xs font-bold text-vault-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <LayoutGrid className="w-4 h-4" />
+                    Tab Visibility &amp; Order
+                  </h3>
+                  <p className="text-xs text-vault-500 dark:text-vault-400 mb-4 leading-relaxed">
+                    Toggle sections on/off to hide them from the tab strip. Use the arrows to reorder.
+                    Hidden sections appear below the divider.
+                  </p>
+
+                  {/* Reset to defaults */}
+                  <button
+                    onClick={() => {
+                      setLocalSectionOrder([...DEFAULT_SECTION_ORDER]);
+                      setLocalHiddenSections([]);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-700 rounded-lg transition-colors mb-4 focus:outline-none focus:ring-2 focus:ring-vault-500/50"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reset to Defaults
+                  </button>
+
+                  {/* Visible sections */}
+                  <div className="space-y-1">
+                    {(() => {
+                      const visibleIds = localSectionOrder.filter(id => !localHiddenSections.includes(id));
+                      return visibleIds.map((sectionId, visIdx) => {
+                        const meta = CHARACTER_SECTIONS.find(s => s.id === sectionId);
+                        if (!meta) return null;
+                        const realIdx = localSectionOrder.indexOf(sectionId);
+                        // Find the real index of the previous/next visible section
+                        const prevRealIdx = visIdx > 0 ? localSectionOrder.indexOf(visibleIds[visIdx - 1]) : -1;
+                        const nextRealIdx = visIdx < visibleIds.length - 1 ? localSectionOrder.indexOf(visibleIds[visIdx + 1]) : -1;
+                        return (
+                          <div
+                            key={sectionId}
+                            className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-700/50 transition-colors"
+                          >
+                            {/* Reorder arrows */}
+                            <div className="flex flex-col gap-0.5 shrink-0">
+                              <button
+                                onClick={() => {
+                                  if (prevRealIdx < 0) return;
+                                  const next = [...localSectionOrder];
+                                  [next[realIdx], next[prevRealIdx]] = [next[prevRealIdx], next[realIdx]];
+                                  setLocalSectionOrder(next);
+                                }}
+                                disabled={visIdx === 0}
+                                className="p-0.5 text-vault-400 hover:text-vault-600 dark:hover:text-vault-300 disabled:opacity-25 disabled:cursor-default transition-colors"
+                                aria-label={`Move ${meta.label} up`}
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (nextRealIdx < 0) return;
+                                  const next = [...localSectionOrder];
+                                  [next[realIdx], next[nextRealIdx]] = [next[nextRealIdx], next[realIdx]];
+                                  setLocalSectionOrder(next);
+                                }}
+                                disabled={visIdx >= visibleIds.length - 1}
+                                className="p-0.5 text-vault-400 hover:text-vault-600 dark:hover:text-vault-300 disabled:opacity-25 disabled:cursor-default transition-colors"
+                                aria-label={`Move ${meta.label} down`}
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {/* Section label */}
+                            <span className="flex-1 text-sm font-medium text-vault-800 dark:text-vault-200 truncate">
+                              {meta.label}
+                            </span>
+                            <span className="text-xs text-vault-400 dark:text-vault-500 truncate max-w-[120px] sm:max-w-[200px]">
+                              {meta.description}
+                            </span>
+
+                            {/* Toggle visibility */}
+                            <button
+                              onClick={() => {
+                                setLocalHiddenSections(prev => [...prev, sectionId]);
+                              }}
+                              className="p-1.5 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 rounded-md hover:bg-vault-100 dark:hover:bg-vault-700 transition-colors shrink-0"
+                              aria-label={`Hide ${meta.label}`}
+                              title="Hide tab"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/* Hidden sections */}
+                  {localHiddenSections.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2 mt-4 mb-2 px-2">
+                        <div className="flex-1 h-px bg-vault-200 dark:bg-vault-700" />
+                        <span className="text-xs font-medium text-vault-400 dark:text-vault-500 uppercase tracking-wider">
+                          Hidden
+                        </span>
+                        <div className="flex-1 h-px bg-vault-200 dark:bg-vault-700" />
+                      </div>
+                      <div className="space-y-1">
+                        {localSectionOrder
+                          .filter(id => localHiddenSections.includes(id))
+                          .map((sectionId) => {
+                            const meta = CHARACTER_SECTIONS.find(s => s.id === sectionId);
+                            if (!meta) return null;
+                            return (
+                              <div
+                                key={sectionId}
+                                className="flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-700/50 transition-colors opacity-60"
+                              >
+                                <span className="flex-1 text-sm font-medium text-vault-500 dark:text-vault-400 truncate">
+                                  {meta.label}
+                                </span>
+                                <span className="text-xs text-vault-400 dark:text-vault-600 truncate max-w-[120px] sm:max-w-[200px]">
+                                  {meta.description}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setLocalHiddenSections(prev => prev.filter(id => id !== sectionId));
+                                  }}
+                                  className="p-1.5 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 rounded-md hover:bg-vault-100 dark:hover:bg-vault-700 transition-colors shrink-0"
+                                  aria-label={`Show ${meta.label}`}
+                                  title="Show tab"
+                                >
+                                  <EyeOff className="w-4 h-4" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

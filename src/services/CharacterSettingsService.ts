@@ -6,7 +6,7 @@
 import type { CharacterVaultSettings } from '../db/characterTypes';
 import type { AIConfig, SamplerSettings, PromptSettings } from '../db/characterTypes';
 import { DEFAULT_SETTINGS } from '../db/characterTypes';
-import { DEFAULT_CHARACTER_VAULT_SETTINGS } from '../db/characterTypes';
+import { DEFAULT_CHARACTER_VAULT_SETTINGS, DEFAULT_SECTION_ORDER } from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
 import type { CharacterSection } from '../db/characterTypes';
 
@@ -244,6 +244,61 @@ export class CharacterSettingsService {
     
     await characterDb.settings.put(defaultSettings);
     return defaultSettings;
+  }
+
+  /**
+   * Get section tab order. Falls back to DEFAULT_SECTION_ORDER if not set.
+   * Any sections not in the saved list are appended at the end.
+   */
+  async getSectionOrder(): Promise<CharacterSection[]> {
+    const settings = await this.getSettings();
+    const saved = settings.sectionOrder;
+    if (!saved) return [...DEFAULT_SECTION_ORDER];
+
+    // Append any new sections not in the saved list
+    const missing = DEFAULT_SECTION_ORDER.filter(id => !saved.includes(id));
+    return [...saved, ...missing];
+  }
+
+  /**
+   * Save custom section tab order.
+   */
+  async saveSectionOrder(sectionOrder: CharacterSection[]): Promise<void> {
+    const settings = await this.getSettings();
+    const updatedSettings: CharacterVaultSettings = {
+      ...settings,
+      sectionOrder,
+    };
+    await characterDb.settings.put(updatedSettings);
+  }
+
+  /**
+   * Get hidden section IDs. Falls back to empty (all visible).
+   */
+  async getHiddenSections(): Promise<CharacterSection[]> {
+    const settings = await this.getSettings();
+    return settings.hiddenSections || [];
+  }
+
+  /**
+   * Save hidden section IDs.
+   */
+  async saveHiddenSections(hiddenSections: CharacterSection[]): Promise<void> {
+    const settings = await this.getSettings();
+    const updatedSettings: CharacterVaultSettings = {
+      ...settings,
+      hiddenSections,
+    };
+    await characterDb.settings.put(updatedSettings);
+  }
+
+  /**
+   * Reset section layout (order + hidden) to defaults.
+   */
+  async resetSectionLayout(): Promise<void> {
+    const settings = await this.getSettings();
+    const { sectionOrder, hiddenSections, ...rest } = settings;
+    await characterDb.settings.put(rest as CharacterVaultSettings);
   }
 
   /**

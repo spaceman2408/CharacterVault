@@ -5,7 +5,7 @@
 
 import { createContext } from 'react';
 import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../db/characterTypes';
+import type { SamplerSettings, AIConfig, PromptSettings, SectionMeta } from '../db/characterTypes';
 
 /**
  * Save status types
@@ -71,6 +71,13 @@ export interface CharacterEditorContextValue {
   /** Snapshot loading state */
   isSnapshotsLoading: boolean;
   
+  /** Custom section tab order (full list including hidden) */
+  sectionOrder: CharacterSection[];
+  /** Sections hidden from the tab strip */
+  hiddenSections: CharacterSection[];
+  /** Computed: visible sections in display order (SectionMeta objects) */
+  visibleSections: SectionMeta[];
+  
   /** Set the active section */
   setActiveSection: (section: CharacterSection) => void;
   /** Update the current character */
@@ -113,6 +120,10 @@ export interface CharacterEditorContextValue {
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   /** Reload settings from database */
   reloadSettings: () => Promise<void>;
+  /** Update section layout (order + hidden) in local state */
+  updateSectionLayout: (updates: { sectionOrder?: CharacterSection[]; hiddenSections?: CharacterSection[] }) => void;
+  /** Reset section layout to defaults in local state */
+  resetSectionLayoutLocal: () => void;
 }
 
 /**
