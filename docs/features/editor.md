@@ -206,3 +206,4 @@ The empty-editor prompt is currently hardcoded and cannot be edited in the Promp
 - [Creator Notes preview](/features/creator-notes)
 - [AI Assistant — Orion](/features/ai-assistant)
 - [Configure AI provider](/configuration/ai-setup)
+- [Customize section tab layout](/configuration/section-layout)

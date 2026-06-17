@@ -4,6 +4,21 @@ Quick overview of recent updates to CharacterVault.
 
 ---
 
+## June 2026
+
+### Customizable Section Tabs
+
+The character editor has 18 section tabs by default — more than most people need. A new **Sections** tab in Settings lets you hide the tabs you don't use, reorder the rest however you like, and reset to the default order at any time.
+
+- **Show or hide** — Toggle any section tab on or off with the eye icon
+- **Reorder** — Move tabs up and down with arrow buttons
+- **Reset to Defaults** — Restore the original layout in one click
+- **Mobile-friendly** — Arrow buttons work great on touchscreens; the mobile dropdown respects your custom order and visibility
+
+[Learn more →](/configuration/section-layout)
+
+---
+
 ## May 2026
 
 ### AI Creation Studio

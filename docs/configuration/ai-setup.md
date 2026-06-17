@@ -6,7 +6,7 @@ Character Vault's AI features — the Orion assistant and AI toolbar — require
 
 1. Open a character in the workspace.
 2. Click **Settings** in the workspace header.
-3. The settings modal opens with three tabs: **AI Config**, **Sampler**, and **Prompts**.
+3. The settings modal opens with five tabs: **AI Config**, **Sampler**, **Prompts**, **Studio**, and **Sections**.
 4. Click **Save Settings** at the bottom when you're done. Changes don't take effect until you save.
 
 You can close the panel with **Cancel** or `Escape` to discard changes.
@@ -109,6 +109,14 @@ The Prompts tab lets you edit the system prompts used by each AI toolbar operati
 Every prompt must contain `${text}` — this is where your selected text gets inserted. The Custom (Instruct) prompt also requires `${instruction}` for your typed instruction. Validation errors appear inline if required placeholders are missing.
 
 For full details on how prompts work with the AI toolbar, see [Customizing AI Operation Prompts](/features/editor#customizing-ai-operation-prompts).
+
+## Studio Tab
+
+The Studio tab controls UI preferences for the AI Creation Studio — primarily the **I'm Feeling Lucky** vortex animation. Toggle it off if the visual effect gets distracting or slows down your device.
+
+## Sections Tab
+
+The Sections tab lets you customize the editor's section tab strip. Hide tabs you don't use, reorder the rest, and reset to defaults at any time. See [Section Tab Layout](/configuration/section-layout) for the full guide.
 
 
 ## Missing /v1 Detection

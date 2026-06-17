@@ -4,6 +4,7 @@
 
 ### Current Release Notes
 
+- Added a **Sections** tab in Settings — hide, reorder, and reset your section tabs to match your workflow.
 - Improved the AI Settings tabs so they are easier to read and no longer overlap.
 - Reduced unwanted browser password prompts when entering AI settings.
 - Improved the character history view for screen readers.
