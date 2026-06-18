@@ -48,6 +48,8 @@ export function ContextPanel({
     addContextSection, 
     removeContextSection,
     samplerSettings,
+    visibleSections,
+    sectionOrder,
   } = useCharacterEditorContext();
 
   const currentCharacterData = currentCharacter?.data ?? null;
@@ -65,34 +67,45 @@ export function ContextPanel({
   const contextLimit = samplerSettings.contextLength;
   const hasLorebook = !!currentCharacterData?.characterBook;
 
-  // Filter sections based on search query
-  const filteredSections = CHARACTER_SECTIONS.filter(section => {
-    // Exclude image, extensions, and certain v3 fields (not useful for context)
+  // Sections usable as context: exclude non-text sections and those hidden from the tab strip.
+  // Hidden sections are intentionally excluded so they don't clutter the context picker.
+  // Build the pool of addable sections, respecting the user's section order and visibility.
+  const addableSections = React.useMemo(() => {
     const excludedSections = ['image', 'extensions', 'avatar', 'character_version', 'tags'];
-    if (excludedSections.includes(section.id)) return false;
-    
-    // Exclude already selected sections
-    if (contextSectionIds.includes(section.id)) return false;
-    
-    // Hide lorebook if character has no lorebook or it's empty
-    if (section.id === 'lorebook') {
-      if (!hasLorebook) return false;
-    }
-    
-    // Filter by search query
-    if (!searchQuery.trim()) return true;
-    
+    return visibleSections.filter(section => {
+      if (excludedSections.includes(section.id)) return false;
+      if (contextSectionIds.includes(section.id)) return false;
+      if (section.id === 'lorebook' && !hasLorebook) return false;
+      return true;
+    });
+  }, [visibleSections, contextSectionIds, hasLorebook]);
+
+  // Filter the addable pool by search query
+  const filteredSections = React.useMemo(() => {
+    if (!searchQuery.trim()) return addableSections;
     const query = searchQuery.toLowerCase();
-    return (
+    return addableSections.filter(section =>
       section.label.toLowerCase().includes(query) ||
       section.description.toLowerCase().includes(query)
     );
-  });
+  }, [addableSections, searchQuery]);
 
-  // Get selected context sections
-  const contextSections = CHARACTER_SECTIONS.filter(
-    section => contextSectionIds.includes(section.id)
-  );
+  // Get selected context sections, ordered by the user's sectionOrder (hidden sections still
+  // appear here if they were added before being hidden, since they're actively in context).
+  const contextSections = React.useMemo(() => {
+    const selected = new Set(contextSectionIds);
+    const ordered = sectionOrder
+      .filter(id => selected.has(id))
+      .map(id => CHARACTER_SECTIONS.find(s => s.id === id))
+      .filter((s): s is NonNullable<typeof s> => s !== undefined);
+    // Append any selected sections not present in sectionOrder (e.g. newly added types)
+    ordered.forEach(s => selected.delete(s.id));
+    selected.forEach(id => {
+      const meta = CHARACTER_SECTIONS.find(s => s.id === id);
+      if (meta) ordered.push(meta);
+    });
+    return ordered;
+  }, [contextSectionIds, sectionOrder]);
 
   // Calculate token count using estimator
   const calculateTokenCount = useCallback((): number => {
