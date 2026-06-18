@@ -250,7 +250,9 @@ export class CharacterDatabase extends Dexie {
           ...character.data.spec,
           ...input.data?.spec,
         },
-        characterBook: input.data?.characterBook ?? character.data.characterBook,
+        characterBook: input.data && 'characterBook' in input.data
+          ? input.data.characterBook
+          : character.data.characterBook,
         extensions: input.data?.extensions ?? character.data.extensions,
       },
       updatedAt: timestamp,

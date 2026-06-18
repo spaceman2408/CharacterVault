@@ -419,6 +419,14 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
               },
             });
           }}
+          onDelete={() => {
+            void updateCharacter({
+              data: {
+                ...currentCharacter.data,
+                characterBook: undefined,
+              },
+            });
+          }}
           setSelectedText={setSelectedText}
           contextSectionIds={contextSectionIds}
           aiConfig={aiConfig}

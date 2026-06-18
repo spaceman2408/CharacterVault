@@ -41,6 +41,7 @@ function isEntryContextEnabled(entry: LorebookEntry): boolean {
 interface LorebookEditorProps {
   lorebook: CharacterBook | undefined;
   onChange: (lorebook: CharacterBook) => void;
+  onDelete?: () => void;
   setSelectedText: (text: string) => void;
   contextSectionIds: CharacterSection[];
   aiConfig: AIConfig;
@@ -503,6 +504,7 @@ function LorebookEntryDetail({
 export function LorebookEditor({
   lorebook,
   onChange,
+  onDelete,
   setSelectedText,
   contextSectionIds,
   aiConfig,
@@ -518,6 +520,7 @@ export function LorebookEditor({
     <LorebookEditorInner
       lorebook={lorebook}
       onChange={onChange}
+      onDelete={onDelete}
       setSelectedText={setSelectedText}
       contextSectionIds={contextSectionIds}
       aiConfig={aiConfig}
@@ -540,6 +543,7 @@ type LorebookEditorInnerProps = LorebookEditorProps;
 function LorebookEditorInner({
   lorebook,
   onChange,
+  onDelete,
   setSelectedText,
   contextSectionIds,
   aiConfig,
@@ -715,6 +719,17 @@ function LorebookEditorInner({
     }));
     persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
   }, [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook]);
+
+  // Handle deleting the entire lorebook
+  const handleDeleteLorebook = useCallback(() => {
+    if (!onDelete) return;
+    const entryCount = entries.length;
+    const message = entryCount > 0
+      ? `Delete this lorebook and all ${entryCount} entries? This cannot be undone.`
+      : 'Delete this lorebook? This cannot be undone.';
+    if (!window.confirm(message)) return;
+    onDelete();
+  }, [onDelete, entries.length]);
 
   // File input ref for import
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -907,6 +922,23 @@ function LorebookEditorInner({
                       Disable All
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Delete Lorebook */}
+              {onDelete && (
+                <div className="pt-2 border-t border-vault-200 dark:border-vault-700">
+                  <button
+                    onClick={handleDeleteLorebook}
+                    className="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 text-xs
+                      text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300
+                      hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-900/40
+                      rounded transition-colors"
+                    title="Delete the entire lorebook"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Lorebook
+                  </button>
                 </div>
               )}
             </div>
