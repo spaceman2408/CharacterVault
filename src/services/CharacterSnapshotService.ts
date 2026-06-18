@@ -5,6 +5,7 @@
 
 import type {
   Character,
+  CharacterBook,
   CharacterSection,
   CharacterSnapshot,
   CharacterSnapshotPayload,
@@ -103,12 +104,19 @@ function getSectionLabel(section: SnapshotDiffEntry['section']): string {
   return CHARACTER_SECTIONS.find(entry => entry.id === section)?.label ?? section;
 }
 
+function normalizeLorebook(book: CharacterBook | null | undefined): CharacterBook | null {
+  if (!book || book.entries.length === 0) {
+    return null;
+  }
+  return book;
+}
+
 function getSectionValue(payload: CharacterSnapshotPayload, section: SnapshotDiffEntry['section']): unknown {
   switch (section) {
     case 'image':
       return payload.imageData;
     case 'lorebook':
-      return payload.data.characterBook ?? null;
+      return normalizeLorebook(payload.data.characterBook ?? null);
     case 'extensions':
       return payload.data.extensions ?? {};
     default:
@@ -121,7 +129,7 @@ function getCharacterSectionValue(character: Character, section: SnapshotDiffEnt
     case 'image':
       return character.imageData;
     case 'lorebook':
-      return character.data.characterBook ?? null;
+      return normalizeLorebook(character.data.characterBook ?? null);
     case 'extensions':
       return character.data.extensions ?? {};
     default:
@@ -140,7 +148,14 @@ class CharacterSnapshotService {
   }
 
   async buildPayloadHash(payload: CharacterSnapshotPayload): Promise<string> {
-    const serializedPayload = stableSerialize(payload);
+    const normalizedPayload: CharacterSnapshotPayload = {
+      ...payload,
+      data: {
+        ...payload.data,
+        characterBook: normalizeLorebook(payload.data.characterBook ?? null) ?? undefined,
+      },
+    };
+    const serializedPayload = stableSerialize(normalizedPayload);
 
     if (globalThis.crypto?.subtle) {
       const payloadBytes = new TextEncoder().encode(serializedPayload);
@@ -349,7 +364,7 @@ class CharacterSnapshotService {
           input: {
             data: {
               ...currentCharacter.data,
-              characterBook: clonePayloadData(snapshot.payload.data.characterBook),
+              characterBook: normalizeLorebook(clonePayloadData(snapshot.payload.data.characterBook)) ?? undefined,
             },
           },
         };
