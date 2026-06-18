@@ -41,7 +41,6 @@ import {
   ArrowUp,
   ArrowDown,
   RotateCcw,
-  GripVertical,
 } from 'lucide-react';
 import type { AIConfig, SamplerSettings, PromptSettings, AIModelInfo } from '../../db/characterTypes';
 import { DEFAULT_SETTINGS, CHARACTER_SECTIONS, DEFAULT_SECTION_ORDER } from '../../db/characterTypes';
@@ -2020,7 +2019,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                             <span className="flex-1 text-sm font-medium text-vault-800 dark:text-vault-200 truncate">
                               {meta.label}
                             </span>
-                            <span className="text-xs text-vault-400 dark:text-vault-500 truncate max-w-[120px] sm:max-w-[200px]">
+                            <span className="text-xs text-vault-400 dark:text-vault-500 truncate max-w-30 sm:max-w-50">
                               {meta.description}
                             </span>
 
@@ -2065,7 +2064,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                                 <span className="flex-1 text-sm font-medium text-vault-500 dark:text-vault-400 truncate">
                                   {meta.label}
                                 </span>
-                                <span className="text-xs text-vault-400 dark:text-vault-600 truncate max-w-[120px] sm:max-w-[200px]">
+                                <span className="text-xs text-vault-400 dark:text-vault-600 truncate max-w-30 sm:max-w-50">
                                   {meta.description}
                                 </span>
                                 <button

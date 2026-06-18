@@ -297,8 +297,10 @@ export class CharacterSettingsService {
    */
   async resetSectionLayout(): Promise<void> {
     const settings = await this.getSettings();
-    const { sectionOrder, hiddenSections, ...rest } = settings;
-    await characterDb.settings.put(rest as CharacterVaultSettings);
+    const resetSettings: CharacterVaultSettings = { ...settings };
+    delete resetSettings.sectionOrder;
+    delete resetSettings.hiddenSections;
+    await characterDb.settings.put(resetSettings);
   }
 
   /**
