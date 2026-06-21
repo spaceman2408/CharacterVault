@@ -674,6 +674,32 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     updateSpecFieldBase,
   ]);
 
+  const updateBaselineSnapshot = useCallback(async (snapshotId: string) => {
+    const character = currentCharacterRef.current;
+    if (!character) {
+      return;
+    }
+
+    // Validate the target is actually the baseline ('open') snapshot.
+    const target = snapshotMetadata.find(meta => meta.id === snapshotId);
+    if (!target || target.source !== 'open') {
+      return;
+    }
+
+    setSaveStatus('saving');
+
+    try {
+      const latestCharacter = await flushPendingSaves();
+      await characterSnapshotService.overwriteSnapshot(snapshotId, latestCharacter ?? character);
+      await refreshSnapshotsForCharacter(character.id);
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('Failed to update baseline snapshot:', error);
+      setSaveStatus('error');
+      throw error;
+    }
+  }, [flushPendingSaves, refreshSnapshotsForCharacter, snapshotMetadata]);
+
   /**
    * Get context content for AI from selected sections
    */
@@ -903,6 +929,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     refreshSnapshots,
     deleteSnapshot,
     restoreSnapshot,
+    updateBaselineSnapshot,
     getSnapshotDiff,
     handleAIOperation,
     getContextContent,

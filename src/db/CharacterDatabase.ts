@@ -8,6 +8,7 @@ import Dexie, { type Table } from 'dexie';
 import type {
   Character,
   CharacterSnapshot,
+  CharacterSnapshotPayload,
   CharacterVaultSettings,
   CreateSnapshotInput,
   CreateCharacterInput,
@@ -654,6 +655,47 @@ export class CharacterDatabase extends Dexie {
     await this.transaction('rw', this.snapshots, this.storedImages, async () => {
       await this.storedImages.put({ id: imageHash, imageData, thumbnailData });
       await this.snapshots.update(snapshotId, { imageHash });
+    });
+  }
+
+  /**
+   * Overwrite an existing snapshot's payload and hashes in place.
+   * Preserves the snapshot's id, source, and createdAt. Used to update the
+   * baseline ('open') snapshot with the current draft's content.
+   * @param {string} snapshotId - Snapshot ID to overwrite
+   * @param {string} characterId - Character ID (for orphaned image cleanup)
+   * @param {CharacterSnapshotPayload} payload - New payload (with image data)
+   * @param {string} payloadHash - New payload hash
+   * @param {string | null} imageHash - New image hash (null if no image)
+   * @returns {Promise<void>}
+   */
+  async overwriteSnapshotPayload(
+    snapshotId: string,
+    characterId: string,
+    payload: CharacterSnapshotPayload,
+    payloadHash: string,
+    imageHash: string | null,
+  ): Promise<void> {
+    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
+      if (imageHash && payload.imageData) {
+        await this.storedImages.put({
+          id: imageHash,
+          imageData: payload.imageData,
+          thumbnailData: payload.thumbnailData,
+        });
+      }
+
+      await this.snapshots.update(snapshotId, {
+        payload: {
+          ...payload,
+          imageData: '', // Stored in storedImages via imageHash
+          thumbnailData: '',
+        },
+        payloadHash,
+        imageHash,
+      });
+
+      await this.cleanOrphanedImages(characterId);
     });
   }
 }
