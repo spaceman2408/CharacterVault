@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Camera,
+  Check,
   ChevronDown,
   Clock3,
   LoaderCircle,
@@ -47,7 +48,8 @@ type RenderableDiffLine =
 type ConfirmAction =
   | { kind: 'delete'; metadata: SnapshotMetadata }
   | { kind: 'restore-whole'; metadata: SnapshotMetadata }
-  | { kind: 'restore-section'; metadata: SnapshotMetadata; entry: SnapshotDiffEntry };
+  | { kind: 'restore-section'; metadata: SnapshotMetadata; entry: SnapshotDiffEntry }
+  | { kind: 'update-baseline'; metadata: SnapshotMetadata };
 
 const MODAL_CLOSE_MS = 180;
 const NEW_SNAPSHOT_HIGHLIGHT_MS = 1800;
@@ -876,13 +878,21 @@ function ConfirmationDialog({
         confirmLabel: 'Restore card',
         confirmClassName: 'bg-vault-900 text-white hover:bg-black dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white',
       }
-      : {
-        eyebrow: 'Restore section',
-        title: `Restore ${action.entry.label}?`,
-        description: `Only this section will be restored from the "${formatSnapshotLabel(action.metadata.source)}" revision. Other sections remain unchanged.`,
-        confirmLabel: 'Restore section',
-        confirmClassName: 'bg-vault-900 text-white hover:bg-black dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white',
-      };
+      : action.kind === 'restore-section'
+        ? {
+          eyebrow: 'Restore section',
+          title: `Restore ${action.entry.label}?`,
+          description: `Only this section will be restored from the "${formatSnapshotLabel(action.metadata.source)}" revision. Other sections remain unchanged.`,
+          confirmLabel: 'Restore section',
+          confirmClassName: 'bg-vault-900 text-white hover:bg-black dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white',
+        }
+        : {
+          eyebrow: 'Update base card',
+          title: 'Overwrite the base card snapshot?',
+          description: `This replaces the "Opened card" baseline revision with your current draft. The original baseline will be overwritten and cannot be recovered.`,
+          confirmLabel: 'Overwrite base card',
+          confirmClassName: 'bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400',
+        };
 
   return (
     <div className="absolute inset-0 z-20 flex items-end justify-center bg-black/45 p-3 backdrop-blur-sm sm:items-center sm:p-6">
@@ -1012,6 +1022,7 @@ interface SnapshotSummaryProps {
   isSnapshotMissing: boolean;
   hasAttemptedLoad: boolean;
   onRestore: () => void;
+  onUpdateBaseline: () => void;
 }
 
 function SnapshotSummary({
@@ -1022,12 +1033,16 @@ function SnapshotSummary({
   isSnapshotMissing,
   hasAttemptedLoad,
   onRestore,
+  onUpdateBaseline,
 }: SnapshotSummaryProps): React.ReactElement {
   const restoreDisabledReason = isSnapshotMissing
     ? 'Snapshot data is missing or corrupted'
     : changedSectionCount === 0
       ? 'No changes to restore'
       : undefined;
+
+  const isBaseline = metadata.source === 'open';
+  const canUpdateBaseline = isBaseline && changedSectionCount > 0 && !isSnapshotMissing;
 
   return (
     <div className="space-y-3">
@@ -1036,16 +1051,30 @@ function SnapshotSummary({
           <h3 className="text-xl font-semibold text-vault-950 dark:text-vault-50">{formatSnapshotLabel(metadata.source)}</h3>
             <p className="text-sm text-vault-500 dark:text-vault-400">{formatSnapshotDescription(metadata.source)}</p>
         </div>
-        <button
-          type="button"
-          onClick={onRestore}
-          disabled={isBusy || changedSectionCount === 0 || isSnapshotMissing}
-          title={restoreDisabledReason}
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-vault-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Restore card
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {isBaseline && (
+            <button
+              type="button"
+              onClick={onUpdateBaseline}
+              disabled={isBusy || !canUpdateBaseline}
+              title={canUpdateBaseline ? undefined : 'Accept the current draft as the new base card'}
+              className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-900/50"
+            >
+              <Check className="h-4 w-4" />
+              Update base card
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onRestore}
+            disabled={isBusy || changedSectionCount === 0 || isSnapshotMissing}
+            title={restoreDisabledReason}
+            className="inline-flex items-center gap-2 rounded-lg bg-vault-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Restore card
+          </button>
+        </div>
       </div>
 
       {isSnapshotMissing && hasAttemptedLoad && (
@@ -1146,6 +1175,7 @@ export function CharacterHistoryModal({
     createManualSnapshot,
     deleteSnapshot,
     restoreSnapshot,
+    updateBaselineSnapshot,
     getSnapshotDiff,
   } = useCharacterEditorContext();
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
@@ -1428,6 +1458,23 @@ export function CharacterHistoryModal({
         await restoreSnapshot(confirmAction.metadata.id, 'whole');
         onToast('success', 'Card restored', 'The full card was restored from the selected revision.');
         closeModal();
+      } else if (confirmAction.kind === 'update-baseline') {
+        await updateBaselineSnapshot(confirmAction.metadata.id);
+        onToast('success', 'Base card updated', 'The "Opened card" baseline was overwritten with the current draft.');
+        // Reload diff for the (still-selected) baseline snapshot so the UI clears.
+        if (selectedSnapshotId) {
+          setIsLoadingDiff(true);
+          setHasAttemptedLoad(false);
+          try {
+            const entries = await getSnapshotDiff(selectedSnapshotId);
+            setDiffEntries(entries.filter(entry => entry.changed));
+            const snapshot = await characterSnapshotService.loadSnapshotPayload(selectedSnapshotId);
+            setSelectedSnapshot(snapshot ?? null);
+            setHasAttemptedLoad(true);
+          } finally {
+            setIsLoadingDiff(false);
+          }
+        }
       } else {
         await restoreSnapshot(confirmAction.metadata.id, 'section', confirmAction.entry.section);
         onToast('success', 'Section restored', `${confirmAction.entry.label} was restored from the selected revision.`);
@@ -1449,6 +1496,8 @@ export function CharacterHistoryModal({
         onToast('error', 'Delete failed', 'The revision could not be deleted.');
       } else if (confirmAction.kind === 'restore-whole') {
         onToast('error', 'Restore failed', 'The full card could not be restored from this revision.');
+      } else if (confirmAction.kind === 'update-baseline') {
+        onToast('error', 'Update failed', 'The base card snapshot could not be overwritten.');
       } else {
         onToast('error', 'Restore failed', `${confirmAction.entry.label} could not be restored from this revision.`);
       }
@@ -1601,6 +1650,7 @@ export function CharacterHistoryModal({
                       isSnapshotMissing={selectedSnapshot === null}
                       hasAttemptedLoad={hasAttemptedLoad}
                       onRestore={() => selectedMetadata && setConfirmAction({ kind: 'restore-whole', metadata: selectedMetadata })}
+                      onUpdateBaseline={() => selectedMetadata && setConfirmAction({ kind: 'update-baseline', metadata: selectedMetadata })}
                     />
                   )}
 

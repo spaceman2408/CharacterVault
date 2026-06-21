@@ -392,6 +392,32 @@ class CharacterSnapshotService {
     }
   }
 
+  /**
+   * Overwrite an existing snapshot's payload in place with the current
+   * character's content. Preserves the snapshot's id, source, and createdAt.
+   * Used to update the baseline ('open') snapshot when accepting diffs.
+   * @param {string} snapshotId - Snapshot ID to overwrite
+   * @param {Character} character - Current character to snapshot
+   * @returns {Promise<void>}
+   */
+  async overwriteSnapshot(snapshotId: string, character: Character): Promise<void> {
+    const fullPayload: CharacterSnapshotPayload = this.buildPayload(character);
+    const payloadHash = await this.buildPayloadHash(fullPayload);
+
+    let imageHash: string | null = null;
+    if (character.imageData) {
+      imageHash = await this.computeImageHash(character.imageData, character.thumbnailData);
+    }
+
+    await characterDb.overwriteSnapshotPayload(
+      snapshotId,
+      character.id,
+      fullPayload,
+      payloadHash,
+      imageHash,
+    );
+  }
+
   formatSnapshotSource(source: SnapshotSource): string {
     return SNAPSHOT_SOURCE_LABELS[source];
   }

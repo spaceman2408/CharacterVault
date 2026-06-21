@@ -112,6 +112,8 @@ export interface CharacterEditorContextValue {
   deleteSnapshot: (snapshotId: string) => Promise<void>;
   /** Restore a snapshot */
   restoreSnapshot: (snapshotId: string, scope: 'whole' | 'section', targetSection?: CharacterSection) => Promise<void>;
+  /** Overwrite the baseline ('open') snapshot in place with the current draft */
+  updateBaselineSnapshot: (snapshotId: string) => Promise<void>;
   /** Get diff entries for a snapshot (async - loads payload lazily) */
   getSnapshotDiff: (snapshotId: string) => Promise<SnapshotDiffEntry[]>;
   /** Handle AI operation result */
