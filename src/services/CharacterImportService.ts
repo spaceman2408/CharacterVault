@@ -754,11 +754,35 @@ export class CharacterImportService {
   }
 
   /**
+   * Coerce a value into a string array.
+   *
+   * Some character card editors (and older SillyTavern exports) store
+   * `keys`/`secondary_keys` as a single comma-delimited string instead of
+   * the array the V2 spec mandates. This coerces such values into proper
+   * arrays so downstream code can safely assume `string[]`.
+   */
+  private coerceKeysArray(value: unknown): string[] {
+    if (Array.isArray(value)) {
+      return value.map(k => String(k)).filter(k => k.length > 0);
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value
+        .split(',')
+        .map(k => k.trim())
+        .filter(k => k.length > 0);
+    }
+    return [];
+  }
+
+  /**
    * Normalize lorebook entries from external sources.
    *
    * SillyTavern may omit top-level `case_sensitive` (or set it to null)
    * and instead store the value in `extensions.case_sensitive`. This method
    * resolves the field so our internal model always has a definitive value.
+   *
+   * It also coerces `keys`/`secondary_keys` into arrays, since some card
+   * editors serialize these as comma-delimited strings rather than arrays.
    */
   private normalizeLorebookEntries(book: CharacterBook | undefined): CharacterBook | undefined {
     if (!book || !book.entries?.length) return book;
@@ -769,6 +793,8 @@ export class CharacterImportService {
         const extCaseSensitive = entry.extensions?.case_sensitive as boolean | null | undefined;
         return {
           ...entry,
+          keys: this.coerceKeysArray(entry.keys),
+          secondary_keys: this.coerceKeysArray(entry.secondary_keys),
           case_sensitive: entry.case_sensitive ?? extCaseSensitive ?? false,
         };
       }),
