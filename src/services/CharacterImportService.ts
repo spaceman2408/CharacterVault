@@ -783,16 +783,36 @@ export class CharacterImportService {
    *
    * It also coerces `keys`/`secondary_keys` into arrays, since some card
    * editors serialize these as comma-delimited strings rather than arrays.
+   *
+   * Finally, it guarantees every entry has a unique numeric `id`. Some card
+   * editors omit `id` entirely or set it to null, which causes entries to
+   * collide on selection (all entries resolve to the same index). We preserve
+   * existing valid ids where unique, fall back to `insertion_order`, then to
+   * a generated unique id so each entry is selectable individually.
    */
   private normalizeLorebookEntries(book: CharacterBook | undefined): CharacterBook | undefined {
     if (!book || !book.entries?.length) return book;
+
+    const usedIds = new Set<number>();
+    let nextGeneratedId = 0;
 
     return {
       ...book,
       entries: book.entries.map((entry: LorebookEntry) => {
         const extCaseSensitive = entry.extensions?.case_sensitive as boolean | null | undefined;
+
+        // Resolve a unique numeric id, preferring the entry's existing value,
+        // then `insertion_order`, then a generated unique id.
+        const candidateIds = [
+          typeof entry.id === 'number' && Number.isFinite(entry.id) ? entry.id : undefined,
+          typeof entry.insertion_order === 'number' && Number.isFinite(entry.insertion_order) ? entry.insertion_order : undefined,
+        ];
+        const resolvedId = candidateIds.find(id => id !== undefined && !usedIds.has(id)) ?? nextGeneratedId++;
+        usedIds.add(resolvedId);
+
         return {
           ...entry,
+          id: resolvedId,
           keys: this.coerceKeysArray(entry.keys),
           secondary_keys: this.coerceKeysArray(entry.secondary_keys),
           case_sensitive: entry.case_sensitive ?? extCaseSensitive ?? false,
