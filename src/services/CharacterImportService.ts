@@ -796,18 +796,30 @@ export class CharacterImportService {
     const usedIds = new Set<number>();
     let nextGeneratedId = 0;
 
+    // Allocate a generated id guaranteed not to collide with any id already
+    // claimed by an entry (either a real id or an earlier generated one).
+    const allocateGeneratedId = (): number => {
+      while (usedIds.has(nextGeneratedId)) {
+        nextGeneratedId++;
+      }
+      const id = nextGeneratedId;
+      nextGeneratedId++;
+      return id;
+    };
+
     return {
       ...book,
       entries: book.entries.map((entry: LorebookEntry) => {
         const extCaseSensitive = entry.extensions?.case_sensitive as boolean | null | undefined;
 
         // Resolve a unique numeric id, preferring the entry's existing value,
-        // then `insertion_order`, then a generated unique id.
+        // then `insertion_order`, then a generated unique id. Generated ids
+        // skip any value already claimed so they never collide with real ones.
         const candidateIds = [
           typeof entry.id === 'number' && Number.isFinite(entry.id) ? entry.id : undefined,
           typeof entry.insertion_order === 'number' && Number.isFinite(entry.insertion_order) ? entry.insertion_order : undefined,
         ];
-        const resolvedId = candidateIds.find(id => id !== undefined && !usedIds.has(id)) ?? nextGeneratedId++;
+        const resolvedId = candidateIds.find(id => id !== undefined && !usedIds.has(id)) ?? allocateGeneratedId();
         usedIds.add(resolvedId);
 
         return {
