@@ -789,30 +789,6 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // Listen for the NanoGPT OAuth callback relayed from the popup/tab. The
-  // callback page (public/nanogpt-callback.html) postMessages the code+state
-  // back here; we exchange it for an API key and drop it into the key field.
-  useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      const payload = isOAuthCallbackMessage(event);
-      if (!payload) return;
-      void (async () => {
-        setIsSigningIn(true);
-        try {
-          const key = await exchangeCode(payload.code, payload.state);
-          handleApiKeyChangeRef.current(key);
-          addToast('success', 'Signed in. Choose a model!');
-        } catch (err) {
-          addToast('error', err instanceof Error ? err.message : 'NanoGPT sign-in failed.');
-        } finally {
-          setIsSigningIn(false);
-        }
-      })();
-    };
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [addToast]);
-
   const localAIConfigRef = useRef(localAIConfig);
   localAIConfigRef.current = localAIConfig;
   // Ref to the API-key setter so the OAuth message listener (registered once)
@@ -824,6 +800,40 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
   modelsByBaseUrlRef.current = modelsByBaseUrl;
   const fetchingModelsByBaseUrlRef = useRef(fetchingModelsByBaseUrl);
   fetchingModelsByBaseUrlRef.current = fetchingModelsByBaseUrl;
+  const fetchModelsForUrlRef = useRef<(baseUrl: string, apiKey: string) => Promise<AIModelInfo[]>>(async () => []);
+
+  // Listen for the NanoGPT OAuth callback relayed from the popup/tab. The
+  // callback page (public/nanogpt-callback.html) postMessages the code+state
+  // back here; we exchange it for an API key and drop it into the key field,
+  // then auto-fetch the available models so the user lands on a populated
+  // model picker.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const payload = isOAuthCallbackMessage(event);
+      if (!payload) return;
+      void (async () => {
+        setIsSigningIn(true);
+        try {
+          const key = await exchangeCode(payload.code, payload.state);
+          handleApiKeyChangeRef.current(key);
+          const baseUrl = localAIConfigRef.current.baseUrl;
+          const models = await fetchModelsForUrlRef.current(baseUrl, key);
+          if (models.length > 0) {
+            setLocalAIConfig(prev => ({ ...prev, availableModels: models }));
+            addToast('success', `Signed in. Fetched ${models.length} models.`);
+          } else {
+            addToast('success', 'Signed in. Choose a model!');
+          }
+        } catch (err) {
+          addToast('error', err instanceof Error ? err.message : 'NanoGPT sign-in failed.');
+        } finally {
+          setIsSigningIn(false);
+        }
+      })();
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [addToast]);
 
   const isCacheStale = (normalizedUrl: string): boolean => {
     const cached = modelsByBaseUrlRef.current[normalizedUrl];
@@ -856,6 +866,8 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
       setFetchingModelsByBaseUrl(prev => ({ ...prev, [normalizedUrl]: false }));
     }
   }, []);
+
+  fetchModelsForUrlRef.current = fetchModelsForUrl;
 
   // Reset transient toast UI when panel closes.
   useEffect(() => {
