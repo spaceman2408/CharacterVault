@@ -41,6 +41,7 @@ import {
   ArrowUp,
   ArrowDown,
   RotateCcw,
+  LogIn,
 } from 'lucide-react';
 import type { AIConfig, SamplerSettings, PromptSettings, AIModelInfo } from '../../db/characterTypes';
 import { DEFAULT_SETTINGS, CHARACTER_SECTIONS, DEFAULT_SECTION_ORDER } from '../../db/characterTypes';
@@ -49,6 +50,7 @@ import { characterSettingsService } from '../../services/CharacterSettingsServic
 import { CharacterEditorContext } from '../../context';
 import { AIService, AIError } from '../../services/AIService';
 import type { ModelProvider } from '../../services/providers';
+import { startSignIn, exchangeCode, isOAuthCallbackMessage } from '../../services/providers/NanoGPTAuth';
 
 interface CharacterSettingsPanelProps {
   isOpen: boolean;
@@ -764,6 +766,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
   const [expandedPrompts, setExpandedPrompts] = useState<Record<string, boolean>>({});
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const toastTimeoutsRef = useRef<number[]>([]);
 
@@ -786,8 +789,35 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  // Listen for the NanoGPT OAuth callback relayed from the popup/tab. The
+  // callback page (public/nanogpt-callback.html) postMessages the code+state
+  // back here; we exchange it for an API key and drop it into the key field.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const payload = isOAuthCallbackMessage(event);
+      if (!payload) return;
+      void (async () => {
+        setIsSigningIn(true);
+        try {
+          const key = await exchangeCode(payload.code, payload.state);
+          handleApiKeyChangeRef.current(key);
+          addToast('success', 'Signed in with NanoGPT — API key added.');
+        } catch (err) {
+          addToast('error', err instanceof Error ? err.message : 'NanoGPT sign-in failed.');
+        } finally {
+          setIsSigningIn(false);
+        }
+      })();
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [addToast]);
+
   const localAIConfigRef = useRef(localAIConfig);
   localAIConfigRef.current = localAIConfig;
+  // Ref to the API-key setter so the OAuth message listener (registered once)
+  // can apply the obtained key without re-subscribing on every render.
+  const handleApiKeyChangeRef = useRef<(apiKey: string) => void>(() => {});
   const localSamplerRef = useRef(localSampler);
   localSamplerRef.current = localSampler;
   const modelsByBaseUrlRef = useRef(modelsByBaseUrl);
@@ -1174,6 +1204,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
       };
     });
   };
+  handleApiKeyChangeRef.current = handleApiKeyChange;
 
   const handleModelChange = (modelId: string) => {
     setLocalAIConfig(prev => {
@@ -1619,6 +1650,34 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                         className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
                         placeholder={selectedBaseUrlPreset === 'lmstudio' ? 'Optional for local endpoints' : 'Enter your API key'}
                       />
+                      {selectedBaseUrlPreset === 'nano-gpt' && (
+                        <>
+                          <div className="flex items-center gap-3 my-1">
+                            <div className="h-px flex-1 bg-vault-200 dark:bg-vault-700" />
+                            <span className="text-xs text-vault-400 dark:text-vault-500">or</span>
+                            <div className="h-px flex-1 bg-vault-200 dark:bg-vault-700" />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void startSignIn()}
+                            disabled={isSigningIn}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
+                            bg-vault-900 dark:bg-vault-100 text-white dark:text-vault-900
+                            hover:opacity-90 active:scale-[0.99] transition-all duration-200
+                            disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {isSigningIn ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <LogIn className="w-4 h-4" />
+                            )}
+                            {isSigningIn ? 'Signing in…' : 'Sign in with NanoGPT'}
+                          </button>
+                          <p className="text-xs text-vault-500 dark:text-vault-400 mt-1.5">
+                            Opens NanoGPT in a new window to approve access. The app can spend from your NanoGPT balance until you revoke or limit the key.
+                          </p>
+                        </>
+                      )}
                     </div>
 
                     <ModelSelect
