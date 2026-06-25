@@ -6,6 +6,26 @@ Quick overview of recent updates to CharacterVault.
 
 ## June 2026
 
+### NanoGPT Sign-In (PKCE) with Auto Model Fetch
+
+You can now sign in to NanoGPT directly from **Settings → AI Config** — no need to copy an API key from your dashboard. The flow uses OAuth with PKCE (Proof Key for Code Exchange), so your password never leaves NanoGPT's site and no client secret is stored in CharacterVault.
+
+- **One-click sign-in** — A new **Sign in with NanoGPT** button appears next to the API Key field when the Nano-GPT preset is selected.
+- **Auto-fetch models** — On successful sign-in, your available models are fetched automatically and the model dropdown is populated for you.
+- **Per-URL caching** — The auto-fetch uses the same per-base-URL cache as manual fetches, so reopening the settings panel loads instantly.
+
+::: tip Browser popups must be allowed
+The flow opens a new window/tab to NanoGPT. Allow popups for this site if your browser blocks them.
+:::
+
+::: warning Mobile
+Works on Chrome for Android. Other mobile browsers may not relay the auth code back to the app — if sign-in doesn't complete, paste an API key manually.
+:::
+
+[Learn more →](/configuration/ai-setup#sign-in-with-nanogpt-pkce)
+
+---
+
 ### Customizable Section Tabs
 
 The character editor has 18 section tabs by default — more than most people need. A new **Sections** tab in Settings lets you hide the tabs you don't use, reorder the rest however you like, and reset to the default order at any time.

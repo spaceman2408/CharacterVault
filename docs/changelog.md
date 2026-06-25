@@ -4,6 +4,7 @@
 
 ### Current Release Notes
 
+- **NanoGPT PKCE sign-in** — Sign in to NanoGPT directly from Settings → AI Config with a new **Sign in with NanoGPT** button. The OAuth flow uses PKCE (no client secret, no password leaves NanoGPT), and your available models are automatically fetched and loaded into the model picker as soon as sign-in completes. Popup blockers must be allowed. Works on Chrome for Android; other mobile browsers may not relay the auth code back — paste an API key manually if sign-in doesn't complete on your phone.
 - Added a **Sections** tab in Settings — hide, reorder, and reset your section tabs to match your workflow.
 - Improved the AI Settings tabs so they are easier to read and no longer overlap.
 - Reduced unwanted browser password prompts when entering AI settings.
@@ -14,6 +15,9 @@
 
 ### Latest Commits (Newest to Oldest)
 
+- `00c188d` - feat(auth): auto-fetch models after NanoGPT OAuth sign-in
+- `f019115` - style(ui): update NanoGPT sign-in success toast message
+- `55c0ec7` - feat(auth): add NanoGPT OAuth sign-in flow
 - `974ff11` - refactor(ai): enhance copy button timeout handling and variable scoping
 - `461ace4` - feat(mobile): enable copy button visibility on mobile devices
 - `43bb8ce` - feat(ui): add stats tooltip and mobile copy button visibility

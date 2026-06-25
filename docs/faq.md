@@ -88,6 +88,27 @@ Your API key is stored locally in your browser's storage. It is not sent to Char
 You can clear your AI settings at any time from the AI Config tab by clicking **Clear AI Settings**. See [AI Setup → Security Notice](/configuration/ai-setup#security-notice).
 :::
 
+::: details What is the NanoGPT sign-in button?
+When the **Nano-GPT** preset is selected in Settings → AI Config, you'll see a **Sign in with NanoGPT** button next to the API Key field. It signs you in using OAuth with PKCE (Proof Key for Code Exchange):
+
+1. Click the button — a new window/tab opens to NanoGPT.
+2. Approve the request on NanoGPT's site.
+3. CharacterVault exchanges the approval for an API key and drops it into the API Key field.
+4. Your available models are auto-fetched and the model picker is populated.
+
+Your NanoGPT password is never seen by CharacterVault, and no client secret is stored in the app. You can still paste an API key manually at any time — the two flows are interchangeable.
+
+::: warning Browser popups must be allowed
+The flow opens a new window or tab. If your browser blocks popups for this site, the button will appear to do nothing. Allow popups for your CharacterVault origin and try again.
+:::
+
+::: warning Mobile browser support
+Works on **Chrome for Android**. Other mobile browsers may not relay the authorization code back to the app correctly. If sign-in doesn't complete on your phone, paste your NanoGPT API key into the API Key field manually.
+:::
+
+See [AI Setup → Sign in with NanoGPT](/configuration/ai-setup#sign-in-with-nanogpt-pkce) for the full walkthrough.
+:::
+
 ---
 
 ## Import & Export
@@ -225,6 +246,10 @@ Yes, all eight toolbar operation prompts are customizable:
 3. Edit the prompt template for any operation
 
 Each prompt must include `${text}` as a placeholder (the selected or full editor content). The Custom operation also requires `${instruction}`. See [Text Editor → Customizing AI Prompts](/features/editor#customizing-ai-prompts).
+:::
+
+::: details The NanoGPT sign-in button does nothing
+Your browser is most likely blocking the popup that opens NanoGPT's authorization page. Click the popup-blocker icon in your browser's address bar and allow popups for this site, then click **Sign in with NanoGPT** again. On mobile, prefer Chrome — other mobile browsers may not relay the authorization code back to the app, in which case paste your API key manually into the API Key field instead.
 :::
 
 ::: details How do I report a bug or request a feature?

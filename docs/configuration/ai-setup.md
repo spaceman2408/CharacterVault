@@ -43,6 +43,35 @@ Some presets include a link to the provider's key management page — click **Ge
 Your API key is stored locally in your browser's storage. It could be accessed by malicious browser extensions or if someone gains physical access to your unlocked computer.
 :::
 
+### Sign in with NanoGPT (PKCE)
+
+When the **Nano-GPT** preset is selected, a **Sign in with NanoGPT** button appears next to the API Key field. Instead of pasting an API key, you can sign in with your NanoGPT account — CharacterVault walks you through a secure OAuth flow using PKCE (Proof Key for Code Exchange), no client secret stored anywhere, no password ever seen by this app.
+
+**How it works**
+
+1. Click **Sign in with NanoGPT**. A new browser window/tab opens to NanoGPT's authorization page.
+2. Approve the request on NanoGPT's site.
+3. NanoGPT redirects back to a small relay page that returns the authorization code to CharacterVault.
+4. CharacterVault exchanges the code (plus the one-time PKCE verifier) for an API key and drops it into the API Key field for you.
+5. Your available models are **automatically fetched** — the model dropdown is populated as soon as sign-in completes, so you can pick a model and start chatting immediately.
+
+The success toast confirms the result, e.g. **"Signed in. Fetched 47 models."**
+
+::: warning Browser popups must be allowed
+The sign-in flow opens a new window or tab. If your browser blocks popups for this site, the button will appear to do nothing. Allow popups for `spaceman2408.github.io` (or your hosted origin) and try again. If you previously dismissed the permission, click the popup-blocker icon in the address bar to allow them for this site.
+:::
+
+::: warning Mobile browser support
+PKCE sign-in works best on desktop browsers. Mobile support depends on the browser:
+
+- **Chrome on Android** — Works. The sign-in opens in a new tab and returns successfully.
+- **Other mobile browsers** — May work, may not. Some mobile browsers handle popup/tab handoff differently and can fail to relay the authorization code back to the app. If sign-in doesn't complete on your phone, paste an API key manually instead.
+
+If you're on mobile and the button doesn't progress past "Signing in...", open the page in Chrome or paste your API key directly into the API Key field.
+:::
+
+You can still paste an API key manually at any time — the two flows are interchangeable.
+
 ### Model
 
 Click the **Fetch** button to load available models from your provider. A searchable dropdown appears:
