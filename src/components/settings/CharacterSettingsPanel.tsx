@@ -801,7 +801,7 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
         try {
           const key = await exchangeCode(payload.code, payload.state);
           handleApiKeyChangeRef.current(key);
-          addToast('success', 'Signed in with NanoGPT — API key added.');
+          addToast('success', 'Signed in. Choose a model!');
         } catch (err) {
           addToast('error', err instanceof Error ? err.message : 'NanoGPT sign-in failed.');
         } finally {
