@@ -629,8 +629,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
             flexShrink: '0',
           },
           '.cm-scroller': {
-            height: maxHeight ? 'auto' : '100%',
-            maxHeight: maxHeight ?? '100%',
+            height: maxHeight && maxHeight !== 'none' ? 'auto' : '100%',
+            maxHeight: maxHeight && maxHeight !== 'none' ? maxHeight : '100%',
             minHeight: '0',
             overflowY: 'auto',
             overflowX: 'hidden',

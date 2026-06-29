@@ -352,7 +352,7 @@ function LorebookEntryDetail({
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-2">
+    <div className="flex flex-col gap-2 md:flex-1 md:min-h-0">
       {/* Comment Field (Entry Name in SillyTavern) */}
       <div className="shrink-0">
         <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
@@ -473,10 +473,10 @@ function LorebookEntryDetail({
       </div>
 
       {/* Content Editor (with AI toolbar) */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="h-[50vh] min-h-[200px] md:h-auto md:flex-1 md:min-h-0 md:flex md:flex-col">
         <div
           ref={editorRef}
-          className="flex-1 min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+          className="h-full md:flex-1 md:min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
           style={{ minHeight: '200px' }}
         />
       </div>
@@ -1071,11 +1071,11 @@ function LorebookEditorInner({
 
       {/* Right Detail Panel */}
       <div className={`
-        flex-1 min-h-0 overflow-hidden bg-white dark:bg-vault-900
-        ${!isMobileViewOpen ? 'hidden md:flex md:flex-col' : 'flex flex-col'}
+        flex-1 min-h-0 bg-white dark:bg-vault-900
+        ${!isMobileViewOpen ? 'hidden md:flex md:flex-col md:overflow-hidden' : 'block overflow-y-auto md:flex md:flex-col md:overflow-hidden'}
       `}>
         {selectedEntry ? (
-          <div className="flex-1 min-h-0 flex flex-col p-4 md:p-6 pb-[max(env(safe-area-inset-bottom),0px)]">
+          <div className="p-4 md:p-6 md:flex-1 md:min-h-0 md:flex md:flex-col pb-[max(env(safe-area-inset-bottom),0px)]">
             {/* Mobile Back Button */}
             <button
               onClick={handleBackToList}
