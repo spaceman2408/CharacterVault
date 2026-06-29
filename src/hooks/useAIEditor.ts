@@ -625,9 +625,13 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
             overflow: 'hidden',
             ...editorStyles,
           },
+          '.cm-panels': {
+            flexShrink: '0',
+          },
           '.cm-scroller': {
             height: maxHeight ? 'auto' : '100%',
             maxHeight: maxHeight ?? '100%',
+            minHeight: '0',
             overflowY: 'auto',
             overflowX: 'hidden',
             overscrollBehaviorY: 'auto',

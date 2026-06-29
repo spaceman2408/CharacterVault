@@ -687,8 +687,10 @@ textarea:focus:not(:focus-visible) {
 .cm-panels.cm-panels-top {
   border-bottom: 1px solid var(--ai-toolbar-border) !important;
   background-color: var(--ai-toolbar-bg) !important;
-  position: relative;
-  z-index: 1;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  overflow: visible;
 }
 
 /* Higher specificity for dark mode to override scoped CodeMirror styles */

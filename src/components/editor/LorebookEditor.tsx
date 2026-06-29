@@ -352,9 +352,9 @@ function LorebookEntryDetail({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col flex-1 min-h-0 gap-2">
       {/* Comment Field (Entry Name in SillyTavern) */}
-      <div>
+      <div className="shrink-0">
         <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
           Entry Name
         </label>
@@ -370,7 +370,7 @@ function LorebookEntryDetail({
       </div>
 
       {/* Keys Field */}
-      <div>
+      <div className="shrink-0">
         <div className="flex items-center gap-2 mb-2">
           <label className="text-sm font-medium text-vault-700 dark:text-vault-300">
             Trigger Keys
@@ -406,7 +406,7 @@ function LorebookEntryDetail({
       </div>
 
       {/* Settings Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Priority */}
         <div>
           <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
@@ -442,7 +442,7 @@ function LorebookEntryDetail({
       </div>
 
       {/* Toggles */}
-      <div className="flex flex-wrap gap-4">
+      <div className="shrink-0 flex flex-wrap gap-4">
         <label className="flex items-center gap-2.5 cursor-pointer">
           <input
             type="checkbox"
@@ -473,16 +473,16 @@ function LorebookEntryDetail({
       </div>
 
       {/* Content Editor (with AI toolbar) */}
-      <div>
+      <div className="flex-1 min-h-0 flex flex-col">
         <div
           ref={editorRef}
-          className="border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+          className="flex-1 min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
           style={{ minHeight: '200px' }}
         />
       </div>
 
       {/* Name Field (internal, moved to bottom) */}
-      <div>
+      <div className="shrink-0">
         <input
           type="text"
           value={draftEntry.name || ''}
@@ -1071,15 +1071,15 @@ function LorebookEditorInner({
 
       {/* Right Detail Panel */}
       <div className={`
-        flex-1 min-h-0 overflow-y-auto bg-white dark:bg-vault-900
-        ${!isMobileViewOpen ? 'hidden md:block' : 'block'}
+        flex-1 min-h-0 overflow-hidden bg-white dark:bg-vault-900
+        ${!isMobileViewOpen ? 'hidden md:flex md:flex-col' : 'flex flex-col'}
       `}>
         {selectedEntry ? (
-          <div className="p-4 md:p-6 pb-[max(env(safe-area-inset-bottom),0px)]">
+          <div className="flex-1 min-h-0 flex flex-col p-4 md:p-6 pb-[max(env(safe-area-inset-bottom),0px)]">
             {/* Mobile Back Button */}
             <button
               onClick={handleBackToList}
-              className="md:hidden mb-4 flex items-center gap-1 text-sm text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200"
+              className="md:hidden mb-4 shrink-0 flex items-center gap-1 text-sm text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200"
             >
               <ChevronLeft className="w-4 h-4" />
               Back to entries

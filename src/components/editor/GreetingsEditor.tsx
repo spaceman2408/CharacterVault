@@ -152,11 +152,11 @@ function GreetingDetail({
   });
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       {/* Editor */}
       <div
         ref={editorRef}
-        className="border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+        className="flex-1 min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
         style={{ minHeight: '200px' }}
       />
     </div>
@@ -307,15 +307,15 @@ export function GreetingsEditor({
 
       {/* Right Detail Panel */}
       <div className={`
-        flex-1 min-h-0 overflow-y-auto bg-white dark:bg-vault-900
-        ${!isMobileViewOpen ? 'hidden md:block' : 'block'}
+        flex-1 min-h-0 overflow-hidden bg-white dark:bg-vault-900
+        ${!isMobileViewOpen ? 'hidden md:flex md:flex-col' : 'flex flex-col'}
       `}>
         {selectedGreeting !== undefined ? (
-          <div className="p-4 md:p-6 pb-[max(env(safe-area-inset-bottom),0px)]">
+          <div className="flex-1 min-h-0 flex flex-col p-4 md:p-6 pb-[max(env(safe-area-inset-bottom),0px)]">
             {/* Mobile Back Button */}
             <button
               onClick={handleBackToList}
-              className="md:hidden mb-4 flex items-center gap-1 text-sm text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200"
+              className="md:hidden mb-4 shrink-0 flex items-center gap-1 text-sm text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200"
             >
               <ChevronLeft className="w-4 h-4" />
               Back to greetings
