@@ -12,6 +12,8 @@
     "predeploy": "npm run build:site",
     "deploy": "node scripts/deploy-pages.mjs",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "docs:dev": "vitepress dev docs --port 3001",
     "docs:build": "vitepress build docs",
@@ -58,6 +60,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
-    "vitepress": "^1.6.3"
+    "vitepress": "^1.6.3",
+    "vitest": "^2.1.9"
   }
 }
