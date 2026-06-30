@@ -139,6 +139,21 @@ export interface StoredImage {
   thumbnailData: string;
 }
 
+/**
+ * Cached spellcheck dictionary entry, keyed by language code.
+ * Stores the raw Hunspell `.aff` and `.dic` text as loaded.
+ */
+export interface SpellDictionaryCacheEntry {
+  /** Language code (e.g. "en") */
+  id: string;
+  /** Raw Hunspell .aff file contents */
+  aff: string;
+  /** Raw Hunspell .dic file contents */
+  dic: string;
+  /** When the entry was cached (ms since epoch) */
+  cachedAt: number;
+}
+
 export interface CharacterSnapshotPayload {
   name: string;
   imageData: string;
@@ -372,6 +387,20 @@ export interface ClipboardValidationResult {
 /**
  * Application settings for CharacterVault
  */
+/**
+ * Spellcheck settings, stored under `ui.spellcheck`.
+ */
+export interface SpellcheckSettings {
+  /** Whether in-editor spellcheck is enabled */
+  enabled: boolean;
+  /** Language code; currently only `en` is bundled */
+  language: string;
+  /** Words ignored for the current user (lowercased) */
+  ignoredWords: string[];
+  /** Words added to the personal dictionary (lowercased) */
+  customWords: string[];
+}
+
 export interface CharacterVaultSettings {
   /** Single settings record ID */
   id: 'app-settings';
@@ -386,6 +415,8 @@ export interface CharacterVaultSettings {
     sidebarWidth: number;
     /** Show the "I'm Feeling Lucky" vortex animation in AI Creation Studio */
     showLuckyVortex?: boolean;
+    /** Spellcheck preferences */
+    spellcheck?: SpellcheckSettings;
   };
 
   /** AI configuration */
@@ -421,8 +452,24 @@ export const DEFAULT_CHARACTER_VAULT_SETTINGS: Omit<CharacterVaultSettings, 'id'
     theme: 'system',
     editorFontSize: 16,
     sidebarWidth: 280,
+    spellcheck: {
+      enabled: true,
+      language: 'en',
+      ignoredWords: [],
+      customWords: [],
+    },
   },
   version: 1,
+};
+
+/**
+ * Default spellcheck settings (used to backfill old settings records).
+ */
+export const DEFAULT_SPELLCHECK_SETTINGS: SpellcheckSettings = {
+  enabled: true,
+  language: 'en',
+  ignoredWords: [],
+  customWords: [],
 };
 
 // ============================================================================

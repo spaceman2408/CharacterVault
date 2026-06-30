@@ -5,7 +5,7 @@
 
 import { createContext } from 'react';
 import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings, SectionMeta } from '../db/characterTypes';
+import type { SamplerSettings, AIConfig, PromptSettings, SectionMeta, SpellcheckSettings } from '../db/characterTypes';
 
 /**
  * Save status types
@@ -77,6 +77,15 @@ export interface CharacterEditorContextValue {
   hiddenSections: CharacterSection[];
   /** Computed: visible sections in display order (SectionMeta objects) */
   visibleSections: SectionMeta[];
+
+  /** Spellcheck settings */
+  spellcheck: SpellcheckSettings;
+  /** Update a spellcheck field (e.g. enabled, language) */
+  updateSpellcheck: (updates: Partial<SpellcheckSettings>) => void;
+  /** Add a word to the user's ignore list */
+  addIgnoredWord: (word: string) => Promise<void>;
+  /** Add a word to the user's personal dictionary */
+  addCustomWord: (word: string) => Promise<void>;
   
   /** Set the active section */
   setActiveSection: (section: CharacterSection) => void;

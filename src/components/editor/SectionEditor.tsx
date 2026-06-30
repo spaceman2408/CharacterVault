@@ -251,6 +251,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     activeSection,
     fontSize,
     setFontSize,
+    spellcheck,
   } = useCharacterEditorContext();
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
@@ -311,6 +312,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     fontSize,
     onFontSizeChange: setFontSize,
     additionalExtensions: creatorNotesExts,
+    spellcheck,
   });
 
   // Early return for no character
@@ -400,6 +402,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           activeSection={activeSection}
           fontSize={fontSize}
           onFontSizeChange={setFontSize}
+          spellcheck={spellcheck}
         />
       </div>
     );
@@ -437,6 +440,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           fontSize={fontSize}
           onFontSizeChange={setFontSize}
           characterName={currentCharacter?.name}
+          spellcheck={spellcheck}
         />
       </div>
     );

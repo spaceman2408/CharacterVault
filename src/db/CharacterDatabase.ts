@@ -15,6 +15,7 @@ import type {
   UpdateCharacterInput,
   SnapshotMetadata,
   CharacterListItem,
+  SpellDictionaryCacheEntry,
   StoredImage,
 } from './characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
@@ -83,6 +84,9 @@ export class CharacterDatabase extends Dexie {
   /** Table storing images - content-addressed storage */
   storedImages!: Table<StoredImage, string>;
 
+  /** Table storing cached spellcheck dictionary blobs */
+  spellDictionaryCache!: Table<SpellDictionaryCacheEntry, string>;
+
   constructor() {
     super('character-vault-db');
 
@@ -124,6 +128,15 @@ export class CharacterDatabase extends Dexie {
       settings: 'id',
       snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
       storedImages: 'id',
+    });
+
+    // Version 5: Add spellDictionaryCache table for spellcheck dictionary blobs
+    this.version(5).stores({
+      characters: 'id, name, updatedAt, createdAt',
+      settings: 'id',
+      snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+      storedImages: 'id',
+      spellDictionaryCache: 'id',
     });
   }
 

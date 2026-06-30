@@ -20,6 +20,9 @@ import { toolbarSearch, toolbarSearchTheme } from '../editor/extensions/toolbarS
 import { themeSync } from '../editor/extensions/themeSync';
 import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
 import { characterMacroHelper } from '../editor/extensions/characterMacroHelper';
+import { spellcheckExtension, setSpellcheckSettings } from '../editor/extensions/spellcheck';
+import type { SpellcheckSettings } from '../db/characterTypes';
+import { DEFAULT_SPELLCHECK_SETTINGS } from '../db/characterTypes';
 import { AIService, AIError, estimateTokens } from '../services/AIService';
 import { getProviderSelectionId } from '../services/providers';
 
@@ -102,6 +105,11 @@ export interface UseAIEditorOptions {
   toolbarActions?: ToolbarActionConfig[];
   /** Additional CodeMirror extensions (e.g., language modes) to include in the editor */
   additionalExtensions?: Extension[];
+  /**
+   * Spellcheck settings (enabled, language, ignored/custom words).
+   * When omitted, defaults to `DEFAULT_SPELLCHECK_SETTINGS` (enabled, English).
+   */
+  spellcheck?: SpellcheckSettings;
 }
 
 export interface UseAIEditorReturn {
@@ -159,6 +167,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     onFontSizeChange,
     toolbarActions = defaultToolbarActions,
     additionalExtensions,
+    spellcheck = DEFAULT_SPELLCHECK_SETTINGS,
   } = options;
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -616,8 +625,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         themeSync(),
         drawSelection(),
         EditorView.lineWrapping,
-        // Enable native browser spellcheck
-        EditorView.contentAttributes.of({ spellcheck: 'true' }),
+        // Custom in-editor spellcheck (see src/editor/spellcheck)
+        spellcheckExtension({ settings: spellcheck }),
         EditorView.theme({
           '&': {
             fontSize: 'var(--editor-font-size, 16px)',
@@ -817,6 +826,13 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       setFontSize(view, fontSize);
     }
   }, [fontSize]);
+
+  // Sync external spellcheck settings changes to the editor
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    setSpellcheckSettings(view, spellcheck);
+  }, [spellcheck]);
 
   return {
     editorRef,

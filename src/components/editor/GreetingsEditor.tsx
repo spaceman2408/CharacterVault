@@ -24,6 +24,7 @@ interface GreetingsEditorProps {
   activeSection: string;
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
+  spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
 }
 
 interface GreetingListItemProps {
@@ -46,6 +47,7 @@ interface GreetingDetailProps {
   setSelectedText: (text: string) => void;
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
+  spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
 }
 
 /**
@@ -125,6 +127,7 @@ function GreetingDetail({
   setSelectedText,
   fontSize,
   onFontSizeChange,
+  spellcheck,
 }: GreetingDetailProps): React.ReactElement {
   const [draftGreeting, setDraftGreeting] = useState(greeting);
 
@@ -149,6 +152,7 @@ function GreetingDetail({
     isActive: true,
     fontSize,
     onFontSizeChange,
+    spellcheck,
   });
 
   return (
@@ -178,6 +182,7 @@ export function GreetingsEditor({
   getContextContent,
   fontSize,
   onFontSizeChange,
+  spellcheck,
 }: GreetingsEditorProps): React.ReactElement {
   const [greetingsList, setGreetingsList] = useState<string[]>(greetings);
   const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(0);
@@ -331,6 +336,7 @@ export function GreetingsEditor({
               setSelectedText={setSelectedText}
               fontSize={fontSize}
               onFontSizeChange={onFontSizeChange}
+              spellcheck={spellcheck}
             />
           </div>
         ) : (

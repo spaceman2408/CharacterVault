@@ -4,9 +4,13 @@
  */
 
 import type { CharacterVaultSettings } from '../db/characterTypes';
-import type { AIConfig, SamplerSettings, PromptSettings } from '../db/characterTypes';
+import type { AIConfig, SamplerSettings, PromptSettings, SpellcheckSettings } from '../db/characterTypes';
 import { DEFAULT_SETTINGS } from '../db/characterTypes';
-import { DEFAULT_CHARACTER_VAULT_SETTINGS, DEFAULT_SECTION_ORDER } from '../db/characterTypes';
+import {
+  DEFAULT_CHARACTER_VAULT_SETTINGS,
+  DEFAULT_SECTION_ORDER,
+  DEFAULT_SPELLCHECK_SETTINGS,
+} from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
 import type { CharacterSection } from '../db/characterTypes';
 
@@ -19,23 +23,86 @@ export class CharacterSettingsService {
    */
   async getSettings(): Promise<CharacterVaultSettings> {
     const settings = await characterDb.getSettings();
-    
+
     if (!settings) {
       // Create default settings if none exist
       const defaultSettings: CharacterVaultSettings = {
         id: 'app-settings',
         ui: {
-          theme: 'system',
-          editorFontSize: 16,
-          sidebarWidth: 280,
+          ...DEFAULT_CHARACTER_VAULT_SETTINGS.ui,
         },
         version: 1,
       };
       await characterDb.settings.add(defaultSettings);
       return defaultSettings;
     }
-    
+
+    // Backfill spellcheck defaults for existing users
+    if (!settings.ui?.spellcheck) {
+      settings.ui.spellcheck = { ...DEFAULT_SPELLCHECK_SETTINGS };
+      await characterDb.settings.put(settings);
+    }
+
     return settings;
+  }
+
+  /**
+   * Get spellcheck settings, merging with defaults so all fields exist.
+   */
+  async getSpellcheckSettings(): Promise<SpellcheckSettings> {
+    const settings = await this.getSettings();
+    return {
+      ...DEFAULT_SPELLCHECK_SETTINGS,
+      ...(settings.ui.spellcheck ?? {}),
+    };
+  }
+
+  /**
+   * Persist spellcheck settings (merging with existing values).
+   */
+  async saveSpellcheckSettings(updates: Partial<SpellcheckSettings>): Promise<void> {
+    const settings = await this.getSettings();
+    const current = settings.ui.spellcheck ?? { ...DEFAULT_SPELLCHECK_SETTINGS };
+    const next: SpellcheckSettings = {
+      ...DEFAULT_SPELLCHECK_SETTINGS,
+      ...current,
+      ...updates,
+      ignoredWords: updates.ignoredWords ?? current.ignoredWords ?? [],
+      customWords: updates.customWords ?? current.customWords ?? [],
+    };
+    await characterDb.settings.put({
+      ...settings,
+      ui: {
+        ...settings.ui,
+        spellcheck: next,
+      },
+    });
+  }
+
+  /**
+   * Add a word to the user's ignore list (lowercased, deduped).
+   */
+  async addIgnoredWord(word: string): Promise<void> {
+    const trimmed = word.trim().toLowerCase();
+    if (!trimmed) return;
+    const current = await this.getSpellcheckSettings();
+    if (current.ignoredWords.includes(trimmed)) return;
+    await this.saveSpellcheckSettings({
+      ignoredWords: [...current.ignoredWords, trimmed],
+    });
+  }
+
+  /**
+   * Add a word to the personal dictionary (lowercased, deduped).
+   */
+  async addCustomWord(word: string): Promise<void> {
+    const trimmed = word.trim().toLowerCase();
+    if (!trimmed) return;
+    const current = await this.getSpellcheckSettings();
+    if (current.customWords.includes(trimmed)) return;
+    await this.saveSpellcheckSettings({
+      customWords: [...current.customWords, trimmed],
+    });
   }
 
   /**

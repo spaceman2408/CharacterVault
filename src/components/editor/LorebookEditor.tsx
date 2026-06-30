@@ -52,6 +52,7 @@ interface LorebookEditorProps {
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
   characterName?: string;
+  spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
 }
 
 interface LorebookEntryListItemProps {
@@ -76,6 +77,7 @@ interface LorebookEntryDetailProps {
   setSelectedText: (text: string) => void;
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
+  spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
 }
 
 const POSITION_OPTIONS: { value: LorebookEntry['position']; label: string }[] = [
@@ -186,6 +188,7 @@ function LorebookEntryDetail({
   setSelectedText,
   fontSize,
   onFontSizeChange,
+  spellcheck,
 }: LorebookEntryDetailProps): React.ReactElement {
   const [draftEntry, setDraftEntry] = useState(entry);
   const { editorRef } = useAIEditor({
@@ -212,6 +215,7 @@ function LorebookEntryDetail({
     isActive: true,
     fontSize,
     onFontSizeChange,
+    spellcheck,
   });
 
   // Local state for keys input to allow typing commas/spaces without immediate parsing
@@ -515,6 +519,7 @@ export function LorebookEditor({
   fontSize,
   onFontSizeChange,
   characterName,
+  spellcheck,
 }: LorebookEditorProps): React.ReactElement {
   return (
     <LorebookEditorInner
@@ -531,6 +536,7 @@ export function LorebookEditor({
       fontSize={fontSize}
       onFontSizeChange={onFontSizeChange}
       characterName={characterName}
+      spellcheck={spellcheck}
     />
   );
 }
@@ -553,6 +559,7 @@ function LorebookEditorInner({
   fontSize,
   onFontSizeChange,
   characterName,
+  spellcheck,
 }: LorebookEditorInnerProps): React.ReactElement {
   const normalizedPropLorebook = useMemo<CharacterBook>(() => ({
     name: lorebook?.name || '',
@@ -1095,6 +1102,7 @@ function LorebookEditorInner({
               setSelectedText={setSelectedText}
               fontSize={fontSize}
               onFontSizeChange={onFontSizeChange}
+              spellcheck={spellcheck}
             />
           </div>
         ) : (

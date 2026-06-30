@@ -109,7 +109,12 @@ This is available in every text editor that uses the shared CodeMirror toolbar, 
 
 ## Editor Features
 
-- **Spellcheck** — Native browser spellcheck is enabled.
+- **Spellcheck** — A custom in-editor spellchecker (Hunspell-backed) underlines
+  misspellings and offers quick-fix suggestions. Toggle on/off and pick the
+  language from **Studio → Spellcheck** in Settings. The English dictionary is
+  fetched from `/dictionary/en.{aff,dic}` on first use and cached in IndexedDB
+  for offline access. Hover or focus over a flagged word to see suggestions
+  plus "Ignore word" and "Add to dictionary".
 - **Undo/Redo** — Standard `Ctrl+Z` / `Ctrl+Shift+Z` support.
 - **Line wrapping** — Long lines wrap automatically.
 - **Theme sync** — The editor follows the app's dark/light mode.

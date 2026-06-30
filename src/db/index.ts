@@ -28,6 +28,12 @@ export type {
   ClipboardValidationResult,
   CharacterListItem,
   StoredImage,
+  SpellDictionaryCacheEntry,
+  SpellcheckSettings,
 } from './characterTypes';
-export { CHARACTER_SECTIONS, DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
+export {
+  CHARACTER_SECTIONS,
+  DEFAULT_CHARACTER_VAULT_SETTINGS,
+  DEFAULT_SPELLCHECK_SETTINGS,
+} from './characterTypes';
 export { CharacterDatabase, characterDb } from './CharacterDatabase';

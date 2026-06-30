@@ -5,9 +5,10 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../db/characterTypes';
-import { DEFAULT_SETTINGS, DEFAULT_SECTION_ORDER, CHARACTER_SECTIONS } from '../db/characterTypes';
+import type { SamplerSettings, AIConfig, PromptSettings, SpellcheckSettings } from '../db/characterTypes';
+import { DEFAULT_SETTINGS, DEFAULT_SECTION_ORDER, CHARACTER_SECTIONS, DEFAULT_SPELLCHECK_SETTINGS } from '../db/characterTypes';
 import type { SectionMeta } from '../db/characterTypes';
+import { bindSpellcheckCallbacks } from '../editor/extensions/spellcheck';
 import { useCharacterContext } from './useCharacterContext';
 import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation, type ManualSnapshotResult } from './characterEditorContextTypes';
 import { characterSettingsService } from '../services/CharacterSettingsService';
@@ -45,6 +46,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [fontSize, setFontSizeState] = useState(16);
   const [sectionOrder, setSectionOrder] = useState<CharacterSection[]>([...DEFAULT_SECTION_ORDER]);
   const [hiddenSections, setHiddenSections] = useState<CharacterSection[]>([]);
+  const [spellcheck, setSpellcheckState] = useState<SpellcheckSettings>({ ...DEFAULT_SPELLCHECK_SETTINGS });
   
   // AI-related state
   const [selectedText, setSelectedText] = useState('');
@@ -259,13 +261,14 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   // Function to reload settings from database
   const reloadSettings = useCallback(async () => {
     try {
-      const [config, sampler, prompts, settings, secOrder, secHidden] = await Promise.all([
+      const [config, sampler, prompts, settings, secOrder, secHidden, spell] = await Promise.all([
         characterSettingsService.getAISettings(),
         characterSettingsService.getSamplerSettings(),
         characterSettingsService.getPromptSettings(),
         characterSettingsService.getSettings(),
         characterSettingsService.getSectionOrder(),
         characterSettingsService.getHiddenSections(),
+        characterSettingsService.getSpellcheckSettings(),
       ]);
       setAIConfig(config);
       setSamplerSettings(sampler);
@@ -273,6 +276,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setFontSizeState(settings.ui.editorFontSize);
       setSectionOrder(secOrder);
       setHiddenSections(secHidden);
+      setSpellcheckState(spell);
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
@@ -452,10 +456,10 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
    */
   const setFontSize = useCallback(async (size: number) => {
     setFontSizeState(size);
-    
+
     // Update CSS variable
     document.documentElement.style.setProperty('--editor-font-size', `${size}px`);
-    
+
     // Persist to database
     try {
       const settings = await characterSettingsService.getSettings();
@@ -470,6 +474,58 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       console.error('Failed to save font size:', error);
     }
   }, []);
+
+  /**
+   * Update spellcheck settings (merged with current values).
+   */
+  const updateSpellcheck = useCallback((updates: Partial<SpellcheckSettings>) => {
+    setSpellcheckState((prev) => {
+      const next: SpellcheckSettings = {
+        ...DEFAULT_SPELLCHECK_SETTINGS,
+        ...prev,
+        ...updates,
+        ignoredWords: updates.ignoredWords ?? prev.ignoredWords,
+        customWords: updates.customWords ?? prev.customWords,
+      };
+      void characterSettingsService.saveSpellcheckSettings(updates);
+      return next;
+    });
+  }, []);
+
+  const addIgnoredWord = useCallback(async (word: string) => {
+    const trimmed = word.trim().toLowerCase();
+    if (!trimmed) return;
+    setSpellcheckState((prev) => {
+      if (prev.ignoredWords.includes(trimmed)) return prev;
+      const next = { ...prev, ignoredWords: [...prev.ignoredWords, trimmed] };
+      void characterSettingsService.addIgnoredWord(trimmed);
+      return next;
+    });
+  }, []);
+
+  const addCustomWord = useCallback(async (word: string) => {
+    const trimmed = word.trim().toLowerCase();
+    if (!trimmed) return;
+    setSpellcheckState((prev) => {
+      if (prev.customWords.includes(trimmed)) return prev;
+      const next = { ...prev, customWords: [...prev.customWords, trimmed] };
+      void characterSettingsService.addCustomWord(trimmed);
+      return next;
+    });
+  }, []);
+
+  // Bind spellcheck callbacks so the editor's tooltip can push ignore/add
+  // actions back into context state without a one-off prop chain per editor.
+  useEffect(() => {
+    void bindSpellcheckCallbacks({
+      ignoreWord: (word) => {
+        void addIgnoredWord(word);
+      },
+      addWord: (word) => {
+        void addCustomWord(word);
+      },
+    });
+  }, [addIgnoredWord, addCustomWord]);
 
   /**
    * Update section order and/or hidden sections (local state only; persisted on Settings Save)
@@ -913,6 +969,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     sectionOrder,
     hiddenSections,
     visibleSections,
+    spellcheck,
     setActiveSection,
     updateCharacter,
     updateSpecField,
@@ -924,6 +981,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     updateAIConfig,
     updateSamplerSettings,
     updatePromptSettings,
+    updateSpellcheck,
+    addIgnoredWord,
+    addCustomWord,
     setIsHistoryOpen,
     createManualSnapshot,
     refreshSnapshots,

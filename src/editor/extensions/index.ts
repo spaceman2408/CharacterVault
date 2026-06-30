@@ -41,3 +41,16 @@ export {
 export {
   characterMacroHelper,
 } from './characterMacroHelper';
+
+export {
+  spellcheckExtension,
+  setSpellcheckSettings,
+  bindSpellcheckCallbacks,
+  tokenize,
+  DEFAULT_TOKENIZER_OPTIONS,
+} from './spellcheck';
+
+export type {
+  SpellcheckExtensionOptions,
+  SpellcheckCallbacks,
+} from './spellcheck';

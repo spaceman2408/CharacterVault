@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronUp,
   BookOpen,
+  Languages,
   Loader2,
   Sparkles,
   Target,
@@ -761,6 +762,8 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
   const [activeTab, setActiveTab] = useState<'ai' | 'sampler' | 'prompts' | 'studio' | 'sections'>('ai');
   const [showLuckyVortex, setShowLuckyVortex] = useState(true);
+  const [localSpellcheckEnabled, setLocalSpellcheckEnabled] = useState(true);
+  const [localSpellcheckLanguage, setLocalSpellcheckLanguage] = useState('en');
   const [localSectionOrder, setLocalSectionOrder] = useState<CharacterSection[]>([]);
   const [localHiddenSections, setLocalHiddenSections] = useState<CharacterSection[]>([]);
   const [expandedPrompts, setExpandedPrompts] = useState<Record<string, boolean>>({});
@@ -889,20 +892,23 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
   // Load settings when panel opens
   useEffect(() => {
     if (!isOpen) return;
-    
+
     const loadSettings = async () => {
       setIsLoading(true);
       try {
-        const [config, sampler, prompts, fullSettings, secOrder, secHidden] = await Promise.all([
+        const [config, sampler, prompts, fullSettings, secOrder, secHidden, spell] = await Promise.all([
           characterSettingsService.getAISettings(),
           characterSettingsService.getSamplerSettings(),
           characterSettingsService.getPromptSettings(),
           characterSettingsService.getSettings(),
           characterSettingsService.getSectionOrder(),
           characterSettingsService.getHiddenSections(),
+          characterSettingsService.getSpellcheckSettings(),
         ]);
 
         setShowLuckyVortex(fullSettings.ui?.showLuckyVortex ?? true);
+        setLocalSpellcheckEnabled(spell.enabled);
+        setLocalSpellcheckLanguage(spell.language);
         setLocalSectionOrder(secOrder);
         setLocalHiddenSections(secHidden);
         
@@ -1351,7 +1357,14 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
         sectionOrder: localSectionOrder,
         hiddenSections: localHiddenSections,
       });
-      
+
+      // Persist spellcheck toggle/language (ignore/custom lists are maintained
+      // from the editor's quick-fix tooltip, not this panel).
+      await characterSettingsService.saveSpellcheckSettings({
+        enabled: localSpellcheckEnabled,
+        language: localSpellcheckLanguage,
+      });
+
       await reloadSettings();
       
       addToast('success', 'Settings saved successfully!');
@@ -2009,6 +2022,57 @@ export function CharacterSettingsPanel({ isOpen, onClose, reloadSettings: propRe
                         </p>
                       </div>
                     </label>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-vault-800/50 rounded-xl p-4 border border-vault-200 dark:border-vault-700 shadow-sm">
+                  <h3 className="text-xs font-bold text-vault-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Languages className="w-4 h-4" />
+                    Spellcheck
+                  </h3>
+
+                  <div className="space-y-4">
+                    <label className="flex items-start gap-3 text-sm text-vault-700 dark:text-vault-300 cursor-pointer group">
+                      <div className="relative mt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={localSpellcheckEnabled}
+                          onChange={(e) => setLocalSpellcheckEnabled(e.target.checked)}
+                          className="peer sr-only"
+                        />
+                        <div className="w-10 h-6 bg-vault-300 dark:bg-vault-700 rounded-full peer-checked:bg-vault-600 dark:peer-checked:bg-vault-500 transition-colors duration-200" />
+                        <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="group-hover:text-vault-900 dark:group-hover:text-vault-100 transition-colors font-medium">
+                          Enable in-editor spellcheck
+                        </span>
+                        <p className="text-xs text-vault-500 dark:text-vault-400 mt-1 leading-relaxed">
+                          Underlines misspellings and offers quick-fix suggestions when hovering over a
+                          flagged word. The dictionary is fetched on first use and cached locally for
+                          offline access.
+                        </p>
+                      </div>
+                    </label>
+
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+                        <span className="p-1.5 rounded-md bg-vault-100 dark:bg-vault-800 text-vault-600 dark:text-vault-400">
+                          <Languages className="w-4 h-4" />
+                        </span>
+                        Language
+                      </label>
+                      <select
+                        value={localSpellcheckLanguage}
+                        onChange={(e) => setLocalSpellcheckLanguage(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+                      >
+                        <option value="en">English (en-US)</option>
+                      </select>
+                      <p className="mt-2 text-xs text-vault-500">
+                        Additional language packs will appear here as they&apos;re bundled.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
