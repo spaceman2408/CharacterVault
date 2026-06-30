@@ -115,6 +115,36 @@ This is available in every text editor that uses the shared CodeMirror toolbar, 
   fetched from `/dictionary/en.{aff,dic}` on first use and cached in IndexedDB
   for offline access. Hover or focus over a flagged word to see suggestions
   plus "Ignore word" and "Add to dictionary".
+
+### Spellcheck
+
+The shared editor runs a Hunspell-backed spellchecker — the same engine LibreOffice
+and most browsers use. It's enabled by default for every section that uses the
+shared toolbar: Description, Personality, Scenario, Greetings, Lorebook entry
+content, Creator Notes, and Extensions.
+
+How it works:
+
+- **Underlines** — Misspelled words get a wavy red underline. Hovering shows a
+  tooltip with up to eight suggestions, plus **Ignore word** and **Add to
+  dictionary**.
+- **Affix-aware** — `running`, `ran`, and `runs` all pass without you needing to
+  whitelist anything.
+- **Smart ignores** — The checker automatically skips ` ``` ` code fences, inline
+  `` `code` `` spans, `{{macro}}` placeholders, HTML tags, URLs/emails, numeric
+  tokens, and ALL-CAPS acronyms. Add more words to your **ignored** or
+  **personal dictionary** lists from the tooltip; they persist in your settings
+  and apply across all cards.
+- **Debounced + viewport-only** — Only the visible portion of large lorebooks
+  is checked, so editing stays fast.
+- **Offline** — The English Hunspell dictionary is fetched once on first use
+  and cached in IndexedDB for subsequent visits.
+
+Toggle or switch language in **Settings → Studio → Spellcheck**. Currently the
+only bundled language is **English (en-US)**; additional languages can be added
+by dropping `public/dictionary/<lang>.aff` and `public/dictionary/<lang>.dic`
+into the project and listing the code in
+`src/editor/spellcheck/dictionary.ts`.
 - **Undo/Redo** — Standard `Ctrl+Z` / `Ctrl+Shift+Z` support.
 - **Line wrapping** — Long lines wrap automatically.
 - **Theme sync** — The editor follows the app's dark/light mode.

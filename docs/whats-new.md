@@ -6,6 +6,24 @@ Quick overview of recent updates to CharacterVault.
 
 ## June 2026
 
+### In-Editor Spellcheck
+
+A Hunspell-backed spellchecker — the same engine LibreOffice uses — now runs inside the character editor. Misspelled words get a wavy-red underline; hover one to see quick-fix suggestions, **Ignore word**, or **Add to dictionary**.
+
+- **Affix-aware** — `running`, `ran`, and `runs` all pass without you whitelisting anything
+- **Smart ignores** — Code fences, `{{macro}}` placeholders, numbers, URLs/emails, and ALL-CAPS acronyms are skipped automatically
+- **Personal dictionary & per-user ignore list** — Add good-but-uncommon words (character names, neologisms) once and they stick across all your cards
+- **Toggle in Settings** — Disable in **Settings → Studio → Spellcheck** if you don't want it
+- **Offline-friendly** — The English dictionary is fetched once on first use and cached locally so it works without a connection
+
+::: tip Performance
+Spellchecking is debounced and viewport-scoped, so even large lorebooks stay responsive.
+:::
+
+[Learn more →](/features/editor#spellcheck)
+
+---
+
 ### NanoGPT Sign-In (PKCE) with Auto Model Fetch
 
 You can now sign in to NanoGPT directly from **Settings → AI Config** — no need to copy an API key from your dashboard. The flow uses OAuth with PKCE (Proof Key for Code Exchange), so your password never leaves NanoGPT's site and no client secret is stored in CharacterVault.

@@ -4,6 +4,7 @@
 
 ### Current Release Notes
 
+- **In-editor spellcheck** — A Hunspell-backed spellchecker (English dictionary) runs inside the shared editor. Misspelled words are underlined with a wavy-red decoration; hover one to see a quick-fix tooltip with suggestions plus **Ignore word** and **Add to dictionary**. Code fences, `{{macro}}` placeholders, numbers, and ALL-CAPS acronyms are skipped automatically. Your ignored words and personal dictionary persist across all cards. Toggle the feature in **Settings → Studio → Spellcheck**. The dictionary is cached in IndexedDB after first load, so it works offline.
 - **NanoGPT PKCE sign-in** — Sign in to NanoGPT directly from Settings → AI Config with a new **Sign in with NanoGPT** button. The OAuth flow uses PKCE (no client secret, no password leaves NanoGPT), and your available models are automatically fetched and loaded into the model picker as soon as sign-in completes. Popup blockers must be allowed. Works on Chrome for Android; other mobile browsers may not relay the auth code back — paste an API key manually if sign-in doesn't complete on your phone.
 - Added a **Sections** tab in Settings — hide, reorder, and reset your section tabs to match your workflow.
 - Improved the AI Settings tabs so they are easier to read and no longer overlap.
