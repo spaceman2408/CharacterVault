@@ -279,11 +279,17 @@ function findMarkupBlockSkips(text: string): Array<{ from: number; to: number }>
         break;
       }
       // Attribute name (with optional `:`, `.`, `-`, `_`).
+      const attrNameStart = i;
       while (i < n) {
         const c = text[i];
         if (/[\p{L}\p{N}_:.-]/u.test(c)) i += 1;
         else break;
       }
+      // If the cursor didn't advance (e.g. a stray `(`, `@`, `*`, emoji, or
+      // any char that isn't whitespace / `>` / `/` / a valid attr-name char),
+      // skip it so we make forward progress. Otherwise the `continue` below
+      // would loop forever on the same offset and hang the renderer.
+      if (i === attrNameStart) i += 1;
       // Whitespace, then optional `=`, then value.
       while (i < n && /[ \t\r\n\f]/u.test(text[i])) i += 1;
       if (text[i] !== '=') continue;

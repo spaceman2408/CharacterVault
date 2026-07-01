@@ -67,7 +67,7 @@ export function loadSpellchecker(language: string): Promise<LoadedSpellchecker |
     const cached = await readCache(key);
     if (cached) {
       try {
-        return buildSpellchecker(key, cached.aff, cached.dic, true);
+        return await buildSpellchecker(key, cached.aff, cached.dic, true);
       } catch (error) {
         if (import.meta.env.DEV) {
           console.warn('[spellcheck] cached dictionary failed to load, refetching', error);
@@ -80,7 +80,7 @@ export function loadSpellchecker(language: string): Promise<LoadedSpellchecker |
       const aff = await fetchWithTimeout(dictionaryUrl(key, 'aff'), LOAD_TIMEOUT_MS);
       const dic = await fetchWithTimeout(dictionaryUrl(key, 'dic'), LOAD_TIMEOUT_MS);
       void writeCache({ id: key, aff, dic, cachedAt: Date.now() });
-      return buildSpellchecker(key, aff, dic, false);
+      return await buildSpellchecker(key, aff, dic, false);
     } catch (error) {
       console.error(`[spellcheck] failed to load dictionary "${key}"`, error);
       return null;
@@ -106,12 +106,28 @@ function dictionaryUrl(language: string, ext: 'aff' | 'dic'): string {
   return `${base}/dictionary/${language}.${ext}`;
 }
 
-function buildSpellchecker(
+/**
+ * Build the nspell instance.
+ *
+ * `nspell(aff, dic)` parses the entire affix + word list synchronously on the
+ * main thread. The bundled English dictionary is ~550 KB / ~175k words, and
+ * the parse can block for hundreds of ms to several seconds on slower
+ * machines — enough to trip Chrome's renderer watchdog and surface as
+ * `RESULT_CODE_HUNG` (which is what happens on first open of a section after
+ * the spellcheck merge).
+ *
+ * `buildSpellchecker` is already invoked from an `async` context, so we yield
+ * to the event loop first with `setTimeout(0)`. That hands the renderer a
+ * chance to paint / process input before the synchronous parse runs, keeping
+ * the page responsive.
+ */
+async function buildSpellchecker(
   language: string,
   aff: string,
   dic: string,
   fromCache: boolean,
-): LoadedSpellchecker {
+): Promise<LoadedSpellchecker> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
   return { language, spell: nspell(aff, dic), fromCache };
 }
 
