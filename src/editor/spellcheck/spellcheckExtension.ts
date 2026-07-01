@@ -10,6 +10,10 @@
  * - Honors the user's `ignoredWords` and `customWords` lists (passed in as
  *   options, refreshed via `Compartment.reconfigure`).
  * - Debounces re-tokenization and only re-spells the visible viewport.
+ * - In `html` and `json` modes, also queries the editor's syntax tree so that
+ *   HTML tag structure (element names, attributes, CSS classes) and JSON
+ *   property keys are skipped automatically — they are technical tokens the
+ *   user does not author as prose.
  *
  * No-ops entirely when `enabled === false` (the dictionary is never loaded
  * and no decorations are added).
@@ -29,8 +33,10 @@ import {
   Compartment,
   StateEffect,
   StateField,
+  type EditorState,
   type Extension,
 } from '@codemirror/state';
+import { syntaxTree } from '@codemirror/language';
 import { tokenize, DEFAULT_TOKENIZER_OPTIONS } from './tokenizer';
 import { loadSpellchecker, type LoadedSpellchecker } from './dictionary';
 import type { SpellcheckSettings } from '../../db/characterTypes';
@@ -41,6 +47,20 @@ const DEBOUNCE_MS = 300;
 
 export interface SpellcheckExtensionOptions {
   settings: SpellcheckSettings;
+  /**
+   * Language mode of the editor being spellchecked.
+   *
+   * - `'prose'` (default) — plain prose; only the tokenizer's ignore rules apply.
+   * - `'html'` — also skip tokens inside HTML element names / attribute names /
+   *   attribute values / `<tag>` brackets / comments / `<script>` / `<style>`.
+   *   Requires the host editor to be running `@codemirror/lang-html` (or
+   *   anything built on `@lezer/html`).
+   * - `'json'` — also skip tokens inside JSON `PropertyName` nodes (the
+   *   `"key"` part of `"key": "value"` pairs). Requires the host editor to be
+   *   running `@codemirror/lang-json` (or anything built on `@lezer/json`).
+   *   String values are still spellchecked.
+   */
+  mode?: 'prose' | 'html' | 'json';
 }
 
 interface Mistake {
@@ -158,9 +178,206 @@ export function spellcheckExtension(options: SpellcheckExtensionOptions): Extens
     baseTheme,
     spellDecorationsField,
     spellMistakesField,
-    spellcheckCompartment.of(buildEnabledExtensions(options.settings)),
+    spellcheckCompartment.of(buildEnabledExtensions(options.settings, options.mode ?? 'prose')),
     hoverTooltip(spellcheckHover, { hideOnChange: true }),
   ];
+}
+
+/**
+ * Robust character-by-character scanner that emits "skip" ranges for every
+ * piece of HTML markup in `text` — comments, tag names, attribute names,
+ * attribute values, opening/closing tags, and the contents of `<style>` /
+ * `<script>` blocks.
+ *
+ * Used as a defensive net in `html` mode because the integrated
+ * `@codemirror/lang-html` parser can lose structure when faced with the kind
+ * of heavily-scripted creator-notes content users author here (we observed
+ * it emit only 7 of 22 comments and stop parsing partway through a CSS
+ * block, leaving CSS body tokens unmissed). The walk handles:
+ *
+ *  - `<!-- … -->` comments (including odd `>:( -->` content)
+ *  - `<style …> … </style>` and `<script …> … </script>` blocks — content
+ *    included so CSS / JS words are skipped wholesale
+ *  - tag openers (`<tag attr="value" attr='value'>`), self-closing
+ *    (`<tag />`), and closers (`</tag>`), including attribute values
+ *    delimited by `'…'` or `"…"`
+ *  - `<![ … ]>` / `<!DOCTYPE …>` declarations
+ *
+ * Prose text (anything between markup tokens) stays out of these ranges and
+ * is therefore still spell-checked.
+ *
+ * The walk runs in O(n) and is allocated once per spellcheck re-spell.
+ */
+function findMarkupBlockSkips(text: string): Array<{ from: number; to: number }> {
+  const ranges: Array<{ from: number; to: number }> = [];
+  const push = (from: number, to: number) => ranges.push({ from, to });
+
+  let i = 0;
+  const n = text.length;
+  while (i < n) {
+    const ch = text[i];
+
+    // Plain text — emit nothing; fall through to finding markup.
+    if (ch !== '<') {
+      i += 1;
+      continue;
+    }
+
+    // Start of a markup node at offset `i`. Find its end (inclusive) by
+    // walking through tag/attribute syntax.
+    const tagStart = i;
+    i += 1;
+
+    // Comment: `<!-- … -->`
+    if (text.startsWith('!--', i)) {
+      i = i + 3;
+      const close = text.indexOf('-->', i);
+      const end = close === -1 ? n : close + 3;
+      push(tagStart, end);
+      i = end;
+      continue;
+    }
+
+    // Doctype / CDATA / processing instruction: `<![ … ]>` or `<! … >`. Treat
+    // the entire declaration as a skip range.
+    if (text[i] === '!') {
+      i += 1;
+      const close = text.indexOf('>', i);
+      const end = close === -1 ? n : close + 1;
+      push(tagStart, end);
+      i = end;
+      continue;
+    }
+
+    // Skip an HTML comment more leniently (in case the input is malformed
+    // and `<!--` is followed by `>` early — `<!---->` etc.). Already handled
+    // by the dedicated branch above.
+
+    // Closing tag or opening tag.
+    if (text[i] === '/') i += 1;
+
+    // Tag name (or no name at all if this is bogus `<>`) — scan letters or
+    // hyphen until we hit whitespace, `/`, or `>`.
+    while (i < n) {
+      const c = text[i];
+      if (/[\p{L}\p{N}_:-]/u.test(c)) i += 1;
+      else break;
+    }
+    // Walk attributes.
+    while (i < n) {
+      // Whitespace between attributes.
+      while (i < n && /[ \t\r\n\f]/u.test(text[i])) i += 1;
+      if (i >= n) break;
+      const after = text[i];
+      if (after === '>') {
+        i += 1;
+        break;
+      }
+      if (after === '/') {
+        i += 1;
+        if (text[i] === '>') i += 1;
+        break;
+      }
+      // Attribute name (with optional `:`, `.`, `-`, `_`).
+      while (i < n) {
+        const c = text[i];
+        if (/[\p{L}\p{N}_:.\-]/u.test(c)) i += 1;
+        else break;
+      }
+      // Whitespace, then optional `=`, then value.
+      while (i < n && /[ \t\r\n\f]/u.test(text[i])) i += 1;
+      if (text[i] !== '=') continue;
+      i += 1;
+      while (i < n && /[ \t\r\n\f]/u.test(text[i])) i += 1;
+      const quote = text[i];
+      if (quote === '"' || quote === "'") {
+        i += 1;
+        while (i < n && text[i] !== quote) i += 1;
+        if (i < n) i += 1; // skip closing quote
+      } else {
+        // Unquoted value — scan until whitespace or `>`.
+        while (i < n) {
+          const c = text[i];
+          if (c === '>' || c === '/' || /[ \t\r\n\f]/u.test(c)) break;
+          i += 1;
+        }
+      }
+    }
+
+    // `tagStart..i` is the entire opening or closing tag including attribute
+    // values. Record it.
+    push(tagStart, i);
+
+    // For `<style>` or `<script>` openings, additionally consume the content
+    // up to the matching closer.
+    const recentOpen = text.slice(tagStart, i);
+    let closeName: string | null = null;
+    if (/^<style\b/i.test(recentOpen)) closeName = 'style';
+    else if (/^<script\b/i.test(recentOpen)) closeName = 'script';
+    if (closeName) {
+      const closeTag = `</${closeName}>`;
+      const closeIdx = text.indexOf(closeTag, i);
+      if (closeIdx === -1) {
+        // Unterminated — eat to end of document.
+        push(i, n);
+        i = n;
+      } else {
+        push(i, closeIdx);
+        i = closeIdx;
+      }
+    }
+  }
+
+  // Merge adjacent/overlapping ranges.
+  ranges.sort((a, b) => a.from - b.from || a.to - b.to);
+  const merged: Array<{ from: number; to: number }> = [];
+  for (const r of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && r.from <= last.to) {
+      last.to = Math.max(last.to, r.to);
+    } else {
+      merged.push({ ...r });
+    }
+  }
+  return merged;
+}
+
+/**
+ * Module-level dictionary cache: reconfigure-with-fresh-closures is cheap, but
+ * the dictionary itself is expensive to load.
+ */
+
+  // `<style>…</style>` — capture the entire element including opener and
+  // closer (`<style…>` and `</style>`). Attribute-spread openers and
+  // multi-attribute values are handled by scanning for the first `>` after
+  // `<style`.
+  const styleBlockRe = /<style\b[^>]*>/g;
+  while ((m = styleBlockRe.exec(text)) !== null) {
+    const start = m.index;
+    const openEnd = start + m[0].length;
+    const close = text.indexOf('</style>', openEnd);
+    if (close === -1) {
+      ranges.push({ from: start, to: text.length });
+      break;
+    }
+    ranges.push({ from: start, to: close + '</style>'.length });
+  }
+
+  // `<script>…</script>` — same pattern.
+  const scriptBlockRe = /<script\b[^>]*>/g;
+  while ((m = scriptBlockRe.exec(text)) !== null) {
+    const start = m.index;
+    const openEnd = start + m[0].length;
+    const close = text.indexOf('</script>', openEnd);
+    if (close === -1) {
+      ranges.push({ from: start, to: text.length });
+      break;
+    }
+    ranges.push({ from: start, to: close + '</script>'.length });
+  }
+
+  ranges.sort((a, b) => a.from - b.from);
+  return ranges;
 }
 
 /**
@@ -178,7 +395,10 @@ function ensureSpellchecker(language: string): Promise<LoadedSpellchecker | null
   return promise;
 }
 
-function buildEnabledExtensions(settings: SpellcheckSettings): Extension[] {
+function buildEnabledExtensions(
+  settings: SpellcheckSettings,
+  mode: 'prose' | 'html' | 'json',
+): Extension[] {
   return [
     ViewPlugin.fromClass(
       class SpellcheckPlugin {
@@ -189,12 +409,14 @@ function buildEnabledExtensions(settings: SpellcheckSettings): Extension[] {
         private debounceTimer?: ReturnType<typeof setTimeout>;
         private customWords: readonly string[];
         private customWordsAdded: Set<string> = new Set();
+        private mode: 'prose' | 'html' | 'json';
 
         constructor(view: EditorView) {
           this.view = view;
           this.language = settings.language;
           this.ignored = new Set(settings.ignoredWords.map(w => w.toLowerCase()));
           this.customWords = settings.customWords;
+          this.mode = mode;
           void this.loadDictionaryAndRespell(true);
         }
 
@@ -248,12 +470,16 @@ function buildEnabledExtensions(settings: SpellcheckSettings): Extension[] {
 
           const startLine = doc.lineAt(viewport.from);
           const endLineNumber = Math.min(doc.lines, doc.lineAt(viewport.to).number);
+          const inSkipRange = makeSkipRangePredicate(view.state, this.mode);
 
           outer: for (let lineNo = startLine.number; lineNo <= endLineNumber; lineNo += 1) {
             const line = doc.line(lineNo);
+            const lineBase = line.from;
             const tokens = tokenize(line.text, DEFAULT_TOKENIZER_OPTIONS);
             for (const t of tokens) {
               if (t.skipped) continue;
+              const absoluteFrom = lineBase + t.from;
+              if (inSkipRange(absoluteFrom)) continue;
               if (this.ignored.has(t.wordLower)) continue;
               if (mistakes.length >= DECORATION_CAP) break outer;
               try {
@@ -263,8 +489,8 @@ function buildEnabledExtensions(settings: SpellcheckSettings): Extension[] {
                 // erroneously reject valid capitalized words.
                 if (!loaded.spell.correct(t.word)) {
                   mistakes.push({
-                    from: line.from + t.from,
-                    to: line.from + t.to,
+                    from: absoluteFrom,
+                    to: lineBase + t.to,
                     word: t.word,
                   });
                 }
@@ -283,6 +509,114 @@ function buildEnabledExtensions(settings: SpellcheckSettings): Extension[] {
       },
     ),
   ];
+}
+
+/**
+ * Skip-node predicates for `html` and `json` modes. Tokens whose midpoint falls
+ * inside any of these ranges are skipped, on top of the tokenizer's textual
+ * rules.
+ *
+ * The predicate is recomputed per-respell from the live syntax tree, so it
+ * stays in sync with document edits.
+ *
+ * Note: `@codemirror/lang-html` wraps `<script>`/`<style>`/`<textarea>`
+ * content using `configureNesting`, embedding the **CSS** parser for
+ * `<style>` and the **JavaScript** parser for `<script>`. That means the
+ * content of `<style>` is a CSS parse tree (`StyleSheet` …), NOT raw
+ * `StyleText`. We list both the raw HTML grammar names and the nested-parse
+ * wrapper names so a stripped `lang-html` and a vanilla `@lezer/html` both
+ * work. CSS/JS leaves (`PropertyName`, `ClassSelector`, `KeyValue`, …) fall
+ * inside the wrappers and inherit the skip automatically.
+ */
+const HTML_SKIP_NODE_NAMES: ReadonlySet<string> = new Set([
+  // `<tag>` itself (the `<` .. `>` brackets and their contents)
+  'OpenTag',
+  'CloseTag',
+  'SelfClosingTag',
+  'MismatchedCloseTag',
+  'NoMatchCloseTag',
+  // The tag/element name (`span`, `div`, `br`, …)
+  'TagName',
+  // Attribute structure (`<tag ...>`)
+  'Attribute',
+  'AttributeName',
+  'AttributeValue',
+  'UnquotedAttributeValue',
+  // Comments
+  'Comment',
+  // Embedded CSS / JavaScript / raw text containers (raw HTML grammar names)
+  'Script',
+  'Style',
+  'Textarea',
+  'ScriptText',
+  'StyleText',
+  'TextareaText',
+  // Embeds produced by `@codemirror/lang-html`'s `configureNesting`:
+  // the `<style>` body is wrapped as a CSS `StyleSheet`, the `<script>`
+  // body as a JS program node, etc. Skipping these parents also skips every
+  // CSS / JS leaf inside them (and every word token they contain).
+  'StyleSheet',
+  'ScriptContent', // some lang-html versions use this instead of `Script`
+  'Styles',         // CSS parser top node, just in case
+]);
+
+/**
+ * JSON: skip ranges where tokens are likely technical data, not prose.
+ *
+ * - `PropertyName` covers the `"key":` side.
+ * - `String` covers string _values_; most JSON in character-card extensions
+ *   is data (paths, IDs, hashed slugs, CSS export strings), so values are
+ *   skipped wholesale. Users who need prose checks inside JSON values can
+ *   paste the text into a description field first.
+ */
+const JSON_SKIP_NODE_NAMES: ReadonlySet<string> = new Set([
+  'PropertyName',
+  'String',
+]);
+
+function makeSkipRangePredicate(
+  state: EditorState,
+  mode: 'prose' | 'html' | 'json',
+): (offset: number) => boolean {
+  if (mode === 'prose') return () => false;
+  const nodeNames = mode === 'html' ? HTML_SKIP_NODE_NAMES : JSON_SKIP_NODE_NAMES;
+  const ranges: Array<{ from: number; to: number }> = [];
+
+  // First, range derived from the syntax tree.
+  const tree = syntaxTree(state);
+  tree.iterate({
+    enter(node) {
+      if (nodeNames.has(node.name)) {
+        ranges.push({ from: node.from, to: node.to });
+      }
+    },
+  });
+
+  // In HTML mode, also pick up `<style>`, `<script>`, and comment blocks via a
+  // text-level scan. The integrated `lang-html` parser loses structure when
+  // it encounters heavily-scripted docs (we saw it emit only 7 of 22 comments
+  // and stop somewhere mid-doc, leaving CSS body tokens unmissed). The text
+  // scan is dumb but robust.
+  if (mode === 'html') {
+    for (const r of findMarkupBlockSkips(state.doc.toString())) {
+      ranges.push(r);
+    }
+  }
+
+  // Sort by `from` and dedupe overlaps. Ranges are then walked linearly. A
+  // binary search is tempting but breaks for overlapping ranges that share
+  // a `from` (e.g. `<style>` element's `TagName [994, 1000]` next to its nested
+  // `StyleSheet [994, 1256]` — picking the small one at mid sends the search
+  // right past the wider one).
+  ranges.sort((a, b) => a.from - b.from || a.to - b.to);
+  if (ranges.length === 0) return () => false;
+  return (offset: number): boolean => {
+    for (const r of ranges) {
+      if (r.from > offset) break;
+      if (offset >= r.from && offset < r.to) return true;
+    }
+    return false;
+  };
 }
 
 function viewDispatchMistakes(view: EditorView, next: readonly Mistake[]): void {
@@ -423,16 +757,22 @@ function buildDecorations(mistakes: readonly Mistake[]): DecorationSet {
 /**
  * Reconfigure the spellcheck extension with new settings.
  * Use after the user toggles the spellcheck setting, switches language, or
- * updates the custom/ignored word lists.
+ * updates the custom/ignored word lists. `mode` is the same language mode
+ * that was originally passed to {@link spellcheckExtension}; it is preserved
+ * across reconfigure so HTML/JSON skip rules remain in effect.
  */
-export function setSpellcheckSettings(view: EditorView, settings: SpellcheckSettings): void {
+export function setSpellcheckSettings(
+  view: EditorView,
+  settings: SpellcheckSettings,
+  mode: 'prose' | 'html' | 'json' = 'prose',
+): void {
   if (!settings.enabled) {
     view.dispatch({ effects: spellcheckCompartment.reconfigure([]) });
     view.dispatch({ effects: setMistakesEffect.of([]) });
     return;
   }
   view.dispatch({
-    effects: spellcheckCompartment.reconfigure(buildEnabledExtensions(settings)),
+    effects: spellcheckCompartment.reconfigure(buildEnabledExtensions(settings, mode)),
   });
 }
 

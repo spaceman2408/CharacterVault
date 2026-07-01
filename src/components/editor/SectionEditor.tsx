@@ -14,6 +14,8 @@ import { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { useAIEditor } from '../../hooks';
 import { creatorNotesExtensions } from '../../editor/extensions';
+import { json } from '@codemirror/lang-json';
+import type { Extension } from '@codemirror/state';
 
 interface SectionEditorProps {
   section: CharacterSection;
@@ -288,10 +290,16 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     }
   }, [section, updateSpecField]);
 
-  const creatorNotesExts = React.useMemo(
-    () => section === 'creator_notes' ? creatorNotesExtensions() : undefined,
-    [section],
-  );
+  const sectionExtensions = React.useMemo<Extension[] | undefined>(() => {
+    if (section === 'creator_notes') return creatorNotesExtensions();
+    if (section === 'extensions') return [json()];
+    return undefined;
+  }, [section]);
+
+  const sectionSpellcheckMode: 'prose' | 'html' | 'json' =
+    section === 'creator_notes' ? 'html'
+    : section === 'extensions' ? 'json'
+    : 'prose';
 
   // Use the shared AI editor hook
   // Key forces re-initialization when section changes to prevent value mixing
@@ -311,8 +319,9 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     isActive: section !== 'image' && section !== 'name' && section !== 'creator' && section !== 'tags' && section !== 'alternate_greetings' && section !== 'lorebook' && !!currentCharacter,
     fontSize,
     onFontSizeChange: setFontSize,
-    additionalExtensions: creatorNotesExts,
+    additionalExtensions: sectionExtensions,
     spellcheck,
+    spellcheckMode: sectionSpellcheckMode,
   });
 
   // Early return for no character

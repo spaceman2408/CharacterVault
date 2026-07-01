@@ -110,6 +110,15 @@ export interface UseAIEditorOptions {
    * When omitted, defaults to `DEFAULT_SPELLCHECK_SETTINGS` (enabled, English).
    */
   spellcheck?: SpellcheckSettings;
+  /**
+   * Language mode of the editor being spellchecked. Defaults to `'prose'`.
+   * - `'prose'`: skip only the tokenizer's ignore rules
+   * - `'html'`: also skip tokens inside HTML tags / attribute values (use with
+   *   a host that runs `@codemirror/lang-html`)
+   * - `'json'`: also skip JSON property keys (use with a host that runs
+   *   `@codemirror/lang-json`)
+   */
+  spellcheckMode?: 'prose' | 'html' | 'json';
 }
 
 export interface UseAIEditorReturn {
@@ -168,6 +177,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     toolbarActions = defaultToolbarActions,
     additionalExtensions,
     spellcheck = DEFAULT_SPELLCHECK_SETTINGS,
+    spellcheckMode = 'prose',
   } = options;
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -626,7 +636,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         drawSelection(),
         EditorView.lineWrapping,
         // Custom in-editor spellcheck (see src/editor/spellcheck)
-        spellcheckExtension({ settings: spellcheck }),
+        spellcheckExtension({ settings: spellcheck, mode: spellcheckMode }),
         EditorView.theme({
           '&': {
             fontSize: 'var(--editor-font-size, 16px)',
@@ -831,8 +841,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    setSpellcheckSettings(view, spellcheck);
-  }, [spellcheck]);
+    setSpellcheckSettings(view, spellcheck, spellcheckMode);
+  }, [spellcheck, spellcheckMode]);
 
   return {
     editorRef,

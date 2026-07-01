@@ -128,6 +128,11 @@ How it works:
 - **Underlines** — Misspelled words get a wavy red underline. Hovering shows a
   tooltip with up to eight suggestions, plus **Ignore word** and **Add to
   dictionary**.
+- **Language-aware in technical sections** — Creator Notes (HTML) and
+  Extensions (JSON) automatically skip technical tokens that aren't prose:
+  HTML element names, attribute names, attribute values, and JSON property
+  keys (e.g. `full_path`, `class="sora-preview"`). The text between tags and
+  the JSON string _values_ are still checked.
 - **Affix-aware** — `running`, `ran`, and `runs` all pass without you needing to
   whitelist anything.
 - **Smart ignores** — The checker automatically skips ` ``` ` code fences, inline
