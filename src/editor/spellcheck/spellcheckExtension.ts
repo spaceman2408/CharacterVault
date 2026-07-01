@@ -281,7 +281,7 @@ function findMarkupBlockSkips(text: string): Array<{ from: number; to: number }>
       // Attribute name (with optional `:`, `.`, `-`, `_`).
       while (i < n) {
         const c = text[i];
-        if (/[\p{L}\p{N}_:.\-]/u.test(c)) i += 1;
+        if (/[\p{L}\p{N}_:.-]/u.test(c)) i += 1;
         else break;
       }
       // Whitespace, then optional `=`, then value.
@@ -340,44 +340,6 @@ function findMarkupBlockSkips(text: string): Array<{ from: number; to: number }>
     }
   }
   return merged;
-}
-
-/**
- * Module-level dictionary cache: reconfigure-with-fresh-closures is cheap, but
- * the dictionary itself is expensive to load.
- */
-
-  // `<style>…</style>` — capture the entire element including opener and
-  // closer (`<style…>` and `</style>`). Attribute-spread openers and
-  // multi-attribute values are handled by scanning for the first `>` after
-  // `<style`.
-  const styleBlockRe = /<style\b[^>]*>/g;
-  while ((m = styleBlockRe.exec(text)) !== null) {
-    const start = m.index;
-    const openEnd = start + m[0].length;
-    const close = text.indexOf('</style>', openEnd);
-    if (close === -1) {
-      ranges.push({ from: start, to: text.length });
-      break;
-    }
-    ranges.push({ from: start, to: close + '</style>'.length });
-  }
-
-  // `<script>…</script>` — same pattern.
-  const scriptBlockRe = /<script\b[^>]*>/g;
-  while ((m = scriptBlockRe.exec(text)) !== null) {
-    const start = m.index;
-    const openEnd = start + m[0].length;
-    const close = text.indexOf('</script>', openEnd);
-    if (close === -1) {
-      ranges.push({ from: start, to: text.length });
-      break;
-    }
-    ranges.push({ from: start, to: close + '</script>'.length });
-  }
-
-  ranges.sort((a, b) => a.from - b.from);
-  return ranges;
 }
 
 /**
