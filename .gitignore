@@ -23,7 +23,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.kiro
+.kilo
+.agents
 
 # Project files
 .cache/
