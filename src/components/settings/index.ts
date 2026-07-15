@@ -4,3 +4,5 @@
  */
 
 export { CharacterSettingsPanel } from './CharacterSettingsPanel';
+export type { CharacterSettingsPanelProps, SettingsTabId, SettingsDraft } from './types';
+export { SETTINGS_TABS } from './registry';

@@ -1,0 +1,426 @@
+/**
+ * @fileoverview Model list caching and fetch helpers for AI settings.
+ * @module components/settings/hooks/useModelCatalog
+ */
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AIConfig, AIModelInfo, SamplerSettings } from '../../../db/characterTypes';
+import { AIService, AIError } from '../../../services/AIService';
+import type { ModelProvider } from '../../../services/providers';
+import {
+  AI_BASE_URL_PRESETS,
+  MODEL_CACHE_STALENESS_MS,
+  getStoredApiKey,
+  getStoredModelId,
+  isPresetUrl,
+  normalizeBaseUrl,
+} from '../config/aiBaseUrlPresets';
+import type { AddToast, SettingsDraft } from '../types';
+
+interface CachedModels {
+  models: AIModelInfo[];
+  fetchedAt: number;
+}
+
+interface UseModelCatalogOptions {
+  isOpen: boolean;
+  isLoading: boolean;
+  draft: SettingsDraft;
+  setDraft: React.Dispatch<React.SetStateAction<SettingsDraft>>;
+  addToast: AddToast;
+}
+
+export function useModelCatalog({
+  isOpen,
+  isLoading,
+  draft,
+  setDraft,
+  addToast,
+}: UseModelCatalogOptions) {
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [modelsByBaseUrl, setModelsByBaseUrl] = useState<Record<string, CachedModels>>({});
+  const [fetchingModelsByBaseUrl, setFetchingModelsByBaseUrl] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [modelProviders, setModelProviders] = useState<ModelProvider[]>([]);
+  const [isFetchingProviders, setIsFetchingProviders] = useState(false);
+  const [supportsProviderSelection, setSupportsProviderSelection] = useState(false);
+
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const modelsByBaseUrlRef = useRef(modelsByBaseUrl);
+  modelsByBaseUrlRef.current = modelsByBaseUrl;
+  const fetchingModelsByBaseUrlRef = useRef(fetchingModelsByBaseUrl);
+  fetchingModelsByBaseUrlRef.current = fetchingModelsByBaseUrl;
+
+  const isCacheStale = (normalizedUrl: string): boolean => {
+    const cached = modelsByBaseUrlRef.current[normalizedUrl];
+    if (!cached) return true;
+    return Date.now() - cached.fetchedAt > MODEL_CACHE_STALENESS_MS;
+  };
+
+  const fetchModelsForUrl = useCallback(
+    async (baseUrl: string, apiKey: string): Promise<AIModelInfo[]> => {
+      const normalizedUrl = normalizeBaseUrl(baseUrl);
+      if (fetchingModelsByBaseUrlRef.current[normalizedUrl]) {
+        return modelsByBaseUrlRef.current[normalizedUrl]?.models ?? [];
+      }
+      setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: true }));
+      try {
+        const aiService = new AIService(
+          { ...draftRef.current.ai, baseUrl, apiKey },
+          draftRef.current.sampler
+        );
+        const models = await aiService.fetchModels({
+          subscriptionOnly: draftRef.current.ai.subscriptionModelsOnly,
+          detailed: true,
+        });
+        setModelsByBaseUrl((prev) => ({
+          ...prev,
+          [normalizedUrl]: { models, fetchedAt: Date.now() },
+        }));
+        return models;
+      } catch {
+        return [];
+      } finally {
+        setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: false }));
+      }
+    },
+    []
+  );
+
+  const fetchModelsForUrlRef = useRef(fetchModelsForUrl);
+  fetchModelsForUrlRef.current = fetchModelsForUrl;
+
+  // Auto-fetch models for presets with stored keys when panel opens
+  useEffect(() => {
+    if (!isOpen || isLoading) return;
+
+    const autoFetch = async () => {
+      const fetches: Promise<void>[] = [];
+
+      for (const preset of AI_BASE_URL_PRESETS) {
+        const normalizedUrl = normalizeBaseUrl(preset.baseUrl);
+        const apiKey = draftRef.current.ai.apiKeysByBaseUrl?.[normalizedUrl];
+
+        if (!apiKey) continue;
+
+        if (!isCacheStale(normalizedUrl)) {
+          const cached = modelsByBaseUrlRef.current[normalizedUrl];
+          if (
+            normalizeBaseUrl(draftRef.current.ai.baseUrl) === normalizedUrl &&
+            cached
+          ) {
+            setDraft((prev) => ({
+              ...prev,
+              ai: { ...prev.ai, availableModels: cached.models },
+            }));
+          }
+          continue;
+        }
+
+        fetches.push(
+          fetchModelsForUrl(preset.baseUrl, apiKey).then((models) => {
+            if (normalizeBaseUrl(draftRef.current.ai.baseUrl) === normalizedUrl) {
+              setDraft((prev) => ({
+                ...prev,
+                ai: { ...prev.ai, availableModels: models },
+              }));
+            }
+          })
+        );
+      }
+
+      await Promise.allSettled(fetches);
+    };
+
+    void autoFetch();
+  }, [isOpen, isLoading, fetchModelsForUrl, setDraft]);
+
+  const fetchModels = useCallback(async () => {
+    setIsFetchingModels(true);
+    try {
+      const { ai, sampler } = draftRef.current;
+      const aiService = new AIService(ai, sampler);
+      const models = await aiService.fetchModels({
+        subscriptionOnly: ai.subscriptionModelsOnly,
+        detailed: true,
+      });
+      const normalizedUrl = normalizeBaseUrl(ai.baseUrl);
+      setDraft((prev) => ({
+        ...prev,
+        ai: { ...prev.ai, availableModels: models },
+      }));
+      setModelsByBaseUrl((prev) => ({
+        ...prev,
+        [normalizedUrl]: { models, fetchedAt: Date.now() },
+      }));
+      addToast('success', `Fetched ${models.length} models`);
+    } catch (err) {
+      if (err instanceof AIError) {
+        addToast('error', err.message);
+      } else {
+        addToast('error', 'Failed to fetch models');
+      }
+    } finally {
+      setIsFetchingModels(false);
+    }
+  }, [addToast, setDraft]);
+
+  const fetchModelProviders = useCallback(
+    async (modelId: string, ai: AIConfig, sampler: SamplerSettings) => {
+      if (!modelId) return;
+
+      setIsFetchingProviders(true);
+      try {
+        const aiService = new AIService(ai, sampler);
+        const providerInfo = await aiService.fetchModelProviders(modelId);
+
+        setSupportsProviderSelection(providerInfo.supportsProviderSelection);
+
+        if (providerInfo.supportsProviderSelection) {
+          setModelProviders(providerInfo.providers);
+          const currentProvider = draftRef.current.ai.selectedProvider;
+          if (
+            currentProvider &&
+            !providerInfo.providers.some((p) => p.provider === currentProvider)
+          ) {
+            setDraft((prev) => ({
+              ...prev,
+              ai: {
+                ...prev.ai,
+                selectedProvider: '',
+                providerByModelId: { ...(prev.ai.providerByModelId ?? {}) },
+              },
+            }));
+          }
+        } else {
+          setModelProviders([]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch model providers:', err);
+        setModelProviders([]);
+        setSupportsProviderSelection(false);
+      } finally {
+        setIsFetchingProviders(false);
+      }
+    },
+    [setDraft]
+  );
+
+  // Fetch providers when model changes
+  useEffect(() => {
+    if (!draft.ai.modelId) {
+      setModelProviders([]);
+      setSupportsProviderSelection(false);
+      return;
+    }
+
+    void fetchModelProviders(draft.ai.modelId, draft.ai, draft.sampler);
+    // Intentionally depend on modelId primarily; full ai/sampler passed into fetch
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.ai.modelId, fetchModelProviders]);
+
+  const handleBaseUrlChange = useCallback(
+    (baseUrl: string, loadStoredProfile: boolean) => {
+      const normalizedUrl = normalizeBaseUrl(baseUrl);
+      const cached = modelsByBaseUrl[normalizedUrl];
+      const cachedModels = !cached || isCacheStale(normalizedUrl) ? [] : cached.models;
+
+      setDraft((prev) => {
+        const shouldSaveAsCustom =
+          prev.ai.baseUrl && !isPresetUrl(prev.ai.baseUrl) && baseUrl !== prev.ai.baseUrl;
+
+        return {
+          ...prev,
+          ai: {
+            ...prev.ai,
+            baseUrl,
+            lastCustomBaseUrl: shouldSaveAsCustom
+              ? normalizeBaseUrl(prev.ai.baseUrl)
+              : prev.ai.lastCustomBaseUrl,
+            modelId: loadStoredProfile
+              ? getStoredModelId(prev.ai.modelIdsByBaseUrl, baseUrl)
+              : prev.ai.modelId,
+            apiKey: loadStoredProfile
+              ? getStoredApiKey(prev.ai.apiKeysByBaseUrl, baseUrl)
+              : prev.ai.apiKey,
+            availableModels: cachedModels,
+          },
+        };
+      });
+
+      if (cachedModels.length === 0) {
+        const apiKey = draftRef.current.ai.apiKeysByBaseUrl?.[normalizedUrl];
+        if (apiKey) {
+          void fetchModelsForUrl(baseUrl, apiKey).then((models) => {
+            setDraft((prev) => ({
+              ...prev,
+              ai: { ...prev.ai, availableModels: models },
+            }));
+          });
+        }
+      }
+    },
+    [modelsByBaseUrl, setDraft, fetchModelsForUrl]
+  );
+
+  const handleCustomUrlChange = useCallback(
+    (baseUrl: string) => {
+      const normalizedUrl = normalizeBaseUrl(baseUrl);
+      const cached = modelsByBaseUrl[normalizedUrl];
+      const cachedModels = !cached || isCacheStale(normalizedUrl) ? [] : cached.models;
+
+      setDraft((prev) => ({
+        ...prev,
+        ai: {
+          ...prev.ai,
+          baseUrl,
+          lastCustomBaseUrl: normalizedUrl,
+          modelId: normalizedUrl
+            ? getStoredModelId(prev.ai.modelIdsByBaseUrl, normalizedUrl)
+            : prev.ai.modelId,
+          apiKey: normalizedUrl
+            ? getStoredApiKey(prev.ai.apiKeysByBaseUrl, normalizedUrl)
+            : prev.ai.apiKey,
+          availableModels: cachedModels,
+        },
+      }));
+
+      if (cachedModels.length === 0 && normalizedUrl) {
+        const apiKey = draftRef.current.ai.apiKeysByBaseUrl?.[normalizedUrl];
+        if (apiKey) {
+          void fetchModelsForUrl(baseUrl, apiKey).then((models) => {
+            setDraft((prev) => ({
+              ...prev,
+              ai: { ...prev.ai, availableModels: models },
+            }));
+          });
+        }
+      }
+    },
+    [modelsByBaseUrl, setDraft, fetchModelsForUrl]
+  );
+
+  const handleApiKeyChange = useCallback(
+    (apiKey: string) => {
+      setDraft((prev) => {
+        const normalizedBaseUrl = normalizeBaseUrl(prev.ai.baseUrl);
+        const apiKeysByBaseUrl = { ...(prev.ai.apiKeysByBaseUrl ?? {}) };
+
+        if (normalizedBaseUrl) {
+          if (apiKey) {
+            apiKeysByBaseUrl[normalizedBaseUrl] = apiKey;
+          } else {
+            delete apiKeysByBaseUrl[normalizedBaseUrl];
+          }
+        }
+
+        return {
+          ...prev,
+          ai: {
+            ...prev.ai,
+            apiKey,
+            apiKeysByBaseUrl,
+          },
+        };
+      });
+    },
+    [setDraft]
+  );
+
+  const handleModelChange = useCallback(
+    (modelId: string) => {
+      setDraft((prev) => {
+        const normalizedBaseUrl = normalizeBaseUrl(prev.ai.baseUrl);
+        const modelIdsByBaseUrl = { ...(prev.ai.modelIdsByBaseUrl ?? {}) };
+
+        if (normalizedBaseUrl) {
+          if (modelId) {
+            modelIdsByBaseUrl[normalizedBaseUrl] = modelId;
+          } else {
+            delete modelIdsByBaseUrl[normalizedBaseUrl];
+          }
+        }
+
+        if (modelId === prev.ai.modelId) {
+          return {
+            ...prev,
+            ai: { ...prev.ai, modelIdsByBaseUrl },
+          };
+        }
+
+        const savedProvider = prev.ai.providerByModelId?.[modelId];
+        const providerToUse =
+          savedProvider !== undefined ? savedProvider : prev.ai.selectedProvider;
+
+        return {
+          ...prev,
+          ai: {
+            ...prev.ai,
+            modelId,
+            modelIdsByBaseUrl,
+            selectedProvider: providerToUse,
+          },
+        };
+      });
+    },
+    [setDraft]
+  );
+
+  const handleProviderChange = useCallback(
+    (providerId: string) => {
+      setDraft((prev) => {
+        const providerByModelId = { ...(prev.ai.providerByModelId ?? {}) };
+
+        if (prev.ai.modelId) {
+          if (providerId) {
+            providerByModelId[prev.ai.modelId] = providerId;
+          } else {
+            delete providerByModelId[prev.ai.modelId];
+          }
+        }
+
+        return {
+          ...prev,
+          ai: {
+            ...prev.ai,
+            selectedProvider: providerId,
+            providerByModelId,
+          },
+        };
+      });
+    },
+    [setDraft]
+  );
+
+  const selectedBaseUrlPreset =
+    AI_BASE_URL_PRESETS.find(
+      (preset) => normalizeBaseUrl(preset.baseUrl) === normalizeBaseUrl(draft.ai.baseUrl)
+    )?.id ?? 'custom';
+
+  const isFetchingModelsForCurrentUrl =
+    !!fetchingModelsByBaseUrl[normalizeBaseUrl(draft.ai.baseUrl)];
+
+  const resetProviderState = useCallback(() => {
+    setModelProviders([]);
+    setSupportsProviderSelection(false);
+  }, []);
+
+  return {
+    isFetchingModels,
+    isFetchingModelsForCurrentUrl,
+    modelProviders,
+    isFetchingProviders,
+    supportsProviderSelection,
+    selectedBaseUrlPreset,
+    fetchModels,
+    fetchModelsForUrl: fetchModelsForUrlRef,
+    handleBaseUrlChange,
+    handleCustomUrlChange,
+    handleApiKeyChange,
+    handleModelChange,
+    handleProviderChange,
+    resetProviderState,
+  };
+}
