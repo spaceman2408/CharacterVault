@@ -3,6 +3,7 @@
  * @module @services/CharacterExportService
  */
 
+import JSZip from 'jszip';
 import type { Character, CharacterBook, CharacterCardV2, LorebookEntry, ExportCharacterResult } from '../db/characterTypes';
 
 /**
@@ -95,6 +96,91 @@ export class CharacterExportService {
         error: error instanceof Error ? error.message : 'Error exporting character',
       };
     }
+  }
+
+  /**
+   * Export the entire vault as a ZIP archive.
+   * Uses PNG (embedded data) when the character has an image; otherwise JSON (V3).
+   */
+  async exportVaultAsZip(characters: Character[]): Promise<ExportCharacterResult> {
+    try {
+      if (characters.length === 0) {
+        return {
+          success: false,
+          error: 'No characters to export.',
+        };
+      }
+
+      const zip = new JSZip();
+      const usedNames = new Map<string, number>();
+      let exported = 0;
+      const failures: string[] = [];
+
+      for (const character of characters) {
+        const result = character.imageData
+          ? await this.exportAsPNG(character)
+          : await this.exportAsJSON(character);
+
+        // PNG requires an image; if that path failed, fall back to JSON
+        const finalResult =
+          result.success && result.blob
+            ? result
+            : character.imageData
+              ? await this.exportAsJSON(character)
+              : result;
+
+        if (!finalResult.success || !finalResult.blob || !finalResult.filename) {
+          failures.push(character.name);
+          continue;
+        }
+
+        const uniqueName = this.uniqueZipFilename(finalResult.filename, usedNames);
+        zip.file(uniqueName, finalResult.blob);
+        exported += 1;
+      }
+
+      if (exported === 0) {
+        return {
+          success: false,
+          error: failures.length
+            ? `Failed to export any characters (${failures.join(', ')})`
+            : 'Failed to export vault.',
+        };
+      }
+
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      const note =
+        failures.length > 0
+          ? `Exported ${exported} of ${characters.length}; skipped: ${failures.join(', ')}`
+          : undefined;
+
+      return {
+        success: true,
+        blob,
+        filename: `character-vault-backup-${dateStamp}.zip`,
+        error: note,
+      };
+    } catch (error) {
+      console.error('Vault ZIP export error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error exporting vault backup',
+      };
+    }
+  }
+
+  /**
+   * Ensure ZIP entry filenames stay unique when characters share a name.
+   */
+  private uniqueZipFilename(filename: string, usedNames: Map<string, number>): string {
+    const count = usedNames.get(filename) ?? 0;
+    usedNames.set(filename, count + 1);
+    if (count === 0) return filename;
+
+    const lastDot = filename.lastIndexOf('.');
+    if (lastDot <= 0) return `${filename}_${count + 1}`;
+    return `${filename.slice(0, lastDot)}_${count + 1}${filename.slice(lastDot)}`;
   }
 
   /**

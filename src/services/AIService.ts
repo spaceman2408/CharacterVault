@@ -4,7 +4,14 @@
  * @module @services/AIService
  */
 
-import type { AIConfig, SamplerSettings, AIModelInfo, PromptSettings } from '../db/characterTypes';
+import type {
+  AIConfig,
+  SamplerSettings,
+  AIModelInfo,
+  PromptSettings,
+  CharacterSpec,
+  CharacterBook,
+} from '../db/characterTypes';
 import { ReasoningParser } from './ReasoningParser';
 import { resolveProvider } from './providers';
 import type { ModelProviderInfo, FetchModelsOptions } from './providers';
@@ -27,6 +34,93 @@ export function estimateTokens(text: string): number {
   if (!text) return 0;
   const byteLength = new TextEncoder().encode(text).length;
   return Math.ceil(byteLength / BYTES_PER_TOKEN);
+}
+
+/**
+ * Token breakdown for vault cards.
+ *
+ * - **active**: fields typically always present in an RP prompt
+ *   (name, description, appearance, personality, scenario, system, post-history, examples)
+ * - **total**: everything on the card, including greetings, lorebook, and metadata
+ *
+ * Not counted as active: first message, alternate greetings, lorebook,
+ * creator/notes/tags/version (those still count toward total).
+ */
+export interface CharacterTokenEstimate {
+  active: number;
+  total: number;
+}
+
+/**
+ * Estimate active + total tokens for a character card.
+ * Uses the same byte-based heuristic as {@link estimateTokens}.
+ */
+export function estimateCharacterCardTokens(
+  data: { spec: CharacterSpec; characterBook?: CharacterBook | null },
+  nameFallback = ''
+): CharacterTokenEstimate {
+  const spec = data.spec;
+  let active = 0;
+  let total = 0;
+
+  const addActive = (text?: string | null) => {
+    if (!text) return;
+    const n = estimateTokens(text);
+    active += n;
+    total += n;
+  };
+  const addTotalOnly = (text?: string | null) => {
+    if (!text) return;
+    total += estimateTokens(text);
+  };
+
+  // Active (always-on RP definition fields)
+  addActive(spec.name || nameFallback);
+  addActive(spec.description);
+  addActive(spec.physical_description);
+  addActive(spec.personality);
+  addActive(spec.scenario);
+  addActive(spec.system_prompt);
+  addActive(spec.post_history_instructions);
+  addActive(spec.mes_example);
+
+  // Total-only: greetings / one-shot / conditional / metadata
+  addTotalOnly(spec.first_mes);
+  if (spec.alternate_greetings?.length) {
+    addTotalOnly(spec.alternate_greetings.join('\n---\n'));
+  }
+  addTotalOnly(spec.creator);
+  addTotalOnly(spec.creator_notes);
+  addTotalOnly(spec.character_version);
+  if (spec.tags?.length) {
+    addTotalOnly(spec.tags.join(', '));
+  }
+
+  const book = data.characterBook;
+  if (book) {
+    addTotalOnly(book.name);
+    addTotalOnly(book.description);
+    for (const entry of book.entries ?? []) {
+      addTotalOnly(entry.content);
+      if (entry.keys?.length) addTotalOnly(entry.keys.join(','));
+      addTotalOnly(entry.name);
+      addTotalOnly(entry.comment);
+      if (entry.secondary_keys?.length) {
+        addTotalOnly(entry.secondary_keys.join(','));
+      }
+    }
+  }
+
+  return { active, total };
+}
+
+/**
+ * Format a token estimate for compact UI display (e.g. vault cards).
+ */
+export function formatTokenEstimate(tokens: number): string {
+  if (tokens < 1000) return `~${tokens}`;
+  if (tokens < 10_000) return `~${(tokens / 1000).toFixed(1)}k`;
+  return `~${Math.round(tokens / 1000)}k`;
 }
 
 /**

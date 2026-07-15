@@ -3,7 +3,17 @@
  * @module @services
  */
 
-export { AIService, AIError, createAIService, type AIErrorType } from './AIService';
+export {
+  AIService,
+  AIError,
+  createAIService,
+  estimateTokens,
+  estimateCharacterCardTokens,
+  formatTokenEstimate,
+  BYTES_PER_TOKEN,
+  type AIErrorType,
+  type CharacterTokenEstimate,
+} from './AIService';
 export {
   ReasoningFormat,
   ReasoningParser,

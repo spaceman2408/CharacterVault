@@ -48,6 +48,40 @@ export class CharacterImportService {
   }
 
   /**
+   * Import multiple character files sequentially.
+   * Continues past individual failures so bulk import is resilient.
+   */
+  async importFromFiles(files: FileList | File[]): Promise<{
+    successCount: number;
+    failCount: number;
+    characters: Character[];
+    errors: { filename: string; error: string }[];
+  }> {
+    const fileArray = Array.from(files);
+    const characters: Character[] = [];
+    const errors: { filename: string; error: string }[] = [];
+
+    for (const file of fileArray) {
+      const result = await this.importFromFile(file);
+      if (result.success && result.character) {
+        characters.push(result.character);
+      } else {
+        errors.push({
+          filename: file.name,
+          error: result.error || 'Unknown import error',
+        });
+      }
+    }
+
+    return {
+      successCount: characters.length,
+      failCount: errors.length,
+      characters,
+      errors,
+    };
+  }
+
+  /**
    * Import character from JSON file
    */
   private async importFromJSON(file: File): Promise<ImportCharacterResult> {

@@ -13,6 +13,7 @@ import type {
   CharacterVaultSettings,
   CharacterListItem,
 } from '../db/characterTypes';
+import { estimateCharacterCardTokens } from '../services/AIService';
 
 const IMPORTED_CHARACTER_FLAG = 'character_vault_imported';
 
@@ -44,13 +45,19 @@ interface CharacterOperations {
 }
 
 // Helper to create CharacterListItem from Character
-const toListItem = (char: Character): CharacterListItem => ({
-  id: char.id,
-  name: char.name,
-  thumbnailData: char.thumbnailData,
-  lastOpenedAt: char.lastOpenedAt,
-  updatedAt: char.updatedAt,
-});
+const toListItem = (char: Character): CharacterListItem => {
+  const tokens = estimateCharacterCardTokens(char.data, char.name);
+  return {
+    id: char.id,
+    name: char.name,
+    thumbnailData: char.thumbnailData,
+    lastOpenedAt: char.lastOpenedAt,
+    updatedAt: char.updatedAt,
+    activeTokens: tokens.active,
+    totalTokens: tokens.total,
+    tags: char.data.spec.tags ?? [],
+  };
+};
 
 /**
  * Hook for managing character state and operations
@@ -238,12 +245,10 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
       setCharacters(prev =>
         prev.map(c => (c.id === characterId ? updated : c))
       );
-      // Spec field updates don't affect list items (name is in CharacterListItem but handled separately)
-      if (field === 'name') {
-        setCharacterListItems(prev =>
-          prev.map(c => (c.id === characterId ? { ...c, name: typeof value === 'string' ? value : c.name } : c))
-        );
-      }
+      // Keep vault list tokens/tags/name in sync with the latest character payload
+      setCharacterListItems(prev =>
+        prev.map(c => (c.id === characterId ? toListItem(updated) : c))
+      );
       return updated;
     } catch (err) {
       if (specUpdateSequenceRef.current.get(sequenceKey) !== nextSequence) {

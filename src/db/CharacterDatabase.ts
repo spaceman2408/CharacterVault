@@ -19,6 +19,7 @@ import type {
   StoredImage,
 } from './characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
+import { estimateCharacterCardTokens } from '../services/AIService';
 import { v4 as uuidv4 } from 'uuid';
 
 function stableSerialize(value: unknown): string {
@@ -165,10 +166,20 @@ export class CharacterDatabase extends Dexie {
       .orderBy('updatedAt')
       .reverse()
       .toArray();
-    // Destructure to drop heavy fields (data, imageData, version, createdAt) for GC
-    return all.map(({ id, name, thumbnailData, lastOpenedAt, updatedAt }) => ({
-      id, name, thumbnailData, lastOpenedAt, updatedAt,
-    }));
+    // Map to lightweight list items; drop heavy fields (imageData, full data blob) for GC
+    return all.map(({ id, name, thumbnailData, lastOpenedAt, updatedAt, data }) => {
+      const tokens = estimateCharacterCardTokens(data, name);
+      return {
+        id,
+        name,
+        thumbnailData,
+        lastOpenedAt,
+        updatedAt,
+        activeTokens: tokens.active,
+        totalTokens: tokens.total,
+        tags: data.spec.tags ?? [],
+      };
+    });
   }
 
   /**
@@ -188,9 +199,11 @@ export class CharacterDatabase extends Dexie {
   async searchCharacters(query: string): Promise<Character[]> {
     const lowerQuery = query.toLowerCase();
     return this.characters
-      .filter(char =>
-        char.name.toLowerCase().includes(lowerQuery)
-      )
+      .filter(char => {
+        if (char.name.toLowerCase().includes(lowerQuery)) return true;
+        const tags = char.data.spec.tags ?? [];
+        return tags.some(tag => tag.toLowerCase().includes(lowerQuery));
+      })
       .toArray();
   }
 

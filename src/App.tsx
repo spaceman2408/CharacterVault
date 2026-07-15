@@ -4,6 +4,7 @@
  */
 
 import React, { useRef, useState, useMemo, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Routes, Route } from 'react-router-dom';
 import { CharacterProvider, useCharacterContext } from './context';
 import { CharacterWorkspace } from './components/workspace';
@@ -11,6 +12,9 @@ import { WelcomeTutorial } from './components/WelcomeTutorial';
 import { ImportPage } from './pages/ImportPage';
 import { AICreationStudio } from './pages/ai-creation-studio/AICreationStudio';
 import { characterImportService } from './services/CharacterImportService';
+import { characterExportService } from './services/CharacterExportService';
+import { formatTokenEstimate } from './services/AIService';
+import { characterDb } from './db/CharacterDatabase';
 import {
   Users,
   Plus,
@@ -21,15 +25,24 @@ import {
   Clock,
   User,
   Upload,
+  Download,
   Search,
   Play,
   X,
   HelpCircle,
   BookOpen,
-  Sparkles
+  Sparkles,
+  ArrowUpDown,
+  Loader2,
+  FileJson,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { PromoBanner } from './components/PromoBanner';
 import type { CharacterListItem } from './db';
+
+type VaultSortMode = 'name' | 'recent';
+type CardExportFormat = 'png' | 'json';
+const VAULT_SORT_STORAGE_KEY = 'characterVaultSort';
 
 // --- Utility Components ---
 
@@ -82,6 +95,8 @@ interface CharacterCardProps {
   onOpen: (id: string) => void;
   onDuplicate: (id: string, name: string) => void;
   onDelete: (id: string, name: string) => void;
+  onExport: (id: string, format: CardExportFormat) => Promise<void>;
+  isExporting?: boolean;
 }
 
 function CharacterCardSkeleton(): React.ReactElement {
@@ -96,12 +111,96 @@ function CharacterCardSkeleton(): React.ReactElement {
   );
 }
 
-function CharacterCard({ character, onOpen, onDuplicate, onDelete }: CharacterCardProps): React.ReactElement {
+const cardActionBtnClass =
+  'inline-flex items-center justify-center min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 p-2 sm:p-1.5 ' +
+  'bg-white/95 dark:bg-vault-900/95 backdrop-blur-sm rounded-lg shadow-sm ' +
+  'text-vault-600 dark:text-vault-300 hover:text-vault-900 hover:bg-white ' +
+  'dark:hover:text-vault-50 dark:hover:bg-vault-800 ' +
+  'active:scale-95 transition-colors disabled:opacity-50 touch-manipulation';
+
+function CharacterCard({
+  character,
+  onOpen,
+  onDuplicate,
+  onDelete,
+  onExport,
+  isExporting = false,
+}: CharacterCardProps): React.ReactElement {
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const exportBtnRef = useRef<HTMLButtonElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
   const formatRelativeTime = (timestamp?: string) => {
     if (!timestamp) return 'New';
     const diff = new Date().getTime() - new Date(timestamp).getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     return days === 0 ? 'Today' : days === 1 ? 'Yesterday' : `${days}d ago`;
+  };
+
+  const openExportMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isExporting) return;
+    if (!exportBtnRef.current) return;
+
+    const rect = exportBtnRef.current.getBoundingClientRect();
+    const menuWidth = 168;
+    const menuHeight = 96;
+    const pad = 8;
+
+    // Prefer below the button; flip above if near bottom. Prefer right-aligned to button.
+    let top = rect.bottom + 6;
+    if (top + menuHeight > window.innerHeight - pad) {
+      top = Math.max(pad, rect.top - menuHeight - 6);
+    }
+    let left = rect.right - menuWidth;
+    if (left < pad) left = pad;
+    if (left + menuWidth > window.innerWidth - pad) {
+      left = window.innerWidth - menuWidth - pad;
+    }
+
+    setMenuPosition({ top, left });
+    setExportMenuOpen(true);
+  };
+
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+
+    const handleOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (
+        exportBtnRef.current?.contains(target) ||
+        exportMenuRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setExportMenuOpen(false);
+    };
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExportMenuOpen(false);
+    };
+
+    const handleViewportChange = () => setExportMenuOpen(false);
+
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside, { passive: true });
+    document.addEventListener('keydown', handleKey);
+    window.addEventListener('scroll', handleViewportChange, true);
+    window.addEventListener('resize', handleViewportChange);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+      document.removeEventListener('keydown', handleKey);
+      window.removeEventListener('scroll', handleViewportChange, true);
+      window.removeEventListener('resize', handleViewportChange);
+    };
+  }, [exportMenuOpen]);
+
+  const handleExport = async (format: CardExportFormat) => {
+    setExportMenuOpen(false);
+    await onExport(character.id, format);
   };
 
   return (
@@ -126,46 +225,114 @@ function CharacterCard({ character, onOpen, onDuplicate, onDelete }: CharacterCa
           </div>
         )}
         
-        {/* Hover Overlay Gradient */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {/* Hover Overlay Gradient — keep a light always-on scrim on mobile so actions stay readable */}
+        <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-black/20 sm:from-black/60 sm:to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
         
-        {/* Quick Actions Overlay */}
-        <div className="absolute top-2 right-2 flex gap-1 transition-all duration-200 
+        {/* Quick Actions — always visible on mobile, hover-reveal on desktop */}
+        <div
+          className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex flex-row gap-1 transition-all duration-200 
           opacity-100 translate-y-0 
           sm:opacity-0 sm:-translate-y-2 
-          sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+          sm:group-hover:opacity-100 sm:group-hover:translate-y-0
+          sm:group-focus-within:opacity-100 sm:group-focus-within:translate-y-0"
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
-            onClick={(e) => { e.stopPropagation(); onDuplicate(character.id, character.name); }}
-            className="p-1.5 bg-white/90 dark:bg-vault-900/90 backdrop-blur-sm rounded-md text-vault-600 dark:text-vault-300 hover:text-vault-900 hover:bg-white shadow-sm"
-            title="Duplicate"
+            ref={exportBtnRef}
+            type="button"
+            onClick={openExportMenu}
+            disabled={isExporting}
+            className={cardActionBtnClass}
+            title="Export"
+            aria-label={`Export ${character.name}`}
+            aria-expanded={exportMenuOpen}
+            aria-haspopup="menu"
           >
-            <Copy className="w-3.5 h-3.5" />
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+            )}
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(character.id, character.name); }}
-            className="p-1.5 bg-white/90 dark:bg-vault-900/90 backdrop-blur-sm rounded-md text-red-500 hover:text-red-600 hover:bg-white shadow-sm"
-            title="Delete"
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDuplicate(character.id, character.name); }}
+            className={cardActionBtnClass}
+            title="Duplicate"
+            aria-label={`Duplicate ${character.name}`}
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Copy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(character.id, character.name); }}
+            className={`${cardActionBtnClass} text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300`}
+            title="Delete"
+            aria-label={`Delete ${character.name}`}
+          >
+            <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
           </button>
         </div>
       </div>
 
       {/* Content Area */}
-      <div className="p-4 flex flex-col gap-1">
+      <div className="p-3 sm:p-4 flex flex-col gap-1">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-vault-900 dark:text-vault-50 truncate text-sm leading-tight">
             {character.name}
           </h3>
         </div>
         
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-1.5 text-xs text-vault-500 dark:text-vault-400">
-            <Clock className="w-3 h-3" />
-            <span>{formatRelativeTime(character.lastOpenedAt)}</span>
+        <div className="flex items-center justify-between gap-2 mt-1.5 sm:mt-2">
+          <div className="flex items-center gap-1.5 text-xs text-vault-500 dark:text-vault-400 min-w-0">
+            <Clock className="w-3 h-3 shrink-0" />
+            <span className="truncate">{formatRelativeTime(character.lastOpenedAt)}</span>
           </div>
+          <span
+            className="text-[10px] sm:text-[11px] tabular-nums text-vault-400 dark:text-vault-500 shrink-0"
+            title={
+              `Active (RP always-on): ${character.activeTokens.toLocaleString()} tokens\n` +
+              `Total (incl. greetings & lorebook): ${character.totalTokens.toLocaleString()} tokens`
+            }
+          >
+            {formatTokenEstimate(character.activeTokens)}
+            <span className="text-vault-300 dark:text-vault-600"> / </span>
+            {formatTokenEstimate(character.totalTokens)}
+          </span>
         </div>
       </div>
+
+      {/* Export format menu (portaled so card overflow doesn't clip it) */}
+      {exportMenuOpen && menuPosition && createPortal(
+        <div
+          ref={exportMenuRef}
+          role="menu"
+          aria-label={`Export ${character.name}`}
+          className="fixed z-9999 w-44 rounded-xl border border-vault-200 dark:border-vault-700 bg-white dark:bg-vault-900 shadow-xl py-1 animate-in fade-in zoom-in-95"
+          style={{ top: menuPosition.top, left: menuPosition.left }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-vault-700 dark:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800 active:bg-vault-100 dark:active:bg-vault-800 touch-manipulation"
+            onClick={() => void handleExport('png')}
+          >
+            <ImageIcon className="w-4 h-4 shrink-0 text-vault-500" />
+            <span>Export PNG</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-vault-700 dark:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800 active:bg-vault-100 dark:active:bg-vault-800 touch-manipulation"
+            onClick={() => void handleExport('json')}
+          >
+            <FileJson className="w-4 h-4 shrink-0 text-vault-500" />
+            <span>Export JSON</span>
+          </button>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -173,6 +340,17 @@ function CharacterCard({ character, onOpen, onDuplicate, onDelete }: CharacterCa
 /**
  * Character Selection View
  */
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => void }): React.ReactElement {
   const {
     characterListItems,
@@ -189,7 +367,19 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   const [newCharacterName, setNewCharacterName] = useState('');
   const [deleteConfirmState, setDeleteConfirmState] = useState<{ id: string; name: string } | null>(null);
   const [copyConfirmState, setCopyConfirmState] = useState<{ id: string; name: string } | null>(null);
+  const [sortMode, setSortMode] = useState<VaultSortMode>(() => {
+    const stored = localStorage.getItem(VAULT_SORT_STORAGE_KEY);
+    return stored === 'recent' || stored === 'name' ? stored : 'name';
+  });
+  const [isImporting, setIsImporting] = useState(false);
+  const [isExportingVault, setIsExportingVault] = useState(false);
+  const [backupConfirmOpen, setBackupConfirmOpen] = useState(false);
+  const [exportingCardId, setExportingCardId] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
+  const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Promo banner dismissal state
   const [isPromoDismissed, setIsPromoDismissed] = useState(() => {
@@ -201,18 +391,30 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
     setIsPromoDismissed(true);
   };
 
+  const showStatus = useCallback((message: string, durationMs = 5000) => {
+    if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+    setStatusMessage(message);
+    statusTimeoutRef.current = setTimeout(() => setStatusMessage(null), durationMs);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+    };
+  }, []);
+
   // Pagination
   const getPageSize = () => (typeof window !== 'undefined' && window.innerWidth < 640 ? 12 : 18);
   const [pageSize, setPageSize] = useState(getPageSize);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Reset pagination when search changes
+  // Reset pagination when search or sort changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setCurrentPage(1);
     }, 0);
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [searchQuery, sortMode]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -236,20 +438,39 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
     localStorage.setItem('theme', newDark ? 'dark' : 'light');
   };
 
+  const handleSortChange = (mode: VaultSortMode) => {
+    setSortMode(mode);
+    localStorage.setItem(VAULT_SORT_STORAGE_KEY, mode);
+  };
+
   // Logic - work with characterListItems for vault view
+  // Search matches name or tags (tag matches are silent — no tag chips in the UI)
   const filteredCharacters = useMemo(() => {
     let result = [...characterListItems];
     if (searchQuery) {
-      result = result.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(c => {
+        if (c.name.toLowerCase().includes(q)) return true;
+        return (c.tags ?? []).some(tag => tag.toLowerCase().includes(q));
+      });
     }
     return result;
   }, [characterListItems, searchQuery]);
 
   const sortedCharacters = useMemo(() => {
-    return [...filteredCharacters].sort((a, b) => {
-      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
-    });
-  }, [filteredCharacters]);
+    const list = [...filteredCharacters];
+    if (sortMode === 'recent') {
+      return list.sort((a, b) => {
+        const dateA = a.lastOpenedAt ? new Date(a.lastOpenedAt).getTime() : 0;
+        const dateB = b.lastOpenedAt ? new Date(b.lastOpenedAt).getTime() : 0;
+        if (dateB !== dateA) return dateB - dateA;
+        return b.updatedAt.localeCompare(a.updatedAt);
+      });
+    }
+    return list.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
+    );
+  }, [filteredCharacters, sortMode]);
 
   const lastActive = useMemo(() => {
     return [...characterListItems].sort((a, b) => {
@@ -348,22 +569,180 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
     }
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const importFiles = useCallback(async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter(
+      (f) =>
+        f.type === 'application/json' ||
+        f.name.toLowerCase().endsWith('.json') ||
+        f.type === 'image/png' ||
+        f.name.toLowerCase().endsWith('.png')
+    );
+
+    if (fileArray.length === 0) {
+      showStatus('No PNG or JSON character files found.');
+      return;
+    }
+
+    setIsImporting(true);
     try {
-      const result = await characterImportService.importFromFile(file);
-      if (result.success && result.character) {
-        await refreshCharacters();
-        // Optional: Open immediately
-        // openCharacter(result.character.id);
+      const result = await characterImportService.importFromFiles(fileArray);
+      await refreshCharacters();
+
+      if (result.successCount === 0) {
+        const firstError = result.errors[0];
+        showStatus(
+          firstError
+            ? `Import failed: ${firstError.filename} — ${firstError.error}`
+            : 'Import failed.',
+          7000
+        );
+      } else if (result.failCount > 0) {
+        showStatus(
+          `Imported ${result.successCount} of ${fileArray.length}. ${result.failCount} failed.`,
+          7000
+        );
       } else {
-        alert(result.error);
+        showStatus(
+          result.successCount === 1
+            ? `Imported “${result.characters[0]?.name ?? 'character'}”.`
+            : `Imported ${result.successCount} characters.`
+        );
       }
     } catch {
-      alert('Import failed');
+      showStatus('Import failed.');
+    } finally {
+      setIsImporting(false);
     }
+  }, [refreshCharacters, showStatus]);
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    await importFiles(files);
     e.target.value = '';
+  };
+
+  const handleBackupClick = () => {
+    if (characterListItems.length === 0 || isExportingVault) return;
+    setBackupConfirmOpen(true);
+  };
+
+  const handleBackupCancel = () => {
+    if (isExportingVault) return;
+    setBackupConfirmOpen(false);
+  };
+
+  const handleExportVault = async () => {
+    if (characterListItems.length === 0 || isExportingVault) return;
+    setIsExportingVault(true);
+    try {
+      const characters = await characterDb.getAllCharacters();
+      const result = await characterExportService.exportVaultAsZip(characters);
+      if (result.success && result.blob && result.filename) {
+        downloadBlob(result.blob, result.filename);
+        showStatus(
+          result.error
+            ? `Backup downloaded. ${result.error}`
+            : `Vault backup downloaded (${characters.length} cards).`,
+          6000
+        );
+        setBackupConfirmOpen(false);
+      } else {
+        showStatus(result.error || 'Failed to export vault backup.', 7000);
+      }
+    } catch {
+      showStatus('Failed to export vault backup.');
+    } finally {
+      setIsExportingVault(false);
+    }
+  };
+
+  const handleCardExport = useCallback(async (id: string, format: CardExportFormat) => {
+    if (exportingCardId) return;
+    setExportingCardId(id);
+    try {
+      const character = await characterDb.getCharacter(id);
+      if (!character) {
+        showStatus('Character not found.');
+        return;
+      }
+
+      const result =
+        format === 'png'
+          ? await characterExportService.exportAsPNG(character)
+          : await characterExportService.exportAsJSON(character);
+
+      if (result.success && result.blob && result.filename) {
+        downloadBlob(result.blob, result.filename);
+        showStatus(
+          format === 'png'
+            ? `Exported “${character.name}” as PNG.`
+            : `Exported “${character.name}” as JSON.`
+        );
+      } else {
+        showStatus(
+          result.error ||
+            (format === 'png'
+              ? 'PNG export failed. Add an image or export as JSON.'
+              : 'Export failed.'),
+          7000
+        );
+      }
+    } catch {
+      showStatus('Export failed.');
+    } finally {
+      setExportingCardId(null);
+    }
+  }, [exportingCardId, showStatus]);
+
+  const isImportableDrag = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return false;
+    // When available, prefer checking item types; otherwise allow drop and filter later
+    const items = e.dataTransfer.items;
+    if (!items || items.length === 0) return true;
+    return Array.from(items).some(
+      (item) =>
+        item.kind === 'file' &&
+        (item.type === 'application/json' ||
+          item.type === 'image/png' ||
+          item.type === '' ||
+          item.type.startsWith('image/'))
+    );
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!isImportableDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current += 1;
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!isImportableDrag(e) && dragDepthRef.current === 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDragOver(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!isImportableDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current = 0;
+    setIsDragOver(false);
+    if (isImporting) return;
+    const files = e.dataTransfer.files;
+    if (files?.length) {
+      await importFiles(files);
+    }
   };
 
   // Delete confirmation handlers
@@ -399,7 +778,39 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
   };
 
   return (
-    <div className="h-dvh overflow-y-auto bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 transition-colors duration-500 animate-fade-in-slow">
+    <div
+      className="h-dvh overflow-y-auto bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 transition-colors duration-500 animate-fade-in-slow relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag-and-drop import overlay */}
+      {isDragOver && (
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-vault-950/60 backdrop-blur-sm">
+          <div className="rounded-2xl border-2 border-dashed border-white/50 bg-white/10 px-10 py-8 text-center text-white shadow-2xl">
+            <Upload className="mx-auto mb-3 h-10 w-10 opacity-90" />
+            <p className="text-lg font-semibold">Drop character cards to import</p>
+            <p className="mt-1 text-sm text-white/70">PNG or JSON — multiple files supported</p>
+          </div>
+        </div>
+      )}
+
+      {/* Status toast */}
+      {statusMessage && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-in slide-in-from-bottom-2 rounded-xl border border-vault-200 bg-white/95 px-4 py-3 text-sm shadow-xl dark:border-vault-700 dark:bg-vault-900/95">
+          <div className="flex items-start gap-2">
+            <p className="flex-1 text-vault-800 dark:text-vault-100">{statusMessage}</p>
+            <button
+              type="button"
+              onClick={() => setStatusMessage(null)}
+              className="rounded p-0.5 text-vault-400 hover:bg-vault-100 hover:text-vault-700 dark:hover:bg-vault-800 dark:hover:text-vault-200"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* --- Sticky Header --- */}
       <header className="sticky top-0 z-30 w-full backdrop-blur-xl bg-white/80 dark:bg-vault-950/80 border-b border-vault-200 dark:border-vault-800">
@@ -418,7 +829,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-vault-400 group-focus-within:text-vault-600 dark:group-focus-within:text-vault-300 transition-colors" />
               <input 
                 type="text" 
-                placeholder="Search characters..." 
+                placeholder="Search name or tags..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-vault-100 dark:bg-vault-900 border border-transparent focus:bg-white dark:focus:bg-vault-800 focus:border-vault-300 dark:focus:border-vault-700 rounded-full py-1.5 pl-9 pr-4 text-sm transition-all outline-none"
@@ -427,22 +838,50 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <input ref={fileInputRef} type="file" accept=".png,.json,image/png,application/json" onChange={handleImport} className="hidden" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".png,.json,image/png,application/json"
+              multiple
+              onChange={handleImport}
+              className="hidden"
+            />
             
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+              disabled={isImporting}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50"
             >
-              <Upload className="w-4 h-4" />
+              {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               Import
             </button>
             
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+              disabled={isImporting}
+              className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50"
               title="Import"
             >
-              <Upload className="w-4 h-4" />
+              {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={handleBackupClick}
+              disabled={characterListItems.length === 0 || isExportingVault}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50"
+              title="Download a ZIP backup of every character"
+            >
+              {isExportingVault ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Backup
+            </button>
+
+            <button
+              onClick={handleBackupClick}
+              disabled={characterListItems.length === 0 || isExportingVault}
+              className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50"
+              title="Backup vault"
+            >
+              {isExportingVault ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             </button>
 
             <button
@@ -517,7 +956,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-vault-400 group-focus-within:text-vault-600 dark:group-focus-within:text-vault-300 transition-colors" />
           <input 
             type="text" 
-            placeholder="Search characters..." 
+            placeholder="Search name or tags..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-vault-100 dark:bg-vault-900 border border-transparent focus:bg-white dark:focus:bg-vault-800 focus:border-vault-300 dark:focus:border-vault-700 rounded-full py-2 pl-9 pr-4 text-sm transition-all outline-none"
@@ -555,29 +994,59 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
         )}
 
         {/* Quick Resume & Stats Bar */}
-        {characterListItems.length > 0 && !searchQuery && (
-          <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4 mb-8">
+        {characterListItems.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Library</h2>
               <p className="text-vault-500 dark:text-vault-400 text-sm mt-1">
-                {characterListItems.length} {characterListItems.length === 1 ? 'character' : 'characters'} stored locally
+                {searchQuery
+                  ? `${sortedCharacters.length} of ${characterListItems.length} ${characterListItems.length === 1 ? 'character' : 'characters'}`
+                  : `${characterListItems.length} ${characterListItems.length === 1 ? 'character' : 'characters'} stored locally`}
               </p>
             </div>
-            
-            {lastActive && (
-              <button
-                onClick={() => openCharacter(lastActive.id)}
-                className="group flex items-center gap-3 pl-4 pr-3 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-300 dark:hover:border-vault-700 hover:shadow-md transition-all"
-              >
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-vault-400 uppercase tracking-wider">Continue</p>
-                  <p className="text-sm font-semibold max-w-37.5 truncate">{lastActive.name}</p>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-vault-100 dark:bg-vault-800 flex items-center justify-center group-hover:bg-vault-900 group-hover:text-white dark:group-hover:bg-vault-50 dark:group-hover:text-vault-900 transition-colors">
-                  <Play className="w-4 h-4 fill-current" />
-                </div>
-              </button>
-            )}
+
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+              <div className="inline-flex items-center gap-1 rounded-full border border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900 p-1">
+                <ArrowUpDown className="w-3.5 h-3.5 text-vault-400 ml-2" />
+                <button
+                  type="button"
+                  onClick={() => handleSortChange('name')}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    sortMode === 'name'
+                      ? 'bg-vault-900 text-white dark:bg-vault-50 dark:text-vault-900'
+                      : 'text-vault-500 hover:text-vault-800 dark:text-vault-400 dark:hover:text-vault-200'
+                  }`}
+                >
+                  Name
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSortChange('recent')}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    sortMode === 'recent'
+                      ? 'bg-vault-900 text-white dark:bg-vault-50 dark:text-vault-900'
+                      : 'text-vault-500 hover:text-vault-800 dark:text-vault-400 dark:hover:text-vault-200'
+                  }`}
+                >
+                  Recent
+                </button>
+              </div>
+
+              {!searchQuery && lastActive && (
+                <button
+                  onClick={() => openCharacter(lastActive.id)}
+                  className="group flex items-center gap-3 pl-4 pr-3 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-300 dark:hover:border-vault-700 hover:shadow-md transition-all"
+                >
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-vault-400 uppercase tracking-wider">Continue</p>
+                    <p className="text-sm font-semibold max-w-37.5 truncate">{lastActive.name}</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-vault-100 dark:bg-vault-800 flex items-center justify-center group-hover:bg-vault-900 group-hover:text-white dark:group-hover:bg-vault-50 dark:group-hover:text-vault-900 transition-colors">
+                    <Play className="w-4 h-4 fill-current" />
+                  </div>
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -633,6 +1102,8 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                       onOpen={openCharacter}
                       onDuplicate={handleCopyClick}
                       onDelete={handleDeleteClick}
+                      onExport={handleCardExport}
+                      isExporting={exportingCardId === char.id}
                     />
                   ))
                 : visibleCharacters.map((char) => <CharacterCardSkeleton key={char.id} />)}
@@ -729,6 +1200,65 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
               >
                 Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vault Backup Confirmation Modal */}
+      {backupConfirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-in fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vault-backup-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleBackupCancel();
+          }}
+        >
+          <div className="bg-white dark:bg-vault-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-full">
+                <Download className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h3 id="vault-backup-title" className="text-lg font-semibold text-vault-900 dark:text-vault-100">
+                Backup vault?
+              </h3>
+            </div>
+            <p className="text-vault-600 dark:text-vault-400 mb-2">
+              Download a ZIP of{' '}
+              <span className="font-medium text-vault-900 dark:text-vault-100">
+                {characterListItems.length} {characterListItems.length === 1 ? 'character' : 'characters'}
+              </span>
+              ?
+            </p>
+            <p className="text-sm text-vault-500 dark:text-vault-500 mb-6">
+              Cards with images export as PNG; cards without export as JSON. This may take a moment for large vaults.
+            </p>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end">
+              <button
+                type="button"
+                onClick={handleBackupCancel}
+                disabled={isExportingVault}
+                className="px-4 py-2.5 sm:py-2 text-sm font-medium text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50 touch-manipulation"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleExportVault()}
+                disabled={isExportingVault}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50 touch-manipulation"
+              >
+                {isExportingVault ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Preparing…
+                  </>
+                ) : (
+                  'Download backup'
+                )}
               </button>
             </div>
           </div>

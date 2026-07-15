@@ -4,7 +4,7 @@ CharacterVault plays well with the wider character card ecosystem. Whether you'r
 
 ## Importing Characters
 
-Click **Import** in the vault header, then select a file. CharacterVault accepts PNG images with embedded data or JSON files.
+Click **Import** in the vault header, then select one or more files — or drag and drop PNG/JSON files onto the library. CharacterVault accepts PNG images with embedded data or JSON files, and can import many at once.
 
 ### PNG Files
 
@@ -23,6 +23,15 @@ All three load cleanly into your vault.
 ### From SillyTavern
 
 The **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)** adds an "Export to CharacterVault" button right inside SillyTavern's export menu. When you use it, the extension copies the character to your clipboard in a format CharacterVault understands — no need to save files manually.
+
+## Vault backup
+
+From the library header, click **Backup** to download a ZIP of every character:
+
+- Cards **with** an image → PNG with embedded data
+- Cards **without** an image → JSON (V3)
+
+Use this periodically so a browser wipe does not erase your vault.
 
 ## Exporting Characters
 

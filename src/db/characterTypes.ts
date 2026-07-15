@@ -233,6 +233,17 @@ export interface CharacterListItem {
   thumbnailData: string;
   lastOpenedAt?: Timestamp;
   updatedAt: Timestamp;
+  /**
+   * Estimated tokens always present in a typical RP prompt
+   * (name, description, appearance, personality, scenario, system, post-history, examples).
+   */
+  activeTokens: number;
+  /**
+   * Estimated tokens for the full card (active fields + greetings + lorebook + metadata).
+   */
+  totalTokens: number;
+  /** Tags used for search only — not rendered as a tag UI in the vault */
+  tags: string[];
 }
 
 // ============================================================================
