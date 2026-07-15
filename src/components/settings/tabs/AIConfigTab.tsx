@@ -3,7 +3,7 @@
  * @module components/settings/tabs/AIConfigTab
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 import {
   AlertCircle,
   Brain,
@@ -28,6 +28,9 @@ import { SettingsToggle } from '../components/SettingsToggle';
 import type { SettingsTabProps } from '../types';
 
 export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpers }) => {
+  // Stable unique name — avoids password-manager heuristics without Math.random in render
+  const apiKeyFieldName = useId();
+
   if (!helpers) return null;
 
   const {
@@ -221,7 +224,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
             </label>
             <input
               type="password"
-              name={`vault-ai-key-${Math.random().toString(36).slice(2)}`}
+              name={`vault-ai-key-${apiKeyFieldName}`}
               value={localAIConfig.apiKey}
               onChange={(e) => handleApiKeyChange(e.target.value)}
               autoComplete="off"
