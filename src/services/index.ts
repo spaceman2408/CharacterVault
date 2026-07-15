@@ -10,6 +10,8 @@ export {
   estimateTokens,
   estimateCharacterCardTokens,
   formatTokenEstimate,
+  truncateTextToTokenLimit,
+  fitContextChunks,
   BYTES_PER_TOKEN,
   type AIErrorType,
   type CharacterTokenEstimate,

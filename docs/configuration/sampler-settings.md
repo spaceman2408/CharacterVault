@@ -107,7 +107,7 @@ The maximum number of tokens the AI will generate in a single response.
 
 ### Context Length
 
-The total token window for AI requests (input + output combined). This is selected from a dropdown with predefined sizes:
+The total token window for AI requests (input + output combined). Choose a preset from the dropdown, or select **Custom…** to enter any value from 4,096 to 1,000,000 tokens.
 
 | Option | Token Count |
 | :--- | :--- |
@@ -117,12 +117,16 @@ The total token window for AI requests (input + output combined). This is select
 | 16K | 16,384 |
 | 32K | 32,768 |
 | 64K | 65,536 |
-| 128K | 131,072 |
+| 128K | 128,000 |
+| 256K | 256,000 |
+| 512K | 512,000 |
+| 1M | 1,000,000 |
+| Custom… | Any integer from 4,096 to 1,000,000 |
 
-Choose a context length that matches or is lower than the maximum supported by your selected model. Larger windows allow the AI to work with more text but cost more and take longer.
+Choose a context length that matches or is lower than the maximum supported by your selected model. Larger windows allow the AI to work with more text but cost more and take longer. Providers may reject requests if the window exceeds what the model supports.
 
 ::: warning
-Max Tokens is capped at 8,192 on save. If you enter a value above this, it will be clamped down automatically.
+Max Tokens is capped at 8,192 on save. Context Length is clamped to 2,048–1,000,000 on save (custom entries require at least 4,096 in the UI).
 :::
 
 ## Tips

@@ -3,7 +3,7 @@
  * @module components/settings/tabs/SamplerTab
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BookOpen,
   Filter,
@@ -17,10 +17,18 @@ import {
   Wand2,
 } from 'lucide-react';
 import type { SamplerSettings } from '../../../db/characterTypes';
-import { DEFAULT_SETTINGS } from '../../../db/characterTypes';
+import {
+  CONTEXT_LENGTH_CUSTOM_MIN,
+  CONTEXT_LENGTH_MAX,
+  CONTEXT_LENGTH_PRESETS,
+  DEFAULT_SETTINGS,
+  clampContextLength,
+} from '../../../db/characterTypes';
 import { SettingsCard } from '../components/SettingsCard';
 import { SliderControl } from '../components/SliderControl';
 import type { SettingsTabProps } from '../types';
+
+const PRESET_CONTEXT_VALUES = new Set<number>(CONTEXT_LENGTH_PRESETS.map((p) => p.value));
 
 function applyNamedPreset(
   settings: SamplerSettings,
@@ -35,17 +43,54 @@ function applyNamedPreset(
 
 export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   const settings = draft.sampler;
+  // Sticky custom mode so choosing "Custom…" while on a preset value still shows the number input
+  const [customMode, setCustomMode] = useState(
+    () => !PRESET_CONTEXT_VALUES.has(settings.contextLength)
+  );
+  const isCustomContext =
+    customMode || !PRESET_CONTEXT_VALUES.has(settings.contextLength);
 
   const onChange = (next: SamplerSettings) => {
     setDraft((prev) => ({ ...prev, sampler: next }));
   };
 
   const handlePreset = (preset: 'creative' | 'balanced' | 'factual') => {
+    setCustomMode(false);
     onChange(applyNamedPreset(settings, preset));
   };
 
   const updateSetting = <K extends keyof SamplerSettings>(key: K, value: SamplerSettings[K]) => {
     onChange({ ...settings, [key]: value });
+  };
+
+  const handleContextSelect = (raw: string) => {
+    if (raw === 'custom') {
+      setCustomMode(true);
+      // Keep current value if already ≥ custom min; otherwise lift 2K → 4K
+      const next = Math.max(CONTEXT_LENGTH_CUSTOM_MIN, settings.contextLength);
+      if (next !== settings.contextLength) {
+        updateSetting('contextLength', clampContextLength(next));
+      }
+      return;
+    }
+    setCustomMode(false);
+    updateSetting('contextLength', parseInt(raw, 10));
+  };
+
+  const handleCustomContextChange = (raw: string) => {
+    const parsed = parseInt(raw, 10);
+    if (!Number.isFinite(parsed)) return;
+    setCustomMode(true);
+    updateSetting('contextLength', parsed);
+  };
+
+  const handleCustomContextBlur = () => {
+    const clamped = clampContextLength(
+      Math.max(CONTEXT_LENGTH_CUSTOM_MIN, settings.contextLength)
+    );
+    if (clamped !== settings.contextLength) {
+      updateSetting('contextLength', clamped);
+    }
   };
 
   return (
@@ -163,19 +208,36 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
               Context Length
             </label>
             <select
-              value={settings.contextLength}
-              onChange={(e) => updateSetting('contextLength', parseInt(e.target.value, 10))}
+              value={isCustomContext ? 'custom' : settings.contextLength}
+              onChange={(e) => handleContextSelect(e.target.value)}
               className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
             >
-              <option value={2048}>2K tokens</option>
-              <option value={4096}>4K tokens</option>
-              <option value={8192}>8K tokens</option>
-              <option value={16384}>16K tokens</option>
-              <option value={32768}>32K tokens</option>
-              <option value={65536}>64K tokens</option>
-              <option value={128000}>128K tokens</option>
+              {CONTEXT_LENGTH_PRESETS.map((preset) => (
+                <option key={preset.value} value={preset.value}>
+                  {preset.label}
+                </option>
+              ))}
+              <option value="custom">Custom…</option>
             </select>
-            <p className="mt-2 text-xs text-vault-500">Maximum context window for AI requests</p>
+            {isCustomContext && (
+              <input
+                type="number"
+                min={CONTEXT_LENGTH_CUSTOM_MIN}
+                max={CONTEXT_LENGTH_MAX}
+                step={1}
+                value={settings.contextLength}
+                onChange={(e) => handleCustomContextChange(e.target.value)}
+                onBlur={handleCustomContextBlur}
+                className="mt-2 w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+                aria-label="Custom context length in tokens"
+              />
+            )}
+            <p className="mt-2 text-xs text-vault-500">
+              Maximum context window for AI requests
+              {isCustomContext
+                ? ` (custom: ${CONTEXT_LENGTH_CUSTOM_MIN.toLocaleString()}–${CONTEXT_LENGTH_MAX.toLocaleString()} tokens)`
+                : ' (presets up to 1M, or Custom…)'}
+            </p>
           </div>
         </div>
       </SettingsCard>

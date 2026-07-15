@@ -19,14 +19,20 @@ import { EDITOR_PERSONA, buildSystemPrompt as buildSystemPromptParts, getStableP
 
 /**
  * Bytes per token ratio for token estimation.
- * Empirically derived: 1 token ≈ 5 bytes (UTF-8)
+ *
+ * Conservative vs typical English (~4 chars/token): using 4 bytes/token slightly
+ * over-counts relative to a naive 5-byte heuristic so we clamp/truncate earlier.
+ * Real BPE counts still vary by model; UI estimates remain approximate.
+ *
+ * History: was 5, which under-estimated enough to exceed provider limits
+ * (e.g. ~140k real input vs a 128k window while local estimate still "fit").
  */
-export const BYTES_PER_TOKEN = 5;
+export const BYTES_PER_TOKEN = 4;
 
 /**
  * Estimate token count for a string.
- * Uses heuristic: 1 token ≈ 5 bytes (UTF-8)
- * This handles non-ASCII text (CJK, emoji, etc.) more accurately than character count
+ * Uses heuristic: 1 token ≈ {@link BYTES_PER_TOKEN} UTF-8 bytes.
+ * Handles non-ASCII text (CJK, emoji, etc.) better than raw character count.
  * @param text - The text to estimate tokens for
  * @returns Estimated token count
  */
@@ -34,6 +40,74 @@ export function estimateTokens(text: string): number {
   if (!text) return 0;
   const byteLength = new TextEncoder().encode(text).length;
   return Math.ceil(byteLength / BYTES_PER_TOKEN);
+}
+
+/** Overhead reserved per context chunk for join separators / framing. */
+const CONTEXT_CHUNK_SEPARATOR_TOKENS = 5;
+
+/** Don't partial-fill with a sliver smaller than this (tokens). */
+const MIN_PARTIAL_CONTEXT_TOKENS = 48;
+
+/**
+ * Truncate a string so its estimated token count fits `availableTokens`.
+ * Uses the same UTF-8 byte heuristic as {@link estimateTokens}.
+ */
+export function truncateTextToTokenLimit(text: string, availableTokens: number): string {
+  if (availableTokens <= 0) return '...';
+  if (estimateTokens(text) <= availableTokens) return text;
+
+  const encoder = new TextEncoder();
+  const ellipsis = '...';
+  const maxBytes = Math.max(0, availableTokens * BYTES_PER_TOKEN - encoder.encode(ellipsis).length);
+
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (encoder.encode(text.slice(0, mid)).length <= maxBytes) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+
+  let end = lo;
+  if (end > 0 && end < text.length) {
+    const code = text.charCodeAt(end - 1);
+    if (code >= 0xd800 && code <= 0xdbff) end -= 1;
+  }
+
+  return text.slice(0, Math.max(0, end)) + ellipsis;
+}
+
+/**
+ * Fit ordered context chunks into a token budget.
+ * Includes whole chunks while they fit; if the next chunk overflows, partially
+ * includes a truncated prefix of it (so a 100k+ lorebook is not dropped to empty).
+ */
+export function fitContextChunks(context: string[], availableTokens: number): string[] {
+  if (availableTokens <= 0) return [];
+
+  const result: string[] = [];
+  let currentTokens = 0;
+
+  for (const ctx of context) {
+    if (!ctx || !ctx.trim()) continue;
+    const tokens = estimateTokens(ctx) + CONTEXT_CHUNK_SEPARATOR_TOKENS;
+    if (currentTokens + tokens <= availableTokens) {
+      result.push(ctx);
+      currentTokens += tokens;
+      continue;
+    }
+
+    const remaining = availableTokens - currentTokens - CONTEXT_CHUNK_SEPARATOR_TOKENS;
+    if (remaining >= MIN_PARTIAL_CONTEXT_TOKENS) {
+      result.push(truncateTextToTokenLimit(ctx, remaining));
+    }
+    break;
+  }
+
+  return result;
 }
 
 /**
@@ -287,8 +361,15 @@ export class AIService {
   private sampler: SamplerSettings;
   private prompts: PromptSettings;
   private abortController: AbortController | null = null;
-  /** Safety margin of tokens to reserve for overhead and varying token lengths */
-  private static readonly SAFETY_MARGIN = 100;
+  /**
+   * Safety margin reserved for tokenizer variance, message framing, and
+   * prompt wrappers not fully accounted for in the pre-budget step.
+   * Kept in sync with `aiToolbarPanel` selection checks.
+   */
+  private static readonly SAFETY_MARGIN = 256;
+
+  /** Per-message role/framing overhead when summing multi-message prompts. */
+  private static readonly MESSAGE_OVERHEAD_TOKENS = 6;
 
   constructor(config: AIConfig, sampler: SamplerSettings, prompts?: PromptSettings) {
     this.config = config;
@@ -305,41 +386,78 @@ export class AIService {
     return estimateTokens(text);
   }
 
-  /**
-   * Truncate context entries to fit within available tokens
-   */
+  /** Max tokens allowed for request input (context window minus max output and margin). */
+  private getMaxInputTokens(sampler: SamplerSettings = this.sampler): number {
+    return Math.max(0, sampler.contextLength - sampler.maxTokens - AIService.SAFETY_MARGIN);
+  }
+
+  private estimateMessagesTokens(messages: ChatMessage[]): number {
+    return messages.reduce(
+      (sum, m) => sum + estimateTokens(m.content) + AIService.MESSAGE_OVERHEAD_TOKENS,
+      0
+    );
+  }
+
+  /** Truncate context entries to fit within available tokens (partial last chunk OK). */
   private fitContextToLimit(context: string[], availableTokens: number): string[] {
-    if (availableTokens <= 0) return [];
-    
-    const result: string[] = [];
-    let currentTokens = 0;
-    
-    for (const ctx of context) {
-      const tokens = AIService.estimateTokens(ctx) + 5; // +5 for separators/overhead
-      if (currentTokens + tokens <= availableTokens) {
-        result.push(ctx);
-        currentTokens += tokens;
-      } else {
-        // Try to include a partial if it's the first one? No, let's just drop for now
-        // since these are "context entries" (Lorebook etc.)
-        break;
-      }
-    }
-    
-    return result;
+    return fitContextChunks(context, availableTokens);
+  }
+
+  /** Truncate a string to an estimated token budget. */
+  private truncateTextToLimit(text: string, availableTokens: number): string {
+    return truncateTextToTokenLimit(text, availableTokens);
   }
 
   /**
-   * Truncate single text string to fit within available tokens from the end/start?
-   * For single-turn ops, we usually want to truncate from the end if it's too long.
+   * Last-line defense before send: if assembled messages still exceed the input
+   * budget, shrink in this order so the active user turn is preserved longest:
+   * 1) assistant history, 2) older user turns, 3) system/context, 4) latest user.
    */
-  private truncateTextToLimit(text: string, availableTokens: number): string {
-    if (availableTokens <= 0) return '...';
-    const maxChars = availableTokens * 4;
-    if (text.length <= maxChars) return text;
-    
-    // Truncate and add ellipsis
-    return text.substring(0, Math.max(0, maxChars - 3)) + '...';
+  private enforceInputBudget(messages: ChatMessage[], maxInput: number): ChatMessage[] {
+    const result = messages.map((m) => ({ ...m, content: m.content }));
+
+    const totalTokens = () => this.estimateMessagesTokens(result);
+    if (totalTokens() <= maxInput) return result;
+
+    let lastUserIndex = -1;
+    for (let i = result.length - 1; i >= 0; i--) {
+      if (result[i].role === 'user') {
+        lastUserIndex = i;
+        break;
+      }
+    }
+
+    const indicesByPriority: number[] = [];
+    // Oldest assistant first (drop early history before recent)
+    for (let i = 0; i < result.length; i++) {
+      if (result[i].role === 'assistant') indicesByPriority.push(i);
+    }
+    // Older user turns (not the latest)
+    for (let i = 0; i < result.length; i++) {
+      if (result[i].role === 'user' && i !== lastUserIndex) indicesByPriority.push(i);
+    }
+    // System / context block
+    for (let i = 0; i < result.length; i++) {
+      if (result[i].role === 'system') indicesByPriority.push(i);
+    }
+    // Last resort: active user message (editor selection / current question)
+    if (lastUserIndex >= 0) indicesByPriority.push(lastUserIndex);
+
+    for (const i of indicesByPriority) {
+      const over = totalTokens() - maxInput;
+      if (over <= 0) break;
+
+      const contentTokens = estimateTokens(result[i].content);
+      if (contentTokens <= 0) continue;
+
+      const keepTokens = Math.max(0, contentTokens - over);
+      result[i] = {
+        ...result[i],
+        content: this.truncateTextToLimit(result[i].content, keepTokens),
+      };
+    }
+
+    return result;
   }
 
   /**
@@ -559,12 +677,16 @@ Provide only the generated text without any additional commentary.`;
     const sampler = { ...this.sampler, ...customSampler };
     const useStreaming = this.config.enableStreaming && onChunk;
 
+    // Final clamp: pre-budget steps can under-count wrappers/tokenizer variance
+    const maxInput = this.getMaxInputTokens(sampler);
+    const budgetedMessages = this.enforceInputBudget(messages, maxInput);
+
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
     const request: ChatCompletionRequest = {
       model: this.config.modelId,
-      messages,
+      messages: budgetedMessages,
       temperature: sampler.temperature,
       top_p: sampler.topP,
       min_p: sampler.minP,

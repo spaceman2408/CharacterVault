@@ -506,12 +506,35 @@ export interface SamplerSettings {
   /** Top P nucleus sampling (0.0 - 1.0) */
   topP: number;
 
-  /** Context window size (min 2048) */
+  /** Context window size (2048 – 1_000_000) */
   contextLength: number;
 
   /** Max generation tokens (min 100) */
   maxTokens: number;
 }
+
+/** Absolute minimum context window (2K preset only). */
+export const CONTEXT_LENGTH_MIN = 2048;
+
+/** Minimum allowed for free-form custom context length. */
+export const CONTEXT_LENGTH_CUSTOM_MIN = 4096;
+
+/** Maximum context window (1M tokens). */
+export const CONTEXT_LENGTH_MAX = 1_000_000;
+
+/** Named context-length presets for the Sampler settings UI. */
+export const CONTEXT_LENGTH_PRESETS = [
+  { label: '2K tokens', value: 2048 },
+  { label: '4K tokens', value: 4096 },
+  { label: '8K tokens', value: 8192 },
+  { label: '16K tokens', value: 16384 },
+  { label: '32K tokens', value: 32768 },
+  { label: '64K tokens', value: 65536 },
+  { label: '128K tokens', value: 128000 },
+  { label: '256K tokens', value: 256000 },
+  { label: '512K tokens', value: 512000 },
+  { label: '1M tokens', value: 1000000 },
+] as const;
 
 /**
  * AI model information
@@ -674,3 +697,9 @@ export const DEFAULT_SETTINGS = {
     grammar: 'Please fix any grammar, spelling, and punctuation errors in the following text while preserving the original meaning and style:\n\n"""\n${text}\n"""\n\nProvide only the corrected text without any additional commentary.',
   } satisfies PromptSettings,
 };
+
+/** Clamp a context length into the allowed absolute range (2048 – 1_000_000). */
+export function clampContextLength(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_SETTINGS.sampler.contextLength;
+  return Math.min(CONTEXT_LENGTH_MAX, Math.max(CONTEXT_LENGTH_MIN, Math.round(value)));
+}

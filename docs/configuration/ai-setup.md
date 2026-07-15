@@ -156,7 +156,7 @@ If your API requests fail and the base URL doesn't end in `/v1`, the error messa
 
 These are set on the **Sampler** tab:
 
-- **Context Length** — Dropdown from 2K to 128K tokens. This is the total window (input + output).
+- **Context Length** — Dropdown from 2K to 1M tokens, plus a Custom option (4,096–1,000,000). This is the total window (input + output).
 - **Max Tokens** — Slider from 100 to 8,192. The maximum tokens the AI will generate per response.
 
 ::: warning

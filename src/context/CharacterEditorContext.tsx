@@ -757,74 +757,108 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   }, [flushPendingSaves, refreshSnapshotsForCharacter, snapshotMetadata]);
 
   /**
-   * Get context content for AI from selected sections
+   * Get context content for AI from selected sections.
+   *
+   * Lorebook and alternate greetings are emitted as **multiple chunks** (one
+   * per entry/greeting) so AIService can fit a prefix of them into the budget
+   * instead of all-or-nothing dropping a 100k+ blob.
    */
   const getContextContent = useCallback((sectionIds: CharacterSection[]): string[] => {
     const character = currentCharacterRef.current;
     if (!character) return [];
-    
-    return sectionIds.map(sectionId => {
+
+    const chunks: string[] = [];
+    const push = (content: string) => {
+      if (content && content.trim().length > 0) chunks.push(content);
+    };
+
+    for (const sectionId of sectionIds) {
       const spec = character.data.spec;
       switch (sectionId) {
         case 'name':
-          return `Character Name: ${spec.name}`;
+          push(`Character Name: ${spec.name}`);
+          break;
         case 'description':
-          return `Description:\n${spec.description}`;
+          push(`Description:\n${spec.description}`);
+          break;
         case 'personality':
-          return `Personality:\n${spec.personality}`;
+          push(`Personality:\n${spec.personality}`);
+          break;
         case 'scenario':
-          return `Scenario:\n${spec.scenario}`;
+          push(`Scenario:\n${spec.scenario}`);
+          break;
         case 'first_mes':
-          return `First Message:\n${spec.first_mes}`;
+          push(`First Message:\n${spec.first_mes}`);
+          break;
         case 'mes_example':
-          return `Message Examples:\n${spec.mes_example}`;
+          push(`Message Examples:\n${spec.mes_example}`);
+          break;
         case 'system_prompt':
-          return `System Prompt:\n${spec.system_prompt}`;
+          push(`System Prompt:\n${spec.system_prompt}`);
+          break;
         case 'post_history_instructions':
-          return `Post-History Instructions:\n${spec.post_history_instructions}`;
-        case 'alternate_greetings':
-          return `Alternate Greetings:\n${spec.alternate_greetings.join('\n---\n')}`;
+          push(`Post-History Instructions:\n${spec.post_history_instructions}`);
+          break;
+        case 'alternate_greetings': {
+          const greetings = spec.alternate_greetings ?? [];
+          const nonEmpty = greetings.filter((g) => g && g.trim().length > 0);
+          if (nonEmpty.length === 0) break;
+          // Separate chunks so a long greeting list can partially fit
+          push('Alternate Greetings:');
+          nonEmpty.forEach((greeting, index) => {
+            push(`Greeting ${index + 1}:\n${greeting}`);
+          });
+          break;
+        }
         case 'physical_description':
-          return `Physical Description:\n${spec.physical_description}`;
-        // V3 spec fields
+          push(`Physical Description:\n${spec.physical_description}`);
+          break;
         case 'avatar':
-          return spec.avatar ? `Avatar URL: ${spec.avatar}` : '';
+          if (spec.avatar) push(`Avatar URL: ${spec.avatar}`);
+          break;
         case 'creator_notes':
-          return spec.creator_notes ? `Creator Notes:\n${spec.creator_notes}` : '';
+          if (spec.creator_notes) push(`Creator Notes:\n${spec.creator_notes}`);
+          break;
         case 'creator':
-          return spec.creator ? `Creator: ${spec.creator}` : '';
+          if (spec.creator) push(`Creator: ${spec.creator}`);
+          break;
         case 'character_version':
-          return spec.character_version ? `Version: ${spec.character_version}` : '';
+          if (spec.character_version) push(`Version: ${spec.character_version}`);
+          break;
         case 'tags':
-          return spec.tags?.length ? `Tags: ${spec.tags.join(', ')}` : '';
+          if (spec.tags?.length) push(`Tags: ${spec.tags.join(', ')}`);
+          break;
         case 'lorebook': {
           const book = character.data.characterBook;
-          if (!book || book.entries.length === 0) return '';
-          
-          const enabledEntries = book.entries.filter(e => e.enabled && e.extensions?.context_enabled !== false);
-          if (enabledEntries.length === 0) return '';
-          
-          let loreContent = `Lorebook: ${book.name || 'Character Lore'}\n`;
-          if (book.description) {
-            loreContent += `${book.description}\n`;
+          if (!book || book.entries.length === 0) break;
+
+          const enabledEntries = book.entries.filter(
+            (e) => e.enabled && e.extensions?.context_enabled !== false
+          );
+          if (enabledEntries.length === 0) break;
+
+          // Header as its own small chunk, then one chunk per entry
+          let header = `Lorebook: ${book.name || 'Character Lore'}`;
+          if (book.description) header += `\n${book.description}`;
+          push(header);
+
+          for (const entry of enabledEntries) {
+            let block = `[Entry ${entry.id}]`;
+            if (entry.name) block += ` ${entry.name}`;
+            block += '\n';
+            block += `Keys: ${entry.keys.join(', ')}\n`;
+            if (entry.comment) block += `Note: ${entry.comment}\n`;
+            block += entry.content;
+            push(block);
           }
-          loreContent += '\n';
-          
-          enabledEntries.forEach(entry => {
-            loreContent += `[Entry ${entry.id}]`;
-            if (entry.name) loreContent += ` ${entry.name}`;
-            loreContent += '\n';
-            loreContent += `Keys: ${entry.keys.join(', ')}\n`;
-            if (entry.comment) loreContent += `Note: ${entry.comment}\n`;
-            loreContent += `${entry.content}\n\n`;
-          });
-          
-          return loreContent.trim();
+          break;
         }
         default:
-          return '';
+          break;
       }
-    }).filter(content => content.length > 0);
+    }
+
+    return chunks;
   }, []);
 
   /**

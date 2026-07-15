@@ -9,6 +9,7 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_SECTION_ORDER,
   DEFAULT_SPELLCHECK_SETTINGS,
+  clampContextLength,
 } from '../../../db/characterTypes';
 import { characterSettingsService } from '../../../services/CharacterSettingsService';
 import { normalizeBaseUrl } from '../config/aiBaseUrlPresets';
@@ -63,7 +64,9 @@ function mergeLoadedSampler(sampler: SamplerSettings): SamplerSettings {
     topK: sampler?.topK ?? DEFAULT_SETTINGS.sampler.topK,
     repetitionPenalty: sampler?.repetitionPenalty ?? DEFAULT_SETTINGS.sampler.repetitionPenalty,
     topP: sampler?.topP ?? DEFAULT_SETTINGS.sampler.topP,
-    contextLength: sampler?.contextLength ?? DEFAULT_SETTINGS.sampler.contextLength,
+    contextLength: clampContextLength(
+      sampler?.contextLength ?? DEFAULT_SETTINGS.sampler.contextLength
+    ),
     maxTokens: Math.min(sampler?.maxTokens ?? DEFAULT_SETTINGS.sampler.maxTokens, 8192),
   };
 }
@@ -158,6 +161,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     try {
       const clampedSampler: SamplerSettings = {
         ...draft.sampler,
+        contextLength: clampContextLength(draft.sampler.contextLength),
         maxTokens: Math.min(draft.sampler.maxTokens, 8192),
       };
 

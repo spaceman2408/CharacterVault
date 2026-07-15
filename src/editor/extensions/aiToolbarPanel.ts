@@ -129,7 +129,7 @@ function createToolbarPanel(
   };
   
   let currentSampler = sampler;
-  const SAFETY_MARGIN = 100; // Match AIService.SAFETY_MARGIN
+  const SAFETY_MARGIN = 256; // Match AIService.SAFETY_MARGIN
 
   const toolbarContainer = document.createElement('div');
   toolbarContainer.className = 'ai-toolbar-controls';
