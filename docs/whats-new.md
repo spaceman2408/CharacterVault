@@ -4,6 +4,43 @@ Quick overview of recent updates to CharacterVault.
 
 ---
 
+## July 2026
+
+### Larger Context Windows & Smarter AI Budgeting
+
+AI work with big cards is much more reliable. You can raise the context window far past the old 128K cap, and large lorebooks actually make it into the request.
+
+- **Up to 1M context** — **Settings → Sampler → Context Length** includes 256K, 512K, and 1M presets, plus **Custom…** for any value from 4K to 1M
+- **Lorebook & greetings fill the window** — Selected lorebook entries (and long greeting lists) are packed in piece by piece so you get as much context as the budget allows, instead of almost none
+- **Safer requests** — CharacterVault is more careful about staying under your Context Length and Max Tokens, which cuts down on “prompt too long” errors from providers
+
+[Sampler settings →](/configuration/sampler-settings)  
+[AI Context panel →](/features/ai-context)
+
+---
+
+### Vault Library Upgrades
+
+The home library is built for bigger collections.
+
+- **Backup** — Download a ZIP of every character (PNG when there is an image, JSON otherwise)
+- **Bulk import** — Import many cards at once, including **drag and drop** onto the library
+- **Sort** — Switch between **Name** and **Recent** (preference is remembered)
+- **Search** — Find cards by **name or tags**
+- **Token estimates** — Each card shows **active / total** estimates; hover for exact counts
+- **Quick export** — PNG or JSON from the card actions without opening the editor
+
+[Vault organization →](/features/vault-organization)  
+[Import & export →](/features/import-export)
+
+---
+
+### Smaller Improvements
+
+- **API key field** — Less likely to trigger browser password-manager prompts when pasting a key in AI settings
+
+---
+
 ## June 2026
 
 ### In-Editor Spellcheck

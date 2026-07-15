@@ -14,7 +14,7 @@ All characters are displayed as portrait-style cards in a responsive grid that a
 | Desktop | 5 |
 | Wide desktop | 6 |
 
-Each card shows the character's portrait thumbnail, name, and last-opened time. Characters are always sorted alphabetically by name (case-insensitive, with natural number ordering — "Character 2" comes before "Character 10").
+Each card shows the character's portrait thumbnail, name, last-opened time, and compact **active / total** token estimates. Sort the grid by name or recent activity (see below).
 
 ## Search
 

@@ -4,6 +4,14 @@
 
 ### Current Release Notes
 
+- **Context length up to 1M** — Sampler settings include 256K / 512K / 1M presets and a **Custom…** range (4,096–1,000,000 tokens). Values are clamped on save.
+- **Large AI context packing** — Lorebook and alternate greetings are sent as separate chunks and fill the available window instead of being dropped when the whole block is too large. Token estimates and request trimming are stricter so big prompts are less likely to exceed the provider limit.
+- **Vault backup** — Library **Backup** downloads a ZIP of all characters (PNG with image, JSON without).
+- **Bulk import** — Multi-file import and drag-and-drop of PNG/JSON onto the library.
+- **Library sort & search** — Sort by name or recent; search matches name and tags.
+- **Card token estimates** — Active / total token estimates on each vault card (hover for exact counts).
+- **Quick library export** — Export a single card as PNG or JSON from card actions without opening the editor.
+- **API key field** — More stable field naming so browser password managers are less likely to hijack the AI key input.
 - **In-editor spellcheck** — A Hunspell-backed spellchecker (English dictionary) runs inside the shared editor. Misspelled words are underlined with a wavy-red decoration; hover one to see a quick-fix tooltip with suggestions plus **Ignore word** and **Add to dictionary**. Code fences, `{{macro}}` placeholders, numbers, and ALL-CAPS acronyms are skipped automatically. Creator Notes (HTML) and Extensions (JSON) are language-aware: HTML tag structure and JSON property keys are skipped so technical content doesn't pollute the underline. Your ignored words and personal dictionary persist across all cards. Toggle the feature in **Settings → Studio → Spellcheck**. The dictionary is cached in IndexedDB after first load, so it works offline.
 - **NanoGPT PKCE sign-in** — Sign in to NanoGPT directly from Settings → AI Config with a new **Sign in with NanoGPT** button. The OAuth flow uses PKCE (no client secret, no password leaves NanoGPT), and your available models are automatically fetched and loaded into the model picker as soon as sign-in completes. Popup blockers must be allowed. Works on Chrome for Android; other mobile browsers may not relay the auth code back — paste an API key manually if sign-in doesn't complete on your phone.
 - Added a **Sections** tab in Settings — hide, reorder, and reset your section tabs to match your workflow.
@@ -16,6 +24,11 @@
 
 ### Latest Commits (Newest to Oldest)
 
+- `65a9c8d` - feat(ai): raise context to 1M and fix large-lorebook budgeting
+- `663a513` - feat(vault): backup, bulk import, sort/search, and token estimates
+- `969dfbf` - update ignore
+- `995c932` - refactor(settings): use useId for AI API key field name
+- `3238cf4` - refactor(settings): split panel into modular tabs and registry
 - `00c188d` - feat(auth): auto-fetch models after NanoGPT OAuth sign-in
 - `f019115` - style(ui): update NanoGPT sign-in success toast message
 - `55c0ec7` - feat(auth): add NanoGPT OAuth sign-in flow
