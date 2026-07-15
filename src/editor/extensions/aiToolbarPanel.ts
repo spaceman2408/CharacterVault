@@ -8,7 +8,7 @@
 import { EditorView, showPanel, type Panel, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { SelectionRange, StateEffect } from '@codemirror/state';
 import type { AIOperation } from '../../db/characterTypes';
-import { toggleToolbarSearch, searchPanelOpen } from './toolbarSearch';
+import { toggleToolbarSearch, searchPanelOpen, closeToolbarSearch } from './toolbarSearch';
 import { createFontSizeControl } from './fontSizeControl';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings } from '../../db/characterTypes';
@@ -178,6 +178,69 @@ function createToolbarPanel(
   let selectedText = '';
   let isInstructMode = false;
   let hasSamplerError = false;
+  /** Set in destroy() so delayed rAF focus work cannot touch a dead view. */
+  let panelDestroyed = false;
+  /** Pending ensureEditorFocus / instruct focus frames — cancelled on destroy. */
+  const pendingFocusRafs = new Set<number>();
+
+  function scheduleFocusWork(work: () => void) {
+    if (panelDestroyed) return;
+    const id = requestAnimationFrame(() => {
+      pendingFocusRafs.delete(id);
+      if (panelDestroyed) return;
+      work();
+    });
+    pendingFocusRafs.add(id);
+  }
+
+  /**
+   * Keep keyboard shortcuts / Accept working after toolbar buttons are hidden.
+   * Hiding the focused button (processing UI swap) drops focus to <body>, which
+   * used to disable Mod-Enter / Escape until the user clicked the editor again.
+   */
+  function ensureEditorFocus() {
+    if (panelDestroyed) return;
+    // Leave the custom-instruction box alone while the user is typing there
+    if (document.activeElement === instructInput) return;
+    try {
+      view.focus();
+    } catch {
+      // view may be mid-destroy
+    }
+  }
+
+  /** True when focus is in a text field that is not part of this editor/panel. */
+  function isForeignTextInput(el: EventTarget | null): boolean {
+    if (!(el instanceof HTMLElement)) return false;
+    if (dom.contains(el) || view.dom.contains(el)) return false;
+    const tag = el.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (el.isContentEditable) return true;
+    return false;
+  }
+
+  /** Whether this panel should handle Accept/Reject shortcuts right now. */
+  function shouldHandleAiShortcuts(e: KeyboardEvent): boolean {
+    const hasSession =
+      state.isProcessing || state.isStreaming || !!state.aiResult || !!state.error;
+    if (!hasSession) return false;
+
+    // Never hijack typing in unrelated inputs (chat, settings, etc.)
+    if (isForeignTextInput(e.target) || isForeignTextInput(document.activeElement)) {
+      return false;
+    }
+
+    // If another CodeMirror editor has focus, let that instance handle keys
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) {
+      const otherEditor = active.closest('.cm-editor');
+      if (otherEditor && !view.dom.contains(active)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   // Create button helper
   function createButton(
@@ -210,11 +273,13 @@ function createToolbarPanel(
           dropdown.style.display = 'none';
         }
         onAction(op.id, selectedText, currentSelection);
+        // Focus after the processing UI swaps (hidden button would otherwise blur to body)
+        scheduleFocusWork(() => ensureEditorFocus());
       }
     });
 
     btn.addEventListener('mousedown', (e) => {
-      e.preventDefault(); // Prevent editor losing focus
+      e.preventDefault(); // Keep editor focused instead of focusing the button
     });
 
     return btn;
@@ -342,6 +407,8 @@ function createToolbarPanel(
     // Reset UI
     instructInput.value = '';
     updateState();
+    // Leave the instruct textarea so shortcuts work during generation
+    scheduleFocusWork(() => ensureEditorFocus());
   };
 
   instructSendBtn.addEventListener('click', sendInstruct);
@@ -526,7 +593,7 @@ function createToolbarPanel(
   const abortBtn = document.createElement('button');
   abortBtn.className = 'ai-toolbar-btn-abort';
   abortBtn.innerHTML = '⏹ Stop';
-  abortBtn.title = 'Stop AI operation';
+  abortBtn.title = 'Stop AI operation (Escape)';
   abortBtn.style.cssText = `
     display: none;
     align-items: center;
@@ -789,8 +856,17 @@ function createToolbarPanel(
   `;
   resultContainer.appendChild(actionButtons);
 
+  const isMacPlatform =
+    typeof navigator !== 'undefined' &&
+    (/Mac|iPhone|iPad|iPod/i.test(navigator.platform) ||
+      // navigator.platform is deprecated; userAgentData is not everywhere yet
+      (typeof navigator.userAgent === 'string' && /Mac OS X|Macintosh/i.test(navigator.userAgent)));
+  const modShortcutLabel = isMacPlatform ? '⌘' : 'Ctrl';
+
   const acceptBtn = document.createElement('button');
   acceptBtn.innerHTML = '✓ Accept';
+  acceptBtn.title = `Accept (${modShortcutLabel}+Enter)`;
+  acceptBtn.setAttribute('aria-keyshortcuts', 'Control+Enter Meta+Enter');
   acceptBtn.style.cssText = `
     flex: 1;
     padding: 8px 16px;
@@ -805,14 +881,19 @@ function createToolbarPanel(
   `;
   acceptBtn.addEventListener('click', () => {
     onAccept();
+    scheduleFocusWork(() => ensureEditorFocus());
   });
   acceptBtn.addEventListener('mousedown', (e) => {
+    // Keep / restore editor focus so click + keyboard stay consistent
     e.preventDefault();
+    ensureEditorFocus();
   });
   actionButtons.appendChild(acceptBtn);
 
   const rejectBtn = document.createElement('button');
   rejectBtn.innerHTML = '✕ Reject';
+  rejectBtn.title = 'Reject (Escape)';
+  rejectBtn.setAttribute('aria-keyshortcuts', 'Escape');
   rejectBtn.style.cssText = `
     flex: 1;
     padding: 8px 16px;
@@ -827,11 +908,69 @@ function createToolbarPanel(
   `;
   rejectBtn.addEventListener('click', () => {
     onReject();
+    scheduleFocusWork(() => ensureEditorFocus());
   });
   rejectBtn.addEventListener('mousedown', (e) => {
     e.preventDefault();
+    ensureEditorFocus();
   });
   actionButtons.appendChild(rejectBtn);
+
+  // Shortcuts for this editor's AI session — work even when focus fell to <body>
+  // after the processing UI hid the button that was focused.
+  const onPanelKeyDown = (e: KeyboardEvent) => {
+    if (panelDestroyed) return;
+    const target = e.target as Node | null;
+
+    // Don't steal Escape from the custom-instruction textarea (local cancel)
+    if (
+      e.key === 'Escape' &&
+      target instanceof HTMLElement &&
+      (target === instructInput || instructInput.contains(target))
+    ) {
+      return;
+    }
+
+    if (!shouldHandleAiShortcuts(e)) return;
+
+    // Search panel owns Escape first
+    if (e.key === 'Escape' && view.state.field(searchPanelOpen, false)) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeToolbarSearch(view);
+      return;
+    }
+
+    const canAccept =
+      !state.isProcessing && !state.isStreaming && !!state.aiResult && !state.error;
+    const canDismiss =
+      canAccept ||
+      !!state.error ||
+      state.isProcessing ||
+      state.isStreaming;
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && canAccept) {
+      e.preventDefault();
+      e.stopPropagation();
+      onAccept();
+      scheduleFocusWork(() => ensureEditorFocus());
+      return;
+    }
+
+    if (e.key === 'Escape' && canDismiss) {
+      // Prefer abort while running; reject/dismiss when done or on error
+      e.preventDefault();
+      e.stopPropagation();
+      if (state.isProcessing || state.isStreaming) {
+        onAbort();
+      } else {
+        onReject();
+      }
+      scheduleFocusWork(() => ensureEditorFocus());
+    }
+  };
+  // Capture phase: still fire when focus is body or panel controls
+  document.addEventListener('keydown', onPanelKeyDown, true);
 
   // Track previous content lengths for autoscroll detection
   let prevReasoningLength = 0;
@@ -1090,6 +1229,7 @@ function createToolbarPanel(
   // AI state update function
   const updateAIState: AIStreamingCallback = (update) => {
     const wasProcessing = state.isProcessing;
+    const hadResult = !!state.aiResult;
     if (update.isProcessing !== undefined) state.isProcessing = update.isProcessing;
     if (update.isStreaming !== undefined) state.isStreaming = update.isStreaming;
     if (update.streamingContent !== undefined) state.streamingContent = update.streamingContent;
@@ -1119,6 +1259,28 @@ function createToolbarPanel(
     }
 
     updateResultDisplay();
+
+    // After UI swaps (ops hidden / Accept shown), reclaim focus so shortcuts work
+    // without requiring a manual click into the editor.
+    const startedProcessing = !wasProcessing && state.isProcessing;
+    const finishedWithResult =
+      wasProcessing &&
+      !state.isProcessing &&
+      !state.isStreaming &&
+      !!state.aiResult &&
+      !hadResult;
+    const showedError =
+      !!update.error && !state.isProcessing && !state.isStreaming;
+    if (startedProcessing || finishedWithResult || showedError) {
+      scheduleFocusWork(() => ensureEditorFocus());
+    }
+
+    // Error recovery: put the user back in the instruct box
+    if (restoredInstructMode) {
+      scheduleFocusWork(() => {
+        if (!panelDestroyed) instructInput.focus();
+      });
+    }
   };
 
   // Initial state
@@ -1139,8 +1301,17 @@ function createToolbarPanel(
       updateState();
     },
     destroy: () => {
+      panelDestroyed = true;
+      for (const id of pendingFocusRafs) {
+        cancelAnimationFrame(id);
+      }
+      pendingFocusRafs.clear();
       document.removeEventListener('click', closeDropdownOnOutsideClick);
+      document.removeEventListener('keydown', onPanelKeyDown, true);
       window.clearTimeout(searchPanelTimer);
+      // Drop registry entry early so updateAIState closures are not retained
+      // solely by the WeakMap until the EditorView is GC'd.
+      panelRegistry.delete(view);
       if (fontSizeCleanup) {
         fontSizeCleanup();
       }

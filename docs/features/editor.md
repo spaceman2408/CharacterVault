@@ -52,16 +52,18 @@ When text is selected, the right side of the toolbar shows the character count. 
 
 **Accept or Reject**
 
-- **✓ Accept** — Replaces your selection with the AI result.
-- **✕ Reject** — Discards the AI result and keeps your original text.
+- **✓ Accept** (`Ctrl+Enter` / `⌘+Enter`) — Replaces the text that was selected when you started the AI operation with the AI result.
+- **✕ Reject** (`Escape`) — Discards the AI result and keeps your original text.
+
+The replace target is **locked** when the operation starts. You can move the caret or type elsewhere while you wait — Accept still applies to the original span (adjusted if the document changed).
 
 ::: tip
-Accepted text gets a brief green highlight so you can spot what changed. It fades after a moment.
+Accepted text gets a strong green pulse so you can spot what changed, then soft-fades over about 2–3 seconds.
 :::
 
 **Stop**
 
-While an AI operation is running, a **⏹ Stop** button replaces the toolbar buttons. Click it to cancel the request.
+While an AI operation is running, a **⏹ Stop** button replaces the toolbar buttons. Click it (or press `Escape`) to cancel the request.
 
 **Reasoning**
 

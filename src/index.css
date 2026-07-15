@@ -105,6 +105,10 @@
   --ai-toolbar-accent-rose: #e11d48;
   --ai-toolbar-accent-neutral: #475569;
   --ai-toolbar-accept-bg: #16a34a;
+  --ai-accepted-highlight-bg: rgba(22, 163, 74, 0.28);
+  --ai-accepted-highlight-bg-peak: rgba(22, 163, 74, 0.42);
+  --ai-accepted-highlight-outline: rgba(22, 163, 74, 0.55);
+  --ai-accepted-highlight-glow: rgba(22, 163, 74, 0.35);
 
   --vault-search-bg: #f8fafc;
   --vault-search-border: #e2e8f0;
@@ -177,6 +181,10 @@
   --ai-toolbar-accent-rose: #fb7185;
   --ai-toolbar-accent-neutral: #a3a3a3;
   --ai-toolbar-accept-bg: #22c55e;
+  --ai-accepted-highlight-bg: rgba(34, 197, 94, 0.32);
+  --ai-accepted-highlight-bg-peak: rgba(34, 197, 94, 0.48);
+  --ai-accepted-highlight-outline: rgba(74, 222, 128, 0.65);
+  --ai-accepted-highlight-glow: rgba(34, 197, 94, 0.45);
 
   --vault-search-bg: #262626;
   --vault-search-border: #404040;
@@ -618,6 +626,36 @@ textarea:focus:not(:focus-visible) {
   border-radius: 2px;
   outline: 1px solid var(--vault-search-match-selected-ring);
   box-shadow: 0 0 0 1px var(--vault-search-match-selected-ring);
+}
+
+/* ============================================================================
+   AI ACCEPTED-EDIT HIGHLIGHT (pulse → soft fade after Accept)
+   ============================================================================ */
+
+@keyframes cm-ai-accepted-pulse {
+  0% {
+    background-color: var(--ai-accepted-highlight-bg-peak);
+    box-shadow:
+      0 0 0 2px var(--ai-accepted-highlight-outline),
+      0 0 12px var(--ai-accepted-highlight-glow);
+  }
+  25% {
+    background-color: var(--ai-accepted-highlight-bg);
+    box-shadow:
+      0 0 0 1px var(--ai-accepted-highlight-outline),
+      0 0 6px var(--ai-accepted-highlight-glow);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.cm-ai-accepted-highlight {
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  animation: cm-ai-accepted-pulse 2.5s ease-out forwards;
 }
 
 /* ============================================================================
