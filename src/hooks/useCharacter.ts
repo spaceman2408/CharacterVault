@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { characterDb } from '../db/CharacterDatabase';
+import { characterDb, toCharacterListItem } from '../db/CharacterDatabase';
 import { characterSnapshotService } from '../services/CharacterSnapshotService';
 import type {
   Character,
@@ -13,7 +13,6 @@ import type {
   CharacterVaultSettings,
   CharacterListItem,
 } from '../db/characterTypes';
-import { estimateCharacterCardTokens } from '../services/AIService';
 
 const IMPORTED_CHARACTER_FLAG = 'character_vault_imported';
 
@@ -43,21 +42,6 @@ interface CharacterOperations {
   updateSpecField: (characterId: string, field: keyof Character['data']['spec'], value: string | string[]) => Promise<Character>;
   updateSettings: (updates: Partial<Omit<CharacterVaultSettings, 'id'>>) => Promise<void>;
 }
-
-// Helper to create CharacterListItem from Character
-const toListItem = (char: Character): CharacterListItem => {
-  const tokens = estimateCharacterCardTokens(char.data, char.name);
-  return {
-    id: char.id,
-    name: char.name,
-    thumbnailData: char.thumbnailData,
-    lastOpenedAt: char.lastOpenedAt,
-    updatedAt: char.updatedAt,
-    activeTokens: tokens.active,
-    totalTokens: tokens.total,
-    tags: char.data.spec.tags ?? [],
-  };
-};
 
 /**
  * Hook for managing character state and operations
@@ -117,8 +101,9 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
    */
   const createCharacter = useCallback(async (input: CreateCharacterInput): Promise<Character> => {
     const character = await characterDb.createCharacter(input);
-    setCharacters(prev => [character, ...prev]);
-    setCharacterListItems(prev => [toListItem(character), ...prev]);
+    // Only keep the open card in memory — never stack full characters
+    setCharacters([character]);
+    setCharacterListItems((prev) => [toCharacterListItem(character), ...prev]);
     setCurrentCharacterId(character.id);
 
     // Update last active character in settings
@@ -137,15 +122,9 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     try {
       const character = await characterDb.getCharacter(characterId);
       if (character) {
-        // Update or add the character to the full characters array
-        setCharacters(prev => {
-          const exists = prev.find(c => c.id === characterId);
-          if (exists) {
-            return prev.map(c => c.id === characterId ? character : c);
-          }
-          return [character, ...prev];
-        });
-        
+        // Replace — do not accumulate every previously opened card in heap
+        setCharacters([character]);
+
         await characterDb.updateLastOpened(characterId);
         if (character.data.extensions?.[IMPORTED_CHARACTER_FLAG] === true) {
           await characterSnapshotService.createSnapshot(character, 'open').catch(error => {
@@ -160,7 +139,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
           setSettings({ ...settings, lastActiveCharacterId: characterId });
         }
 
-        // Refresh the list to update lastOpenedAt
+        // Refresh vault index only (lightweight rows — not full cards)
         await refreshCharacters();
       }
     } catch (err) {
@@ -173,6 +152,8 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
    */
   const closeCharacter = useCallback(() => {
     setCurrentCharacterId(null);
+    // Drop full card payload (image + lorebook) when returning to the vault
+    setCharacters([]);
     if (settings) {
       characterDb.updateSettings({ lastActiveCharacterId: undefined });
       setSettings({ ...settings, lastActiveCharacterId: undefined });
@@ -185,11 +166,12 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   const deleteCharacter = useCallback(async (characterId: string): Promise<void> => {
     try {
       await characterDb.deleteCharacter(characterId);
-      setCharacters(prev => prev.filter(c => c.id !== characterId));
-      setCharacterListItems(prev => prev.filter(c => c.id !== characterId));
+      setCharacters((prev) => prev.filter((c) => c.id !== characterId));
+      setCharacterListItems((prev) => prev.filter((c) => c.id !== characterId));
 
       if (currentCharacterId === characterId) {
         setCurrentCharacterId(null);
+        setCharacters([]);
         if (settings) {
           await characterDb.updateSettings({ lastActiveCharacterId: undefined });
           setSettings({ ...settings, lastActiveCharacterId: undefined });
@@ -210,12 +192,11 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   ): Promise<Character> => {
     try {
       const updated = await characterDb.updateCharacter(characterId, input);
-      setCharacters(prev =>
-        prev.map(c => (c.id === characterId ? updated : c))
+      setCharacters((prev) =>
+        prev.map((c) => (c.id === characterId ? updated : c))
       );
-      // Update the list item (only name and thumbnailData can change from updateCharacter)
-      setCharacterListItems(prev =>
-        prev.map(c => (c.id === characterId ? toListItem(updated) : c))
+      setCharacterListItems((prev) =>
+        prev.map((c) => (c.id === characterId ? toCharacterListItem(updated) : c))
       );
       return updated;
     } catch (err) {
@@ -242,12 +223,11 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
         return updated;
       }
 
-      setCharacters(prev =>
-        prev.map(c => (c.id === characterId ? updated : c))
+      setCharacters((prev) =>
+        prev.map((c) => (c.id === characterId ? updated : c))
       );
-      // Keep vault list tokens/tags/name in sync with the latest character payload
-      setCharacterListItems(prev =>
-        prev.map(c => (c.id === characterId ? toListItem(updated) : c))
+      setCharacterListItems((prev) =>
+        prev.map((c) => (c.id === characterId ? toCharacterListItem(updated) : c))
       );
       return updated;
     } catch (err) {
@@ -268,8 +248,8 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   ): Promise<Character> => {
     try {
       const duplicated = await characterDb.duplicateCharacter(characterId, newName);
-      setCharacters(prev => [duplicated, ...prev]);
-      setCharacterListItems(prev => [toListItem(duplicated), ...prev]);
+      // List only — do not pin the full duplicate in memory until the user opens it
+      setCharacterListItems((prev) => [toCharacterListItem(duplicated), ...prev]);
       return duplicated;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to duplicate character'));

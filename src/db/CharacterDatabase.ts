@@ -69,6 +69,24 @@ async function computeSnapshotPayloadHash(payload: CharacterSnapshot['payload'])
 }
 
 /**
+ * Build a lightweight vault-list row from a full character.
+ * Keeps thumbnails + token estimates without retaining imageData / lorebook blobs in React state.
+ */
+export function toCharacterListItem(character: Character): CharacterListItem {
+  const tokens = estimateCharacterCardTokens(character.data, character.name);
+  return {
+    id: character.id,
+    name: character.name,
+    thumbnailData: character.thumbnailData,
+    lastOpenedAt: character.lastOpenedAt,
+    updatedAt: character.updatedAt,
+    activeTokens: tokens.active,
+    totalTokens: tokens.total,
+    tags: character.data.spec.tags ?? [],
+  };
+}
+
+/**
  * Database class for CharacterVault.
  * Single database storing all characters and settings.
  */
@@ -87,6 +105,12 @@ export class CharacterDatabase extends Dexie {
 
   /** Table storing cached spellcheck dictionary blobs */
   spellDictionaryCache!: Table<SpellDictionaryCacheEntry, string>;
+
+  /**
+   * Lightweight vault index — no full imageData / character JSON.
+   * Vault UI reads only this table so large lorebooks/images stay on disk until opened.
+   */
+  characterListIndex!: Table<CharacterListItem, string>;
 
   constructor() {
     super('character-vault-db');
@@ -139,6 +163,32 @@ export class CharacterDatabase extends Dexie {
       storedImages: 'id',
       spellDictionaryCache: 'id',
     });
+
+    // Version 6: Lightweight vault list index (avoids loading full cards on home)
+    this.version(6)
+      .stores({
+        characters: 'id, name, updatedAt, createdAt',
+        settings: 'id',
+        snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+        storedImages: 'id',
+        spellDictionaryCache: 'id',
+        characterListIndex: 'id, name, updatedAt, lastOpenedAt',
+      })
+      .upgrade(async (tx) => {
+        const indexTable = tx.table<CharacterListItem, string>('characterListIndex');
+        // Stream characters one-by-one so peak memory stays lower during migration
+        await tx
+          .table<Character, string>('characters')
+          .toCollection()
+          .each(async (character) => {
+            await indexTable.put(toCharacterListItem(character));
+          });
+      });
+  }
+
+  /** Upsert the vault list row for a character (call after any write). */
+  private async syncCharacterListIndex(character: Character): Promise<void> {
+    await this.characterListIndex.put(toCharacterListItem(character));
   }
 
   // ============================================================================
@@ -157,28 +207,29 @@ export class CharacterDatabase extends Dexie {
   }
 
   /**
-   * Get lightweight list items for vault view
-   * Returns only the fields needed for card display
-   * @returns {Promise<CharacterListItem[]>} Array of character list items
+   * Get lightweight list items for vault view.
+   * Reads `characterListIndex` only — never loads full cards (imageData / lorebook).
    */
   async getAllCharacterListItems(): Promise<CharacterListItem[]> {
-    const all = await this.characters
-      .orderBy('updatedAt')
-      .reverse()
-      .toArray();
-    // Map to lightweight list items; drop heavy fields (imageData, full data blob) for GC
-    return all.map(({ id, name, thumbnailData, lastOpenedAt, updatedAt, data }) => {
-      const tokens = estimateCharacterCardTokens(data, name);
-      return {
-        id,
-        name,
-        thumbnailData,
-        lastOpenedAt,
-        updatedAt,
-        activeTokens: tokens.active,
-        totalTokens: tokens.total,
-        tags: data.spec.tags ?? [],
-      };
+    // Backfill if index is empty but characters exist (edge case / failed migration)
+    const indexCount = await this.characterListIndex.count();
+    if (indexCount === 0) {
+      const charCount = await this.characters.count();
+      if (charCount > 0) {
+        await this.rebuildCharacterListIndex();
+      }
+    }
+
+    return this.characterListIndex.orderBy('updatedAt').reverse().toArray();
+  }
+
+  /** Rebuild the entire vault list index from full character records. */
+  async rebuildCharacterListIndex(): Promise<void> {
+    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
+      await this.characterListIndex.clear();
+      await this.characters.toCollection().each(async (character) => {
+        await this.characterListIndex.put(toCharacterListItem(character));
+      });
     });
   }
 
@@ -249,7 +300,10 @@ export class CharacterDatabase extends Dexie {
       lastOpenedAt: timestamp,
     };
 
-    await this.characters.add(character);
+    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
+      await this.characters.add(character);
+      await this.syncCharacterListIndex(character);
+    });
     return character;
   }
 
@@ -285,7 +339,10 @@ export class CharacterDatabase extends Dexie {
       updatedAt: timestamp,
     };
 
-    await this.characters.put(updatedCharacter);
+    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
+      await this.characters.put(updatedCharacter);
+      await this.syncCharacterListIndex(updatedCharacter);
+    });
     return updatedCharacter;
   }
 
@@ -321,7 +378,10 @@ export class CharacterDatabase extends Dexie {
       updatedAt: timestamp,
     };
 
-    await this.characters.put(updatedCharacter);
+    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
+      await this.characters.put(updatedCharacter);
+      await this.syncCharacterListIndex(updatedCharacter);
+    });
     return updatedCharacter;
   }
 
@@ -341,10 +401,17 @@ export class CharacterDatabase extends Dexie {
    * @returns {Promise<void>}
    */
   async deleteCharacter(id: string): Promise<void> {
-    await this.transaction('rw', this.characters, this.snapshots, async () => {
-      await this.characters.delete(id);
-      await this.snapshots.where('characterId').equals(id).delete();
-    });
+    await this.transaction(
+      'rw',
+      this.characters,
+      this.snapshots,
+      this.characterListIndex,
+      async () => {
+        await this.characters.delete(id);
+        await this.characterListIndex.delete(id);
+        await this.snapshots.where('characterId').equals(id).delete();
+      }
+    );
   }
 
   /**
@@ -378,7 +445,10 @@ export class CharacterDatabase extends Dexie {
       lastOpenedAt: timestamp,
     };
 
-    await this.characters.add(duplicatedCharacter);
+    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
+      await this.characters.add(duplicatedCharacter);
+      await this.syncCharacterListIndex(duplicatedCharacter);
+    });
     return duplicatedCharacter;
   }
 
@@ -389,7 +459,14 @@ export class CharacterDatabase extends Dexie {
    */
   async updateLastOpened(id: string): Promise<void> {
     const timestamp = new Date().toISOString();
-    await this.characters.update(id, { lastOpenedAt: timestamp });
+    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
+      await this.characters.update(id, { lastOpenedAt: timestamp });
+      // Patch index only — avoid loading the full card just for a timestamp
+      const existing = await this.characterListIndex.get(id);
+      if (existing) {
+        await this.characterListIndex.put({ ...existing, lastOpenedAt: timestamp });
+      }
+    });
   }
 
   // ============================================================================
@@ -481,7 +558,10 @@ export class CharacterDatabase extends Dexie {
       lastOpenedAt: timestamp,
     };
 
-    await this.characters.add(character);
+    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
+      await this.characters.add(character);
+      await this.syncCharacterListIndex(character);
+    });
     return character;
   }
 

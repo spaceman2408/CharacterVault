@@ -492,30 +492,44 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
     [sortedCharacters, pageStart, pageSize]
   );
   const [areVisibleCardsReady, setAreVisibleCardsReady] = useState(false);
-  const preloadedImageSourcesRef = useRef<Set<string>>(new Set());
+  // Track preloaded thumbs by character id only — never hold base64 strings in the Set
+  const preloadedThumbIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let isCancelled = false;
 
     const preloadVisibleCards = async () => {
+      const visibleIds = new Set(visibleCharacters.map((c) => c.id));
+      // Drop ids that left the current page so the set cannot grow without bound
+      for (const id of preloadedThumbIdsRef.current) {
+        if (!visibleIds.has(id)) {
+          preloadedThumbIdsRef.current.delete(id);
+        }
+      }
+
       const imagesToPreload = visibleCharacters
         .filter((character) => {
-          if (!character.thumbnailData) {
-            return false;
-          }
-
-          return !preloadedImageSourcesRef.current.has(character.thumbnailData);
+          if (!character.thumbnailData) return false;
+          return !preloadedThumbIdsRef.current.has(character.id);
         })
         .map(
           (character) =>
             new Promise<void>((resolve) => {
               const image = new Image();
-              const imageSource = character.thumbnailData!;
+              const imageSource = character.thumbnailData;
+              let settled = false;
 
               const finalize = () => {
-                preloadedImageSourcesRef.current.add(imageSource);
+                if (settled) return;
+                settled = true;
+                preloadedThumbIdsRef.current.add(character.id);
+                // Drop decoded bitmap reference promptly (browser cache still helps)
+                image.onload = null;
+                image.onerror = null;
+                image.src = '';
                 resolve();
               };
+
               image.onload = finalize;
               image.onerror = finalize;
               image.src = imageSource;

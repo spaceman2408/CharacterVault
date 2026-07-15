@@ -36,4 +36,4 @@ export {
   DEFAULT_CHARACTER_VAULT_SETTINGS,
   DEFAULT_SPELLCHECK_SETTINGS,
 } from './characterTypes';
-export { CharacterDatabase, characterDb } from './CharacterDatabase';
+export { CharacterDatabase, characterDb, toCharacterListItem } from './CharacterDatabase';
