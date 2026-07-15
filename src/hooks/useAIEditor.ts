@@ -225,6 +225,13 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     stats?: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string };
   }) => void) | null>(null);
   const aiServiceRef = useRef<AIService | null>(null);
+  /** False after the hook unmounts — blocks React setState / panel updates. */
+  const isMountedRef = useRef(true);
+  /**
+   * Bumped when a request is superseded (new op, editor teardown, unmount).
+   * In-flight completions with a stale id must not touch UI/state.
+   */
+  const requestGenerationRef = useRef(0);
 
   // AI operation state
   const [isProcessing, setIsProcessing] = useState(false);
@@ -263,6 +270,20 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
   const clearSelectionLock = useCallback(() => {
     selectionLockRef.current = null;
+  }, []);
+
+  /**
+   * Abort the in-flight AI request (if any) and invalidate its generation so a
+   * late resolve/reject cannot update React state or a destroyed panel.
+   */
+  const abortInFlightRequest = useCallback((reason: 'unmount' | 'editor-teardown' | 'superseded') => {
+    requestGenerationRef.current += 1;
+    const service = aiServiceRef.current;
+    if (service) {
+      console.log(`[useAIEditor] Aborting in-flight AI request (${reason})`);
+      service.abort();
+      aiServiceRef.current = null;
+    }
   }, []);
 
   // Keep refs in sync with state
@@ -385,6 +406,17 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     const currentSampler = samplerSettingsRef.current;
     const currentPrompts = promptSettingsRef.current;
 
+    // Cancel any previous in-flight request for this editor instance
+    if (aiServiceRef.current) {
+      abortInFlightRequest('superseded');
+    }
+
+    // Own this request until unmount / teardown / a newer op bumps the generation
+    const requestId = ++requestGenerationRef.current;
+
+    const isCurrentRequest = () =>
+      isMountedRef.current && requestId === requestGenerationRef.current;
+
     // Reset streaming refs (not state, to avoid re-render thrashing)
     streamingContentRef.current = '';
     streamingReasoningRef.current = '';
@@ -429,10 +461,16 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       // Debug: Log the model being used
       console.log('[useAIEditor] Using model:', currentConfig.modelId, 'Base URL:', currentConfig.baseUrl);
       const aiService = new AIService(currentConfig, currentSampler, currentPrompts);
+      // Only attach if we are still the active generation (rapid double-click / unmount)
+      if (!isCurrentRequest()) {
+        aiService.abort();
+        return;
+      }
       aiServiceRef.current = aiService;
       const context = getContextContent(contextSectionIdsRef.current);
 
       const onChunk = currentConfig.enableStreaming ? (chunk: { content?: string; reasoning?: string }) => {
+        if (!isCurrentRequest()) return;
         if (firstTokenTime === null) {
           firstTokenTime = Date.now();
         }
@@ -477,6 +515,9 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           throw new Error('Unknown operation');
       }
 
+      // Drop late completions after unmount, section switch, or a newer request
+      if (!isCurrentRequest()) return;
+
       // Compute stats
       const contentTokens = estimateTokens(response.content);
       const reasoningTokens = estimateTokens(response.reasoning ?? '');
@@ -514,15 +555,25 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         },
       });
     } catch (err) {
-      // Check if this was an abort/cancellation
-      if (err instanceof AIError && err.message === 'Request was cancelled') {
+      // Always clear the service slot for this attempt
+      // (finally also nulls when this generation still owns aiServiceRef)
+      const wasCancelled =
+        err instanceof AIError && err.message === 'Request was cancelled';
+
+      // Stale / unmounted: never touch React state or a destroyed panel
+      if (!isCurrentRequest()) {
+        if (wasCancelled) {
+          console.log('[useAIEditor] AI request cancelled (stale or unmounted)');
+        }
+        return;
+      }
+
+      if (wasCancelled) {
         console.log('[useAIEditor] AI request cancelled by user');
-        // Clear refs without triggering state updates
         streamingContentRef.current = '';
         streamingReasoningRef.current = '';
         lastInstructPromptRef.current = null;
         clearSelectionLock();
-        // Clear state
         setIsProcessing(false);
         isProcessingRef.current = false;
         setIsStreaming(false);
@@ -557,10 +608,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         });
       }
     } finally {
-      aiServiceRef.current = null;
+      // Drop our service slot only if we are still the active generation.
+      // A newer op / teardown may already own aiServiceRef.
+      if (requestId === requestGenerationRef.current) {
+        aiServiceRef.current = null;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiConfig, samplerSettings, promptSettings, getContextContent, setSelectedText, clearSelectionLock]);
+  }, [aiConfig, samplerSettings, promptSettings, getContextContent, setSelectedText, clearSelectionLock, abortInFlightRequest]);
 
   // Handle accept - replace locked selection (or insert at locked cursor if empty range)
   const accept = useCallback(() => {
@@ -890,14 +945,38 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         persistTimeoutRef.current = null;
       }
 
+      // Stop network work for this editor instance (section switch / remount).
+      // Generation bump makes any late chunk/result a no-op for the old panel.
+      abortInFlightRequest('editor-teardown');
+      streamingContentRef.current = '';
+      streamingReasoningRef.current = '';
+      aiReasoningRef.current = '';
+      errorRef.current = null;
+      lastInstructPromptRef.current = null;
+      selectionLockRef.current = null;
+      selectionRef.current = null;
+      aiResultRef.current = null;
+      isProcessingRef.current = false;
+      currentOperationRef.current = null;
+
+      // Clear React AI UI state while the hook is still mounted (e.g. section key change).
+      // Unmount sets isMountedRef false first via its own effect — skip setState then.
+      if (isMountedRef.current) {
+        setIsProcessing(false);
+        setIsStreaming(false);
+        setAiResult(null);
+        setCurrentOperation(null);
+        setSelection(null);
+        setSelectedText('');
+      }
+
       // Clears AI highlight timeout targets, document keydown listeners (panel destroy), etc.
       view.destroy();
       viewRef.current = null;
       panelUpdateRef.current = null;
-      selectionLockRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles), flushPendingPersist, schedulePersist, toolbarActions]);
+  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles), flushPendingPersist, schedulePersist, toolbarActions, abortInFlightRequest, setSelectedText]);
 
   // Update editor content when value changes externally
   useEffect(() => {
@@ -968,6 +1047,16 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     if (!view) return;
     setSpellcheckSettings(view, spellcheck, spellcheckMode);
   }, [spellcheck, spellcheckMode]);
+
+  // Declared last so its cleanup runs first on unmount: flip isMountedRef before
+  // the editor effect cleanup (which may call setState only while still mounted).
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      abortInFlightRequest('unmount');
+    };
+  }, [abortInFlightRequest]);
 
   return {
     editorRef,
