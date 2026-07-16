@@ -74,6 +74,8 @@ The AI toolbar sits at the top of every text editor and offers several operation
 | **Emotion** | Enhance emotional expression |
 | **Fix** | Grammar and clarity improvements |
 
+Suggestions preview **in the editor as ghost text** at your selection. Accept (`Ctrl+Enter` / `⌘+Enter`) commits the edit; Reject (`Escape`) keeps the original.
+
 See [Text Editor → AI Toolbar](/features/editor#ai-toolbar) for details.
 :::
 

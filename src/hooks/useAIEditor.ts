@@ -5,9 +5,8 @@
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { Decoration, EditorView, drawSelection, keymap, ViewUpdate } from '@codemirror/view';
-import type { DecorationSet } from '@codemirror/view';
-import { EditorState, Prec, StateEffect, StateField } from '@codemirror/state';
+import { EditorView, drawSelection, keymap, ViewUpdate } from '@codemirror/view';
+import { Compartment, EditorState, Prec } from '@codemirror/state';
 import type { Extension } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, insertTab, indentLess } from '@codemirror/commands';
 import { indentUnit } from '@codemirror/language';
@@ -15,6 +14,12 @@ import type { CharacterSection } from '../db/characterTypes';
 import type { SamplerSettings, AIConfig, PromptSettings, AIOperation } from '../db/characterTypes';
 import { aiToolbarPanel, getPanelUpdateFunction } from '../editor/extensions/aiToolbarPanel';
 import type { ToolbarActionConfig } from '../editor/extensions/aiToolbarPanel';
+import {
+  aiGhostPreview,
+  setAIGhostPreview,
+  updateAIGhostPreview,
+  clearAIGhostPreview,
+} from '../editor/extensions/aiGhostPreview';
 import { normalizeHtmlEntitiesInView } from '../editor/extensions/normalizeHtmlEntities';
 import { searchPanelOpen, toolbarSearch, toolbarSearchTheme } from '../editor/extensions/toolbarSearch';
 import { themeSync } from '../editor/extensions/themeSync';
@@ -25,9 +30,7 @@ import type { SpellcheckSettings } from '../db/characterTypes';
 import { DEFAULT_SPELLCHECK_SETTINGS } from '../db/characterTypes';
 import { AIService, AIError, estimateTokens } from '../services/AIService';
 import { getProviderSelectionId } from '../services/providers';
-
-/** How long the accepted-edit highlight stays applied (matches CSS pulse animation). */
-const ACCEPTED_HIGHLIGHT_MS = 2500;
+import { showEphemeralToast } from '../utils/ephemeralToast';
 
 /** Locked editor range for the current AI op (accept replaces this, not the live caret). */
 type SelectionLock = { from: number; to: number; text: string };
@@ -56,32 +59,49 @@ function clampSelectionLock(lock: SelectionLock, docLength: number): SelectionLo
   return { from, to, text: lock.text };
 }
 
-const setAcceptedEditHighlight = StateEffect.define<{ from: number; to: number } | null>();
+/** Count leading `\n` characters (after CRLF normalization). */
+function countLeadingNewlines(s: string): number {
+  let n = 0;
+  while (n < s.length && s[n] === '\n') n += 1;
+  return n;
+}
 
-const acceptedEditHighlightField = StateField.define<DecorationSet>({
-  create() {
-    return Decoration.none;
-  },
-  update(decorations, transaction) {
-    let nextDecorations = decorations.map(transaction.changes);
+/** Count trailing `\n` characters (after CRLF normalization). */
+function countTrailingNewlines(s: string): number {
+  let n = 0;
+  while (n < s.length && s[s.length - 1 - n] === '\n') n += 1;
+  return n;
+}
 
-    for (const effect of transaction.effects) {
-      if (!effect.is(setAcceptedEditHighlight)) continue;
+/**
+ * Match AI replacement newline boundaries to the original selection.
+ *
+ * Models often emit extra leading/trailing newlines. Selections can also
+ * invisibly include the newline before a line (looks like the line is
+ * selected, but `from` is the previous `\n`). If we only strip when the
+ * original has *no* leading newline, `\n` + AI's `\n- item` becomes a blank
+ * line between bullets. Instead: strip all edge newlines from the AI text,
+ * then re-apply exactly the original's leading/trailing counts.
+ */
+function normalizeAiEditText(original: string, replacement: string): string {
+  const orig = original.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  let next = replacement.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-      const range = effect.value;
-      if (!range || range.from >= range.to) {
-        nextDecorations = Decoration.none;
-      } else {
-        nextDecorations = Decoration.set([
-          Decoration.mark({ class: 'cm-ai-accepted-highlight' }).range(range.from, range.to),
-        ]);
-      }
-    }
+  const leadOrig = countLeadingNewlines(orig);
+  const trailOrig = countTrailingNewlines(orig);
 
-    return nextDecorations;
-  },
-  provide: (field) => EditorView.decorations.from(field),
-});
+  next = next.replace(/^\n+/, '').replace(/\n+$/, '');
+
+  // Drop leading whitespace-only lines the model invents (not present in original)
+  if (leadOrig === 0) {
+    next = next.replace(/^(?:[ \t\u00A0]*\n)+/, '');
+  }
+  if (trailOrig === 0) {
+    next = next.replace(/(?:\n[ \t\u00A0]*)+$/, '');
+  }
+
+  return `${'\n'.repeat(leadOrig)}${next}${'\n'.repeat(trailOrig)}`;
+}
 
 const defaultToolbarActions: ToolbarActionConfig[] = [
   {
@@ -212,6 +232,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  /** Toggles EditorState.readOnly for the open AI decision session. */
+  const readOnlyCompartmentRef = useRef(new Compartment());
   const panelUpdateRef = useRef<((update: {
     isProcessing?: boolean;
     isStreaming?: boolean;
@@ -258,7 +280,6 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const isProcessingRef = useRef(false);
   const currentOperationRef = useRef<AIOperation | null>(null);
   const contextSectionIdsRef = useRef<CharacterSection[]>(contextSectionIds);
-  const clearHighlightTimeoutRef = useRef<number | null>(null);
   const persistTimeoutRef = useRef<number | null>(null);
   const pendingPersistValueRef = useRef<string | null>(null);
   const isApplyingExternalSyncRef = useRef(false);
@@ -270,6 +291,58 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
   const clearSelectionLock = useCallback(() => {
     selectionLockRef.current = null;
+  }, []);
+
+  /** Cancel debounce timer so a pre-session keystroke cannot flush mid-AI. */
+  const holdPersistForAiSession = useCallback(() => {
+    if (persistTimeoutRef.current !== null) {
+      window.clearTimeout(persistTimeoutRef.current);
+      persistTimeoutRef.current = null;
+    }
+  }, []);
+
+  /**
+   * During an AI session the doc is read-only for user input (caret/scroll still work).
+   * Programmatic Accept still applies changes; this just blocks interleaved typing.
+   */
+  const setEditorReadOnlyForAi = useCallback((readOnly: boolean) => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: readOnlyCompartmentRef.current.reconfigure(
+        EditorState.readOnly.of(readOnly),
+      ),
+    });
+  }, []);
+
+  const dispatchClearGhost = useCallback(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({ effects: clearAIGhostPreview.of(null) });
+  }, []);
+
+  const dispatchGhostPreview = useCallback((
+    from: number,
+    to: number,
+    content: string,
+    isStreaming: boolean,
+  ) => {
+    const view = viewRef.current;
+    if (!view) return;
+    // Collapse the native selection so its mid-line bars don't paint under/over
+    // the ghost card (especially ugly for multi-paragraph mid-line starts).
+    view.dispatch({
+      selection: { anchor: from, head: from },
+      effects: setAIGhostPreview.of({ from, to, content, isStreaming }),
+    });
+  }, []);
+
+  const dispatchGhostContent = useCallback((content: string, isStreaming: boolean) => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: updateAIGhostPreview.of({ content, isStreaming }),
+    });
   }, []);
 
   /**
@@ -366,8 +439,35 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     runPersist(pendingValue);
   }, [runPersist]);
 
+  /**
+   * After an AI session ends, persist the current document once so mid-session
+   * typing (held while the session was open) is not lost.
+   */
+  const flushPersistAfterAiSession = useCallback(() => {
+    const view = viewRef.current;
+    if (view) {
+      pendingPersistValueRef.current = view.state.doc.toString();
+    }
+    flushPendingPersist();
+  }, [flushPendingPersist]);
+
   const schedulePersist = useCallback((nextValue: string) => {
     if (!onPersistChangeRef.current) return;
+
+    // Hold IndexedDB writes for the whole AI decision session
+    if (
+      selectionLockRef.current !== null ||
+      isProcessingRef.current ||
+      !!aiResultRef.current ||
+      !!errorRef.current
+    ) {
+      pendingPersistValueRef.current = nextValue;
+      if (persistTimeoutRef.current !== null) {
+        window.clearTimeout(persistTimeoutRef.current);
+        persistTimeoutRef.current = null;
+      }
+      return;
+    }
 
     if (saveModeRef.current === 'immediate') {
       pendingPersistValueRef.current = null;
@@ -385,6 +485,15 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     }
     persistTimeoutRef.current = window.setTimeout(() => {
       persistTimeoutRef.current = null;
+      // Re-check session in case AI started during debounce
+      if (
+        selectionLockRef.current !== null ||
+        isProcessingRef.current ||
+        !!aiResultRef.current ||
+        !!errorRef.current
+      ) {
+        return;
+      }
       const latestValue = pendingPersistValueRef.current;
       if (latestValue === null) return;
       pendingPersistValueRef.current = null;
@@ -429,11 +538,33 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       lastInstructPromptRef.current = null;
     }
     setAiResult(null);
+    aiResultRef.current = null;
+    errorRef.current = null;
     setCurrentOperation(operation);
     currentOperationRef.current = operation;
     setIsProcessing(true);
     isProcessingRef.current = true;
     setIsStreaming(currentConfig.enableStreaming);
+
+    // Hold storage writes for the whole AI session (including pending debounce)
+    holdPersistForAiSession();
+    // Block user typing so Accept is a single clean undo step (caret/scroll still work)
+    setEditorReadOnlyForAi(true);
+
+    // Lock selection for Accept — freezes the op's target range for the whole session
+    const selectionInfo: SelectionLock = { from: sel.from, to: sel.to, text };
+    selectionLockRef.current = selectionInfo;
+    selectionRef.current = selectionInfo;
+    setSelection(selectionInfo);
+    setSelectedText(text);
+
+    // Hide locked span immediately; stream fills the ghost in place
+    dispatchGhostPreview(
+      selectionInfo.from,
+      selectionInfo.to,
+      '',
+      currentConfig.enableStreaming,
+    );
 
     // Update panel immediately
     panelUpdateRef.current?.({
@@ -446,13 +577,6 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       currentOperation: operation,
       error: null,
     });
-
-    // Lock selection for Accept — freezes the op's target range for the whole session
-    const selectionInfo: SelectionLock = { from: sel.from, to: sel.to, text };
-    selectionLockRef.current = selectionInfo;
-    selectionRef.current = selectionInfo;
-    setSelection(selectionInfo);
-    setSelectedText(text);
 
     const requestStartTime = Date.now();
     let firstTokenTime: number | null = null;
@@ -481,6 +605,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         if (chunk.content) {
           streamingContentRef.current += chunk.content;
           panelUpdateRef.current?.({ streamingContent: streamingContentRef.current });
+          dispatchGhostContent(streamingContentRef.current, true);
         }
       } : undefined;
 
@@ -532,20 +657,41 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         ? totalTokens / (completionTime / 1000)
         : undefined;
 
+      // Align newline boundaries with the locked selection so Accept is a true 1:1
+      const originalText = selectionLockRef.current?.text ?? text;
+      const normalizedContent = normalizeAiEditText(originalText, response.content);
+
       // Update result (keep selection lock until Accept/Reject)
-      aiResultRef.current = response.content;
+      aiResultRef.current = normalizedContent;
       aiReasoningRef.current = response.reasoning || '';
       lastInstructPromptRef.current = null; // Clear stored prompt on success
-      setAiResult(response.content);
+      setAiResult(normalizedContent);
       setIsProcessing(false);
       isProcessingRef.current = false;
       setIsStreaming(false);
+
+      // Final ghost (non-streaming) over the mapped lock
+      const view = viewRef.current;
+      const locked = selectionLockRef.current && view
+        ? clampSelectionLock(selectionLockRef.current, view.state.doc.length)
+        : selectionLockRef.current;
+      if (locked) {
+        dispatchGhostPreview(locked.from, locked.to, normalizedContent, false);
+        if (view) {
+          const scrollCenter = locked.from + Math.floor((locked.to - locked.from) / 2);
+          view.dispatch({
+            effects: EditorView.scrollIntoView(scrollCenter, { y: 'center' }),
+          });
+        }
+      } else {
+        dispatchGhostContent(normalizedContent, false);
+      }
 
       // Update panel with final result
       panelUpdateRef.current?.({
         isProcessing: false,
         isStreaming: false,
-        aiResult: response.content,
+        aiResult: normalizedContent,
         aiReasoning: response.reasoning || '',
         stats: {
           ttft,
@@ -579,6 +725,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         setIsStreaming(false);
         setCurrentOperation(null);
         currentOperationRef.current = null;
+        aiResultRef.current = null;
+        errorRef.current = null;
+        dispatchClearGhost();
+        setEditorReadOnlyForAi(false);
         panelUpdateRef.current?.({
           isProcessing: false,
           isStreaming: false,
@@ -589,6 +739,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           currentOperation: null,
           error: null,
         });
+        flushPersistAfterAiSession();
       } else {
         console.error('AI operation failed:', err);
         const errorMsg = err instanceof AIError ? err.message : 'AI operation failed. Please try again.';
@@ -596,6 +747,9 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         setIsProcessing(false);
         isProcessingRef.current = false;
         setIsStreaming(false);
+        // Drop partial ghost; user still needs to dismiss the error strip
+        // Keep readOnly until they dismiss the error (Reject/Escape)
+        dispatchClearGhost();
 
         // Update panel with error, and pass back the instruct prompt for recovery
         // Use local 'operation' param instead of 'currentOperation' state to avoid closure staleness
@@ -615,14 +769,28 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiConfig, samplerSettings, promptSettings, getContextContent, setSelectedText, clearSelectionLock, abortInFlightRequest]);
+  }, [
+    aiConfig,
+    samplerSettings,
+    promptSettings,
+    getContextContent,
+    setSelectedText,
+    clearSelectionLock,
+    abortInFlightRequest,
+    holdPersistForAiSession,
+    setEditorReadOnlyForAi,
+    dispatchGhostPreview,
+    dispatchGhostContent,
+    dispatchClearGhost,
+    flushPersistAfterAiSession,
+  ]);
 
   // Handle accept - replace locked selection (or insert at locked cursor if empty range)
   const accept = useCallback(() => {
-    const currentAiResult = aiResultRef.current;
+    const rawAiResult = aiResultRef.current;
     const view = viewRef.current;
 
-    if (!view || !currentAiResult) return;
+    if (!view || !rawAiResult) return;
 
     // Prefer the selection lock from op start (mapped through any edits while waiting)
     const docLength = view.state.doc.length;
@@ -632,10 +800,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     // Fallback only if lock is missing (should not happen for toolbar ops)
     const insertFrom = locked?.from ?? view.state.selection.main.from;
     const insertTo = locked?.to ?? insertFrom;
+    const currentAiResult = normalizeAiEditText(locked?.text ?? '', rawAiResult);
     const acceptedFrom = insertFrom;
     const acceptedTo = acceptedFrom + currentAiResult.length;
 
-    // Replace the locked range using exact CodeMirror positions
+    // Replace the locked range; clear ghost + re-enable editing in the same transaction
+    // so Accept is one normal history step (Ctrl+Z restores the pre-AI span).
     const scrollCenter = acceptedFrom + Math.floor((acceptedTo - acceptedFrom) / 2);
     view.dispatch({
       changes: {
@@ -645,24 +815,19 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       },
       selection: { anchor: acceptedFrom, head: acceptedTo },
       effects: [
-        setAcceptedEditHighlight.of({ from: acceptedFrom, to: acceptedTo }),
+        clearAIGhostPreview.of(null),
+        readOnlyCompartmentRef.current.reconfigure(EditorState.readOnly.of(false)),
         EditorView.scrollIntoView(scrollCenter, { y: 'center' }),
       ],
     });
 
-    if (clearHighlightTimeoutRef.current !== null) {
-      window.clearTimeout(clearHighlightTimeoutRef.current);
-    }
-    clearHighlightTimeoutRef.current = window.setTimeout(() => {
-      const currentView = viewRef.current;
-      if (!currentView) return;
-      currentView.dispatch({
-        effects: setAcceptedEditHighlight.of(null),
-      });
-      clearHighlightTimeoutRef.current = null;
-    }, ACCEPTED_HIGHLIGHT_MS);
+    showEphemeralToast({
+      type: 'success',
+      title: 'AI edit applied',
+      message: 'The suggestion was inserted into the editor.',
+    });
 
-    // Clear AI state + release selection lock
+    // Clear AI state + release selection lock (ends session for persist gate)
     streamingContentRef.current = '';
     streamingReasoningRef.current = '';
     aiReasoningRef.current = '';
@@ -691,7 +856,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       currentOperation: null,
       error: null,
     });
-  }, [setSelectedText, clearSelectionLock]);
+
+    // Session over — commit final document
+    flushPersistAfterAiSession();
+  }, [setSelectedText, clearSelectionLock, flushPersistAfterAiSession]);
 
   // Handle reject - clear AI state
   const reject = useCallback(() => {
@@ -718,6 +886,9 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     selectionRef.current = null;
     setSelectedText('');
 
+    dispatchClearGhost();
+    setEditorReadOnlyForAi(false);
+
     // Clear panel state (but pass back the instruct prompt for recovery)
     panelUpdateRef.current?.({
       isProcessing: false,
@@ -730,7 +901,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       error: null,
       instructPrompt: savedPrompt,
     });
-  }, [setSelectedText, clearSelectionLock]);
+
+    // Session over — flush any pre-session pending persist
+    flushPersistAfterAiSession();
+  }, [setSelectedText, clearSelectionLock, dispatchClearGhost, setEditorReadOnlyForAi, flushPersistAfterAiSession]);
 
   // Handle abort - cancel the current AI request
   const abort = useCallback(() => {
@@ -819,8 +993,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
             padding: '0 clamp(2px, 0.8vw, 4px)',
           },
         }),
-        // Accepted-edit highlight styles live in index.css (pulse → fade via .cm-ai-accepted-highlight)
-        acceptedEditHighlightField,
+        // In-editor AI ghost preview (decoration-only until Accept)
+        ...aiGhostPreview(),
+        // User typing blocked while AI session is open (reconfigured at runtime)
+        readOnlyCompartmentRef.current.of(EditorState.readOnly.of(false)),
         // AI result shortcuts — high precedence so they win when a result is pending
         Prec.high(keymap.of([
           {
@@ -871,7 +1047,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
           if (update.focusChanged) {
             isFocusedRef.current = update.view.hasFocus;
-            if (!isFocusedRef.current) {
+            // Don't flush storage while an AI Accept/Reject decision is open
+            if (
+              !isFocusedRef.current &&
+              selectionLockRef.current === null &&
+              !isProcessingRef.current &&
+              !aiResultRef.current &&
+              !errorRef.current
+            ) {
               flushPendingPersist();
             }
           }
@@ -935,10 +1118,6 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     return () => {
       window.clearTimeout(focusTimer);
       window.clearTimeout(panelHookTimer);
-      if (clearHighlightTimeoutRef.current !== null) {
-        window.clearTimeout(clearHighlightTimeoutRef.current);
-        clearHighlightTimeoutRef.current = null;
-      }
       flushPendingPersist();
       if (persistTimeoutRef.current !== null) {
         window.clearTimeout(persistTimeoutRef.current);
@@ -958,6 +1137,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       aiResultRef.current = null;
       isProcessingRef.current = false;
       currentOperationRef.current = null;
+      errorRef.current = null;
 
       // Clear React AI UI state while the hook is still mounted (e.g. section key change).
       // Unmount sets isMountedRef false first via its own effect — skip setState then.
@@ -970,7 +1150,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         setSelectedText('');
       }
 
-      // Clears AI highlight timeout targets, document keydown listeners (panel destroy), etc.
+      // Clears document keydown listeners (panel destroy), etc.
+      // readOnly compartment dies with the view — no need to reconfigure first
       view.destroy();
       viewRef.current = null;
       panelUpdateRef.current = null;

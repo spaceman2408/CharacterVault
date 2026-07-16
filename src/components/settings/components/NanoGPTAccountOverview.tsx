@@ -464,13 +464,6 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
         </div>
       )}
 
-      {apiKey.trim() && status === 'loading' && !showContent && (
-        <div className="flex items-center justify-center gap-2 py-8 text-sm text-vault-500">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Loading account…
-        </div>
-      )}
-
       {apiKey.trim() && bothFailed && (
         <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
@@ -492,15 +485,23 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
         </div>
       )}
 
-      {apiKey.trim() && showContent && (
-        <div className="space-y-4">
+      {/*
+        Always reserve the loaded layout height when a key is present so settings
+        below (e.g. reasoning effort) do not jump when usage/balance finish loading.
+      */}
+      {apiKey.trim() && !bothFailed && (
+        <div
+          className="space-y-4"
+          aria-busy={status === 'loading' && !showContent}
+          aria-live="polite"
+        >
           {/* Hero: balance + status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-lg bg-linear-to-br from-vault-50 to-white dark:from-vault-900/50 dark:to-vault-800/30 border border-vault-200 dark:border-vault-700">
+            <div className="p-3 rounded-lg bg-linear-to-br from-vault-50 to-white dark:from-vault-900/50 dark:to-vault-800/30 border border-vault-200 dark:border-vault-700 min-h-[88px]">
               <div className="text-xs font-medium text-vault-500 dark:text-vault-400 mb-1">
                 Balance
               </div>
-              {balance ? (
+              {showContent && balance ? (
                 <>
                   <div className="text-xl font-bold text-vault-900 dark:text-vault-100 tabular-nums tracking-tight">
                     {formatUsd(balance.usdBalance)}
@@ -509,25 +510,26 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                     {formatNano(balance.nanoBalance)} XNO
                   </div>
                 </>
-              ) : (
+              ) : showContent && balanceError ? (
                 <div className="flex items-start gap-1.5 text-xs text-vault-500 dark:text-vault-400">
-                  {balanceError ? (
-                    <>
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                      <span>{balanceError}</span>
-                    </>
-                  ) : (
-                    <span className="text-vault-400">—</span>
-                  )}
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                  <span>{balanceError}</span>
+                </div>
+              ) : showContent ? (
+                <span className="text-vault-400 text-xs">—</span>
+              ) : (
+                <div className="animate-pulse space-y-2" aria-hidden>
+                  <div className="h-7 w-24 rounded bg-vault-200 dark:bg-vault-700" />
+                  <div className="h-3 w-16 rounded bg-vault-200/80 dark:bg-vault-700/80" />
                 </div>
               )}
             </div>
 
-            <div className="p-3 rounded-lg bg-linear-to-br from-vault-50 to-white dark:from-vault-900/50 dark:to-vault-800/30 border border-vault-200 dark:border-vault-700">
+            <div className="p-3 rounded-lg bg-linear-to-br from-vault-50 to-white dark:from-vault-900/50 dark:to-vault-800/30 border border-vault-200 dark:border-vault-700 min-h-[88px]">
               <div className="text-xs font-medium text-vault-500 dark:text-vault-400 mb-1">
                 Subscription
               </div>
-              {usage && badge && subState ? (
+              {showContent && usage && badge && subState ? (
                 <>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
@@ -566,87 +568,110 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                     </>
                   )}
                 </>
-              ) : (
+              ) : showContent && usageError ? (
                 <div className="flex items-start gap-1.5 text-xs text-vault-500 dark:text-vault-400">
-                  {usageError ? (
-                    <>
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                      <span>
-                        {/cors/i.test(usageError)
-                          ? 'Subscription status unavailable (NanoGPT blocks this API in browsers). Local: restart npm run dev. Production: deploy the free Cloudflare Worker proxy and set VITE_NANOGPT_PROXY.'
-                          : usageError}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-vault-400">—</span>
-                  )}
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                  <span>
+                    {/cors/i.test(usageError)
+                      ? 'Subscription status unavailable (NanoGPT blocks this API in browsers). Local: restart npm run dev. Production: deploy the free Cloudflare Worker proxy and set VITE_NANOGPT_PROXY.'
+                      : usageError}
+                  </span>
+                </div>
+              ) : showContent ? (
+                <span className="text-vault-400 text-xs">—</span>
+              ) : (
+                <div className="animate-pulse space-y-2" aria-hidden>
+                  <div className="h-6 w-20 rounded-full bg-vault-200 dark:bg-vault-700" />
+                  <div className="h-3 w-28 rounded bg-vault-200/80 dark:bg-vault-700/80" />
                 </div>
               )}
             </div>
           </div>
 
-          {/* Quota bars — only when sub is active or in grace (inactive accounts still get a clear CTA) */}
-          {usage && showQuotaBars && (
-            <div className="space-y-3">
-              {usage.weeklyInputTokens && (
-                <QuotaBar
-                  label="Weekly input tokens"
-                  window={usage.weeklyInputTokens}
-                  unitLabel="tokens"
-                />
-              )}
-              {usage.dailyInputTokens && (
-                <QuotaBar
-                  label="Daily input tokens"
-                  window={usage.dailyInputTokens}
-                  unitLabel="tokens"
-                />
-              )}
-              {usage.dailyImages && (
-                <QuotaBar
-                  label="Daily images"
-                  window={usage.dailyImages}
-                  unitLabel="images"
-                  formatUsed={(n) => n.toLocaleString()}
-                />
-              )}
-              {!usage.weeklyInputTokens &&
-                !usage.dailyInputTokens &&
-                !usage.dailyImages && (
+          {/*
+            Lower section: real quota / inactive CTA when loaded; skeleton otherwise.
+            min-height matches ~1 quota bar + footnote so active subs don't shove content down.
+          */}
+          <div className="min-h-[7.5rem]">
+            {showContent && usage && showQuotaBars && (
+              <div className="space-y-3">
+                {usage.weeklyInputTokens && (
+                  <QuotaBar
+                    label="Weekly input tokens"
+                    window={usage.weeklyInputTokens}
+                    unitLabel="tokens"
+                  />
+                )}
+                {usage.dailyInputTokens && (
+                  <QuotaBar
+                    label="Daily input tokens"
+                    window={usage.dailyInputTokens}
+                    unitLabel="tokens"
+                  />
+                )}
+                {usage.dailyImages && (
+                  <QuotaBar
+                    label="Daily images"
+                    window={usage.dailyImages}
+                    unitLabel="images"
+                    formatUsed={(n) => n.toLocaleString()}
+                  />
+                )}
+                {!usage.weeklyInputTokens &&
+                  !usage.dailyInputTokens &&
+                  !usage.dailyImages && (
+                    <p className="text-xs text-vault-500 dark:text-vault-400">
+                      No quota windows reported for this account.
+                    </p>
+                  )}
+                {usage.allowOverage && (
                   <p className="text-xs text-vault-500 dark:text-vault-400">
-                    No quota windows reported for this account.
+                    Overage enabled — after included limits, usage bills to your balance.
                   </p>
                 )}
-              {usage.allowOverage && (
-                <p className="text-xs text-vault-500 dark:text-vault-400">
-                  Overage enabled — after included limits, usage bills to your balance.
+                <p className="text-[11px] text-vault-400 dark:text-vault-500">
+                  Weekly input tokens are subscription-covered input only (not $ spend).
                 </p>
-              )}
-              <p className="text-[11px] text-vault-400 dark:text-vault-500">
-                Weekly input tokens are subscription-covered input only (not $ spend).
-              </p>
-            </div>
-          )}
+              </div>
+            )}
 
-          {usage && subState === 'inactive' && (
-            <div className="p-3 rounded-lg bg-vault-50 dark:bg-vault-900/40 border border-dashed border-vault-300 dark:border-vault-600">
-              <p className="text-sm font-medium text-vault-800 dark:text-vault-200">
-                Subscription not active
-              </p>
-              <p className="text-xs text-vault-500 dark:text-vault-400 mt-1 leading-relaxed">
-                You don&apos;t have an active NanoGPT subscription, so included weekly token
-                limits don&apos;t apply. Your balance above is used for pay-as-you-go models.
-              </p>
-              <a
-                href="https://nano-gpt.com/subscription"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                View NanoGPT subscription ↗
-              </a>
-            </div>
-          )}
+            {showContent && usage && subState === 'inactive' && (
+              <div className="p-3 rounded-lg bg-vault-50 dark:bg-vault-900/40 border border-dashed border-vault-300 dark:border-vault-600">
+                <p className="text-sm font-medium text-vault-800 dark:text-vault-200">
+                  Subscription not active
+                </p>
+                <p className="text-xs text-vault-500 dark:text-vault-400 mt-1 leading-relaxed">
+                  You don&apos;t have an active NanoGPT subscription, so included weekly token
+                  limits don&apos;t apply. Your balance above is used for pay-as-you-go models.
+                </p>
+                <a
+                  href="https://nano-gpt.com/subscription"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  View NanoGPT subscription ↗
+                </a>
+              </div>
+            )}
+
+            {!showContent && (
+              <div className="space-y-3" aria-hidden>
+                <div className="p-3 rounded-lg bg-vault-50 dark:bg-vault-900/40 border border-vault-200 dark:border-vault-700 animate-pulse">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="h-3 w-32 rounded bg-vault-200 dark:bg-vault-700" />
+                    <div className="h-3 w-8 rounded bg-vault-200 dark:bg-vault-700" />
+                  </div>
+                  <div className="h-2 rounded-full bg-vault-200 dark:bg-vault-700 mb-2" />
+                  <div className="h-3 w-48 rounded bg-vault-200/80 dark:bg-vault-700/80" />
+                </div>
+                <div className="flex items-center gap-2 text-xs text-vault-500 dark:text-vault-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                  Loading account…
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </SettingsCard>

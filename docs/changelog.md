@@ -4,6 +4,7 @@
 
 ### Current Release Notes
 
+- **AI toolbar ghost preview** — Enhance / Rephrase / Custom / polish ops preview in the editor as inline ghost text at the selection instead of a large top result panel. Thinking stays collapsible and collapsed by default; Accept / Reject and stats stay in a compact strip. While a suggestion is open the editor is read-only for typing, IndexedDB saves are held until Accept/Reject/cancel, Accept shows a success toast (green highlight flash removed), and leading/trailing newlines are matched to the original selection to avoid blank-line glitches.
 - **Context length up to 1M** — Sampler settings include 256K / 512K / 1M presets and a **Custom…** range (4,096–1,000,000 tokens). Values are clamped on save.
 - **Large AI context packing** — Lorebook and alternate greetings are sent as separate chunks and fill the available window instead of being dropped when the whole block is too large. Token estimates and request trimming are stricter so big prompts are less likely to exceed the provider limit.
 - **Vault backup** — Library **Backup** downloads a ZIP of all characters (PNG with image, JSON without).
@@ -24,6 +25,7 @@
 
 ### Latest Commits (Newest to Oldest)
 
+- `ef2709c` - feat(editor): in-editor AI ghost preview for toolbar edits
 - `65a9c8d` - feat(ai): raise context to 1M and fix large-lorebook budgeting
 - `663a513` - feat(vault): backup, bulk import, sort/search, and token estimates
 - `969dfbf` - update ignore
