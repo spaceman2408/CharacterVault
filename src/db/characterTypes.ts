@@ -439,6 +439,9 @@ export interface CharacterVaultSettings {
   /** Prompt settings */
   prompts?: PromptSettings;
 
+  /** Per-operation model routing for toolbar AI prompts */
+  promptModels?: PromptModelMap;
+
   /** Context section IDs for AI context */
   contextSectionIds?: CharacterSection[];
 
@@ -662,6 +665,20 @@ export interface PromptSettings {
 }
 
 /**
+ * Routes one toolbar AI operation to a specific endpoint + model.
+ * baseUrl should be normalized (trim, no trailing slash) to match apiKeysByBaseUrl keys.
+ */
+export interface PromptModelBinding {
+  /** API base URL (preset or custom), e.g. https://nano-gpt.com/api/v1 */
+  baseUrl: string;
+  /** Model ID on that endpoint */
+  modelId: string;
+}
+
+/** Sparse map: missing key = use global AIConfig as-is. */
+export type PromptModelMap = Partial<Record<keyof PromptSettings, PromptModelBinding>>;
+
+/**
  * Default AI-related settings for CharacterVault.
  */
 export const DEFAULT_SETTINGS = {
@@ -705,6 +722,7 @@ export const DEFAULT_SETTINGS = {
     emotion: 'Please rewrite the following text to add more emotional depth, feeling, and character voice while preserving the original meaning:\n\n"""\n${text}\n"""\n\nProvide only the enhanced text without any additional commentary.',
     grammar: 'Please fix any grammar, spelling, and punctuation errors in the following text while preserving the original meaning and style:\n\n"""\n${text}\n"""\n\nProvide only the corrected text without any additional commentary.',
   } satisfies PromptSettings,
+  promptModels: {} as PromptModelMap,
 };
 
 /** Clamp a context length into the allowed absolute range (2048 – 1_000_000). */

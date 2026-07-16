@@ -3,6 +3,14 @@
  * @module components/settings/config/aiBaseUrlPresets
  */
 
+export {
+  normalizeBaseUrl,
+  getStoredApiKey,
+  getStoredModelId,
+} from '../../../utils/aiBaseUrl';
+
+import { normalizeBaseUrl } from '../../../utils/aiBaseUrl';
+
 export interface AIBaseUrlPreset {
   id: string;
   label: string;
@@ -44,30 +52,8 @@ export const AI_BASE_URL_PRESETS: AIBaseUrlPreset[] = [
 /** Model list cache staleness window. */
 export const MODEL_CACHE_STALENESS_MS = 10 * 60 * 1000;
 
-export function normalizeBaseUrl(value: string): string {
-  return value.trim().replace(/\/$/, '');
-}
-
 export function isPresetUrl(url: string): boolean {
   return AI_BASE_URL_PRESETS.some(
     (preset) => normalizeBaseUrl(preset.baseUrl) === normalizeBaseUrl(url)
   );
-}
-
-export function getStoredApiKey(
-  apiKeysByBaseUrl: Record<string, string> | undefined,
-  baseUrl: string
-): string {
-  const normalized = normalizeBaseUrl(baseUrl);
-  if (!normalized) return '';
-  return apiKeysByBaseUrl?.[normalized] ?? '';
-}
-
-export function getStoredModelId(
-  modelIdsByBaseUrl: Record<string, string> | undefined,
-  baseUrl: string
-): string {
-  const normalized = normalizeBaseUrl(baseUrl);
-  if (!normalized) return '';
-  return modelIdsByBaseUrl?.[normalized] ?? '';
 }
