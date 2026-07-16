@@ -21,6 +21,41 @@ const MANUAL_REFRESH_COOLDOWN_MS = 30_000;
 /** Skip auto-refetch when reopening settings with the same key within this window. */
 const AUTO_CACHE_TTL_MS = 60_000;
 
+/**
+ * Module-level cache so close/reopen Settings does not re-hit NanoGPT / the free proxy.
+ * Component unmount must not reset cooldown or TTL.
+ */
+interface AccountSessionCache {
+  cacheKey: string;
+  fetchedAt: number;
+  cooldownUntil: number;
+  usage: NanoGPTSubscriptionUsage | null;
+  balance: NanoGPTBalance | null;
+  usageError: string | null;
+  balanceError: string | null;
+  status: LoadStatus;
+}
+
+let accountSessionCache: AccountSessionCache | null = null;
+
+function makeCacheKey(baseUrl: string, apiKey: string): string {
+  return `${normalizeCacheKey(baseUrl)}|${apiKey.trim()}`;
+}
+
+function readFreshCache(baseUrl: string, apiKey: string): AccountSessionCache | null {
+  if (!apiKey.trim() || !accountSessionCache) return null;
+  if (accountSessionCache.cacheKey !== makeCacheKey(baseUrl, apiKey)) return null;
+  if (Date.now() - accountSessionCache.fetchedAt >= AUTO_CACHE_TTL_MS) return null;
+  return accountSessionCache;
+}
+
+function getCooldownRemainingSec(baseUrl: string, apiKey: string): number {
+  if (!apiKey.trim() || !accountSessionCache) return 0;
+  if (accountSessionCache.cacheKey !== makeCacheKey(baseUrl, apiKey)) return 0;
+  const ms = accountSessionCache.cooldownUntil - Date.now();
+  return ms > 0 ? Math.ceil(ms / 1000) : 0;
+}
+
 interface NanoGPTAccountOverviewProps {
   baseUrl: string;
   apiKey: string;
@@ -224,23 +259,41 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
   apiKey,
   enabled,
 }) => {
-  const [usage, setUsage] = useState<NanoGPTSubscriptionUsage | null>(null);
-  const [balance, setBalance] = useState<NanoGPTBalance | null>(null);
-  const [usageError, setUsageError] = useState<string | null>(null);
-  const [balanceError, setBalanceError] = useState<string | null>(null);
-  const [status, setStatus] = useState<LoadStatus>('idle');
+  const cachedOnMount = readFreshCache(baseUrl, apiKey);
+
+  const [usage, setUsage] = useState<NanoGPTSubscriptionUsage | null>(
+    () => cachedOnMount?.usage ?? null
+  );
+  const [balance, setBalance] = useState<NanoGPTBalance | null>(
+    () => cachedOnMount?.balance ?? null
+  );
+  const [usageError, setUsageError] = useState<string | null>(
+    () => cachedOnMount?.usageError ?? null
+  );
+  const [balanceError, setBalanceError] = useState<string | null>(
+    () => cachedOnMount?.balanceError ?? null
+  );
+  const [status, setStatus] = useState<LoadStatus>(() => cachedOnMount?.status ?? 'idle');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [cooldownSec, setCooldownSec] = useState(0);
+  const [cooldownSec, setCooldownSec] = useState(() => getCooldownRemainingSec(baseUrl, apiKey));
 
   const requestIdRef = useRef(0);
-  const hasLoadedOnceRef = useRef(false);
-  const lastFetchAtRef = useRef(0);
-  const lastFetchKeyRef = useRef('');
-  const cooldownUntilRef = useRef(0);
 
   const updateCooldownDisplay = useCallback(() => {
-    const remainingMs = cooldownUntilRef.current - Date.now();
-    setCooldownSec(remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0);
+    setCooldownSec(getCooldownRemainingSec(baseUrl, apiKey));
+  }, [apiKey, baseUrl]);
+
+  const applyCacheToState = useCallback((entry: AccountSessionCache) => {
+    setUsage(entry.usage);
+    setBalance(entry.balance);
+    setUsageError(entry.usageError);
+    setBalanceError(entry.balanceError);
+    setStatus(entry.status);
+    setCooldownSec(
+      entry.cooldownUntil > Date.now()
+        ? Math.ceil((entry.cooldownUntil - Date.now()) / 1000)
+        : 0
+    );
   }, []);
 
   const fetchAccount = useCallback(
@@ -251,34 +304,30 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
         setUsageError(null);
         setBalanceError(null);
         setStatus('idle');
+        setCooldownSec(0);
         return;
       }
 
-      const cacheKey = `${normalizeCacheKey(baseUrl)}|${apiKey.trim()}`;
+      const cacheKey = makeCacheKey(baseUrl, apiKey);
       const now = Date.now();
+      const cached =
+        accountSessionCache?.cacheKey === cacheKey ? accountSessionCache : null;
 
-      // Manual refresh rate limit
-      if (opts?.manual && !opts.force) {
-        const until = cooldownUntilRef.current;
-        if (until > now) {
-          updateCooldownDisplay();
-          return;
-        }
-      }
-
-      // Auto-fetch: reuse recent result for same key/url
-      if (
-        !opts?.manual &&
-        !opts?.force &&
-        hasLoadedOnceRef.current &&
-        lastFetchKeyRef.current === cacheKey &&
-        now - lastFetchAtRef.current < AUTO_CACHE_TTL_MS
-      ) {
+      // Manual refresh rate limit (module-level — survives panel close)
+      if (opts?.manual && !opts.force && cached && cached.cooldownUntil > now) {
+        applyCacheToState(cached);
         return;
       }
 
+      // Auto-fetch: reuse module cache for same key within TTL
+      if (!opts?.manual && !opts?.force && cached && now - cached.fetchedAt < AUTO_CACHE_TTL_MS) {
+        applyCacheToState(cached);
+        return;
+      }
+
+      const hadCache = Boolean(cached);
       const requestId = ++requestIdRef.current;
-      if (opts?.manual || hasLoadedOnceRef.current) {
+      if (opts?.manual || hadCache) {
         setIsRefreshing(true);
       } else {
         setStatus('loading');
@@ -291,45 +340,43 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
 
       if (requestId !== requestIdRef.current) return;
 
-      if (usageResult.status === 'fulfilled') {
-        setUsage(usageResult.value);
-        setUsageError(null);
-      } else {
-        setUsage(null);
-        setUsageError(
-          usageResult.reason instanceof Error
+      const nextUsage =
+        usageResult.status === 'fulfilled' ? usageResult.value : null;
+      const nextUsageError =
+        usageResult.status === 'fulfilled'
+          ? null
+          : usageResult.reason instanceof Error
             ? usageResult.reason.message
-            : 'Failed to load subscription usage'
-        );
-      }
-
-      if (balanceResult.status === 'fulfilled') {
-        setBalance(balanceResult.value);
-        setBalanceError(null);
-      } else {
-        setBalance(null);
-        setBalanceError(
-          balanceResult.reason instanceof Error
+            : 'Failed to load subscription usage';
+      const nextBalance =
+        balanceResult.status === 'fulfilled' ? balanceResult.value : null;
+      const nextBalanceError =
+        balanceResult.status === 'fulfilled'
+          ? null
+          : balanceResult.reason instanceof Error
             ? balanceResult.reason.message
-            : 'Failed to load balance'
-        );
-      }
-
-      const finishedAt = Date.now();
-      hasLoadedOnceRef.current = true;
-      lastFetchAtRef.current = finishedAt;
-      lastFetchKeyRef.current = cacheKey;
-      cooldownUntilRef.current = finishedAt + MANUAL_REFRESH_COOLDOWN_MS;
-      updateCooldownDisplay();
-
-      setIsRefreshing(false);
-      setStatus(
+            : 'Failed to load balance';
+      const nextStatus: LoadStatus =
         usageResult.status === 'fulfilled' || balanceResult.status === 'fulfilled'
           ? 'success'
-          : 'error'
-      );
+          : 'error';
+
+      const finishedAt = Date.now();
+      const entry: AccountSessionCache = {
+        cacheKey,
+        fetchedAt: finishedAt,
+        cooldownUntil: finishedAt + MANUAL_REFRESH_COOLDOWN_MS,
+        usage: nextUsage,
+        balance: nextBalance,
+        usageError: nextUsageError,
+        balanceError: nextBalanceError,
+        status: nextStatus,
+      };
+      accountSessionCache = entry;
+      applyCacheToState(entry);
+      setIsRefreshing(false);
     },
-    [apiKey, baseUrl, enabled, updateCooldownDisplay]
+    [apiKey, applyCacheToState, baseUrl, enabled]
   );
 
   // Tick cooldown countdown for the Refresh button label
@@ -341,24 +388,19 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
     return () => window.clearInterval(id);
   }, [cooldownSec, updateCooldownDisplay]);
 
-  // Debounced auto-fetch when key / url changes (immediate clear when key emptied)
+  // Debounced auto-fetch when key / url changes (uses module cache on reopen)
   useEffect(() => {
     if (!enabled) return;
 
     const delay = apiKey.trim() ? 400 : 0;
     const timer = window.setTimeout(() => {
-      if (!apiKey.trim()) {
-        hasLoadedOnceRef.current = false;
-        lastFetchKeyRef.current = '';
-        lastFetchAtRef.current = 0;
-      }
       void fetchAccount();
     }, delay);
 
     return () => window.clearTimeout(timer);
   }, [apiKey, baseUrl, enabled, fetchAccount]);
 
-  // Invalidate in-flight responses on unmount
+  // Invalidate in-flight responses on unmount (cache remains)
   useEffect(() => {
     return () => {
       requestIdRef.current += 1;

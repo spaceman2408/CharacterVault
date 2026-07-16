@@ -119,6 +119,15 @@ Works on **Chrome for Android**. Other mobile browsers may not relay the authori
 See [AI Setup → Sign in with NanoGPT](/configuration/ai-setup#sign-in-with-nanogpt-pkce) for the full walkthrough.
 :::
 
+::: details Why does NanoGPT show balance but not subscription usage?
+Balance and model lists talk to NanoGPT endpoints that allow browser CORS. **Subscription usage** (`/api/subscription/v1/usage`) does not, so static hosts (e.g. GitHub Pages) need a small free **Cloudflare Worker** proxy.
+
+- **Local dev** — Vite proxies automatically; no worker required.  
+- **Production static host** — Deploy `workers/nanogpt-usage-proxy`, set `VITE_NANOGPT_PROXY` at build time, rebuild.
+
+See [AI Setup → Subscription usage and CORS](/configuration/ai-setup#subscription-usage-and-cors-static-hosts).
+:::
+
 ---
 
 ## Import & Export

@@ -98,9 +98,31 @@ When the Nano-GPT preset is selected, a **NanoGPT Account** card shows:
 - **Balance** (USD / Nano) from NanoGPT’s check-balance API  
 - **Subscription status** (active / grace / not active) and weekly input-token quota when available  
 
-Refresh is rate-limited (about 30 seconds) so the APIs and any free proxy are not spammed. Reopening Settings within a minute reuses the last result.
+Refresh is rate-limited (about 30 seconds). Closing and reopening Settings within about a minute reuses the last result so the APIs are not hit again.
 
-**Note:** NanoGPT’s subscription usage endpoint is not CORS-enabled for browsers. Local development uses a Vite proxy. Production static hosting (GitHub Pages) needs a tiny free reverse proxy — see `workers/nanogpt-usage-proxy/README.md` and set `VITE_NANOGPT_PROXY` at build time. Balance works without a proxy.
+#### Subscription usage and CORS (static hosts)
+
+NanoGPT’s **balance** and **models** APIs work from the browser as-is. The **subscription usage** endpoint (`GET /api/subscription/v1/usage`) does **not** send CORS headers, so a pure static host (e.g. GitHub Pages) cannot call it directly.
+
+| Environment | How usage is loaded |
+| :--- | :--- |
+| **Local `npm run dev`** | Vite proxies `/__nanogpt` → nano-gpt.com (no extra setup) |
+| **Static production (GitHub Pages, etc.)** | Deploy the free Cloudflare Worker in `workers/nanogpt-usage-proxy/`, then set `VITE_NANOGPT_PROXY` to the worker URL at **build** time |
+
+Worker deploy (free tier is enough):
+
+```bash
+cd workers/nanogpt-usage-proxy
+npx wrangler deploy
+```
+
+Use the full worker URL from wrangler (shape: `https://<worker-name>.<account-subdomain>.workers.dev`), not just the account subdomain root. Put it in `.env.production` (gitignored) or your CI env:
+
+```bash
+VITE_NANOGPT_PROXY=https://character-vault-nanogpt-usage.<your-subdomain>.workers.dev
+```
+
+Then rebuild and deploy the site so Vite bakes the proxy URL into the bundle. Balance still works without a worker; only subscription status / weekly token quota need it on static hosts.
 
 ### NanoGPT Options
 
