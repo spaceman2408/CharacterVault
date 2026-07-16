@@ -321,7 +321,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                   ai: { ...prev.ai, subscriptionModelsOnly: subscriptionOnly },
                 }));
                 if (localAIConfig.baseUrl && localAIConfig.apiKey) {
-                  void fetchModels();
+                  void fetchModels({ subscriptionOnly });
                 }
               }}
               label="Subscription models only"

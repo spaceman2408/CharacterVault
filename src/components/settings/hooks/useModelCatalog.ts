@@ -20,6 +20,11 @@ import type { AddToast, SettingsDraft } from '../types';
 interface CachedModels {
   models: AIModelInfo[];
   fetchedAt: number;
+  subscriptionOnly: boolean;
+}
+
+export interface FetchModelsCallOptions {
+  subscriptionOnly?: boolean;
 }
 
 interface UseModelCatalogOptions {
@@ -53,31 +58,38 @@ export function useModelCatalog({
   const fetchingModelsByBaseUrlRef = useRef(fetchingModelsByBaseUrl);
   fetchingModelsByBaseUrlRef.current = fetchingModelsByBaseUrl;
 
-  const isCacheStale = (normalizedUrl: string): boolean => {
+  const isCacheStale = (normalizedUrl: string, subscriptionOnly: boolean): boolean => {
     const cached = modelsByBaseUrlRef.current[normalizedUrl];
     if (!cached) return true;
+    if (cached.subscriptionOnly !== subscriptionOnly) return true;
     return Date.now() - cached.fetchedAt > MODEL_CACHE_STALENESS_MS;
   };
 
   const fetchModelsForUrl = useCallback(
-    async (baseUrl: string, apiKey: string): Promise<AIModelInfo[]> => {
+    async (
+      baseUrl: string,
+      apiKey: string,
+      options?: FetchModelsCallOptions
+    ): Promise<AIModelInfo[]> => {
       const normalizedUrl = normalizeBaseUrl(baseUrl);
+      const subscriptionOnly =
+        options?.subscriptionOnly ?? !!draftRef.current.ai.subscriptionModelsOnly;
       if (fetchingModelsByBaseUrlRef.current[normalizedUrl]) {
         return modelsByBaseUrlRef.current[normalizedUrl]?.models ?? [];
       }
       setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: true }));
       try {
         const aiService = new AIService(
-          { ...draftRef.current.ai, baseUrl, apiKey },
+          { ...draftRef.current.ai, baseUrl, apiKey, subscriptionModelsOnly: subscriptionOnly },
           draftRef.current.sampler
         );
         const models = await aiService.fetchModels({
-          subscriptionOnly: draftRef.current.ai.subscriptionModelsOnly,
+          subscriptionOnly,
           detailed: true,
         });
         setModelsByBaseUrl((prev) => ({
           ...prev,
-          [normalizedUrl]: { models, fetchedAt: Date.now() },
+          [normalizedUrl]: { models, fetchedAt: Date.now(), subscriptionOnly },
         }));
         return models;
       } catch {
@@ -105,7 +117,9 @@ export function useModelCatalog({
 
         if (!apiKey) continue;
 
-        if (!isCacheStale(normalizedUrl)) {
+        const subscriptionOnly = !!draftRef.current.ai.subscriptionModelsOnly;
+
+        if (!isCacheStale(normalizedUrl, subscriptionOnly)) {
           const cached = modelsByBaseUrlRef.current[normalizedUrl];
           if (
             normalizeBaseUrl(draftRef.current.ai.baseUrl) === normalizedUrl &&
@@ -120,7 +134,7 @@ export function useModelCatalog({
         }
 
         fetches.push(
-          fetchModelsForUrl(preset.baseUrl, apiKey).then((models) => {
+          fetchModelsForUrl(preset.baseUrl, apiKey, { subscriptionOnly }).then((models) => {
             if (normalizeBaseUrl(draftRef.current.ai.baseUrl) === normalizedUrl) {
               setDraft((prev) => ({
                 ...prev,
@@ -137,35 +151,53 @@ export function useModelCatalog({
     void autoFetch();
   }, [isOpen, isLoading, fetchModelsForUrl, setDraft]);
 
-  const fetchModels = useCallback(async () => {
-    setIsFetchingModels(true);
-    try {
-      const { ai, sampler } = draftRef.current;
-      const aiService = new AIService(ai, sampler);
-      const models = await aiService.fetchModels({
-        subscriptionOnly: ai.subscriptionModelsOnly,
-        detailed: true,
-      });
-      const normalizedUrl = normalizeBaseUrl(ai.baseUrl);
-      setDraft((prev) => ({
-        ...prev,
-        ai: { ...prev.ai, availableModels: models },
-      }));
-      setModelsByBaseUrl((prev) => ({
-        ...prev,
-        [normalizedUrl]: { models, fetchedAt: Date.now() },
-      }));
-      addToast('success', `Fetched ${models.length} models`);
-    } catch (err) {
-      if (err instanceof AIError) {
-        addToast('error', err.message);
-      } else {
-        addToast('error', 'Failed to fetch models');
+  const fetchModels = useCallback(
+    async (options?: FetchModelsCallOptions) => {
+      setIsFetchingModels(true);
+      try {
+        const { ai, sampler } = draftRef.current;
+        const subscriptionOnly =
+          options?.subscriptionOnly !== undefined
+            ? options.subscriptionOnly
+            : !!ai.subscriptionModelsOnly;
+
+        if (options?.subscriptionOnly !== undefined) {
+          draftRef.current = {
+            ...draftRef.current,
+            ai: { ...ai, subscriptionModelsOnly: options.subscriptionOnly },
+          };
+        }
+
+        const aiService = new AIService(
+          { ...draftRef.current.ai, subscriptionModelsOnly: subscriptionOnly },
+          sampler
+        );
+        const models = await aiService.fetchModels({
+          subscriptionOnly,
+          detailed: true,
+        });
+        const normalizedUrl = normalizeBaseUrl(ai.baseUrl);
+        setDraft((prev) => ({
+          ...prev,
+          ai: { ...prev.ai, availableModels: models },
+        }));
+        setModelsByBaseUrl((prev) => ({
+          ...prev,
+          [normalizedUrl]: { models, fetchedAt: Date.now(), subscriptionOnly },
+        }));
+        addToast('success', `Fetched ${models.length} models`);
+      } catch (err) {
+        if (err instanceof AIError) {
+          addToast('error', err.message);
+        } else {
+          addToast('error', 'Failed to fetch models');
+        }
+      } finally {
+        setIsFetchingModels(false);
       }
-    } finally {
-      setIsFetchingModels(false);
-    }
-  }, [addToast, setDraft]);
+    },
+    [addToast, setDraft]
+  );
 
   const fetchModelProviders = useCallback(
     async (modelId: string, ai: AIConfig, sampler: SamplerSettings) => {
@@ -224,8 +256,10 @@ export function useModelCatalog({
   const handleBaseUrlChange = useCallback(
     (baseUrl: string, loadStoredProfile: boolean) => {
       const normalizedUrl = normalizeBaseUrl(baseUrl);
+      const subscriptionOnly = !!draftRef.current.ai.subscriptionModelsOnly;
       const cached = modelsByBaseUrl[normalizedUrl];
-      const cachedModels = !cached || isCacheStale(normalizedUrl) ? [] : cached.models;
+      const cachedModels =
+        !cached || isCacheStale(normalizedUrl, subscriptionOnly) ? [] : cached.models;
 
       setDraft((prev) => {
         const shouldSaveAsCustom =
@@ -253,7 +287,7 @@ export function useModelCatalog({
       if (cachedModels.length === 0) {
         const apiKey = draftRef.current.ai.apiKeysByBaseUrl?.[normalizedUrl];
         if (apiKey) {
-          void fetchModelsForUrl(baseUrl, apiKey).then((models) => {
+          void fetchModelsForUrl(baseUrl, apiKey, { subscriptionOnly }).then((models) => {
             setDraft((prev) => ({
               ...prev,
               ai: { ...prev.ai, availableModels: models },
@@ -268,8 +302,10 @@ export function useModelCatalog({
   const handleCustomUrlChange = useCallback(
     (baseUrl: string) => {
       const normalizedUrl = normalizeBaseUrl(baseUrl);
+      const subscriptionOnly = !!draftRef.current.ai.subscriptionModelsOnly;
       const cached = modelsByBaseUrl[normalizedUrl];
-      const cachedModels = !cached || isCacheStale(normalizedUrl) ? [] : cached.models;
+      const cachedModels =
+        !cached || isCacheStale(normalizedUrl, subscriptionOnly) ? [] : cached.models;
 
       setDraft((prev) => ({
         ...prev,
@@ -290,7 +326,7 @@ export function useModelCatalog({
       if (cachedModels.length === 0 && normalizedUrl) {
         const apiKey = draftRef.current.ai.apiKeysByBaseUrl?.[normalizedUrl];
         if (apiKey) {
-          void fetchModelsForUrl(baseUrl, apiKey).then((models) => {
+          void fetchModelsForUrl(baseUrl, apiKey, { subscriptionOnly }).then((models) => {
             setDraft((prev) => ({
               ...prev,
               ai: { ...prev.ai, availableModels: models },

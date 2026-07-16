@@ -50,7 +50,7 @@ export interface SettingsPanelHelpers {
   showClearConfirm: boolean;
   setShowClearConfirm: (show: boolean) => void;
   isClearing: boolean;
-  fetchModels: () => Promise<void>;
+  fetchModels: (options?: { subscriptionOnly?: boolean }) => Promise<void>;
   handleBaseUrlChange: (baseUrl: string, loadStoredProfile: boolean) => void;
   handleCustomUrlChange: (baseUrl: string) => void;
   handleApiKeyChange: (apiKey: string) => void;
