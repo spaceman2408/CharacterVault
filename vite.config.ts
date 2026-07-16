@@ -37,5 +37,25 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    // NanoGPT's /api/subscription/v1/usage lacks browser CORS headers
+    // (models + check-balance are fine). Proxy so Settings can load sub quota.
+    proxy: {
+      '/__nanogpt': {
+        target: 'https://nano-gpt.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (p) => p.replace(/^\/__nanogpt/, ''),
+      },
+    },
+  },
+  preview: {
+    proxy: {
+      '/__nanogpt': {
+        target: 'https://nano-gpt.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (p) => p.replace(/^\/__nanogpt/, ''),
+      },
+    },
   },
 })

@@ -69,3 +69,44 @@ export interface FetchModelsOptions {
   subscriptionOnly?: boolean;
   detailed?: boolean;
 }
+
+/** NanoGPT subscription state from /api/subscription/v1/usage */
+export type NanoGPTSubscriptionState = 'active' | 'grace' | 'inactive';
+
+/** Quota window for input tokens or images (used / remaining / reset) */
+export interface NanoGPTQuotaWindow {
+  used: number;
+  remaining: number;
+  /** Fraction in [0, 1] */
+  percentUsed: number;
+  /** UNIX epoch milliseconds */
+  resetAt: number;
+}
+
+/** Normalized subscription usage from GET /api/subscription/v1/usage */
+export interface NanoGPTSubscriptionUsage {
+  active: boolean;
+  state: NanoGPTSubscriptionState;
+  graceUntil: string | null;
+  allowOverage: boolean;
+  limits: {
+    weeklyInputTokens: number | null;
+    dailyInputTokens: number | null;
+    dailyImages: number | null;
+  };
+  period: { currentPeriodEnd: string | null };
+  weeklyInputTokens: NanoGPTQuotaWindow | null;
+  dailyInputTokens: NanoGPTQuotaWindow | null;
+  dailyImages: NanoGPTQuotaWindow | null;
+  provider?: string;
+  providerStatus?: string;
+  cancellationReason?: string | null;
+  canceledAt?: string | null;
+  endedAt?: string | null;
+}
+
+/** Account balance from POST /api/check-balance */
+export interface NanoGPTBalance {
+  usdBalance: string;
+  nanoBalance: string;
+}

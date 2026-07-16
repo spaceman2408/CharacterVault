@@ -11,6 +11,10 @@ export type {
   ModelProviderInfo,
   ExtendedAIModelInfo,
   FetchModelsOptions,
+  NanoGPTSubscriptionState,
+  NanoGPTQuotaWindow,
+  NanoGPTSubscriptionUsage,
+  NanoGPTBalance,
 } from './types';
 
 import { NanoGPTProvider } from './NanoGPTProvider';

@@ -91,6 +91,17 @@ Some NanoGPT models support **provider selection** — choosing which backend se
 
 Provider preferences are saved per model — switching models remembers your choice.
 
+### NanoGPT Account overview
+
+When the Nano-GPT preset is selected, a **NanoGPT Account** card shows:
+
+- **Balance** (USD / Nano) from NanoGPT’s check-balance API  
+- **Subscription status** (active / grace / not active) and weekly input-token quota when available  
+
+Refresh is rate-limited (about 30 seconds) so the APIs and any free proxy are not spammed. Reopening Settings within a minute reuses the last result.
+
+**Note:** NanoGPT’s subscription usage endpoint is not CORS-enabled for browsers. Local development uses a Vite proxy. Production static hosting (GitHub Pages) needs a tiny free reverse proxy — see `workers/nanogpt-usage-proxy/README.md` and set `VITE_NANOGPT_PROXY` at build time. Balance works without a proxy.
+
 ### NanoGPT Options
 
 When the NanoGPT preset is selected, two additional toggles appear:

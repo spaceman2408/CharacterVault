@@ -8,6 +8,10 @@ import type {
   FetchModelsOptions,
   ExtendedAIModelInfo,
   ModelProviderInfo,
+  NanoGPTBalance,
+  NanoGPTQuotaWindow,
+  NanoGPTSubscriptionState,
+  NanoGPTSubscriptionUsage,
 } from './types';
 import type { AIConfig } from '../../db/characterTypes';
 
@@ -264,4 +268,238 @@ export class NanoGPTProvider implements IProviderAdapter {
 
     return headers;
   }
+
+  /**
+   * Fetch subscription status and weekly/daily quota windows.
+   * GET /api/subscription/v1/usage
+   *
+   * Note: This path currently lacks browser CORS headers on nano-gpt.com
+   * (unlike /api/v1/models and /api/check-balance). In Vite dev/preview we
+   * route through the same-origin `/__nanogpt` proxy (see vite.config.ts).
+   * Optional production override: VITE_NANOGPT_PROXY.
+   */
+  async fetchSubscriptionUsage(
+    baseUrl: string,
+    apiKey: string
+  ): Promise<NanoGPTSubscriptionUsage> {
+    if (!apiKey.trim()) {
+      throw new Error('API key required');
+    }
+
+    const normalizedUrl = this.normalizeBaseUrl(baseUrl);
+    const directUrl = `${normalizedUrl}/api/subscription/v1/usage`;
+    const url = resolveCorsSafeNanoGptUrl(directUrl);
+
+    // Prefer x-api-key (same as check-balance); avoid Content-Type on GET
+    // so we don't add unnecessary preflight surface when calling direct.
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'x-api-key': apiKey,
+        },
+      });
+    } catch {
+      throw new Error(
+        'Subscription usage blocked by browser CORS (NanoGPT does not allow this endpoint from web apps). Balance still works. Local dev uses a Vite proxy — restart `npm run dev` after updating.'
+      );
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid API key');
+      }
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded');
+      }
+      throw new Error(
+        `Failed to fetch subscription usage: ${response.statusText || `HTTP ${response.status}`}`
+      );
+    }
+
+    const data: unknown = await response.json();
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid subscription usage response');
+    }
+
+    return normalizeSubscriptionUsage(data as Record<string, unknown>);
+  }
+
+  /**
+   * Fetch account balance.
+   * POST /api/check-balance (x-api-key auth)
+   */
+  async fetchBalance(baseUrl: string, apiKey: string): Promise<NanoGPTBalance> {
+    if (!apiKey.trim()) {
+      throw new Error('API key required');
+    }
+
+    const normalizedUrl = this.normalizeBaseUrl(baseUrl);
+    const response = await fetch(`${normalizedUrl}/api/check-balance`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid API key');
+      }
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded');
+      }
+      throw new Error(
+        `Failed to fetch balance: ${response.statusText || `HTTP ${response.status}`}`
+      );
+    }
+
+    const data: unknown = await response.json();
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid balance response');
+    }
+
+    const raw = data as Record<string, unknown>;
+    const usd =
+      typeof raw.usd_balance === 'string'
+        ? raw.usd_balance
+        : typeof raw.usdBalance === 'string'
+          ? raw.usdBalance
+          : typeof raw.usd_balance === 'number'
+            ? String(raw.usd_balance)
+            : '0';
+    const nano =
+      typeof raw.nano_balance === 'string'
+        ? raw.nano_balance
+        : typeof raw.nanoBalance === 'string'
+          ? raw.nanoBalance
+          : typeof raw.nano_balance === 'number'
+            ? String(raw.nano_balance)
+            : '0';
+
+    return { usdBalance: usd, nanoBalance: nano };
+  }
+}
+
+/**
+ * Rewrite NanoGPT URLs that lack browser CORS to a same-origin or configured proxy.
+ * Dev/preview: `/__nanogpt` → vite.config.ts proxy → https://nano-gpt.com
+ * Production: set VITE_NANOGPT_PROXY (e.g. your own reverse proxy) if needed.
+ */
+function resolveCorsSafeNanoGptUrl(absoluteUrl: string): string {
+  if (typeof window === 'undefined') return absoluteUrl;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(absoluteUrl);
+  } catch {
+    return absoluteUrl;
+  }
+
+  if (!parsed.hostname.includes('nano-gpt.com')) return absoluteUrl;
+
+  // Only paths confirmed missing Access-Control-Allow-Origin in browser preflight
+  if (!parsed.pathname.includes('/subscription/v1/usage')) {
+    return absoluteUrl;
+  }
+
+  const env = import.meta.env as ImportMetaEnv & { VITE_NANOGPT_PROXY?: string };
+  const configuredProxy = env.VITE_NANOGPT_PROXY?.trim();
+  if (configuredProxy) {
+    return `${configuredProxy.replace(/\/$/, '')}${parsed.pathname}${parsed.search}`;
+  }
+
+  // Vite dev server and `vite preview` proxy (see vite.config.ts)
+  if (import.meta.env.DEV) {
+    return `/__nanogpt${parsed.pathname}${parsed.search}`;
+  }
+
+  // vite preview is production build mode but can still use the preview proxy
+  if (import.meta.env.MODE === 'production' && /localhost|127\.0\.0\.1/.test(window.location.hostname)) {
+    return `/__nanogpt${parsed.pathname}${parsed.search}`;
+  }
+
+  return absoluteUrl;
+}
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+function asString(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  return null;
+}
+
+function parseQuotaWindow(value: unknown): NanoGPTQuotaWindow | null {
+  if (!value || typeof value !== 'object') return null;
+  const w = value as Record<string, unknown>;
+  const used = asNumber(w.used);
+  const remaining = asNumber(w.remaining);
+  if (used === null || remaining === null) return null;
+
+  let percentUsed = asNumber(w.percentUsed) ?? asNumber(w.percent_used);
+  if (percentUsed === null) {
+    const total = used + remaining;
+    percentUsed = total > 0 ? used / total : 0;
+  }
+  percentUsed = Math.min(1, Math.max(0, percentUsed));
+
+  const resetAt = asNumber(w.resetAt) ?? asNumber(w.reset_at) ?? 0;
+
+  return { used, remaining, percentUsed, resetAt };
+}
+
+function normalizeSubscriptionState(value: unknown): NanoGPTSubscriptionState {
+  if (value === 'active' || value === 'grace' || value === 'inactive') return value;
+  return 'inactive';
+}
+
+function normalizeSubscriptionUsage(raw: Record<string, unknown>): NanoGPTSubscriptionUsage {
+  const limitsRaw =
+    raw.limits && typeof raw.limits === 'object'
+      ? (raw.limits as Record<string, unknown>)
+      : {};
+  const periodRaw =
+    raw.period && typeof raw.period === 'object'
+      ? (raw.period as Record<string, unknown>)
+      : {};
+
+  return {
+    active: Boolean(raw.active),
+    state: normalizeSubscriptionState(raw.state),
+    graceUntil: asString(raw.graceUntil) ?? asString(raw.grace_until),
+    allowOverage: Boolean(raw.allowOverage ?? raw.allow_overage),
+    limits: {
+      weeklyInputTokens:
+        asNumber(limitsRaw.weeklyInputTokens) ?? asNumber(limitsRaw.weekly_input_tokens),
+      dailyInputTokens:
+        asNumber(limitsRaw.dailyInputTokens) ?? asNumber(limitsRaw.daily_input_tokens),
+      dailyImages: asNumber(limitsRaw.dailyImages) ?? asNumber(limitsRaw.daily_images),
+    },
+    period: {
+      currentPeriodEnd:
+        asString(periodRaw.currentPeriodEnd) ?? asString(periodRaw.current_period_end),
+    },
+    weeklyInputTokens:
+      parseQuotaWindow(raw.weeklyInputTokens) ?? parseQuotaWindow(raw.weekly_input_tokens),
+    dailyInputTokens:
+      parseQuotaWindow(raw.dailyInputTokens) ?? parseQuotaWindow(raw.daily_input_tokens),
+    dailyImages: parseQuotaWindow(raw.dailyImages) ?? parseQuotaWindow(raw.daily_images),
+    provider: asString(raw.provider) ?? undefined,
+    providerStatus:
+      asString(raw.providerStatus) ?? asString(raw.provider_status) ?? undefined,
+    cancellationReason:
+      asString(raw.cancellationReason) ?? asString(raw.cancellation_reason),
+    canceledAt: asString(raw.canceledAt) ?? asString(raw.canceled_at),
+    endedAt: asString(raw.endedAt) ?? asString(raw.ended_at),
+  };
 }
