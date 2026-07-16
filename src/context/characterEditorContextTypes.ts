@@ -5,7 +5,14 @@
 
 import { createContext } from 'react';
 import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings, SectionMeta, SpellcheckSettings } from '../db/characterTypes';
+import type {
+  SamplerSettings,
+  AIConfig,
+  PromptSettings,
+  PromptModelMap,
+  SectionMeta,
+  SpellcheckSettings,
+} from '../db/characterTypes';
 
 /**
  * Save status types
@@ -64,6 +71,8 @@ export interface CharacterEditorContextValue {
   samplerSettings: SamplerSettings;
   /** Prompt settings */
   promptSettings: PromptSettings;
+  /** Per-operation model routing for toolbar AI prompts */
+  promptModels: PromptModelMap;
   /** Whether the history modal is open */
   isHistoryOpen: boolean;
   /** Persisted snapshot metadata for the current character (lightweight, no payloads) */
@@ -111,6 +120,8 @@ export interface CharacterEditorContextValue {
   updateSamplerSettings: (settings: Partial<SamplerSettings>) => void;
   /** Update prompt settings */
   updatePromptSettings: (settings: Partial<PromptSettings>) => void;
+  /** Replace per-operation model routing map */
+  updatePromptModels: (promptModels: PromptModelMap) => void;
   /** Toggle history modal */
   setIsHistoryOpen: (open: boolean) => void;
   /** Create a manual snapshot */

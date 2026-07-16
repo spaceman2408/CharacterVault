@@ -4,7 +4,13 @@
  */
 
 import type { CharacterVaultSettings } from '../db/characterTypes';
-import type { AIConfig, SamplerSettings, PromptSettings, SpellcheckSettings } from '../db/characterTypes';
+import type {
+  AIConfig,
+  SamplerSettings,
+  PromptSettings,
+  PromptModelMap,
+  SpellcheckSettings,
+} from '../db/characterTypes';
 import { DEFAULT_SETTINGS } from '../db/characterTypes';
 import {
   DEFAULT_CHARACTER_VAULT_SETTINGS,
@@ -13,6 +19,7 @@ import {
 } from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
 import type { CharacterSection } from '../db/characterTypes';
+import { normalizePromptModelMap } from './resolveOperationConfig';
 
 /**
  * Settings Service class for managing application settings in CharacterVault
@@ -237,6 +244,14 @@ export class CharacterSettingsService {
   }
 
   /**
+   * Get per-operation model routing map
+   */
+  async getPromptModels(): Promise<PromptModelMap> {
+    const settings = await this.getSettings();
+    return normalizePromptModelMap(settings.promptModels);
+  }
+
+  /**
    * Save AI prompt settings
    */
   async savePromptSettings(prompts: PromptSettings): Promise<void> {
@@ -254,12 +269,25 @@ export class CharacterSettingsService {
   }
 
   /**
+   * Save per-operation model routing map
+   */
+  async savePromptModels(promptModels: PromptModelMap): Promise<void> {
+    const settings = await this.getSettings();
+    const updatedSettings: CharacterVaultSettings = {
+      ...settings,
+      promptModels: normalizePromptModelMap(promptModels),
+    };
+    await characterDb.settings.put(updatedSettings);
+  }
+
+  /**
    * Save all AI-related settings at once (avoids race conditions)
    */
   async saveAllAISettings(
     aiConfig: AIConfig,
     sampler: SamplerSettings,
-    prompts: PromptSettings
+    prompts: PromptSettings,
+    promptModels?: PromptModelMap
   ): Promise<void> {
     const settings = await this.getSettings();
     
@@ -277,6 +305,10 @@ export class CharacterSettingsService {
         ...DEFAULT_SETTINGS.prompts,
         ...prompts,
       },
+      promptModels:
+        promptModels !== undefined
+          ? normalizePromptModelMap(promptModels)
+          : normalizePromptModelMap(settings.promptModels),
     };
     
     await characterDb.settings.put(updatedSettings);
@@ -306,6 +338,7 @@ export class CharacterSettingsService {
       ai: DEFAULT_SETTINGS.ai,
       sampler: DEFAULT_SETTINGS.sampler,
       prompts: DEFAULT_SETTINGS.prompts,
+      promptModels: {},
       contextSectionIds: [],
     };
     
@@ -385,6 +418,8 @@ export class CharacterSettingsService {
       sampler: settings.sampler ?? DEFAULT_SETTINGS.sampler,
       // Keep prompts as they're not sensitive
       prompts: settings.prompts ?? DEFAULT_SETTINGS.prompts,
+      // Keep prompt→model routing (not sensitive; keys live under ai)
+      promptModels: normalizePromptModelMap(settings.promptModels),
     };
     
     await characterDb.settings.put(updatedSettings);

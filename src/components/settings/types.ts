@@ -6,8 +6,10 @@
 import type { LucideIcon } from 'lucide-react';
 import type {
   AIConfig,
+  AIModelInfo,
   SamplerSettings,
   PromptSettings,
+  PromptModelMap,
   CharacterSection,
 } from '../../db/characterTypes';
 import type { ModelProvider } from '../../services/providers';
@@ -25,6 +27,7 @@ export interface SettingsDraft {
   ai: AIConfig;
   sampler: SamplerSettings;
   prompts: PromptSettings;
+  promptModels: PromptModelMap;
   showLuckyVortex: boolean;
   spellcheckEnabled: boolean;
   spellcheckLanguage: string;
@@ -38,7 +41,7 @@ export interface CharacterSettingsPanelProps {
   reloadSettings?: () => Promise<void>;
 }
 
-/** AI-tab-only helpers (model fetch, OAuth, clear). Other tabs ignore these. */
+/** Shared helpers (model fetch, OAuth, clear). AI tab uses most; Prompts uses catalog. */
 export interface SettingsPanelHelpers {
   selectedBaseUrlPreset: string;
   isFetchingModels: boolean;
@@ -51,6 +54,10 @@ export interface SettingsPanelHelpers {
   setShowClearConfirm: (show: boolean) => void;
   isClearing: boolean;
   fetchModels: (options?: { subscriptionOnly?: boolean }) => Promise<void>;
+  /** Cached model lists keyed by normalized base URL (Prompts tab routing). */
+  modelsByBaseUrl: Record<string, AIModelInfo[]>;
+  isFetchingModelsForUrl: (baseUrl: string) => boolean;
+  fetchModelsForUrl: (baseUrl: string) => Promise<void>;
   handleBaseUrlChange: (baseUrl: string, loadStoredProfile: boolean) => void;
   handleCustomUrlChange: (baseUrl: string) => void;
   handleApiKeyChange: (apiKey: string) => void;

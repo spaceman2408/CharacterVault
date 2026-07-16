@@ -4,7 +4,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import type { AIConfig, PromptSettings, SamplerSettings } from '../../../db/characterTypes';
+import type {
+  AIConfig,
+  PromptModelMap,
+  PromptSettings,
+  SamplerSettings,
+} from '../../../db/characterTypes';
 import {
   DEFAULT_SETTINGS,
   DEFAULT_SECTION_ORDER,
@@ -12,6 +17,7 @@ import {
   clampContextLength,
 } from '../../../db/characterTypes';
 import { characterSettingsService } from '../../../services/CharacterSettingsService';
+import { normalizePromptModelMap } from '../../../services/resolveOperationConfig';
 import { normalizeBaseUrl } from '../config/aiBaseUrlPresets';
 import type { AddToast, SettingsDraft } from '../types';
 
@@ -23,6 +29,7 @@ export function createDefaultDraft(): SettingsDraft {
     },
     sampler: { ...DEFAULT_SETTINGS.sampler },
     prompts: { ...DEFAULT_SETTINGS.prompts },
+    promptModels: {},
     showLuckyVortex: true,
     spellcheckEnabled: DEFAULT_SPELLCHECK_SETTINGS.enabled,
     spellcheckLanguage: DEFAULT_SPELLCHECK_SETTINGS.language,
@@ -99,6 +106,20 @@ export function validatePrompts(prompts: PromptSettings): string | null {
   return errors.length > 0 ? errors.join('\n') : null;
 }
 
+export function validatePromptModels(promptModels: PromptModelMap): string | null {
+  const errors: string[] = [];
+  for (const [key, binding] of Object.entries(promptModels)) {
+    if (!binding) continue;
+    if (!binding.baseUrl?.trim()) {
+      errors.push(`${key}: model binding is missing an endpoint`);
+    }
+    if (!binding.modelId?.trim()) {
+      errors.push(`${key}: model binding is missing a model ID`);
+    }
+  }
+  return errors.length > 0 ? errors.join('\n') : null;
+}
+
 interface UseSettingsDraftOptions {
   isOpen: boolean;
   reloadSettings: () => Promise<void>;
@@ -116,11 +137,12 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     const loadSettings = async () => {
       setIsLoading(true);
       try {
-        const [config, sampler, prompts, fullSettings, secOrder, secHidden, spell] =
+        const [config, sampler, prompts, promptModels, fullSettings, secOrder, secHidden, spell] =
           await Promise.all([
             characterSettingsService.getAISettings(),
             characterSettingsService.getSamplerSettings(),
             characterSettingsService.getPromptSettings(),
+            characterSettingsService.getPromptModels(),
             characterSettingsService.getSettings(),
             characterSettingsService.getSectionOrder(),
             characterSettingsService.getHiddenSections(),
@@ -131,6 +153,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           ai: mergeLoadedAIConfig(config),
           sampler: mergeLoadedSampler(sampler),
           prompts,
+          promptModels,
           showLuckyVortex: fullSettings.ui?.showLuckyVortex ?? true,
           spellcheckEnabled: spell.enabled,
           spellcheckLanguage: spell.language,
@@ -158,6 +181,13 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       return;
     }
 
+    const promptModelsError = validatePromptModels(draft.promptModels);
+    if (promptModelsError) {
+      addToast('error', promptModelsError);
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const clampedSampler: SamplerSettings = {
         ...draft.sampler,
@@ -166,6 +196,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       };
 
       const normalizedBaseUrl = normalizeBaseUrl(draft.ai.baseUrl);
+      const promptModels = normalizePromptModelMap(draft.promptModels);
 
       await characterSettingsService.saveAllAISettings(
         {
@@ -184,7 +215,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           },
         },
         clampedSampler,
-        draft.prompts
+        draft.prompts,
+        promptModels
       );
 
       const currentSettings = await characterSettingsService.getSettings();

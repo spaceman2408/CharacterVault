@@ -5,8 +5,15 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings, SpellcheckSettings } from '../db/characterTypes';
+import type {
+  SamplerSettings,
+  AIConfig,
+  PromptSettings,
+  PromptModelMap,
+  SpellcheckSettings,
+} from '../db/characterTypes';
 import { DEFAULT_SETTINGS, DEFAULT_SECTION_ORDER, CHARACTER_SECTIONS, DEFAULT_SPELLCHECK_SETTINGS } from '../db/characterTypes';
+import { normalizePromptModelMap } from '../services/resolveOperationConfig';
 import type { SectionMeta } from '../db/characterTypes';
 import { bindSpellcheckCallbacks } from '../editor/extensions/spellcheck';
 import { useCharacterContext } from './useCharacterContext';
@@ -55,6 +62,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [aiConfig, setAIConfig] = useState<AIConfig>(DEFAULT_SETTINGS.ai);
   const [samplerSettings, setSamplerSettings] = useState<SamplerSettings>(DEFAULT_SETTINGS.sampler);
   const [promptSettings, setPromptSettings] = useState<PromptSettings>(DEFAULT_SETTINGS.prompts);
+  const [promptModels, setPromptModels] = useState<PromptModelMap>({});
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [snapshotMetadata, setSnapshotMetadata] = useState<SnapshotMetadata[]>([]);
   const [isSnapshotsLoading, setIsSnapshotsLoading] = useState(false);
@@ -261,10 +269,11 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   // Function to reload settings from database
   const reloadSettings = useCallback(async () => {
     try {
-      const [config, sampler, prompts, settings, secOrder, secHidden, spell] = await Promise.all([
+      const [config, sampler, prompts, models, settings, secOrder, secHidden, spell] = await Promise.all([
         characterSettingsService.getAISettings(),
         characterSettingsService.getSamplerSettings(),
         characterSettingsService.getPromptSettings(),
+        characterSettingsService.getPromptModels(),
         characterSettingsService.getSettings(),
         characterSettingsService.getSectionOrder(),
         characterSettingsService.getHiddenSections(),
@@ -273,6 +282,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setAIConfig(config);
       setSamplerSettings(sampler);
       setPromptSettings(prompts);
+      setPromptModels(models);
       setFontSizeState(settings.ui.editorFontSize);
       setSectionOrder(secOrder);
       setHiddenSections(secHidden);
@@ -625,6 +635,15 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       void characterSettingsService.savePromptSettings(newSettings);
       return newSettings;
     });
+  }, []);
+
+  /**
+   * Update per-operation model routing
+   */
+  const updatePromptModels = useCallback((next: PromptModelMap) => {
+    const normalized = normalizePromptModelMap(next);
+    setPromptModels(normalized);
+    void characterSettingsService.savePromptModels(normalized);
   }, []);
 
   const createManualSnapshot = useCallback(async (): Promise<ManualSnapshotResult> => {
@@ -997,6 +1016,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     aiConfig,
     samplerSettings,
     promptSettings,
+    promptModels,
     isHistoryOpen,
     snapshotMetadata,
     isSnapshotsLoading,
@@ -1015,6 +1035,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     updateAIConfig,
     updateSamplerSettings,
     updatePromptSettings,
+    updatePromptModels,
     updateSpellcheck,
     addIgnoredWord,
     addCustomWord,
