@@ -30,6 +30,16 @@ export type {
 } from './aiToolbarPanel';
 
 export {
+  aiGhostPreview,
+  aiGhostPreviewField,
+  setAIGhostPreview,
+  updateAIGhostPreview,
+  clearAIGhostPreview,
+} from './aiGhostPreview';
+
+export type { AIGhostPreviewData } from './aiGhostPreview';
+
+export {
   normalizeHtmlEntities,
   normalizeHtmlEntitiesInView,
 } from './normalizeHtmlEntities';

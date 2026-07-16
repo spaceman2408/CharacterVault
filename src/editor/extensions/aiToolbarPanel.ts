@@ -1,7 +1,8 @@
 /**
  * @fileoverview CodeMirror panel extension for AI toolbar.
  * Fixed panel at top of editor - no floating, no drag needed.
- * Includes AI result display with streaming support.
+ * AI body text is previewed in-editor as a ghost; this chrome shows
+ * status, collapsible thinking, and Accept/Reject.
  * @module @editor/extensions/aiToolbarPanel
  */
 
@@ -143,16 +144,16 @@ function createToolbarPanel(
   `;
   dom.appendChild(toolbarContainer);
 
-  // Result container (hidden by default)
+  // Compact result chrome (thinking + actions). AI body text is an in-editor ghost.
   const resultContainer = document.createElement('div');
   resultContainer.className = 'ai-result-container';
   resultContainer.style.cssText = `
     display: none;
     flex-direction: column;
-    padding: 12px;
+    padding: 8px 12px;
     border-top: 1px solid var(--ai-toolbar-border);
     background: var(--ai-toolbar-result-bg);
-    max-height: 500px;
+    max-height: min(40vh, 220px);
     overflow-y: auto;
   `;
   dom.appendChild(resultContainer);
@@ -713,26 +714,27 @@ function createToolbarPanel(
   `;
   resultContainer.appendChild(errorDisplay);
 
-  // Processing indicator
+  // Compact processing indicator (body text streams as an in-editor ghost)
   const processingIndicator = document.createElement('div');
   processingIndicator.style.cssText = `
     display: none;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    justify-content: center;
-    padding: 20px;
-    gap: 12px;
+    justify-content: flex-start;
+    padding: 4px 0 8px;
+    gap: 8px;
   `;
   processingIndicator.innerHTML = `
     <div style="
-      width: 32px;
-      height: 32px;
-      border: 3px solid var(--ai-toolbar-input-border);
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--ai-toolbar-input-border);
       border-top-color: var(--ai-toolbar-text-muted);
       border-radius: 50%;
       animation: ai-spin 1s linear infinite;
+      flex-shrink: 0;
     "></div>
-    <span style="font-size: 13px; color: var(--ai-toolbar-text-muted);">AI is working...</span>
+    <span style="font-size: 12px; color: var(--ai-toolbar-text-muted);">Writing in editor…</span>
     <style>
       @keyframes ai-spin {
         to { transform: rotate(360deg); }
@@ -807,52 +809,12 @@ function createToolbarPanel(
     state.showReasoning = !isVisible;
   });
 
-  // Content display
-  const contentDisplay = document.createElement('div');
-  contentDisplay.style.cssText = `
-    display: none;
-    padding: 12px;
-    background: var(--ai-toolbar-bg);
-    border: 1px solid var(--ai-toolbar-border);
-    border-radius: 6px;
-    margin-bottom: 12px;
-  `;
-  resultContainer.appendChild(contentDisplay);
-
-  const contentText = document.createElement('p');
-  contentText.style.cssText = `
-    margin: 0;
-    font-size: 13px;
-    color: var(--ai-toolbar-text);
-    white-space: pre-wrap;
-    line-height: 1.6;
-  `;
-  contentDisplay.appendChild(contentText);
-
-  // Streaming cursor
-  const streamingCursor = document.createElement('span');
-  streamingCursor.style.cssText = `
-    display: inline-block;
-    width: 2px;
-    height: 1.2em;
-    background: var(--ai-toolbar-text-muted);
-    margin-left: 2px;
-    animation: ai-blink 1s step-end infinite;
-    vertical-align: text-bottom;
-  `;
-  streamingCursor.innerHTML = `
-    <style>
-      @keyframes ai-blink {
-        50% { opacity: 0; }
-      }
-    </style>
-  `;
-
-  // Action buttons container
+  // Action buttons container (AI body is previewed in-editor as a ghost)
   const actionButtons = document.createElement('div');
   actionButtons.style.cssText = `
     display: none;
     gap: 8px;
+    margin-top: 4px;
   `;
   resultContainer.appendChild(actionButtons);
 
@@ -972,25 +934,17 @@ function createToolbarPanel(
   // Capture phase: still fire when focus is body or panel controls
   document.addEventListener('keydown', onPanelKeyDown, true);
 
-  // Track previous content lengths for autoscroll detection
+  // Autoscroll only when the user has expanded thinking
   let prevReasoningLength = 0;
-  let prevContentLength = 0;
-  let userScrolled = false;
+  let userScrolledReasoning = false;
 
-  // Detect user scroll in result container
-  resultContainer.addEventListener('scroll', () => {
-    // Check if user scrolled up (not at bottom)
-    const isAtBottom = resultContainer.scrollTop + resultContainer.clientHeight >= resultContainer.scrollHeight - 10;
-    userScrolled = !isAtBottom;
-  });
-
-  // Detect user scroll in reasoning content
   reasoningContent.addEventListener('scroll', () => {
-    const isAtBottom = reasoningContent.scrollTop + reasoningContent.clientHeight >= reasoningContent.scrollHeight - 5;
-    userScrolled = !isAtBottom;
+    const isAtBottom =
+      reasoningContent.scrollTop + reasoningContent.clientHeight >= reasoningContent.scrollHeight - 5;
+    userScrolledReasoning = !isAtBottom;
   });
 
-  // Update result display based on state
+  // Update result chrome based on state (body text is an in-editor ghost)
   function updateResultDisplay() {
     const hasContent = state.isProcessing || state.isStreaming || state.aiResult || state.error;
 
@@ -1001,11 +955,21 @@ function createToolbarPanel(
 
     resultContainer.style.display = 'flex';
 
-    // Update title
+    // Update title / one-line status
     const opLabel = state.currentOperation
       ? { expand: 'Enhance', rewrite: 'Rephrase', instruct: 'Custom', shorten: 'Shorten', lengthen: 'Lengthen', vivid: 'Vivid', emotion: 'Emotion', grammar: 'Fix' }[state.currentOperation]
       : 'AI Result';
-    resultTitle.textContent = state.isStreaming ? `${opLabel}...` : opLabel;
+    if (state.error) {
+      resultTitle.textContent = opLabel;
+    } else if (state.isStreaming) {
+      resultTitle.textContent = `${opLabel} · streaming…`;
+    } else if (state.isProcessing) {
+      resultTitle.textContent = `${opLabel} · working…`;
+    } else if (state.aiResult) {
+      resultTitle.textContent = `${opLabel} · ready`;
+    } else {
+      resultTitle.textContent = opLabel;
+    }
 
     // Error display
     if (state.error) {
@@ -1013,70 +977,43 @@ function createToolbarPanel(
       errorDisplay.textContent = state.error;
       processingIndicator.style.display = 'none';
       reasoningSection.style.display = 'none';
-      contentDisplay.style.display = 'none';
       actionButtons.style.display = 'none';
       return;
     } else {
       errorDisplay.style.display = 'none';
     }
 
-    // Processing indicator
-    processingIndicator.style.display = state.isProcessing && !state.isStreaming ? 'flex' : 'none';
+    // Compact processing row until first stream tokens / while waiting
+    processingIndicator.style.display =
+      state.isProcessing && !state.isStreaming && !state.aiResult ? 'flex' : 'none';
 
-    // Reasoning section
-    const hasReasoning = (state.streamingReasoning?.trim()?.length ?? 0) > 0 || (state.aiReasoning?.trim()?.length ?? 0) > 0;
+    // Reasoning section — collapsed by default (user expands if they want thinking)
+    const hasReasoning =
+      (state.streamingReasoning?.trim()?.length ?? 0) > 0 ||
+      (state.aiReasoning?.trim()?.length ?? 0) > 0;
     reasoningSection.style.display = hasReasoning ? 'block' : 'none';
     if (hasReasoning) {
       reasoningText.textContent = state.isStreaming ? state.streamingReasoning : state.aiReasoning;
 
-      // Auto-expand during streaming and keep expanded after
-      if (state.isStreaming && !state.showReasoning) {
+      if (state.showReasoning) {
         reasoningContent.style.display = 'block';
         const toggle = reasoningHeader.querySelector('.reasoning-toggle');
         if (toggle) toggle.textContent = 'Hide';
-        state.showReasoning = true; // Remember that we auto-expanded it
-      } else if (!state.isStreaming && state.aiReasoning && state.showReasoning) {
-        // Keep reasoning visible after streaming completes
-        reasoningContent.style.display = 'block';
+      } else {
+        reasoningContent.style.display = 'none';
         const toggle = reasoningHeader.querySelector('.reasoning-toggle');
-        if (toggle) toggle.textContent = 'Hide';
+        if (toggle) toggle.textContent = 'Show';
       }
 
-      // Autoscroll reasoning content during streaming
-      if (state.isStreaming && state.streamingReasoning) {
+      if (state.isStreaming && state.streamingReasoning && state.showReasoning) {
         const currentLength = state.streamingReasoning.length;
-        if (currentLength > prevReasoningLength && !userScrolled) {
+        if (currentLength > prevReasoningLength && !userScrolledReasoning) {
           requestAnimationFrame(() => {
             reasoningContent.scrollTop = reasoningContent.scrollHeight;
           });
         }
         prevReasoningLength = currentLength;
       }
-    }
-
-    // Content display
-    const displayContent = state.isStreaming ? state.streamingContent : (state.aiResult || '');
-    if (displayContent) {
-      contentDisplay.style.display = 'block';
-      contentText.textContent = displayContent;
-      if (state.isStreaming) {
-        contentText.appendChild(streamingCursor);
-      }
-
-      // Autoscroll content during streaming
-      if (state.isStreaming && state.streamingContent) {
-        const currentLength = state.streamingContent.length;
-        if (currentLength > prevContentLength && !userScrolled) {
-          requestAnimationFrame(() => {
-            contentDisplay.scrollTop = contentDisplay.scrollHeight;
-            // Also scroll the main result container to ensure content is visible
-            resultContainer.scrollTop = resultContainer.scrollHeight;
-          });
-        }
-        prevContentLength = currentLength;
-      }
-    } else {
-      contentDisplay.style.display = 'none';
     }
 
     // Stats display (only when complete and has result)
@@ -1096,17 +1033,9 @@ function createToolbarPanel(
     const showActions = !state.isProcessing && !state.isStreaming && state.aiResult && !state.error;
     actionButtons.style.display = showActions ? 'flex' : 'none';
 
-    // Final scroll to bottom when streaming completes
-    if (!state.isStreaming && (state.aiResult || state.aiReasoning)) {
-      requestAnimationFrame(() => {
-        reasoningContent.scrollTop = reasoningContent.scrollHeight;
-        contentDisplay.scrollTop = contentDisplay.scrollHeight;
-        resultContainer.scrollTop = resultContainer.scrollHeight;
-      });
-      // Reset tracking variables when done
+    if (!state.isStreaming) {
       prevReasoningLength = 0;
-      prevContentLength = 0;
-      userScrolled = false;
+      userScrolledReasoning = false;
     }
   }
 
@@ -1240,8 +1169,14 @@ function createToolbarPanel(
     if (update.error !== undefined) state.error = update.error;
     if (update.instructPrompt !== undefined) state.instructPrompt = update.instructPrompt;
     if (update.stats !== undefined) state.stats = update.stats;
-    // Clear stats when a new operation starts
-    if (update.isProcessing === true) state.stats = null;
+    // Clear stats / collapse thinking when a new operation starts
+    if (update.isProcessing === true) {
+      state.stats = null;
+      state.showReasoning = false;
+      reasoningContent.style.display = 'none';
+      const toggle = reasoningHeader.querySelector('.reasoning-toggle');
+      if (toggle) toggle.textContent = 'Show';
+    }
 
     // If there's an error and we have a stored instruct prompt, restore instruct mode
     let restoredInstructMode = false;
