@@ -67,7 +67,7 @@ export function CharacterSettingsPanel({
     baseUrl: draft.ai.baseUrl,
     setDraft,
     handleApiKeyChange: modelCatalog.handleApiKeyChange,
-    fetchModelsForUrl: modelCatalog.fetchModelsForUrl,
+    fetchModelsForUrl: modelCatalog.fetchModelsForUrlRef,
     addToast,
   });
 
@@ -147,15 +147,17 @@ export function CharacterSettingsPanel({
     return () => document.removeEventListener('keydown', handleTabKey);
   }, [isOpen, activeTab]);
 
-  // Open/close fade animation
+  // Open/close fade animation (timers/rAF always cleaned up on re-run/unmount)
   useEffect(() => {
     if (isOpen) {
       setIsRendered(true);
-      requestAnimationFrame(() => setIsVisible(true));
-    } else {
-      setIsVisible(false);
-      setTimeout(() => setIsRendered(false), 300);
+      const raf = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(raf);
     }
+
+    setIsVisible(false);
+    const timeoutId = window.setTimeout(() => setIsRendered(false), 300);
+    return () => window.clearTimeout(timeoutId);
   }, [isOpen]);
 
   const handleClearAISettings = async () => {
@@ -187,6 +189,9 @@ export function CharacterSettingsPanel({
     setShowClearConfirm,
     isClearing,
     fetchModels: modelCatalog.fetchModels,
+    modelsByBaseUrl: modelCatalog.modelsByBaseUrl,
+    isFetchingModelsForUrl: modelCatalog.isFetchingModelsForUrl,
+    fetchModelsForUrl: modelCatalog.fetchModelsForUrl,
     handleBaseUrlChange: modelCatalog.handleBaseUrlChange,
     handleCustomUrlChange: modelCatalog.handleCustomUrlChange,
     handleApiKeyChange: modelCatalog.handleApiKeyChange,
@@ -204,37 +209,39 @@ export function CharacterSettingsPanel({
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-opacity duration-300 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <div
           ref={panelRef}
-          className={`bg-vault-50 dark:bg-vault-900 rounded-2xl shadow-2xl w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden ring-1 ring-vault-200 dark:ring-vault-800 transition-transform duration-300 scale-100 ${
+          className={`bg-vault-50 dark:bg-vault-900 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl h-[min(100dvh,100%)] sm:h-[90vh] max-h-[100dvh] sm:max-h-[90vh] flex flex-col overflow-hidden ring-1 ring-vault-200 dark:ring-vault-800 transition-transform duration-300 scale-100 pb-[env(safe-area-inset-bottom)] ${
             isVisible ? 'scale-100' : 'scale-95'
           }`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="settings-title"
         >
-          <div className="flex items-center justify-between px-6 py-4 border-b border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-linear-to-br from-vault-500 to-vault-600">
+          <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="p-2 rounded-xl bg-linear-to-br from-vault-500 to-vault-600 shrink-0">
                 <Settings2 className="w-5 h-5 text-white" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h2
                   id="settings-title"
-                  className="text-lg font-bold text-vault-900 dark:text-vault-100"
+                  className="text-base sm:text-lg font-bold text-vault-900 dark:text-vault-100 truncate"
                 >
                   AI Settings
                 </h2>
-                <p className="text-xs text-vault-500">Configure your AI generation preferences</p>
+                <p className="text-xs text-vault-500 hidden sm:block">
+                  Configure your AI generation preferences
+                </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vault-500/50"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vault-500/50 shrink-0"
               aria-label="Close settings panel"
             >
               <X className="w-5 h-5" />
@@ -242,7 +249,7 @@ export function CharacterSettingsPanel({
           </div>
 
           <div
-            className="flex min-h-14 overflow-x-auto overflow-y-hidden border-b border-vault-200 dark:border-vault-800 px-4 sm:px-6 pt-2 bg-vault-50 dark:bg-vault-900/50 scrollbar-thin scrollbar-thumb-vault-300 dark:scrollbar-thumb-vault-700"
+            className="flex min-h-12 sm:min-h-14 overflow-x-auto overflow-y-hidden border-b border-vault-200 dark:border-vault-800 px-2 sm:px-6 pt-1 sm:pt-2 bg-vault-50 dark:bg-vault-900/50 scrollbar-thin scrollbar-thumb-vault-300 dark:scrollbar-thumb-vault-700 shrink-0"
             role="tablist"
           >
             {SETTINGS_TABS.map((tab) => {
@@ -271,7 +278,7 @@ export function CharacterSettingsPanel({
             })}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-vault-50/50 dark:bg-vault-900/50">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 sm:space-y-6 bg-vault-50/50 dark:bg-vault-900/50">
             {isLoading && activeTab !== 'sampler' && (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-3">
@@ -286,17 +293,17 @@ export function CharacterSettingsPanel({
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900">
+          <div className="flex items-center justify-stretch sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900 shrink-0">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-vault-700 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vault-500/50"
+              className="flex-1 sm:flex-none min-h-11 px-4 py-2.5 text-sm font-medium text-vault-700 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vault-500/50"
             >
               Cancel
             </button>
             <button
               onClick={() => void save()}
               disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2 bg-linear-to-r from-vault-600 to-vault-700 hover:from-vault-700 hover:to-vault-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vault-500/50"
+              className="flex-1 sm:flex-none min-h-11 flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-vault-600 to-vault-700 hover:from-vault-700 hover:to-vault-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vault-500/50"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Settings

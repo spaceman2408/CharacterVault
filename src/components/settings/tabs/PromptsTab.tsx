@@ -5,8 +5,9 @@
 
 import React, { useState } from 'react';
 import { AlertCircle, ChevronDown, ChevronUp, MessageSquare, Sparkles, Target } from 'lucide-react';
-import type { PromptSettings } from '../../../db/characterTypes';
+import type { PromptModelBinding, PromptSettings } from '../../../db/characterTypes';
 import { SettingsCard } from '../components/SettingsCard';
+import { PromptModelBindingSelect } from '../components/PromptModelBindingSelect';
 import type { SettingsTabProps } from '../types';
 
 const PRIMARY_PROMPTS = ['expand', 'rewrite', 'instruct'] as const;
@@ -23,71 +24,106 @@ function promptLabel(promptType: keyof PromptSettings): string {
 interface PromptEditorProps {
   promptType: keyof PromptSettings;
   value: string;
+  binding: PromptModelBinding | undefined;
   expanded: boolean;
   onToggle: () => void;
   onChange: (value: string) => void;
+  onBindingChange: (binding: PromptModelBinding | undefined) => void;
+  helpers: SettingsTabProps['helpers'];
+  globalAi: SettingsTabProps['draft']['ai'];
 }
 
 const PromptEditor: React.FC<PromptEditorProps> = ({
   promptType,
   value,
+  binding,
   expanded,
   onToggle,
   onChange,
-}) => (
-  <div className="border border-vault-200 dark:border-vault-700 rounded-lg overflow-hidden mb-3 last:mb-0">
-    <button
-      onClick={onToggle}
-      className="w-full flex items-center justify-between px-4 py-3 bg-vault-50 dark:bg-vault-800/50 hover:bg-vault-100 dark:hover:bg-vault-800 transition-colors"
-    >
-      <span className="flex items-center gap-2 text-sm font-semibold text-vault-700 dark:text-vault-300 capitalize">
-        <MessageSquare className="w-4 h-4 text-vault-500" />
-        {promptLabel(promptType)}
-      </span>
-      {expanded ? (
-        <ChevronUp className="w-4 h-4 text-vault-500" />
-      ) : (
-        <ChevronDown className="w-4 h-4 text-vault-500" />
-      )}
-    </button>
-    {expanded && (
-      <div className="p-4">
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full h-32 px-3 py-2 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 resize-none transition-all duration-200"
-          placeholder={`Enter ${promptType} prompt...`}
-        />
-        <div className="mt-2 text-xs space-y-1">
-          {promptType === 'instruct' ? (
-            <span className="text-vault-600 dark:text-vault-400">
-              <span className="font-semibold text-red-500">Required:</span> Must contain ${'{text}'}{' '}
-              and ${'{instruction}'}
-            </span>
-          ) : (
-            <span className="text-vault-600 dark:text-vault-400">
-              <span className="font-semibold text-red-500">Required:</span> Must contain ${'{text}'}
-            </span>
+  onBindingChange,
+  helpers,
+  globalAi,
+}) => {
+  const endpoint = binding?.baseUrl ?? '';
+  const isFetching =
+    !!helpers && endpoint
+      ? helpers.isFetchingModelsForUrl(endpoint)
+      : false;
+
+  return (
+    <div className="border border-vault-200 dark:border-vault-700 rounded-lg mb-3 last:mb-0 overflow-visible">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full min-h-12 flex items-center justify-between gap-2 px-3 sm:px-4 py-3 bg-vault-50 dark:bg-vault-800/50 hover:bg-vault-100 dark:hover:bg-vault-800 active:bg-vault-100 dark:active:bg-vault-800 transition-colors rounded-t-lg text-left"
+      >
+        <span className="flex items-start sm:items-center gap-2 text-sm font-semibold text-vault-700 dark:text-vault-300 min-w-0">
+          <MessageSquare className="w-4 h-4 text-vault-500 shrink-0 mt-0.5 sm:mt-0" />
+          <span className="min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-2">
+            <span className="capitalize truncate">{promptLabel(promptType)}</span>
+            {binding?.modelId && (
+              <span className="normal-case font-normal text-xs text-vault-500 dark:text-vault-400 truncate max-w-full sm:max-w-[14rem]">
+                → {binding.modelId}
+              </span>
+            )}
+          </span>
+        </span>
+        {expanded ? (
+          <ChevronUp className="w-5 h-5 text-vault-500 shrink-0" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-vault-500 shrink-0" />
+        )}
+      </button>
+      {expanded && (
+        <div className="p-3 sm:p-4">
+          <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full min-h-28 h-32 px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 resize-y transition-all duration-200"
+            placeholder={`Enter ${promptType} prompt...`}
+          />
+          <div className="mt-2 text-xs space-y-1">
+            {promptType === 'instruct' ? (
+              <span className="text-vault-600 dark:text-vault-400">
+                <span className="font-semibold text-red-500">Required:</span> Must contain ${'{text}'}{' '}
+                and ${'{instruction}'}
+              </span>
+            ) : (
+              <span className="text-vault-600 dark:text-vault-400">
+                <span className="font-semibold text-red-500">Required:</span> Must contain ${'{text}'}
+              </span>
+            )}
+          </div>
+          {!value.includes('${text}') && (
+            <p className="mt-2 text-xs text-red-500 flex items-start gap-1">
+              <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+              Missing required ${'{text}'} placeholder!
+            </p>
+          )}
+          {promptType === 'instruct' && !value.includes('${instruction}') && (
+            <p className="mt-2 text-xs text-red-500 flex items-start gap-1">
+              <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+              Missing required ${'{instruction}'} placeholder!
+            </p>
+          )}
+
+          {helpers && (
+            <PromptModelBindingSelect
+              binding={binding}
+              globalAi={globalAi}
+              modelsByBaseUrl={helpers.modelsByBaseUrl}
+              onChange={onBindingChange}
+              onFetch={helpers.fetchModelsForUrl}
+              isFetching={isFetching}
+            />
           )}
         </div>
-        {!value.includes('${text}') && (
-          <p className="mt-2 text-xs text-red-500 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            Missing required ${'{text}'} placeholder!
-          </p>
-        )}
-        {promptType === 'instruct' && !value.includes('${instruction}') && (
-          <p className="mt-2 text-xs text-red-500 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            Missing required ${'{instruction}'} placeholder!
-          </p>
-        )}
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
-export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
+export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpers }) => {
   const [expandedPrompts, setExpandedPrompts] = useState<Record<string, boolean>>({});
 
   const setPrompt = (key: keyof PromptSettings, value: string) => {
@@ -95,6 +131,18 @@ export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
       ...prev,
       prompts: { ...prev.prompts, [key]: value },
     }));
+  };
+
+  const setBinding = (key: keyof PromptSettings, binding: PromptModelBinding | undefined) => {
+    setDraft((prev) => {
+      const next = { ...prev.promptModels };
+      if (!binding) {
+        delete next[key];
+      } else {
+        next[key] = binding;
+      }
+      return { ...prev, promptModels: next };
+    });
   };
 
   const toggle = (key: string) => {
@@ -108,14 +156,22 @@ export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
           <Target className="w-4 h-4" />
           Primary Operations
         </h3>
+        <p className="text-xs text-vault-500 dark:text-vault-400 mb-3">
+          Optionally route each prompt to a different endpoint and model. Keys are configured on the
+          AI Config tab.
+        </p>
         {PRIMARY_PROMPTS.map((promptType) => (
           <PromptEditor
             key={promptType}
             promptType={promptType}
             value={draft.prompts[promptType]}
+            binding={draft.promptModels[promptType]}
             expanded={!!expandedPrompts[promptType]}
             onToggle={() => toggle(promptType)}
             onChange={(v) => setPrompt(promptType, v)}
+            onBindingChange={(b) => setBinding(promptType, b)}
+            helpers={helpers}
+            globalAi={draft.ai}
           />
         ))}
       </SettingsCard>
@@ -130,9 +186,13 @@ export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             key={promptType}
             promptType={promptType}
             value={draft.prompts[promptType]}
+            binding={draft.promptModels[promptType]}
             expanded={!!expandedPrompts[promptType]}
             onToggle={() => toggle(promptType)}
             onChange={(v) => setPrompt(promptType, v)}
+            onBindingChange={(b) => setBinding(promptType, b)}
+            helpers={helpers}
+            globalAi={draft.ai}
           />
         ))}
       </SettingsCard>

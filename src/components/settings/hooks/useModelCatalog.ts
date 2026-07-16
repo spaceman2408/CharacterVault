@@ -3,7 +3,7 @@
  * @module components/settings/hooks/useModelCatalog
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AIConfig, AIModelInfo, SamplerSettings } from '../../../db/characterTypes';
 import { AIService, AIError } from '../../../services/AIService';
 import type { ModelProvider } from '../../../services/providers';
@@ -57,6 +57,14 @@ export function useModelCatalog({
   modelsByBaseUrlRef.current = modelsByBaseUrl;
   const fetchingModelsByBaseUrlRef = useRef(fetchingModelsByBaseUrl);
   fetchingModelsByBaseUrlRef.current = fetchingModelsByBaseUrl;
+  /** Skip setState after unmount when in-flight model/provider fetches complete */
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const isCacheStale = (normalizedUrl: string, subscriptionOnly: boolean): boolean => {
     const cached = modelsByBaseUrlRef.current[normalizedUrl];
@@ -77,7 +85,9 @@ export function useModelCatalog({
       if (fetchingModelsByBaseUrlRef.current[normalizedUrl]) {
         return modelsByBaseUrlRef.current[normalizedUrl]?.models ?? [];
       }
-      setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: true }));
+      if (mountedRef.current) {
+        setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: true }));
+      }
       try {
         const aiService = new AIService(
           { ...draftRef.current.ai, baseUrl, apiKey, subscriptionModelsOnly: subscriptionOnly },
@@ -87,15 +97,19 @@ export function useModelCatalog({
           subscriptionOnly,
           detailed: true,
         });
-        setModelsByBaseUrl((prev) => ({
-          ...prev,
-          [normalizedUrl]: { models, fetchedAt: Date.now(), subscriptionOnly },
-        }));
+        if (mountedRef.current) {
+          setModelsByBaseUrl((prev) => ({
+            ...prev,
+            [normalizedUrl]: { models, fetchedAt: Date.now(), subscriptionOnly },
+          }));
+        }
         return models;
       } catch {
         return [];
       } finally {
-        setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: false }));
+        if (mountedRef.current) {
+          setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: false }));
+        }
       }
     },
     []
@@ -135,12 +149,16 @@ export function useModelCatalog({
 
         fetches.push(
           fetchModelsForUrl(preset.baseUrl, apiKey, { subscriptionOnly }).then((models) => {
-            if (normalizeBaseUrl(draftRef.current.ai.baseUrl) === normalizedUrl) {
-              setDraft((prev) => ({
-                ...prev,
-                ai: { ...prev.ai, availableModels: models },
-              }));
+            if (
+              !mountedRef.current ||
+              normalizeBaseUrl(draftRef.current.ai.baseUrl) !== normalizedUrl
+            ) {
+              return;
             }
+            setDraft((prev) => ({
+              ...prev,
+              ai: { ...prev.ai, availableModels: models },
+            }));
           })
         );
       }
@@ -153,7 +171,7 @@ export function useModelCatalog({
 
   const fetchModels = useCallback(
     async (options?: FetchModelsCallOptions) => {
-      setIsFetchingModels(true);
+      if (mountedRef.current) setIsFetchingModels(true);
       try {
         const { ai, sampler } = draftRef.current;
         const subscriptionOnly =
@@ -176,6 +194,7 @@ export function useModelCatalog({
           subscriptionOnly,
           detailed: true,
         });
+        if (!mountedRef.current) return;
         const normalizedUrl = normalizeBaseUrl(ai.baseUrl);
         setDraft((prev) => ({
           ...prev,
@@ -187,13 +206,14 @@ export function useModelCatalog({
         }));
         addToast('success', `Fetched ${models.length} models`);
       } catch (err) {
+        if (!mountedRef.current) return;
         if (err instanceof AIError) {
           addToast('error', err.message);
         } else {
           addToast('error', 'Failed to fetch models');
         }
       } finally {
-        setIsFetchingModels(false);
+        if (mountedRef.current) setIsFetchingModels(false);
       }
     },
     [addToast, setDraft]
@@ -203,10 +223,12 @@ export function useModelCatalog({
     async (modelId: string, ai: AIConfig, sampler: SamplerSettings) => {
       if (!modelId) return;
 
-      setIsFetchingProviders(true);
+      if (mountedRef.current) setIsFetchingProviders(true);
       try {
         const aiService = new AIService(ai, sampler);
         const providerInfo = await aiService.fetchModelProviders(modelId);
+
+        if (!mountedRef.current) return;
 
         setSupportsProviderSelection(providerInfo.supportsProviderSelection);
 
@@ -231,10 +253,11 @@ export function useModelCatalog({
         }
       } catch (err) {
         console.error('Failed to fetch model providers:', err);
+        if (!mountedRef.current) return;
         setModelProviders([]);
         setSupportsProviderSelection(false);
       } finally {
-        setIsFetchingProviders(false);
+        if (mountedRef.current) setIsFetchingProviders(false);
       }
     },
     [setDraft]
@@ -443,15 +466,47 @@ export function useModelCatalog({
     setSupportsProviderSelection(false);
   }, []);
 
+  const modelsByBaseUrlList = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(modelsByBaseUrl).map(([url, cache]) => [url, cache.models])
+      ),
+    [modelsByBaseUrl]
+  );
+
+  const isFetchingModelsForUrl = useCallback(
+    (baseUrl: string) => !!fetchingModelsByBaseUrl[normalizeBaseUrl(baseUrl)],
+    [fetchingModelsByBaseUrl]
+  );
+
+  const fetchModelsForUrlPublic = useCallback(
+    async (baseUrl: string) => {
+      const normalizedUrl = normalizeBaseUrl(baseUrl);
+      if (!normalizedUrl) return;
+      const apiKey =
+        getStoredApiKey(draftRef.current.ai.apiKeysByBaseUrl, normalizedUrl) ||
+        (normalizeBaseUrl(draftRef.current.ai.baseUrl) === normalizedUrl
+          ? draftRef.current.ai.apiKey
+          : '');
+      await fetchModelsForUrlRef.current(normalizedUrl, apiKey);
+    },
+    []
+  );
+
   return {
     isFetchingModels,
     isFetchingModelsForCurrentUrl,
+    modelsByBaseUrl: modelsByBaseUrlList,
+    isFetchingModelsForUrl,
     modelProviders,
     isFetchingProviders,
     supportsProviderSelection,
     selectedBaseUrlPreset,
     fetchModels,
-    fetchModelsForUrl: fetchModelsForUrlRef,
+    /** Public single-arg fetch for Prompts tab helpers */
+    fetchModelsForUrl: fetchModelsForUrlPublic,
+    /** Ref form used by NanoGPT sign-in (baseUrl + apiKey) */
+    fetchModelsForUrlRef,
     handleBaseUrlChange,
     handleCustomUrlChange,
     handleApiKeyChange,
