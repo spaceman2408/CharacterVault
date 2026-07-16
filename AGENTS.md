@@ -44,7 +44,7 @@ src/
 tests/                    # Vitest unit tests (mirror service/editor areas)
 docs/                     # User-facing VitePress docs
 public/                   # Static assets, dictionary files
-workers/                  # Optional Cloudflare worker (NanoGPT usage proxy)
+workers/                  # Optional NanoGPT usage proxy (self-hosted production only)
 ```
 
 Feature-specific agent notes may live next to a module (e.g. `src/components/settings/AGENTS.md`). Prefer those over inventing new patterns for that area.

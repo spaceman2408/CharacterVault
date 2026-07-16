@@ -122,12 +122,11 @@ See [AI Setup → Sign in with NanoGPT](/configuration/ai-setup#sign-in-with-nan
 :::
 
 ::: details Why does NanoGPT show balance but not subscription usage?
-Balance and model lists talk to NanoGPT endpoints that allow browser CORS. **Subscription usage** (`/api/subscription/v1/usage`) does not, so static hosts (e.g. GitHub Pages) need a small free **Cloudflare Worker** proxy.
+Balance and model lists work from the browser. **Subscription usage** needs a proxy because NanoGPT does not send CORS headers on that path.
 
-- **Local dev** — Vite proxies automatically; no worker required.  
-- **Production static host** — Deploy `workers/nanogpt-usage-proxy`, set `VITE_NANOGPT_PROXY` at build time, rebuild.
-
-See [AI Setup → Subscription usage and CORS](/configuration/ai-setup#subscription-usage-and-cors-static-hosts).
+- **Official hosted app** — Already handled; no setup.
+- **Localhost / `npm run dev`** — Handled automatically; **you do not need a worker**.
+- **Self-hosted production only** — Follow [NanoGPT Usage Proxy](/configuration/nanogpt-usage-proxy). Balance still works without it.
 :::
 
 ---

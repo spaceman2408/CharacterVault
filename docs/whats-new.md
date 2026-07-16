@@ -20,6 +20,36 @@ Toolbar AI edits (Enhance, Rephrase, Custom, and the polish tools) no longer dum
 
 ---
 
+### NanoGPT Balance & Subscription
+
+When the **Nano-GPT** preset is selected, a **NanoGPT Account** card in **Settings → AI Config** shows:
+
+- **Balance** (USD and Nano)
+- **Subscription status** (active, grace, or not active)
+- **Weekly input tokens** and other quota windows when NanoGPT reports them
+
+Refresh is rate-limited. Closing and reopening Settings soon after reuses the last result so the service isn’t hit again. The card keeps a stable size while loading so the rest of the settings panel doesn’t jump.
+
+::: tip Subscription status
+Official hosted app and **localhost** need no worker. Only **self-hosted production** may need a small proxy for weekly tokens / sub status — see [NanoGPT Usage Proxy](/configuration/nanogpt-usage-proxy). Balance works everywhere without a proxy.
+:::
+
+[AI Setup → NanoGPT Account](/configuration/ai-setup#nanogpt-account-overview)
+
+---
+
+### Reasoning Effort Levels & Compatibility
+
+**Settings → AI Config → Advanced Options** now offers a fuller **Reasoning Effort** ladder when **Enable reasoning** is on: Minimal, Low, Medium, High, Extra high, and Max.
+
+- **GPT-style models** often use Minimal through High, with Extra high as the peak
+- **Many SOTA thinking models** (DeepSeek V4, GLM-5.x, Kimi, and similar) mainly use High and Max
+- If a provider rejects an effort value or some optional sampler knobs, CharacterVault **adjusts and retries** instead of failing the whole request, and remembers what that model accepted for the session
+
+[Reasoning Effort guide →](/configuration/reasoning-effort)
+
+---
+
 ### Larger Context Windows & Smarter AI Budgeting
 
 AI work with big cards is much more reliable. You can raise the context window far past the old 128K cap, and large lorebooks actually make it into the request.

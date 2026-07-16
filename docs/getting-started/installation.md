@@ -46,6 +46,8 @@ npm run build
 
 The production build outputs to the `dist/` directory.
 
+If you **self-host** that production build (not just open the official site, and not only `npm run dev`), and you want NanoGPT **subscription** details in Settings, see [NanoGPT Usage Proxy (Self-Hosted Production)](/configuration/nanogpt-usage-proxy). **You do not need that for localhost.** Balance and AI still work without it.
+
 ## SillyTavern Integration
 
 Export characters directly from SillyTavern to Character Vault using the **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)**. This companion browser extension adds an "Export to CharacterVault" option in the main export menu.

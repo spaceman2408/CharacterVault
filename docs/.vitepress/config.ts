@@ -46,8 +46,13 @@ nav: [
           { text: 'AI Setup', link: '/configuration/ai-setup' },
           { text: 'Reasoning Effort', link: '/configuration/reasoning-effort' },
           { text: 'Sampler Settings', link: '/configuration/sampler-settings' },
+          {
+            text: 'NanoGPT Usage Proxy',
+            link: '/configuration/nanogpt-usage-proxy',
+          },
         ],
       },
+
 
       {
         text: 'More',

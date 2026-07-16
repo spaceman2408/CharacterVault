@@ -2,20 +2,21 @@
  * Minimal CORS proxy for NanoGPT subscription usage.
  *
  * Why: GET https://nano-gpt.com/api/subscription/v1/usage has no browser CORS
- * headers (models + check-balance do). Static hosts (GitHub Pages) cannot proxy,
- * so this free Cloudflare Worker forwards only the usage path and adds CORS.
+ * headers (models + check-balance do). The official CharacterVault host already
+ * serves a proxy for end users. This worker is for people who self-host their
+ * own production build of CharacterVault.
  *
  * Security:
  * - Allowlists a single upstream path
  * - Does not log Authorization / x-api-key
  * - Does not store keys; pass-through only
  *
- * Deploy (free Workers tier is enough):
+ * Deploy (free Workers tier is enough) only if you self-host production.
+ * Full guide: docs/configuration/nanogpt-usage-proxy.md
+ *
  *   cd workers/nanogpt-usage-proxy
  *   npx wrangler deploy
- *
- * Then set at build time:
- *   VITE_NANOGPT_PROXY=https://<your-worker>.workers.dev
+ *   VITE_NANOGPT_PROXY=https://<your-worker>.workers.dev  (at build time)
  */
 
 const UPSTREAM = 'https://nano-gpt.com';

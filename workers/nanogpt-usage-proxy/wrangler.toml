@@ -1,11 +1,14 @@
 # Cloudflare Worker — free tier is enough for CharacterVault NanoGPT usage proxy.
 # Docs: https://developers.cloudflare.com/workers/
 #
+# Only needed if you self-host CharacterVault in production. End users of the
+# official hosted app do not deploy this.
+#
 # Deploy:
 #   npx wrangler login
 #   npx wrangler deploy
 #
-# Then build the app with:
+# Then build your self-hosted app with:
 #   VITE_NANOGPT_PROXY=https://character-vault-nanogpt-usage.<your-subdomain>.workers.dev
 
 name = "character-vault-nanogpt-usage"

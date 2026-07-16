@@ -5,6 +5,8 @@
 ### Current Release Notes
 
 - **AI toolbar ghost preview** — Enhance / Rephrase / Custom / polish ops preview in the editor as inline ghost text at the selection instead of a large top result panel. Thinking stays collapsible and collapsed by default; Accept / Reject and stats stay in a compact strip. While a suggestion is open the editor is read-only for typing, IndexedDB saves are held until Accept/Reject/cancel, Accept shows a success toast (green highlight flash removed), and leading/trailing newlines are matched to the original selection to avoid blank-line glitches.
+- **NanoGPT Account card** — Balance (USD/Nano), subscription status, and quota bars when available; session cache + rate-limited refresh; skeleton layout avoids settings jump while loading.
+- **Reasoning effort** — Expanded levels (`minimal` … `max` / `xhigh`); docs guide under Configuration; request repair remaps unsupported effort values and strips rejected non-standard sampler params with per-model session cache.
 - **Context length up to 1M** — Sampler settings include 256K / 512K / 1M presets and a **Custom…** range (4,096–1,000,000 tokens). Values are clamped on save.
 - **Large AI context packing** — Lorebook and alternate greetings are sent as separate chunks and fill the available window instead of being dropped when the whole block is too large. Token estimates and request trimming are stricter so big prompts are less likely to exceed the provider limit.
 - **Vault backup** — Library **Backup** downloads a ZIP of all characters (PNG with image, JSON without).
@@ -25,7 +27,15 @@
 
 ### Latest Commits (Newest to Oldest)
 
+- `81ebf71` - Merge branch 'feat/ai-request-param-repair'
+- `62c142a` - feat(ai): remaps rejected request params and expands reasoning effort
+- `7aedd8d` - docs: document AI toolbar ghost preview in editor, FAQ, and release notes
 - `ef2709c` - feat(editor): in-editor AI ghost preview for toolbar edits
+- `cd8b170` - feat(settings): show NanoGPT balance and subscription usage at a glance
+- `c0f175c` - refactor(settings): persist NanoGPT account cache across unmount
+- `879cf12` - fix(settings): use current subscription-only flag when fetching models
+- `58bd001` - feat(editor): improve AI accept feedback, shortcuts, and selection lock
+- `944142b` - fix(editor): abort in-flight AI on unmount and ignore stale results
 - `65a9c8d` - feat(ai): raise context to 1M and fix large-lorebook budgeting
 - `663a513` - feat(vault): backup, bulk import, sort/search, and token estimates
 - `969dfbf` - update ignore

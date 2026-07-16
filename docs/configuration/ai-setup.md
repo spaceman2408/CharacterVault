@@ -100,29 +100,7 @@ When the Nano-GPT preset is selected, a **NanoGPT Account** card shows:
 
 Refresh is rate-limited (about 30 seconds). Closing and reopening Settings within about a minute reuses the last result so the APIs are not hit again.
 
-#### Subscription usage and CORS (static hosts)
-
-NanoGPT’s **balance** and **models** APIs work from the browser as-is. The **subscription usage** endpoint (`GET /api/subscription/v1/usage`) does **not** send CORS headers, so a pure static host (e.g. GitHub Pages) cannot call it directly.
-
-| Environment | How usage is loaded |
-| :--- | :--- |
-| **Local `npm run dev`** | Vite proxies `/__nanogpt` → nano-gpt.com (no extra setup) |
-| **Static production (GitHub Pages, etc.)** | Deploy the free Cloudflare Worker in `workers/nanogpt-usage-proxy/`, then set `VITE_NANOGPT_PROXY` to the worker URL at **build** time |
-
-Worker deploy (free tier is enough):
-
-```bash
-cd workers/nanogpt-usage-proxy
-npx wrangler deploy
-```
-
-Use the full worker URL from wrangler (shape: `https://<worker-name>.<account-subdomain>.workers.dev`), not just the account subdomain root. Put it in `.env.production` (gitignored) or your CI env:
-
-```bash
-VITE_NANOGPT_PROXY=https://character-vault-nanogpt-usage.<your-subdomain>.workers.dev
-```
-
-Then rebuild and deploy the site so Vite bakes the proxy URL into the bundle. Balance still works without a worker; only subscription status / weekly token quota need it on static hosts.
+**Subscription status and weekly tokens:** On the **official hosted app** and on **localhost** (`npm run dev`), this works with no extra setup. You only need a small proxy if you **self-host a production build** of CharacterVault. Full walkthrough: [NanoGPT Usage Proxy (Self-Hosted Production)](/configuration/nanogpt-usage-proxy).
 
 ### NanoGPT Options
 

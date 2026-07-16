@@ -276,7 +276,8 @@ export class NanoGPTProvider implements IProviderAdapter {
    * Note: This path currently lacks browser CORS headers on nano-gpt.com
    * (unlike /api/v1/models and /api/check-balance). In Vite dev/preview we
    * route through the same-origin `/__nanogpt` proxy (see vite.config.ts).
-   * Optional production override: VITE_NANOGPT_PROXY.
+   * Official hosted builds already use a proxy. Self-hosted production can set
+   * VITE_NANOGPT_PROXY.
    */
   async fetchSubscriptionUsage(
     baseUrl: string,
@@ -387,7 +388,8 @@ export class NanoGPTProvider implements IProviderAdapter {
 /**
  * Rewrite NanoGPT URLs that lack browser CORS to a same-origin or configured proxy.
  * Dev/preview: `/__nanogpt` → vite.config.ts proxy → https://nano-gpt.com
- * Production: set VITE_NANOGPT_PROXY (e.g. your own reverse proxy) if needed.
+ * Official hosted app: proxy is provided for you.
+ * Self-hosted production: set VITE_NANOGPT_PROXY if you need subscription usage.
  */
 function resolveCorsSafeNanoGptUrl(absoluteUrl: string): string {
   if (typeof window === 'undefined') return absoluteUrl;
