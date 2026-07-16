@@ -77,6 +77,8 @@ The **sparkle icon** (✨) next to the Trigger Keys label uses AI to generate tr
 
 ::: tip
 AI key generation requires an AI provider to be configured. See [AI Setup](/configuration/ai-setup).
+
+If you mapped the **Custom** prompt to a specific endpoint/model under **Settings → Prompts**, key generation uses that mapping; otherwise it uses your global AI Config model.
 :::
 
 ### Context Visibility

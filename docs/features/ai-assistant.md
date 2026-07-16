@@ -4,6 +4,8 @@ Character Vault includes a built-in AI assistant called **Orion** that helps you
 
 ::: tip
 Orion requires an AI provider to be configured. See [AI Setup](/configuration/ai-setup) to get connected first.
+
+Orion always uses the **global** model from **Settings → AI Config**. Per-prompt model mappings on the Prompts tab apply only to the AI toolbar (and lorebook key generation for Custom), not to this chat panel.
 :::
 
 ## Opening the AI Panels

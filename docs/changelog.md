@@ -4,6 +4,8 @@
 
 ### Current Release Notes
 
+- **Per-prompt model routing** — Settings → Prompts can map each toolbar operation to a specific base URL + model (any configured preset). Unmapped ops use global AI Config. Lorebook AI key generation follows the Custom/instruct mapping. Orion and AI Creation Studio remain on the global model. Clear AI Settings keeps prompt text and mappings.
+- **Mobile model/provider sheets** — AI Config and Prompts model pickers use portaled bottom sheets (searchable, Escape-safe, touch-friendly) instead of clipped dropdowns.
 - **AI toolbar ghost preview** — Enhance / Rephrase / Custom / polish ops preview in the editor as inline ghost text at the selection instead of a large top result panel. Thinking stays collapsible and collapsed by default; Accept / Reject and stats stay in a compact strip. While a suggestion is open the editor is read-only for typing, IndexedDB saves are held until Accept/Reject/cancel, Accept shows a success toast (green highlight flash removed), and leading/trailing newlines are matched to the original selection to avoid blank-line glitches.
 - **NanoGPT Account card** — Balance (USD/Nano), subscription status, and quota bars when available; session cache + rate-limited refresh; skeleton layout avoids settings jump while loading.
 - **Reasoning effort** — Expanded levels (`minimal` … `max` / `xhigh`); docs guide under Configuration; request repair remaps unsupported effort values and strips rejected non-standard sampler params with per-model session cache.
@@ -27,6 +29,11 @@
 
 ### Latest Commits (Newest to Oldest)
 
+- `6b077a7` - feat(settings): Prompts tab per-operation model routing UI
+- `f8574b2` - feat(settings): mobile-friendly model and provider picker sheets
+- `fae7f3e` - feat(ai): apply prompt model map to toolbar and lorebook requests
+- `0268062` - feat(settings): persist and load per-prompt model routing map
+- `f2e405d` - feat(ai): add per-prompt model binding types and config resolver
 - `81ebf71` - Merge branch 'feat/ai-request-param-repair'
 - `62c142a` - feat(ai): remaps rejected request params and expands reasoning effort
 - `7aedd8d` - docs: document AI toolbar ghost preview in editor, FAQ, and release notes

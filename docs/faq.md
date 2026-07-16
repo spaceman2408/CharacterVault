@@ -265,7 +265,15 @@ Yes, all eight toolbar operation prompts are customizable:
 2. Go to the **Prompts** tab
 3. Edit the prompt template for any operation
 
-Each prompt must include `${text}` as a placeholder (the selected or full editor content). The Custom operation also requires `${instruction}`. See [Text Editor → Customizing AI Prompts](/features/editor#customizing-ai-prompts).
+Each prompt must include `${text}` as a placeholder (the selected or full editor content). The Custom operation also requires `${instruction}`. See [Text Editor → Customizing AI Operation Prompts](/features/editor#customizing-ai-operation-prompts).
+:::
+
+::: details Can each toolbar button use a different model?
+Yes. On **Settings → Prompts**, expand any operation and set **Model for this prompt**. You can keep **Default (AI Config)** or point that op at another endpoint (Nano-GPT, OpenRouter, Minimax, LM Studio, custom) and model. Keys are configured on the **AI Config** tab first.
+
+Orion chat and AI Creation Studio always use the global AI Config model. Lorebook ✨ key generation follows the **Custom** prompt mapping when set.
+
+See [AI Setup → Per-prompt model routing](/configuration/ai-setup#per-prompt-model-routing) and [Editor → Per-operation model routing](/features/editor#per-operation-model-routing).
 :::
 
 ::: details The NanoGPT sign-in button does nothing

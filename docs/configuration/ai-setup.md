@@ -15,7 +15,7 @@ You can close the panel with **Cancel** or `Escape` to discard changes.
 
 ### Security Notice
 
-At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to remove all AI configuration (key, URL, model) — your characters are not affected. A confirmation step prevents accidental clears.
+At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to remove all AI configuration (key, URL, model) — your characters are not affected. A confirmation step prevents accidental clears. Prompt templates and **per-prompt model mappings** on the Prompts tab are kept (they do not store secrets).
 
 ### API Base URL
 
@@ -74,17 +74,19 @@ You can still paste an API key manually at any time — the two flows are interc
 
 ### Model
 
-Click the **Fetch** button to load available models from your provider. A searchable dropdown appears:
+Click the model field (or **Fetch models**) to load and choose a model. Selection opens a **sheet** (bottom sheet on phones, centered dialog on larger screens) so the list is not clipped by the settings panel:
 
-- **Search** — Type in the filter field to narrow models by name or ID.
-- **Keyboard** — Press `Enter` to select the first match, `Escape` to close.
-- **Manual entry** — If you know a model ID, you can type it directly.
+- **Search** — Type in the filter field to narrow models by name or ID. On mobile, the search field uses a large enough font to avoid iOS zoom.
+- **Keyboard** — Press `Enter` to select the first match, `Escape` to close the sheet only (not the whole Settings panel).
+- **Tap outside / Close** — Dismiss without changing the selection.
 
 Model selections are saved per base URL, so switching providers remembers your last chosen model for each.
 
+This is your **global default** model — used by Orion chat, AI Creation Studio, and any toolbar prompt that is still set to **Default** on the [Prompts tab](#prompts-tab).
+
 ### Provider (NanoGPT Only)
 
-Some NanoGPT models support **provider selection** — choosing which backend serves the request. When available, a **Provider** dropdown appears below the model selector. Each provider shows its per-1k-token pricing for input and output.
+Some NanoGPT models support **provider selection** — choosing which backend serves the request. When available, a **Provider** control appears below the model selector. It uses the same sheet pattern as the model picker. Each provider shows its per-1k-token pricing for input and output.
 
 - **Platform default** — Let NanoGPT auto-select the best provider.
 - **Specific provider** — Pick a named provider to control cost or latency.
@@ -135,14 +137,52 @@ The Sampler tab includes:
 
 ## Prompts Tab
 
-The Prompts tab lets you edit the system prompts used by each AI toolbar operation. Prompts are divided into two groups:
+The Prompts tab lets you edit the **user prompt templates** used by each AI toolbar operation, and optionally **route each operation to a different endpoint and model**.
+
+Prompts are divided into two groups:
 
 - **Primary Operations** — Enhance, Rephrase, Custom. Each prompt is in a collapsible section. Click to expand and edit in a text area.
 - **Polish Operations** — Shorten, Lengthen, Vivid, Emotion, Fix. Same collapsible layout.
 
+### Prompt text
+
 Every prompt must contain `${text}` — this is where your selected text gets inserted. The Custom (Instruct) prompt also requires `${instruction}` for your typed instruction. Validation errors appear inline if required placeholders are missing.
 
-For full details on how prompts work with the AI toolbar, see [Customizing AI Operation Prompts](/features/editor#customizing-ai-operation-prompts).
+### Per-prompt model routing
+
+Under each expanded prompt, **Model for this prompt** controls which API endpoint and model run that operation:
+
+| Control | What it does |
+| :--- | :--- |
+| **Endpoint** | **Default (AI Config)** uses your global base URL + model. Or pick Nano-GPT, OpenRouter, Minimax, LM Studio / localhost, or a custom URL you already configured. |
+| **Model** | When not on Default: open the same style of model sheet as AI Config, **Fetch models** for that endpoint, or type a model ID manually. |
+
+**Examples**
+
+- Map **Fix** to a fast NanoGPT model for cheap grammar passes.
+- Map **Rephrase** to OpenRouter’s DeepSeek (or another host) while Enhance stays on your global model.
+- Leave most ops on Default and only override the ones that need a specialist model.
+
+**Requirements**
+
+- API keys are still managed on the **AI Config** tab (including per–base URL memory). The Prompts tab only **selects** among endpoints that already have a key (or local endpoints that do not need one).
+- A mapped prompt must have both an endpoint and a non-empty model ID, or Save is blocked.
+- Collapsed prompt headers show `→ {modelId}` when a mapping is set.
+
+**What is not routed (yet)**
+
+| Surface | Uses |
+| :--- | :--- |
+| AI toolbar ops (Enhance, Fix, …) | Per-prompt map, or global default |
+| Lorebook **AI key generation** (✨) | The **Custom / instruct** mapping if set, otherwise global |
+| **Orion** chat | Always global AI Config |
+| **AI Creation Studio** | Always global AI Config |
+
+Sampler, streaming, and reasoning settings remain global (Sampler / AI Config tabs).
+
+**Clear AI Settings** removes keys and the global model, but keeps your prompt **text** and **model mappings** (you will need keys again before a mapped endpoint works).
+
+For full details on placeholders and the toolbar, see [Customizing AI Operation Prompts](/features/editor#customizing-ai-operation-prompts).
 
 ## Studio Tab
 
@@ -187,5 +227,5 @@ When the total input exceeds the context window:
 
 - [Use the AI assistant](/features/ai-assistant)
 - [Adjust sampler settings](/configuration/sampler-settings)
-- [Customize AI operation prompts](/features/editor#customizing-ai-operation-prompts)
+- [Customize AI operation prompts & model routing](/features/editor#customizing-ai-operation-prompts)
 

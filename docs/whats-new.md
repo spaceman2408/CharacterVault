@@ -6,6 +6,24 @@ Quick overview of recent updates to CharacterVault.
 
 ## July 2026
 
+### Per-Prompt Model Routing
+
+Each AI toolbar prompt can use its **own endpoint and model**, not only the global AI Config choice.
+
+- **Settings → Prompts** — Expand Enhance, Fix, Rephrase, etc., and set **Model for this prompt**
+- **Any preset** — Nano-GPT, OpenRouter, Minimax, LM Studio, or a custom URL you already saved a key for
+- **Default stays simple** — Leave an op on **Default (AI Config)** to keep using your global model
+- **Examples** — Fast model for Fix, a stronger model for Rephrase, local LM Studio for experiments
+- **Lorebook ✨ keys** — Follow the **Custom** prompt mapping when set
+
+Orion chat and AI Creation Studio still use the global AI Config model. Sampler / streaming / reasoning stay global.
+
+Model and provider pickers (AI Config and Prompts) open as mobile-friendly sheets so search is easy on phones.
+
+[AI Setup → Prompts Tab](/configuration/ai-setup#prompts-tab) · [Editor → model routing](/features/editor#per-operation-model-routing)
+
+---
+
 ### AI Toolbar Ghost Preview
 
 Toolbar AI edits (Enhance, Rephrase, Custom, and the polish tools) no longer dump a huge result panel over your writing. The suggestion appears **in the editor as ghost text** at the selection — what you see is what Accept inserts.

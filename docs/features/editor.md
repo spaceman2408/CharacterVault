@@ -179,13 +179,14 @@ Some short fields use simpler editors instead of the full writing toolbar:
 
 Tags are cleaned up as you add them. Empty tags are ignored, extra spaces are removed, and duplicates are skipped.
 
-## Customizing AI Prompts
+## Customizing AI Operation Prompts
 
-All eight toolbar operation prompts are customizable:
+All eight toolbar operation prompts are customizable, and each one can optionally use a **different AI endpoint and model** than your global AI Config selection.
 
 1. Open **Settings** in the workspace header.
 2. Go to the **Prompts** tab.
-3. Edit the prompt template for any operation.
+3. Expand an operation, edit the template, and (optionally) set **Model for this prompt**.
+4. Click **Save Settings**.
 
 ### Required Placeholders
 
@@ -238,6 +239,28 @@ The empty-editor prompt is currently hardcoded and cannot be edited in the Promp
 :::
 
 > Don't worry if you forget — you can't save a prompt without the required placeholders. An error message will remind you to include them.
+
+### Per-operation model routing
+
+By default every toolbar op uses the model from **Settings → AI Config**. You can override that per prompt:
+
+1. Expand a prompt (e.g. **Fix**).
+2. Under **Model for this prompt**, change **Endpoint** from **Default (AI Config)** to Nano-GPT, OpenRouter, Minimax, LM Studio, or a custom URL that already has a key on AI Config.
+3. Choose a model from the sheet, **Fetch models** for that endpoint, or type a model ID.
+4. Save settings.
+
+Collapsed headers show `→ model-id` when a mapping is active.
+
+| Operation | Mapping key |
+| :--- | :--- |
+| Enhance | expand |
+| Rephrase | rewrite |
+| Custom | instruct (also used by lorebook AI key generation) |
+| Shorten / Lengthen / Vivid / Emotion / Fix | matching polish op |
+
+**Not overridden by these mappings:** Orion chat and AI Creation Studio always use the global AI Config model. Streaming, reasoning, and sampler settings stay global.
+
+Full setup notes: [AI Setup → Prompts Tab](/configuration/ai-setup#prompts-tab).
 
 ## Next Steps
 
