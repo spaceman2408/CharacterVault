@@ -552,6 +552,12 @@ export interface AIModelInfo {
 }
 
 /**
+ * Reasoning effort ladder used by OpenAI-compatible gateways and thinking models.
+ * Not every model accepts every value; unsupported values are remapped at request time.
+ */
+export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
+/**
  * AI provider configuration
  */
 export interface AIConfig {
@@ -582,8 +588,11 @@ export interface AIConfig {
   /** Whether to show reasoning content in the UI (when enabled by the model) */
   showReasoning?: boolean;
 
-  /** Reasoning effort level for OpenAI o1/o3/o4-mini and OpenRouter models */
-  reasoningEffort?: 'low' | 'medium' | 'high';
+  /**
+   * Reasoning effort level for thinking models.
+   * Gateways accept different subsets; AIService remaps when the API reports supported values.
+   */
+  reasoningEffort?: ReasoningEffort;
 
   /** Last custom base URL entered by the user (preserved when switching to/from presets) */
   lastCustomBaseUrl?: string;

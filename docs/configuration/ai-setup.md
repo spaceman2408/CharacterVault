@@ -141,15 +141,9 @@ Three toggle switches control streaming and reasoning:
 | **Enable reasoning** | Off | Enables thinking/reasoning mode for models that support it (DeepSeek, Qwen/QwQ, OpenAI o1/o3/o4-mini, OpenRouter reasoning models). |
 | **Show reasoning** | On | When reasoning is enabled, the AI's thinking process is shown in a collapsible section before the response. |
 
-When reasoning is enabled, a **Reasoning Effort** dropdown appears:
+When reasoning is enabled, a **Reasoning Effort** dropdown appears (Minimal through Max / Extra high). Which levels a model accepts depends on the provider: GPT-style models often use Minimal–High (and Extra high), while many SOTA thinking models (DeepSeek V4, GLM-5.x, Kimi, etc.) mainly use High and Max.
 
-| Level | What It Does |
-| :--- | :--- |
-| **Low** | Faster responses, less reasoning depth |
-| **Medium** | Balanced reasoning (default) |
-| **High** | More thorough reasoning, slower responses |
-
-This controls reasoning depth for OpenAI o1/o3/o4-mini and OpenRouter reasoning models.
+Full guide: [Reasoning Effort](/configuration/reasoning-effort).
 
 ## Sampler Tab
 

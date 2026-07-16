@@ -26,6 +26,7 @@ import { NanoGPTAccountOverview } from '../components/NanoGPTAccountOverview';
 import { ProviderSelect } from '../components/ProviderSelect';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
+import type { ReasoningEffort } from '../../../db/characterTypes';
 import type { SettingsTabProps } from '../types';
 
 export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpers }) => {
@@ -414,18 +415,30 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                   ...prev,
                   ai: {
                     ...prev.ai,
-                    reasoningEffort: e.target.value as 'low' | 'medium' | 'high',
+                    reasoningEffort: e.target.value as ReasoningEffort,
                   },
                 }))
               }
               className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
             >
-              <option value="low">Low - Faster responses, less reasoning</option>
-              <option value="medium">Medium - Balanced reasoning (default)</option>
-              <option value="high">High - More thorough reasoning</option>
+              <option value="minimal">Minimal: fastest, almost no thinking</option>
+              <option value="low">Low: light thinking</option>
+              <option value="medium">Medium: balanced (default)</option>
+              <option value="high">High: thorough thinking</option>
+              <option value="xhigh">Extra high: peak on OpenAI-style models</option>
+              <option value="max">Max: peak on DeepSeek, GLM, and similar</option>
             </select>
             <p className="mt-2 text-xs text-vault-500">
-              Controls reasoning depth for OpenAI o1/o3/o4-mini and OpenRouter models.
+              How hard the model thinks when reasoning is on.{' '}
+              <a
+                href={`${import.meta.env.BASE_URL}docs/configuration/reasoning-effort`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-vault-700 dark:text-vault-300 underline underline-offset-2 hover:text-vault-900 dark:hover:text-vault-100"
+              >
+                Read the reasoning effort guide
+              </a>
+              .
             </p>
           </div>
         )}

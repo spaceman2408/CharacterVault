@@ -11,11 +11,23 @@ import type {
   PromptSettings,
   CharacterSpec,
   CharacterBook,
+  ReasoningEffort,
 } from '../db/characterTypes';
 import { ReasoningParser } from './ReasoningParser';
 import { resolveProvider } from './providers';
 import type { ModelProviderInfo, FetchModelsOptions } from './providers';
 import { EDITOR_PERSONA, buildSystemPrompt as buildSystemPromptParts, getStablePrefix as getStablePrefixParts } from './PromptBuilder';
+import {
+  applyCapabilityCache,
+  getCapabilityCache,
+  parseSupportedValues,
+  recordRepairInCache,
+  recordSupportedEfforts,
+  repairChatRequest,
+  sanitizeSamplerParams,
+  stripAllNonStandardParams,
+  type ChatRequestLike,
+} from './chatRequestRepair';
 
 /**
  * Bytes per token ratio for token estimation.
@@ -289,12 +301,10 @@ interface ChatCompletionRequest {
   stream?: boolean;
   max_tokens?: number;
   include_reasoning?: boolean;
-  reasoning?: boolean | { enabled: boolean; effort?: 'low' | 'medium' | 'high' };
-  reasoning_effort?: 'low' | 'medium' | 'high';
+  reasoning?: boolean | { enabled: boolean; effort?: ReasoningEffort };
+  reasoning_effort?: ReasoningEffort;
   [key: string]: unknown;
 }
-
-const NON_STANDARD_PARAMS = ['min_p', 'top_k', 'repetition_penalty', 'include_reasoning', 'reasoning', 'reasoning_effort', 'reasoning_split'] as const;
 
 /**
  * OpenAI-compatible chat completion response
@@ -684,7 +694,12 @@ Provide only the generated text without any additional commentary.`;
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
-    const request: ChatCompletionRequest = {
+    const enableReasoning = !!this.config.enableReasoning;
+    const effort: ReasoningEffort = this.config.reasoningEffort ?? 'medium';
+    const baseUrl = this.getBaseUrl();
+    const cache = getCapabilityCache(baseUrl, this.config.modelId);
+
+    let request: ChatCompletionRequest = {
       model: this.config.modelId,
       messages: budgetedMessages,
       temperature: sampler.temperature,
@@ -694,20 +709,18 @@ Provide only the generated text without any additional commentary.`;
       repetition_penalty: sampler.repetitionPenalty,
       stream: !!useStreaming,
       max_tokens: sampler.maxTokens,
-      include_reasoning: this.config.enableReasoning ?? false,
-      reasoning: this.config.enableReasoning
-        ? { enabled: true, effort: this.config.reasoningEffort ?? 'medium' }
-        : { enabled: false },
-      reasoning_effort: this.config.enableReasoning
-        ? (this.config.reasoningEffort ?? 'medium')
+      include_reasoning: enableReasoning ? true : undefined,
+      reasoning: enableReasoning
+        ? { enabled: true, effort }
         : undefined,
-      // Minimax: send reasoning_split to separate thinking into reasoning_details field
-      reasoning_split: this.config.enableReasoning && this.isMinimaxBaseUrl() ? true : undefined,
+      reasoning_effort: enableReasoning ? effort : undefined,
+      reasoning_split: enableReasoning && this.isMinimaxBaseUrl() ? true : undefined,
     };
 
-    //DEBUG: Log request details for troubleshooting
+    request = sanitizeSamplerParams(request, baseUrl) as ChatCompletionRequest;
+    request = applyCapabilityCache(request, cache) as ChatCompletionRequest;
+
     console.log('[AIService] Sending request with model:', this.config.modelId);
-    //console.log('[AIService] Full request:', JSON.stringify(request, null, 2));
 
     try {
       let currentRequest = request;
@@ -730,34 +743,51 @@ Provide only the generated text without any additional commentary.`;
           );
         }
 
-        const stripped = this.stripRejectedParams(currentRequest, errorData);
-        if (stripped) {
-          console.warn(
-            `[AIService] Model "${this.config.modelId}" rejected parameters: ${stripped.removed.join(', ')}. ` +
-            `Retrying without them...`
+        const repaired = repairChatRequest(currentRequest as ChatRequestLike, errorData);
+        if (repaired) {
+          const supported = parseSupportedValues(
+            (errorData.error as { message?: string } | undefined)?.message ||
+              (typeof errorData.error === 'string' ? errorData.error : '') ||
+              ''
           );
-          // console.log('[AIService] Retrying with cleaned request:', JSON.stringify(stripped.request, null, 2));
+          if (supported) recordSupportedEfforts(cache, supported);
+          recordRepairInCache(cache, repaired);
+
+          const remapParts = Object.entries(repaired.remapped).map(
+            ([k, v]) => `${k}=${v}`
+          );
+          if (remapParts.length > 0) {
+            console.warn(
+              `[AIService] Model "${this.config.modelId}" remapped parameters: ${remapParts.join(', ')}. Retrying...`
+            );
+          }
+          if (repaired.removed.length > 0) {
+            console.warn(
+              `[AIService] Model "${this.config.modelId}" rejected parameters: ${repaired.removed.join(', ')}. ` +
+                `Retrying without them...`
+            );
+          }
+
           this.abortController = new AbortController();
-          currentRequest = stripped.request;
+          currentRequest = repaired.request as ChatCompletionRequest;
           response = await this.sendRequest(currentRequest, this.abortController.signal);
           continue;
         }
 
-        // Fallback: if error message is generic or doesn't name params, strip all non-standard params proactively
-        const fallbackStripped = this.stripAllNonStandardParams(currentRequest);
-        if (fallbackStripped.removed.length > 0) {
+        const fallback = stripAllNonStandardParams(currentRequest as ChatRequestLike);
+        if (fallback.removed.length > 0) {
+          recordRepairInCache(cache, fallback);
           console.warn(
-            `[AIService] Generic 400 error. Proactively stripping non-standard params: ${fallbackStripped.removed.join(', ')}. ` +
-            `Retrying without them...`
+            `[AIService] Generic 400 error. Proactively stripping non-standard params: ${fallback.removed.join(', ')}. ` +
+              `Retrying without them...`
           );
-          // console.log('[AIService] Retrying with cleaned request:', JSON.stringify(fallbackStripped.request, null, 2));
           this.abortController = new AbortController();
-          currentRequest = fallbackStripped.request;
+          currentRequest = fallback.request as ChatCompletionRequest;
           response = await this.sendRequest(currentRequest, this.abortController.signal);
           continue;
         }
 
-        console.error('[AIService] No stripRejectedParams match. Throwing invalid_request.');
+        console.error('[AIService] No request repair match. Throwing invalid_request.');
         throw new AIError(
           (errorData.error as { message?: string } | undefined)?.message || 'Invalid request',
           'invalid_request',
@@ -797,59 +827,6 @@ Provide only the generated text without any additional commentary.`;
       body: JSON.stringify(request),
       signal,
     });
-  }
-
-  private stripRejectedParams(
-    request: ChatCompletionRequest,
-    errorData: Record<string, unknown>
-  ): { request: ChatCompletionRequest; removed: string[] } | null {
-    const errorObj = errorData.error as Record<string, unknown> | undefined;
-    const errorMsg = (errorObj?.message as string | undefined)
-      || (errorData.message as string | undefined)
-      || (typeof errorData.error === 'string' ? errorData.error : '')
-      || '';
-    const lowerMsg = errorMsg.toLowerCase();
-
-    const removed: string[] = [];
-    for (const param of NON_STANDARD_PARAMS) {
-      if (lowerMsg.includes(param) && request[param] !== undefined) {
-        removed.push(param);
-      }
-    }
-
-    if (lowerMsg.includes('logit_bias') && request.logit_bias !== undefined) {
-      removed.push('logit_bias');
-    }
-
-    if (removed.length === 0) return null;
-
-    const cleaned = { ...request };
-    for (const param of removed) {
-      delete cleaned[param];
-    }
-    return { request: cleaned, removed };
-  }
-
-  private stripAllNonStandardParams(
-    request: ChatCompletionRequest
-  ): { request: ChatCompletionRequest; removed: string[] } {
-    const removed: string[] = [];
-    for (const param of NON_STANDARD_PARAMS) {
-      if (request[param] !== undefined) {
-        removed.push(param);
-      }
-    }
-    if (request.logit_bias !== undefined) {
-      removed.push('logit_bias');
-    }
-
-    if (removed.length === 0) return { request, removed };
-
-    const cleaned = { ...request };
-    for (const param of removed) {
-      delete cleaned[param];
-    }
-    return { request: cleaned, removed };
   }
 
   private async handleResponse(
