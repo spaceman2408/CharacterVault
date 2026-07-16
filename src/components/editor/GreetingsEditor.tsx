@@ -6,7 +6,12 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Plus, Trash2, MessageSquare, ChevronLeft } from 'lucide-react';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/characterTypes';
+import type {
+  SamplerSettings,
+  AIConfig,
+  PromptSettings,
+  PromptModelMap,
+} from '../../db/characterTypes';
 import type { CharacterSection } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
 import { estimateTokens } from '../../services/AIService';
@@ -20,6 +25,7 @@ interface GreetingsEditorProps {
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
+  promptModels?: PromptModelMap;
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   activeSection: string;
   fontSize?: number;
@@ -42,6 +48,7 @@ interface GreetingDetailProps {
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
+  promptModels?: PromptModelMap;
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   contextSectionIds: CharacterSection[];
   setSelectedText: (text: string) => void;
@@ -122,6 +129,7 @@ function GreetingDetail({
   aiConfig,
   samplerSettings,
   promptSettings,
+  promptModels,
   getContextContent,
   contextSectionIds,
   setSelectedText,
@@ -145,6 +153,7 @@ function GreetingDetail({
     aiConfig,
     samplerSettings,
     promptSettings,
+    promptModels,
     getContextContent,
     contextSectionIds,
     minHeight: '200px',
@@ -179,6 +188,7 @@ export function GreetingsEditor({
   aiConfig,
   samplerSettings,
   promptSettings,
+  promptModels,
   getContextContent,
   fontSize,
   onFontSizeChange,
@@ -331,6 +341,7 @@ export function GreetingsEditor({
               aiConfig={aiConfig}
               samplerSettings={samplerSettings}
               promptSettings={promptSettings}
+              promptModels={promptModels}
               getContextContent={getContextContent}
               contextSectionIds={contextSectionIds}
               setSelectedText={setSelectedText}

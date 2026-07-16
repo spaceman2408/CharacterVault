@@ -11,7 +11,14 @@ import type { Extension } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, insertTab, indentLess } from '@codemirror/commands';
 import { indentUnit } from '@codemirror/language';
 import type { CharacterSection } from '../db/characterTypes';
-import type { SamplerSettings, AIConfig, PromptSettings, AIOperation } from '../db/characterTypes';
+import type {
+  SamplerSettings,
+  AIConfig,
+  PromptSettings,
+  PromptModelMap,
+  AIOperation,
+} from '../db/characterTypes';
+import { resolveConfigForOperation } from '../services/resolveOperationConfig';
 import { aiToolbarPanel, getPanelUpdateFunction } from '../editor/extensions/aiToolbarPanel';
 import type { ToolbarActionConfig } from '../editor/extensions/aiToolbarPanel';
 import {
@@ -135,6 +142,8 @@ export interface UseAIEditorOptions {
   samplerSettings: SamplerSettings;
   /** Prompt settings for AI */
   promptSettings: PromptSettings;
+  /** Per-operation model routing for toolbar AI prompts */
+  promptModels?: PromptModelMap;
   /** Function to get context content for AI operations */
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   /** IDs of sections to include in context */
@@ -216,6 +225,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     aiConfig,
     samplerSettings,
     promptSettings,
+    promptModels,
     getContextContent,
     contextSectionIds,
     minHeight = '100px',
@@ -389,6 +399,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const aiConfigRef = useRef(aiConfig);
   const samplerSettingsRef = useRef(samplerSettings);
   const promptSettingsRef = useRef(promptSettings);
+  const promptModelsRef = useRef(promptModels);
   useEffect(() => {
     aiConfigRef.current = aiConfig;
   }, [aiConfig]);
@@ -398,6 +409,9 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   useEffect(() => {
     promptSettingsRef.current = promptSettings;
   }, [promptSettings]);
+  useEffect(() => {
+    promptModelsRef.current = promptModels;
+  }, [promptModels]);
 
   // Use refs to always have access to the latest callbacks/options
   const onImmediateChangeRef = useRef(onImmediateChange);
@@ -511,7 +525,11 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     // Read latest values from refs to avoid stale closures
     // (the CodeMirror toolbar panel captures this callback during init
     // and doesn't re-capture when settings change)
-    const currentConfig = aiConfigRef.current;
+    const currentConfig = resolveConfigForOperation(
+      aiConfigRef.current,
+      operation,
+      promptModelsRef.current
+    );
     const currentSampler = samplerSettingsRef.current;
     const currentPrompts = promptSettingsRef.current;
 
@@ -582,7 +600,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     let firstTokenTime: number | null = null;
 
     try {
-      // Debug: Log the model being used
+      // Debug: Log the model being used (may be per-prompt override)
       console.log('[useAIEditor] Using model:', currentConfig.modelId, 'Base URL:', currentConfig.baseUrl);
       const aiService = new AIService(currentConfig, currentSampler, currentPrompts);
       // Only attach if we are still the active generation (rapid double-click / unmount)
@@ -773,6 +791,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     aiConfig,
     samplerSettings,
     promptSettings,
+    promptModels,
     getContextContent,
     setSelectedText,
     clearSelectionLock,

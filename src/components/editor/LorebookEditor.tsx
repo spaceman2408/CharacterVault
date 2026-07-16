@@ -24,10 +24,16 @@ import {
 } from 'lucide-react';
 import { AIService } from '../../services/AIService';
 import { importLorebook, convertToSTLorebook } from '../../services/LorebookConverter';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../../db/characterTypes';
+import type {
+  SamplerSettings,
+  AIConfig,
+  PromptSettings,
+  PromptModelMap,
+} from '../../db/characterTypes';
 import type { CharacterSection, LorebookEntry, CharacterBook } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
 import { estimateTokens } from '../../services/AIService';
+import { resolveConfigForOperation } from '../../services/resolveOperationConfig';
 
 /**
  * Check if a lorebook entry is enabled for context (AI usage)
@@ -47,6 +53,7 @@ interface LorebookEditorProps {
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
+  promptModels?: PromptModelMap;
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   activeSection: string;
   fontSize?: number;
@@ -72,6 +79,7 @@ interface LorebookEntryDetailProps {
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
+  promptModels?: PromptModelMap;
   getContextContent: (sectionIds: CharacterSection[]) => string[];
   contextSectionIds: CharacterSection[];
   setSelectedText: (text: string) => void;
@@ -183,6 +191,7 @@ function LorebookEntryDetail({
   aiConfig,
   samplerSettings,
   promptSettings,
+  promptModels,
   getContextContent,
   contextSectionIds,
   setSelectedText,
@@ -208,6 +217,7 @@ function LorebookEntryDetail({
     aiConfig,
     samplerSettings,
     promptSettings,
+    promptModels,
     getContextContent,
     contextSectionIds,
     minHeight: '200px',
@@ -265,7 +275,8 @@ function LorebookEntryDetail({
     if (!draftEntry.content.trim()) return;
 
     setGeneratingKeys(true);
-    aiServiceRef.current = new AIService(aiConfig, samplerSettings, promptSettings);
+    const effectiveConfig = resolveConfigForOperation(aiConfig, 'instruct', promptModels);
+    aiServiceRef.current = new AIService(effectiveConfig, samplerSettings, promptSettings);
 
     // 15-second timeout
     timeoutRef.current = setTimeout(() => {
@@ -514,6 +525,7 @@ export function LorebookEditor({
   aiConfig,
   samplerSettings,
   promptSettings,
+  promptModels,
   getContextContent,
   activeSection,
   fontSize,
@@ -531,6 +543,7 @@ export function LorebookEditor({
       aiConfig={aiConfig}
       samplerSettings={samplerSettings}
       promptSettings={promptSettings}
+      promptModels={promptModels}
       getContextContent={getContextContent}
       activeSection={activeSection}
       fontSize={fontSize}
@@ -555,6 +568,7 @@ function LorebookEditorInner({
   aiConfig,
   samplerSettings,
   promptSettings,
+  promptModels,
   getContextContent,
   fontSize,
   onFontSizeChange,
@@ -1097,6 +1111,7 @@ function LorebookEditorInner({
               aiConfig={aiConfig}
               samplerSettings={samplerSettings}
               promptSettings={promptSettings}
+              promptModels={promptModels}
               getContextContent={getContextContent}
               contextSectionIds={contextSectionIds}
               setSelectedText={setSelectedText}

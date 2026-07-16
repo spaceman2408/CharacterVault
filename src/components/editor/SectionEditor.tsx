@@ -249,6 +249,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     aiConfig,
     samplerSettings,
     promptSettings,
+    promptModels,
     getContextContent,
     activeSection,
     fontSize,
@@ -312,6 +313,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     aiConfig,
     samplerSettings,
     promptSettings,
+    promptModels,
     getContextContent,
     contextSectionIds,
     minHeight: 'clamp(180px, 40vh, 400px)',
@@ -407,6 +409,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           aiConfig={aiConfig}
           samplerSettings={samplerSettings}
           promptSettings={promptSettings}
+          promptModels={promptModels}
           getContextContent={getContextContent}
           activeSection={activeSection}
           fontSize={fontSize}
@@ -444,6 +447,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           aiConfig={aiConfig}
           samplerSettings={samplerSettings}
           promptSettings={promptSettings}
+          promptModels={promptModels}
           getContextContent={getContextContent}
           activeSection={activeSection}
           fontSize={fontSize}
