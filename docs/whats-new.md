@@ -6,6 +6,20 @@ Quick overview of recent updates to CharacterVault.
 
 ## July 2026
 
+### AI Toolbar Ghost Preview
+
+Toolbar AI edits (Enhance, Rephrase, Custom, and the polish tools) no longer dump a huge result panel over your writing. The suggestion appears **in the editor as ghost text** at the selection — what you see is what Accept inserts.
+
+- **In-place ghost** — Streams into the locked span with a soft glow; soft-pulses when ready
+- **Compact chrome** — Status, Accept / Reject, and optional thinking stay in a thin strip; thinking is collapsed by default
+- **Clean decisions** — Typing is paused while a suggestion is open so Accept is one undo step; saves wait until you Accept, Reject, or cancel
+- **Toast on Accept** — A short success toast confirms the edit (no jarring green highlight flash)
+- **Shortcuts** — `Ctrl+Enter` / `⌘+Enter` to Accept, `Escape` to Reject or Stop
+
+[Text editor → AI toolbar](/features/editor#ai-toolbar)
+
+---
+
 ### Larger Context Windows & Smarter AI Budgeting
 
 AI work with big cards is much more reliable. You can raise the context window far past the old 128K cap, and large lorebooks actually make it into the request.

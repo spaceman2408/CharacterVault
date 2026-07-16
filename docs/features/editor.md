@@ -42,39 +42,36 @@ Click **▼ More** to reveal a dropdown with additional operations:
 | ❤️ **Emotion** | Emotion | Enhance emotional expression |
 | 🪄 **Fix** | Grammar | Fix grammar and improve clarity |
 
-### AI Operation Results
+### AI Operation Results (Ghost Preview)
 
-After an AI operation finishes, a result panel appears below the toolbar showing the AI's output.
+AI suggestions appear **in the editor** as glowing ghost text at the exact place your selection was — a 1:1 preview of what Accept will write. The original selection is hidden for the preview and restored if you Reject. The top toolbar stays compact: status, optional thinking, and Accept / Reject.
 
-**Selection Info**
+**While the AI is working**
 
-When text is selected, the right side of the toolbar shows the character count. If your selection is too long for the AI's context window, a warning appears and the buttons are disabled.
+- Ghost text streams into place (calm, dim styling while tokens arrive).
+- The editor is **read-only for typing** so the preview stays a clean undo step — you can still scroll and move the caret to read context.
+- A **⏹ Stop** control replaces the main action buttons. Click it (or press `Escape`) to cancel.
+
+**When the suggestion is ready**
+
+- Ghost text soft-pulses so you can tell it is ready to decide.
+- Accept / Reject appear in the slim result strip under the toolbar.
+- Optional performance stats (TTFT, T/S) show in that strip when available.
 
 **Accept or Reject**
 
-- **✓ Accept** (`Ctrl+Enter` / `⌘+Enter`) — Replaces the text that was selected when you started the AI operation with the AI result.
-- **✕ Reject** (`Escape`) — Discards the AI result and keeps your original text.
+- **✓ Accept** (`Ctrl+Enter` / `⌘+Enter`) — Commits the ghost text into the document at the locked range. A short success toast confirms the edit. `Ctrl+Z` / `⌘+Z` undoes just that accept.
+- **✕ Reject** (`Escape`) — Discards the ghost and restores your original text.
 
-The replace target is **locked** when the operation starts. You can move the caret or type elsewhere while you wait — Accept still applies to the original span (adjusted if the document changed).
+The replace target is **locked** when the operation starts. Document saves are held until you Accept, Reject, or cancel, so unaccepted AI text is never written to storage.
 
-::: tip
-Accepted text gets a strong green pulse so you can spot what changed, then soft-fades over about 2–3 seconds.
-:::
+**Selection Info**
 
-**Stop**
-
-While an AI operation is running, a **⏹ Stop** button replaces the toolbar buttons. Click it (or press `Escape`) to cancel the request.
+When text is selected (before you run an operation), the right side of the toolbar can show a character count. If your selection is too long for the AI's context window, a warning appears and the buttons are disabled.
 
 **Reasoning**
 
-If the AI model produces reasoning (thinking) output, a collapsible **"✨ Thinking process"** section appears in the result panel. It auto-expands during streaming and can be toggled after the operation completes.
-
-**Performance Stats**
-
-When an AI operation completes, performance metrics appear in the top-right corner of the result panel:
-
-- **TTFT** — Time to First Token. How long the AI took to start responding (in milliseconds). Lower is better.
-- **T/S** — Tokens per Second. How fast the AI generated tokens after the first one. Higher is better.
+If the AI model produces reasoning (thinking) output, a collapsible **"✨ Thinking process"** section appears in the compact result strip. It stays **collapsed by default** — expand it only if you want to read the thinking.
 
 ## Search & Replace
 
