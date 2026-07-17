@@ -9,7 +9,6 @@ export interface VaultGridProps {
   pageSize: number;
   sortedCharacters: CharacterListItem[];
   visibleCharacters: CharacterListItem[];
-  areVisibleCardsReady: boolean;
   searchQuery: string;
   safeCurrentPage: number;
   totalPages: number;
@@ -27,7 +26,6 @@ export function VaultGrid({
   pageSize,
   sortedCharacters,
   visibleCharacters,
-  areVisibleCardsReady,
   searchQuery,
   safeCurrentPage,
   totalPages,
@@ -76,26 +74,18 @@ export function VaultGrid({
 
   return (
     <>
-      <div
-        className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 md:gap-6 ${
-          areVisibleCardsReady ? 'animate-fade-in' : ''
-        }`}
-      >
-        {areVisibleCardsReady
-          ? visibleCharacters.map((char) => (
-              <CharacterCard
-                key={char.id}
-                character={char}
-                onOpen={onOpen}
-                onDuplicate={onDuplicate}
-                onDelete={onDelete}
-                onExport={onExport}
-                isExporting={exportingCardId === char.id}
-              />
-            ))
-          : visibleCharacters.map((char) => (
-              <CharacterCardSkeleton key={char.id} />
-            ))}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 md:gap-6">
+        {visibleCharacters.map((char) => (
+          <CharacterCard
+            key={char.id}
+            character={char}
+            onOpen={onOpen}
+            onDuplicate={onDuplicate}
+            onDelete={onDelete}
+            onExport={onExport}
+            isExporting={exportingCardId === char.id}
+          />
+        ))}
       </div>
 
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 pb-20">

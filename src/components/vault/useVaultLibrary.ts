@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CharacterListItem } from '../../db';
 import type { VaultSortMode } from './types';
 import { VAULT_SORT_STORAGE_KEY } from './types';
@@ -12,8 +12,6 @@ export function useVaultLibrary(characterListItems: CharacterListItem[]) {
   });
   const [pageSize, setPageSize] = useState(getVaultPageSize);
   const [currentPage, setCurrentPage] = useState(1);
-  const [areVisibleCardsReady, setAreVisibleCardsReady] = useState(false);
-  const preloadedThumbIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -80,80 +78,6 @@ export function useVaultLibrary(characterListItems: CharacterListItem[]) {
     [sortedCharacters, pageStart, pageSize]
   );
 
-  useEffect(() => {
-    let isCancelled = false;
-
-    const preloadVisibleCards = async () => {
-      const visibleIds = new Set(visibleCharacters.map((c) => c.id));
-      for (const id of preloadedThumbIdsRef.current) {
-        if (!visibleIds.has(id)) {
-          preloadedThumbIdsRef.current.delete(id);
-        }
-      }
-
-      const imagesToPreload = visibleCharacters
-        .filter((character) => {
-          if (!character.thumbnailData) return false;
-          return !preloadedThumbIdsRef.current.has(character.id);
-        })
-        .map(
-          (character) =>
-            new Promise<void>((resolve) => {
-              const image = new Image();
-              const imageSource = character.thumbnailData;
-              let settled = false;
-
-              const finalize = () => {
-                if (settled) return;
-                settled = true;
-                preloadedThumbIdsRef.current.add(character.id);
-                image.onload = null;
-                image.onerror = null;
-                image.src = '';
-                resolve();
-              };
-
-              image.onload = finalize;
-              image.onerror = finalize;
-              image.src = imageSource;
-
-              if (image.complete) {
-                finalize();
-                return;
-              }
-
-              if (typeof image.decode === 'function') {
-                image.decode().then(finalize).catch(finalize);
-              }
-            })
-        );
-
-      if (imagesToPreload.length === 0) {
-        if (!isCancelled) {
-          setAreVisibleCardsReady(true);
-        }
-        return;
-      }
-
-      setAreVisibleCardsReady(false);
-      await Promise.all(imagesToPreload);
-
-      if (!isCancelled) {
-        requestAnimationFrame(() => {
-          if (!isCancelled) {
-            setAreVisibleCardsReady(true);
-          }
-        });
-      }
-    };
-
-    void preloadVisibleCards();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [visibleCharacters]);
-
   return {
     searchQuery,
     setSearchQuery,
@@ -166,6 +90,5 @@ export function useVaultLibrary(characterListItems: CharacterListItem[]) {
     safeCurrentPage,
     setCurrentPage,
     pageSize,
-    areVisibleCardsReady,
   };
 }

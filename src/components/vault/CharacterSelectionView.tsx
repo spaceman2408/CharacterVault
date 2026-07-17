@@ -175,7 +175,6 @@ export function CharacterSelectionView({
           pageSize={library.pageSize}
           sortedCharacters={library.sortedCharacters}
           visibleCharacters={library.visibleCharacters}
-          areVisibleCardsReady={library.areVisibleCardsReady}
           searchQuery={library.searchQuery}
           safeCurrentPage={library.safeCurrentPage}
           totalPages={library.totalPages}

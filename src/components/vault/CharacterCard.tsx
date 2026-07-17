@@ -140,8 +140,8 @@ export function CharacterCard({
           <img
             src={character.thumbnailData}
             alt={character.name}
-            className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 will-change-transform"
-            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+            decoding="async"
           />
         ) : (
           <div className="flex flex-col items-center justify-center w-full h-full gap-2 text-fg-subtle">
