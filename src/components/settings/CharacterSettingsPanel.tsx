@@ -209,7 +209,7 @@ export function CharacterSettingsPanel({
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <div
-        className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 transition-opacity duration-300 ${
+        className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-overlay backdrop-blur-sm p-0 sm:p-4 transition-opacity duration-300 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
       >

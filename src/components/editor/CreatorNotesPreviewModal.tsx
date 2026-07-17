@@ -42,7 +42,7 @@ export function CreatorNotesPreviewModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-120 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-120 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm">
       <div
         className="absolute inset-0"
         onClick={onClose}

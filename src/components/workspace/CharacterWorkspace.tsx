@@ -69,7 +69,7 @@ function ToastContainer({
       {toasts.map(toast => (
         <div
           key={toast.id}
-          className={`pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-xl ring-1 ring-black/5 transition-all duration-300 animate-in slide-in-from-right backdrop-blur-sm ${
+          className={`pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-xl ring-1 ring-border/40 transition-all duration-300 animate-in slide-in-from-right backdrop-blur-sm ${
             toast.type === 'success'
               ? 'border-success/40 bg-success-soft text-success-soft-fg'
               : toast.type === 'error'

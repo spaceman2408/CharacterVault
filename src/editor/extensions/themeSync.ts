@@ -1,6 +1,8 @@
 /**
  * Theme synchronization for CodeMirror 6.
  * Chrome + syntax colors come from CSS variables in index.css.
+ * The `dark` flag must track the app theme so CM does not apply its
+ * built-in light selection color (#d7d4f0 lavender) in dark mode.
  */
 
 import type { Extension } from '@codemirror/state';
@@ -17,59 +19,69 @@ function isDarkMode(): boolean {
   return document.documentElement.classList.contains('dark');
 }
 
-/** Editor chrome — all colors via CSS vars (light/dark assigned in index.css). */
-const editorChromeTheme = EditorView.theme({
-  '&': {
-    backgroundColor: 'var(--editor-bg)',
-    color: 'var(--editor-text)',
-  },
-  '.cm-content': {
-    caretColor: 'var(--editor-caret)',
-  },
-  '&.cm-focused .cm-cursor': {
-    borderLeftColor: 'var(--editor-caret)',
-  },
-  '&.cm-focused .cm-selectionBackground, ::selection': {
-    backgroundColor: 'var(--editor-selection)',
-  },
-  '.cm-selectionBackground': {
-    backgroundColor: 'var(--editor-selection)',
-  },
-  '.cm-gutters': {
-    backgroundColor: 'transparent',
-    borderRight: 'none',
-    color: 'var(--editor-gutter)',
-  },
-  '.cm-activeLineGutter': {
-    backgroundColor: 'var(--editor-active-line-gutter)',
-  },
-  '.cm-activeLine': {
-    backgroundColor: 'var(--editor-active-line)',
-  },
-  '.cm-lineNumbers': {
-    color: 'var(--editor-gutter)',
-  },
-  '.cm-foldPlaceholder': {
-    backgroundColor: 'var(--editor-fold-bg)',
-    border: 'none',
-    color: 'var(--editor-fold-text)',
-    borderRadius: '4px',
-  },
-  '.cm-tooltip': {
-    backgroundColor: 'var(--tooltip-bg)',
-    border: '1px solid var(--tooltip-border)',
-    color: 'var(--tooltip-text)',
-  },
-});
+const selectionBackground = {
+  backgroundColor: 'var(--editor-selection) !important',
+} as const;
+
+/** Editor chrome — all colors via CSS vars; dark flag tracks app theme. */
+function buildEditorChromeTheme(dark: boolean) {
+  return EditorView.theme(
+    {
+      '&': {
+        backgroundColor: 'var(--editor-bg)',
+        color: 'var(--editor-text)',
+      },
+      '.cm-content': {
+        caretColor: 'var(--editor-caret)',
+      },
+      '&.cm-focused .cm-cursor, .cm-dropCursor': {
+        borderLeftColor: 'var(--editor-caret)',
+      },
+      // Cover CM’s layered selection (default light focus uses lavender #d7d4f0)
+      '.cm-selectionBackground': selectionBackground,
+      '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground':
+        selectionBackground,
+      '.cm-content ::selection': selectionBackground,
+      '&.cm-focused .cm-selectionBackground, ::selection': selectionBackground,
+      '.cm-activeLine': {
+        backgroundColor: 'var(--editor-active-line)',
+      },
+      '.cm-gutters': {
+        backgroundColor: 'transparent',
+        borderRight: 'none',
+        color: 'var(--editor-gutter)',
+      },
+      '.cm-activeLineGutter': {
+        backgroundColor: 'var(--editor-active-line-gutter)',
+      },
+      '.cm-lineNumbers': {
+        color: 'var(--editor-gutter)',
+      },
+      '.cm-foldPlaceholder': {
+        backgroundColor: 'var(--editor-fold-bg)',
+        border: 'none',
+        color: 'var(--editor-fold-text)',
+        borderRadius: '4px',
+      },
+      '.cm-tooltip': {
+        backgroundColor: 'var(--tooltip-bg)',
+        border: '1px solid var(--tooltip-border)',
+        color: 'var(--tooltip-text)',
+      },
+    },
+    { dark },
+  );
+}
 
 function buildSyntaxExtension(): Extension {
   return syntaxHighlighting(createSyntaxHighlightStyle());
 }
 
 function reconfigureTheme(view: EditorView): void {
+  const dark = isDarkMode();
   view.dispatch({
     effects: [
-      themeCompartment.reconfigure(editorChromeTheme),
+      themeCompartment.reconfigure(buildEditorChromeTheme(dark)),
       syntaxCompartment.reconfigure(buildSyntaxExtension()),
     ],
   });
@@ -110,20 +122,20 @@ const themeSyncPlugin = ViewPlugin.fromClass(
 
 /**
  * Theme sync extension:
- * - CSS-var editor chrome (no One Dark package)
+ * - CSS-var editor chrome
+ * - Correct CM `dark` flag so default light lavender selection is not used
  * - Syntax highlighting from --syntax-* tokens
- * - Re-resolves colors when .dark toggles
  */
 export function themeSync(): Extension[] {
   return [
-    themeCompartment.of(editorChromeTheme),
+    themeCompartment.of(buildEditorChromeTheme(isDarkMode())),
     syntaxCompartment.of(buildSyntaxExtension()),
     themeSyncPlugin,
   ];
 }
 
 export function getCurrentTheme(): Extension {
-  return editorChromeTheme;
+  return buildEditorChromeTheme(isDarkMode());
 }
 
 export function refreshTheme(view: EditorView): void {

@@ -22,11 +22,11 @@
   --color-vault-300: #d4d4d4;
   --color-vault-400: #a3a3a3;
   --color-vault-500: #737373;
-  --color-vault-600: #525252;
-  --color-vault-700: #404040;
-  --color-vault-800: #262626;
-  --color-vault-900: #1a1a1a;
-  --color-vault-950: #0a0a0a;
+  --color-vault-600: #5a5a5a;
+  --color-vault-700: #4a4a4a;
+  --color-vault-800: #3a3a3a;
+  --color-vault-900: #323232;
+  --color-vault-950: #2c2c2c;
 
   /* Semantic → Tailwind utilities (bg-bg, text-fg, border-border, …) */
   --color-bg: var(--bg);
@@ -113,7 +113,8 @@
   --editor-text: var(--fg);
   --editor-text-secondary: var(--fg-muted);
   --editor-caret: #404040;
-  --editor-selection: rgba(37, 99, 235, 0.18);
+  /* Light: soft blue selection (CM default is lavender #d7d4f0 — we override it) */
+  --editor-selection: rgba(37, 99, 235, 0.22);
   --editor-gutter: #a3a3a3;
   --editor-active-line-gutter: rgba(0, 0, 0, 0.04);
   --editor-active-line: rgba(0, 0, 0, 0.03);
@@ -208,44 +209,46 @@
 .dark {
   color-scheme: dark;
 
-  --bg: #0a0a0a;
-  --surface: #1a1a1a;
-  --muted: #262626;
-  --inverse: #f5f5f5;
-  --hover: #2e2e2e;
-  --fg: #f0f0f0;
-  --fg-muted: #a3a3a3;
-  --fg-subtle: #737373;
-  --fg-inverse: #171717;
-  --border: #333333;
-  --border-strong: #404040;
+  /* Soft gray dark mode — no pure/near-black */
+  --bg: #2c2c2c;
+  --surface: #363636;
+  --muted: #404040;
+  --inverse: #f0f0f0;
+  --hover: #4a4a4a;
+  --fg: #ececec;
+  --fg-muted: #b0b0b0;
+  --fg-subtle: #8a8a8a;
+  --fg-inverse: #2c2c2c;
+  --border: #4a4a4a;
+  --border-strong: #5a5a5a;
   --accent: #60a5fa;
-  --accent-fg: #0a0a0a;
+  --accent-fg: #1f1f1f;
   --success: #22c55e;
-  --success-soft: rgba(34, 197, 94, 0.15);
+  --success-soft: rgba(34, 197, 94, 0.18);
   --success-soft-fg: #86efac;
   --warning: #f59e0b;
-  --warning-soft: rgba(245, 158, 11, 0.15);
+  --warning-soft: rgba(245, 158, 11, 0.18);
   --warning-soft-fg: #fcd34d;
   --danger: #f87171;
-  --danger-soft: rgba(248, 113, 113, 0.15);
+  --danger-soft: rgba(248, 113, 113, 0.18);
   --danger-soft-fg: #fca5a5;
   --info: #60a5fa;
-  --info-soft: rgba(96, 165, 250, 0.15);
+  --info-soft: rgba(96, 165, 250, 0.18);
   --info-soft-fg: #93c5fd;
-  --overlay: rgba(0, 0, 0, 0.65);
-  --ring: #a3a3a3;
+  --overlay: rgba(44, 44, 44, 0.72);
+  --ring: #b0b0b0;
 
   --editor-bg: transparent;
   --editor-text: var(--fg);
   --editor-text-secondary: var(--fg-muted);
   --editor-caret: #d4d4d4;
-  --editor-selection: rgba(96, 165, 250, 0.28);
-  --editor-gutter: #737373;
-  --editor-active-line-gutter: rgba(255, 255, 255, 0.04);
-  --editor-active-line: rgba(255, 255, 255, 0.035);
-  --editor-fold-bg: #333333;
-  --editor-fold-text: #a3a3a3;
+  /* Dark: soft cyan on gray — distinct from light-mode blue/lavender */
+  --editor-selection: rgba(56, 189, 248, 0.38);
+  --editor-gutter: #8a8a8a;
+  --editor-active-line-gutter: rgba(255, 255, 255, 0.05);
+  --editor-active-line: rgba(255, 255, 255, 0.04);
+  --editor-fold-bg: #4a4a4a;
+  --editor-fold-text: #b0b0b0;
 
   /* Syntax — One Dark–inspired, on neutral vault surfaces */
   --syntax-keyword: #c678dd;
@@ -317,8 +320,8 @@
   --category-ref-hover-bg: rgba(167, 139, 250, 0.2);
 
   --focus-ring: var(--ring);
-  --scrollbar: #525252;
-  --scrollbar-hover: #737373;
+  --scrollbar: #5a5a5a;
+  --scrollbar-hover: #707070;
 
   color: var(--fg);
   background-color: var(--bg);

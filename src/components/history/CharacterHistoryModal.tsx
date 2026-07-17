@@ -895,7 +895,7 @@ function ConfirmationDialog({
         };
 
   return (
-    <div className="absolute inset-0 z-20 flex items-end justify-center bg-black/45 p-3 backdrop-blur-sm sm:items-center sm:p-6">
+    <div className="absolute inset-0 z-20 flex items-end justify-center bg-overlay p-3 backdrop-blur-sm sm:items-center sm:p-6">
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-2xl border-border bg-surface">
         <div className="mb-4 flex items-start gap-3">
           <div className="rounded-xl bg-muted p-2.5 text-fg-muted bg-muted text-fg">
@@ -1526,7 +1526,7 @@ export function CharacterHistoryModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-overlay p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={requestClose}
     >
       <div

@@ -61,7 +61,7 @@ export function showEphemeralToast(options: EphemeralToastOptions): void {
   const host = ensureHost();
 
   const toast = document.createElement('div');
-  toast.className = `pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-xl ring-1 ring-black/5 transition-all duration-300 animate-in slide-in-from-right backdrop-blur-sm ${shell}`;
+  toast.className = `pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-xl ring-1 ring-border/40 transition-all duration-300 animate-in slide-in-from-right backdrop-blur-sm ${shell}`;
   toast.setAttribute('role', 'status');
 
   const iconWrap = document.createElement('div');

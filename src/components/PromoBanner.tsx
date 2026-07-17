@@ -15,7 +15,7 @@ interface PromoBannerProps {
 function AnimatedBackground(): React.ReactElement {
   return (
     <>
-      <div className="absolute inset-0 big-linear-to-br from-vault-800 via-vault-900 to-black" />
+      <div className="absolute inset-0 big-linear-to-br from-vault-700 via-vault-800 to-vault-900" />
 
       <div
         className="absolute -top-20 -right-20 w-40 h-40 bg-vault-500/20 rounded-full blur-3xl"

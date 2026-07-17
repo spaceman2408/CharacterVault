@@ -174,7 +174,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
         <button
           type="button"
           aria-label="Close model picker"
-          className="absolute inset-0 bg-black/55 backdrop-blur-[1px]"
+          className="absolute inset-0 bg-overlay backdrop-blur-[1px]"
           onClick={closeModelPicker}
         />
         <div

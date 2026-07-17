@@ -106,7 +106,7 @@ const CharacterPreviewCard: React.FC<CharacterPreviewCardProps> = ({
           )}
         </div>
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-vault-950/65 via-transparent to-transparent" />
         {/* Name overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-6">
           <h2 className="text-2xl font-bold text-white drop-shadow-md">

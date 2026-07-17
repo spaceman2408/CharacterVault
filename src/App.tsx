@@ -226,7 +226,7 @@ function CharacterCard({
         )}
         
         {/* Hover Overlay Gradient — keep a light always-on scrim on mobile so actions stay readable */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-black/20 sm:from-black/60 sm:to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-linear-to-t from-vault-950/55 via-transparent to-vault-950/20 sm:from-vault-950/65 sm:to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
         
         {/* Quick Actions — always visible on mobile, hover-reveal on desktop */}
         <div

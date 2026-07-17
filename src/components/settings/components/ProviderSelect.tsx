@@ -68,7 +68,7 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
         <button
           type="button"
           aria-label="Close provider picker"
-          className="absolute inset-0 bg-black/55 backdrop-blur-[1px]"
+          className="absolute inset-0 bg-overlay backdrop-blur-[1px]"
           onClick={closePicker}
         />
         <div
