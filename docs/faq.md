@@ -32,8 +32,6 @@ You can:
 - **Stay in control** with local IndexedDB storage, dark and light themes
 :::
 
----
-
 ## AI Features
 
 ::: details How do I enable AI features?
@@ -112,24 +110,10 @@ Your NanoGPT password is never seen by CharacterVault, and no client secret is s
 
 ::: warning Browser popups must be allowed
 The flow opens a new window or tab. If your browser blocks popups for this site, the button will appear to do nothing. Allow popups for your CharacterVault origin and try again.
-:::
-
 ::: warning Mobile browser support
 Works on **Chrome for Android**. Other mobile browsers may not relay the authorization code back to the app correctly. If sign-in doesn't complete on your phone, paste your NanoGPT API key into the API Key field manually.
-:::
-
 See [AI Setup → Sign in with NanoGPT](/configuration/ai-setup#sign-in-with-nanogpt-pkce) for the full walkthrough.
 :::
-
-::: details Why does NanoGPT show balance but not subscription usage?
-Balance and model lists work from the browser. **Subscription usage** needs a proxy because NanoGPT does not send CORS headers on that path.
-
-- **Official hosted app** — Already handled; no setup.
-- **Localhost / `npm run dev`** — Handled automatically; **you do not need a worker**.
-- **Self-hosted production only** — Follow [NanoGPT Usage Proxy](/configuration/nanogpt-usage-proxy). Balance still works without it.
-:::
-
----
 
 ## Import & Export
 
@@ -167,8 +151,6 @@ A browser extension that adds "Export to CharacterVault" to SillyTavern's export
 See [Installation → SillyTavern Integration](/getting-started/installation#sillytavern-integration).
 :::
 
----
-
 ## Snapshots & History
 
 ::: details How do snapshots work?
@@ -204,8 +186,6 @@ Storage notes:
 - Snapshots are local; clearing browser data removes all snapshot history
 :::
 
----
-
 ## Storage & Data
 
 ::: details Where is my data stored?
@@ -225,8 +205,6 @@ The app works offline. You can create, edit, organize, import, and export charac
 
 AI features (Orion assistant and AI toolbar) require an internet connection to reach your configured API endpoint.
 :::
-
----
 
 ## Troubleshooting
 
