@@ -257,10 +257,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                   type="button"
                   onClick={() => startSignIn()}
                   disabled={isSigningIn}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
-                  bg-accent text-accent-fg
-                  hover:opacity-90 active:scale-[0.99] transition-all duration-200
-                  disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium bg-accent text-accent-fg hover:opacity-90 active:scale-[0.99] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isSigningIn ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

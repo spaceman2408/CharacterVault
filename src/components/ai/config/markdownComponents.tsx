@@ -40,7 +40,7 @@ export const markdownComponents: Components = {
     return (
       <code
         className={`${className || ''} ${isInline
-          ? 'bg-muted bg-hover px-1.5 py-0.5 rounded-md text-fg'
+          ? 'bg-hover px-1.5 py-0.5 rounded-md text-fg'
           : ''} font-mono text-sm`}
         {...props}
       >
@@ -56,7 +56,7 @@ export const markdownComponents: Components = {
     return (
       <div className="my-3 overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
         <div className="flex items-center justify-between border-b border-border bg-surface px-3 py-2">
-          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-fg-subtle">
+          <span className="font-medium uppercase tracking-[0.14em] text-fg-subtle">
             Code
           </span>
           <CodeBlockCopyButton
@@ -64,7 +64,7 @@ export const markdownComponents: Components = {
             className="shrink-0"
           />
         </div>
-        <pre className="overflow-x-auto bg-bg px-4 py-3 text-[13px] leading-6 text-fg">
+        <pre className="overflow-x-auto bg-bg px-4 py-3 leading-6 text-fg">
           {children}
         </pre>
       </div>
@@ -131,7 +131,7 @@ export const markdownComponents: Components = {
   table({ children }) {
     return (
       <div className="overflow-x-auto my-4 rounded-lg border border-border">
-        <table className="min-w-full divide-y divide-border">
+        <table className="min-w-full divide-border">
           {children}
         </table>
       </div>
@@ -143,7 +143,7 @@ export const markdownComponents: Components = {
   },
 
   tbody({ children }) {
-    return <tbody className="divide-y divide-border">{children}</tbody>;
+    return <tbody className="divide-border">{children}</tbody>;
   },
 
   tr({ children }) {

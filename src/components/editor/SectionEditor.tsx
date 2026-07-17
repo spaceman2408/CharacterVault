@@ -71,7 +71,7 @@ function NameFieldEditor({ value, onChange, label, description }: NameFieldEdito
         type="text"
         value={draftName}
         onChange={handleChange}
-        className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-base text-fg outline-none transition-all placeholder:text-fg-subtle focus:border-vault-400 focus:ring-2 focus:ring-accent/20 border-border bg-surface text-fg placeholder:text-fg-subtle focus:border-border-strong focus:ring-accent/20"
+        className="w-full rounded-xl border px-4 py-3 text-base outline-none transition-all focus:ring-2 border-border bg-surface text-fg placeholder:text-fg-subtle focus:border-border-strong focus:ring-accent/20"
         placeholder="Character name"
       />
     </div>
@@ -164,13 +164,13 @@ function TagsFieldEditor({ tags, onChange, label, description }: TagsFieldEditor
         {currentTags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md bg-muted px-2 text-xs font-medium text-fg-muted bg-muted text-fg"
+            className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md px-2 text-xs font-medium bg-muted text-fg"
           >
             <span className="truncate">{tag}</span>
             <button
               type="button"
               onClick={() => removeTag(tag)}
-              className="rounded-sm text-fg-subtle transition-colors hover:text-danger focus:outline-none focus:ring-2 focus:ring-accent/30 text-fg0 hover:text-danger"
+              className="rounded-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent/30 text-fg0 hover:text-danger"
               aria-label={`Remove ${tag}`}
             >
               x
@@ -183,7 +183,7 @@ function TagsFieldEditor({ tags, onChange, label, description }: TagsFieldEditor
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          className="min-w-36 flex-1 bg-transparent px-1 py-1 text-sm text-fg outline-none placeholder:text-fg-subtle text-fg placeholder:text-fg-subtle"
+          className="min-w-36 flex-1 bg-transparent px-1 py-1 text-sm outline-none text-fg placeholder:text-fg-subtle"
           placeholder={currentTags.length === 0 ? 'Type a tag and press Enter' : 'Add tag'}
         />
       </div>
@@ -501,7 +501,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
             className="min-h-0 border border-border rounded-xl overflow-hidden lg:w-1/2"
           />
 
-          <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-vault-800 shadow-inner border-border lg:w-1/2">
+          <div className="min-h-0 overflow-hidden rounded-xl border bg-vault-800 shadow-inner border-border lg:w-1/2">
             <CreatorNotesPreviewPane
               content={livePreviewValue}
               frameClassName="block h-full w-full bg-vault-800"

@@ -90,14 +90,14 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
         <span className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
           Generation Style
         </span>
-        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
+        <span className="font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
           Required
         </span>
       </div>
 
       <div className="space-y-2">
         <div>
-          <p className="text-[11px] font-medium text-fg-muted mb-1.5">
+          <p className="font-medium text-fg-muted mb-1.5">
             Perspective
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -105,7 +105,7 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
           </div>
         </div>
         <div>
-          <p className="text-[11px] font-medium text-fg-muted mb-1.5">
+          <p className="font-medium text-fg-muted mb-1.5">
             Tense
           </p>
           <div className="flex flex-wrap gap-1.5">

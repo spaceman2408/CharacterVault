@@ -226,8 +226,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
             {!isLast && (
               <button
                 onClick={handleSkip}
-                className="absolute top-2 right-10 sm:top-4 sm:right-16 z-20 flex items-center gap-1 px-2 py-1 text-xs font-medium
-                  text-fg-subtle hover:text-fg transition-colors rounded-lg hover:bg-hover"
+                className="absolute top-2 right-10 sm:top-4 sm:right-16 z-20 flex items-center gap-1 px-2 py-1 text-xs font-medium text-fg-subtle hover:text-fg transition-colors rounded-lg hover:bg-hover"
               >
                 <span>Skip</span>
                 <X className="w-3 h-3" />
@@ -285,21 +284,14 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
                   return (
                     <div
                       key={`${step.id}-${idx}`}
-                      className="tutorial-feature-card group flex items-start gap-2.5 sm:gap-4 p-2.5 sm:p-4 rounded-lg sm:rounded-xl
-                        bg-muted
-                        border border-border
-                        hover:border-border-strong"
+                      className="tutorial-feature-card group flex items-start gap-2.5 sm:gap-4 p-2.5 sm:p-4 rounded-lg sm:rounded-xl bg-muted border border-border hover:border-border-strong"
                       style={{
                         opacity: isAnimating ? 0 : 1,
                         transform: isAnimating ? 'translateY(8px)' : 'translateY(0)',
                       }}
                     >
-                      <div className="shrink-0 p-2 sm:p-2.5 rounded-md sm:rounded-lg bg-hover
-                        group-hover:bg-accent
-                        transition-colors duration-200">
-                        <FeatureIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-fg-muted
-                          group-hover:text-accent-fg
-                          transition-colors duration-200" />
+                      <div className="shrink-0 p-2 sm:p-2.5 rounded-md sm:rounded-lg bg-hover group-hover:bg-accent transition-colors duration-200">
+                        <FeatureIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-fg-muted group-hover:text-accent-fg transition-colors duration-200" />
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-sm font-semibold text-fg mb-0.5">
@@ -350,7 +342,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
           </div>
 
           {/* Footer / Navigation */}
-          <div className="px-4 py-3 sm:px-8 sm:py-5 border-t border-border bg-muted/50 bg-muted flex items-center justify-between shrink-0">
+          <div className="px-4 py-3 sm:px-8 sm:py-5 border-t border-border bg-muted flex items-center justify-between shrink-0">
             <button
               onClick={handlePrev}
               disabled={isFirst}
@@ -366,10 +358,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
 
             <button
               onClick={isLast ? handleComplete : handleNext}
-              className="flex items-center gap-1.5 sm:gap-2 px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg
-                bg-accent text-accent-fg
-                hover:opacity-90 active:scale-95
-                shadow-sm hover:shadow-md transition-all duration-200"
+              className="flex items-center gap-1.5 sm:gap-2 px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg bg-accent text-accent-fg hover:opacity-90 active:scale-95 shadow-sm hover:shadow-md transition-all duration-200"
             >
               {isLast ? (
                 <>

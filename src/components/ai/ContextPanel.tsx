@@ -296,7 +296,7 @@ export function ContextPanel({
                     <p className="font-medium mb-1">How tokens are estimated:</p>
                     <p>Text size in bytes ÷ {BYTES_PER_TOKEN} (rounded up)</p>
                     <p className="text-fg-subtle mt-1">Actual token counts may vary by model.</p>
-                    <div className="absolute bottom-full left-4 -mb-px border-4 border-transparent border-b-vault-800"></div>
+                    <div className="absolute bottom-full left-4 -mb-px border-4 border-b-vault-800"></div>
                   </div>
                 </div>
                 <span>Token counts are an estimation only.</span>

@@ -106,11 +106,7 @@ function GreetingListItem({
 
         <button
           onClick={handleDelete}
-          className="
-            opacity-0 group-hover:opacity-100 focus:opacity-100
-            p-1.5 text-fg-subtle hover:text-danger text-fg0 hover:text-danger
-            hover:bg-danger-soft rounded transition-all
-          "
+          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-fg0 hover:text-danger hover:bg-danger-soft rounded transition-all"
           title="Delete greeting"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -309,10 +305,7 @@ export function GreetingsEditor({
         <div className="shrink-0 p-3 border-t border-border">
           <button
             onClick={handleAddGreeting}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border-strong
-              text-fg-muted hover:text-fg
-              hover:border-border-strong hover:bg-hover/30
-              rounded-lg text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 border-dashed border-border-strong text-fg-muted hover:text-fg hover:border-border-strong hover:bg-hover/30 rounded-lg text-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
             New Greeting

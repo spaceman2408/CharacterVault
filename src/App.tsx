@@ -113,9 +113,9 @@ function CharacterCardSkeleton(): React.ReactElement {
 
 const cardActionBtnClass =
   'inline-flex items-center justify-center min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 p-2 sm:p-1.5 ' +
-  'bg-surface/95 backdrop-blur-sm rounded-lg shadow-sm ' +
-  'text-fg-muted hover:text-fg hover:bg-surface ' +
-  'hover:text-fg hover:bg-accent-soft hover:text-accent ' +
+  'bg-surface/95 backdrop-blur-sm rounded-lg shadow-sm' +
+  'text-fg-muted hover:text-fg hover:bg-surface' +
+  'hover:bg-accent-soft hover:text-accent' +
   'active:scale-95 transition-colors disabled:opacity-50 touch-manipulation';
 
 function CharacterCard({
@@ -205,9 +205,7 @@ function CharacterCard({
 
   return (
     <div 
-      className="group relative flex flex-col bg-surface rounded-xl border border-border 
-      hover:border-border-strong shadow-xs hover:shadow-lg
-      transition-all duration-300 overflow-hidden cursor-pointer"
+      className="group relative flex flex-col bg-surface rounded-xl border border-border hover:border-border-strong shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer"
       onClick={() => onOpen(character.id)}
     >
       {/* Image Area - Aspect Ratio for Character Cards */}
@@ -230,11 +228,7 @@ function CharacterCard({
         
         {/* Quick Actions — always visible on mobile, hover-reveal on desktop */}
         <div
-          className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex flex-row gap-1 transition-all duration-200 
-          opacity-100 translate-y-0 
-          sm:opacity-0 sm:-translate-y-2 
-          sm:group-hover:opacity-100 sm:group-hover:translate-y-0
-          sm:group-focus-within:opacity-100 sm:group-focus-within:translate-y-0"
+          className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex flex-row gap-1 transition-all duration-200 opacity-100 translate-y-0 sm:opacity-0 sm:-translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 sm:group-focus-within:opacity-100 sm:group-focus-within:translate-y-0"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -289,7 +283,7 @@ function CharacterCard({
             <span className="truncate">{formatRelativeTime(character.lastOpenedAt)}</span>
           </div>
           <span
-            className="text-[10px] sm:text-[11px] tabular-nums text-fg-subtle shrink-0"
+            className="sm:text-[11px] tabular-nums text-fg-subtle shrink-0"
             title={
               `Active (RP always-on): ${character.activeTokens.toLocaleString()} tokens\n` +
               `Total (incl. greetings & lorebook): ${character.totalTokens.toLocaleString()} tokens`
@@ -818,7 +812,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button
               type="button"
               onClick={() => setStatusMessage(null)}
-              className="rounded p-0.5 text-fg-subtle hover:bg-accent-soft hover:text-accent hover:text-fg hover:bg-accent-soft hover:text-accent hover:text-fg"
+              className="rounded p-0.5 text-fg-subtle hover:bg-accent-soft hover:text-fg"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -910,10 +904,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
             <a
               href="#/ai-create"
-              className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
-              text-fg-muted
-              hover:bg-accent-soft hover:text-accent rounded-xl
-              transition-colors duration-200"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
             >
               <Sparkles className="w-4 h-4" />
               <span className="hidden sm:inline">AI Create</span>
@@ -929,10 +920,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
             <button
               onClick={() => setIsCreating(true)}
-              className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
-            text-fg-muted
-            hover:bg-accent-soft hover:text-accent rounded-xl
-            transition-colors duration-200"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Create New</span>
@@ -1052,7 +1040,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                   className="group flex items-center gap-3 pl-4 pr-3 py-2 bg-surface border border-border rounded-full hover:border-border-strong hover:shadow-md transition-all"
                 >
                   <div className="text-right">
-                    <p className="text-[10px] font-bold text-fg-subtle uppercase tracking-wider">Continue</p>
+                    <p className="font-bold text-fg-subtle uppercase tracking-wider">Continue</p>
                     <p className="text-sm font-semibold max-w-37.5 truncate">{lastActive.name}</p>
                   </div>
                   <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-accent group-hover:text-accent-fg transition-colors">

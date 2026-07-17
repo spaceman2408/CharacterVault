@@ -76,14 +76,14 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
       <button
         type="button"
         onClick={() => setShowStats(prev => !prev)}
-        className="ml-1 p-0.5 rounded-full text-fg-subtle hover:text-fg text-fg0 hover:text-fg hover:bg-hover transition-colors focus:outline-none"
+        className="ml-1 p-0.5 rounded-full text-fg0 hover:text-fg hover:bg-hover transition-colors focus:outline-none"
         aria-label="Response stats"
       >
         <Info className="w-3 h-3" />
       </button>
       <div
         className={
-          'absolute bottom-full left-0 mb-1 px-2 py-1.5 bg-surface text-fg rounded-md shadow-lg border border-border text-left transition-opacity duration-150 z-10 ' +
+          'absolute bottom-full left-0 mb-1 px-2 py-1.5 bg-surface text-fg rounded-md shadow-lg border border-border text-left transition-opacity duration-150 z-10' +
           (showStats
             ? 'opacity-100 pointer-events-auto'
             : 'opacity-0 pointer-events-none group-hover/stats:opacity-100 group-hover/stats:pointer-events-auto')

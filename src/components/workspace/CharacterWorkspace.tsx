@@ -329,8 +329,7 @@ function ImageEditor(): React.ReactElement {
             />
             <button
               onClick={() => currentCharacter && void updateCharacter({ imageData: '', thumbnailData: '' })}
-              className="absolute top-2 right-2 p-2 bg-danger hover:opacity-90 text-white rounded-lg
-                opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
+              className="absolute top-2 right-2 p-2 bg-danger hover:opacity-90 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -364,8 +363,7 @@ function ImageEditor(): React.ReactElement {
             onChange={handleInputChange}
             className="hidden"
           />
-          <span className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-accent-fg hover:opacity-90 
-            text-white rounded-xl font-medium transition-colors duration-200 cursor-pointer">
+          <span className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:opacity-90 text-white rounded-xl font-medium transition-colors duration-200 cursor-pointer">
             <Upload className="w-4 h-4" />
             {currentCharacter?.imageData ? 'Change Image' : 'Upload Image'}
           </span>
@@ -438,15 +436,11 @@ function CharacterHeader({
   };
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 md:px-6
-      bg-surface/60 backdrop-blur-xl
-      border-b border-border/60 shrink-0">
+    <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-surface/60 backdrop-blur-xl border-b border-border/60 shrink-0">
       <div className="flex items-center gap-3 md:gap-4">
         <button
           onClick={closeCharacter}
-          className="p-2 text-fg-muted hover:text-accent
-            hover:bg-accent-soft rounded-xl transition-all duration-200
-            focus:outline-none focus:ring-2 focus:ring-accent active:scale-95 shrink-0"
+          className="p-2 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent active:scale-95 shrink-0"
           title="Back to characters"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -536,10 +530,7 @@ function CharacterHeader({
 
         <button
           onClick={onOpenRevisions}
-          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
-            text-fg-muted
-            hover:bg-accent-soft hover:text-accent rounded-xl
-            transition-colors duration-200"
+          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
           title="Open revisions"
         >
           <History className="w-4 h-4" />
@@ -548,10 +539,7 @@ function CharacterHeader({
 
         <button
           onClick={onOpenSettings}
-          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
-            text-fg-muted
-            hover:bg-accent-soft hover:text-accent rounded-xl
-            transition-colors duration-200"
+          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
           title="AI Settings"
         >
           <Settings className="w-4 h-4" />
@@ -627,10 +615,7 @@ function ExportDropdown({ onExportJSON, onExportPNG }: ExportDropdownProps): Rea
       <button
         ref={buttonRef}
         onClick={handleToggle}
-        className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
-          text-fg-muted
-          hover:bg-accent-soft hover:text-accent rounded-xl
-          transition-colors duration-200"
+        className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
         title="Export character"
       >
         <Download className="w-4 h-4" />

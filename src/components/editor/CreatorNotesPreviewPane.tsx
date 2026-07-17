@@ -76,7 +76,7 @@ export function CreatorNotesPreviewPane({
 
   if (!content.trim()) {
     return (
-      <div className={emptyClassName || 'rounded-xl border border-dashed border-border-strong bg-muted/70 px-5 py-6 text-sm text-fg-muted border-border bg-muted text-fg-muted'}>
+      <div className={emptyClassName || 'rounded-xl border-dashed px-5 py-6 text-sm border-border bg-muted text-fg-muted'}>
         Add CSS or HTML to Creator Notes to preview it here.
       </div>
     );

@@ -409,7 +409,7 @@ export const AICreationStudio: React.FC = () => {
                     {/* Tags used for this generation */}
                     {inputMode === 'tags' && (
                       <div className="pt-3 border-t border-border">
-                        <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-wider mb-2">
+                        <p className="font-semibold text-fg-muted uppercase tracking-wider mb-2">
                           Tags used
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -417,7 +417,7 @@ export const AICreationStudio: React.FC = () => {
                             (tagSelections[cat.key] ?? []).map((tag) => (
                               <span
                                 key={`${cat.key}-${tag}`}
-                                className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md bg-muted text-fg border border-border"
+                                className="inline-flex items-center px-2 py-0.5 font-medium rounded-md bg-muted text-fg border border-border"
                               >
                                 {formatTag(tag)}
                               </span>
@@ -429,7 +429,7 @@ export const AICreationStudio: React.FC = () => {
 
                     {inputMode === 'write' && concept && (
                       <div className="pt-3 border-t border-border">
-                        <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-wider mb-1">
+                        <p className="font-semibold text-fg-muted uppercase tracking-wider mb-1">
                           Concept
                         </p>
                         <p className="text-sm text-fg-muted italic">
@@ -499,7 +499,7 @@ export const AICreationStudio: React.FC = () => {
                     {/* Tags used — persisted after generation completes */}
                     {inputMode === 'tags' && Object.values(tagSelections).some((t) => t.length > 0) && (
                       <div className="pt-3 mt-3 border-t border-border">
-                        <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-wider mb-2">
+                        <p className="font-semibold text-fg-muted uppercase tracking-wider mb-2">
                           Tags used
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -507,7 +507,7 @@ export const AICreationStudio: React.FC = () => {
                             (tagSelections[cat.key] ?? []).map((tag) => (
                               <span
                                 key={`${cat.key}-${tag}`}
-                                className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md bg-muted text-fg border border-border"
+                                className="inline-flex items-center px-2 py-0.5 font-medium rounded-md bg-muted text-fg border border-border"
                               >
                                 {formatTag(tag)}
                               </span>
@@ -518,7 +518,7 @@ export const AICreationStudio: React.FC = () => {
                     )}
                     {inputMode === 'write' && concept && (
                       <div className="pt-3 mt-3 border-t border-border">
-                        <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-wider mb-1">
+                        <p className="font-semibold text-fg-muted uppercase tracking-wider mb-1">
                           Concept
                         </p>
                         <p className="text-sm text-fg-muted italic">

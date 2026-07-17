@@ -152,7 +152,7 @@ function LorebookEntryListItem({
               p-1.5 rounded transition-all
               ${isContextEnabled
                 ? 'text-success hover:opacity-90 hover:bg-success-soft'
-                : 'text-fg-subtle hover:text-fg hover:bg-hover text-fg0 hover:text-fg hover:bg-hover'
+                : 'text-fg0 hover:text-fg hover:bg-hover'
               }
             `}
             title={isContextEnabled ? 'In context (click to exclude)' : 'Not in context (click to include)'}
@@ -166,10 +166,7 @@ function LorebookEntryListItem({
 
           <button
             onClick={handleDelete}
-            className="
-              p-1.5 text-fg-subtle hover:text-danger text-fg0 hover:text-danger
-              hover:bg-danger-soft rounded transition-all
-            "
+            className="p-1.5 text-fg0 hover:text-danger hover:bg-danger-soft rounded transition-all"
             title="Delete entry"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -378,9 +375,7 @@ function LorebookEntryDetail({
           value={draftEntry.comment || ''}
           onChange={(e) => handleCommentChange(e.target.value)}
           placeholder="Entry display name (optional)"
-          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
-            text-fg placeholder:text-fg-subtle
-            focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
         />
       </div>
 
@@ -414,9 +409,7 @@ function LorebookEntryDetail({
           onChange={(e) => handleKeysChange(e.target.value)}
           onBlur={handleKeysBlur}
           placeholder="castle, fortress, stronghold"
-          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
-            text-fg placeholder:text-fg-subtle
-            focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
         />
       </div>
 
@@ -431,9 +424,7 @@ function LorebookEntryDetail({
             type="number"
             value={draftEntry.priority ?? 0}
             onChange={(e) => handlePriorityChange(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
-              text-fg
-              focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+            className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
           />
         </div>
 
@@ -445,9 +436,7 @@ function LorebookEntryDetail({
           <select
             value={entry.position || 'before_char'}
             onChange={(e) => handlePositionChange(e.target.value as LorebookEntry['position'])}
-            className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
-              text-fg
-              focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+            className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
           >
             {POSITION_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -503,9 +492,7 @@ function LorebookEntryDetail({
           value={draftEntry.name || ''}
           onChange={(e) => handleNameChange(e.target.value)}
           placeholder="Internal notes about this entry, not used in output (optional)"
-          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
-            text-fg placeholder:text-fg-subtle
-            focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
         />
       </div>
     </div>
@@ -901,9 +888,7 @@ function LorebookEditorInner({
                   value={bookName}
                   onChange={(e) => handleBookNameChange(e.target.value)}
                   placeholder="Character Lorebook"
-                  className="w-full px-2.5 py-1.5 text-xs bg-surface border border-border rounded
-                    text-fg placeholder:text-fg-subtle
-                    focus:outline-none focus:ring-1 focus:ring-accent"
+                  className="w-full px-2.5 py-1.5 text-xs bg-surface border border-border rounded text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
               <div>
@@ -915,9 +900,7 @@ function LorebookEditorInner({
                   value={bookDescription}
                   onChange={(e) => handleBookDescriptionChange(e.target.value)}
                   placeholder="Brief description"
-                  className="w-full px-2.5 py-1.5 text-xs bg-surface border border-border rounded
-                    text-fg placeholder:text-fg-subtle
-                    focus:outline-none focus:ring-1 focus:ring-accent"
+                  className="w-full px-2.5 py-1.5 text-xs bg-surface border border-border rounded text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
               {/* Context Visibility Controls */}
@@ -951,10 +934,7 @@ function LorebookEditorInner({
                 <div className="pt-2 border-t border-border">
                   <button
                     onClick={handleDeleteLorebook}
-                    className="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 text-xs
-                      text-danger hover:text-danger
-                      hover:bg-danger-soft border border-danger/30
-                      rounded transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 text-xs text-danger hover:text-danger hover:bg-danger-soft border border-danger/30 rounded transition-colors"
                     title="Delete the entire lorebook"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -976,9 +956,7 @@ function LorebookEditorInner({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`Search ${entries.length} entries...`}
-                className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface border border-border rounded
-                  text-fg placeholder:text-fg-subtle
-                  focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface border border-border rounded text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-1 focus:ring-accent"
               />
               {searchQuery && (
                 <button
@@ -990,7 +968,7 @@ function LorebookEditorInner({
               )}
             </div>
             {searchQuery && (
-              <div className="text-[10px] text-fg-muted mt-1">
+              <div className="text-fg-muted mt-1">
                 {filteredEntries.length} of {entries.length} entries
               </div>
             )}
@@ -1052,10 +1030,7 @@ function LorebookEditorInner({
             />
             <button
               onClick={handleImportClick}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-border
-                text-fg-muted hover:text-fg
-                hover:bg-hover/30
-                rounded-lg text-sm transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-border text-fg-muted hover:text-fg hover:bg-hover/30 rounded-lg text-sm transition-colors"
               title="Import lorebook from JSON file"
             >
               <Upload className="w-4 h-4" />
@@ -1064,11 +1039,7 @@ function LorebookEditorInner({
             <button
               onClick={handleExport}
               disabled={entries.length === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-border
-                text-fg-muted hover:text-fg
-                hover:bg-hover/30
-                disabled:opacity-40 disabled:cursor-not-allowed
-                rounded-lg text-sm transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-border text-fg-muted hover:text-fg hover:bg-hover/30 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
               title="Export lorebook to JSON file"
             >
               <Download className="w-4 h-4" />
@@ -1079,10 +1050,7 @@ function LorebookEditorInner({
           {/* New Entry Button */}
           <button
             onClick={handleAddEntry}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border-strong
-              text-fg-muted hover:text-fg
-              hover:border-border-strong hover:bg-hover/30
-              rounded-lg text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 border-dashed border-border-strong text-fg-muted hover:text-fg hover:border-border-strong hover:bg-hover/30 rounded-lg text-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
             New Entry

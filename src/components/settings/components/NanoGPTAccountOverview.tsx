@@ -168,7 +168,7 @@ const statusBadgeStyles: Record<
   inactive: {
     label: 'Not active',
     className:
-      'bg-muted text-fg-muted bg-muted text-fg-muted border-border',
+      'bg-muted text-fg-muted border-border',
     dot: 'bg-vault-400',
   },
 };
@@ -520,7 +520,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
               ) : (
                 <div className="animate-pulse space-y-2" aria-hidden>
                   <div className="h-7 w-24 rounded bg-hover" />
-                  <div className="h-3 w-16 rounded bg-vault-200/80 bg-hover/80" />
+                  <div className="h-3 w-16 rounded bg-hover/80" />
                 </div>
               )}
             </div>
@@ -582,7 +582,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
               ) : (
                 <div className="animate-pulse space-y-2" aria-hidden>
                   <div className="h-6 w-20 rounded-full bg-hover" />
-                  <div className="h-3 w-28 rounded bg-vault-200/80 bg-hover/80" />
+                  <div className="h-3 w-28 rounded bg-hover/80" />
                 </div>
               )}
             </div>
@@ -629,14 +629,14 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                     Overage enabled — after included limits, usage bills to your balance.
                   </p>
                 )}
-                <p className="text-[11px] text-fg-subtle">
+                <p className="text-fg-subtle">
                   Weekly input tokens are subscription-covered input only (not $ spend).
                 </p>
               </div>
             )}
 
             {showContent && usage && subState === 'inactive' && (
-              <div className="p-3 rounded-lg bg-bg/40 border border-dashed border-border-strong">
+              <div className="p-3 rounded-lg bg-bg/40 border-dashed border-border-strong">
                 <p className="text-sm font-medium text-fg">
                   Subscription not active
                 </p>
@@ -663,7 +663,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                     <div className="h-3 w-8 rounded bg-hover" />
                   </div>
                   <div className="h-2 rounded-full bg-hover mb-2" />
-                  <div className="h-3 w-48 rounded bg-vault-200/80 bg-hover/80" />
+                  <div className="h-3 w-48 rounded bg-hover/80" />
                 </div>
                 <div className="flex items-center gap-2 text-xs text-fg-muted">
                   <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />

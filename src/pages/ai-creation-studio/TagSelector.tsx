@@ -229,19 +229,19 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
             >
               <button
                 onClick={() => toggleCategory(category.key)}
-                className="w-full flex items-center justify-between px-3 py-2.5 bg-muted/50 bg-surface/30 hover:bg-hover/50 transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2.5 bg-surface/30 hover:bg-hover/50 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-fg">
                     {category.label}
                   </span>
                   {category.key === 'generation' && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
+                    <span className="font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
                       Required
                     </span>
                   )}
                   {selectedInCat.length > 0 && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-hover text-fg-muted">
+                    <span className="font-bold px-1.5 py-0.5 rounded-full bg-hover text-fg-muted">
                       {selectedInCat.length}
                     </span>
                   )}

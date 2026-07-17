@@ -29,7 +29,7 @@ const FieldReasoning: React.FC<{ reasoning: string }> = memo(({ reasoning }) => 
           setOpen(!open);
           userScrolledUp.current = false;
         }}
-        className="flex items-center gap-1 p-0.5 rounded text-fg-subtle hover:text-fg-muted hover:text-fg transition-colors"
+        className="flex items-center gap-1 p-0.5 rounded text-fg-subtle hover:text-fg transition-colors"
         title={open ? 'Hide thinking' : 'Show thinking'}
       >
         <Sparkles className="w-3 h-3" />
@@ -46,7 +46,7 @@ const FieldReasoning: React.FC<{ reasoning: string }> = memo(({ reasoning }) => 
           }}
           className="mt-1 max-h-32 sm:max-h-40 overflow-y-auto bg-muted/90 border border-border rounded-md px-2 py-1.5 shadow-sm"
         >
-          <pre className="text-[11px] font-mono text-fg-subtle whitespace-pre-wrap leading-relaxed">
+          <pre className="font-mono text-fg-subtle whitespace-pre-wrap leading-relaxed">
             {reasoning}
           </pre>
         </div>

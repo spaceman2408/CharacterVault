@@ -48,9 +48,9 @@ export function CreatorNotesPreviewModal({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 flex h-[90vh] w-[90vw] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl border-border bg-surface">
+      <div className="relative z-10 flex h-[90vh] w-[90vw] flex-col overflow-hidden rounded-2xl border shadow-2xl border-border bg-surface">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4 border-border">
+        <div className="flex items-center justify-between gap-4 border-b px-5 py-4 border-border">
           <h3 className="text-lg font-semibold text-fg">
             Creator Notes Preview
           </h3>
@@ -58,14 +58,14 @@ export function CreatorNotesPreviewModal({
             <button
               type="button"
               onClick={onAddToEditor}
-              className="hidden rounded-lg bg-vault-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-vault-700 sm:block hover:bg-hover"
+              className="hidden rounded-lg bg-vault-600 px-3 py-2 text-sm font-medium text-white transition-colors sm:block hover:bg-hover"
             >
               Add to Editor
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-hover border-border text-fg hover:bg-hover"
+              className="rounded-lg border px-3 py-2 text-sm font-medium transition-colors border-border text-fg hover:bg-hover"
             >
               Close
             </button>
@@ -75,7 +75,7 @@ export function CreatorNotesPreviewModal({
         <CreatorNotesPreviewPane
           content={content}
           frameClassName="flex-1 overflow-auto rounded-[1.25rem] border border-vault-600 bg-vault-800 shadow-[0_20px_60px_rgba(17,24,39,0.35)]"
-          emptyClassName="flex-1 overflow-auto rounded-[1.25rem] border border-dashed border-vault-500 bg-vault-800 px-5 py-6 text-center text-sm text-fg-subtle"
+          emptyClassName="flex-1 overflow-auto rounded-[1.25rem] border-dashed border-vault-500 bg-vault-800 px-5 py-6 text-center text-sm text-fg-subtle"
         />
       </div>
     </div>,

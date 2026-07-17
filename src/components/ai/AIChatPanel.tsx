@@ -264,7 +264,7 @@ export function AIChatPanel({
                   <div className="mb-2 border border-border-strong rounded-md overflow-hidden">
                     <button
                       onClick={() => setIsStreamingReasoningExpanded(!isStreamingReasoningExpanded)}
-                      className="w-full flex items-center justify-between px-2 py-1.5 bg-muted bg-hover hover:bg-hover transition-colors text-left"
+                      className="w-full flex items-center justify-between px-2 py-1.5 bg-hover hover:bg-hover transition-colors text-left"
                     >
                       <span className="text-xs font-medium text-fg-muted flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
