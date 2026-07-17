@@ -61,10 +61,8 @@ export interface CharacterEditorContextValue {
   
   /** Currently selected text in editor */
   selectedText: string;
-  /** Selected context section IDs for AI */
+  /** User-selected section IDs included in AI context (persisted, not tied to active tab) */
   contextSectionIds: CharacterSection[];
-  /** Sections manually added by the user (persisted even when active) */
-  userAddedContextIds: CharacterSection[];
   /** AI configuration */
   aiConfig: AIConfig;
   /** Sampler settings */

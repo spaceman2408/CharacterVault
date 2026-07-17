@@ -57,8 +57,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   
   // AI-related state
   const [selectedText, setSelectedText] = useState('');
-  const [userAddedContextIds, setUserAddedContextIds] = useState<CharacterSection[]>([]);
-  const [removedSectionIds, setRemovedSectionIds] = useState<CharacterSection[]>([]);
+  /** User-selected AI context pins (global settings; not auto-tied to active section) */
+  const [contextSectionIds, setContextSectionIdsState] = useState<CharacterSection[]>([]);
   const [aiConfig, setAIConfig] = useState<AIConfig>(DEFAULT_SETTINGS.ai);
   const [samplerSettings, setSamplerSettings] = useState<SamplerSettings>(DEFAULT_SETTINGS.sampler);
   const [promptSettings, setPromptSettings] = useState<PromptSettings>(DEFAULT_SETTINGS.prompts);
@@ -242,19 +242,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     return results.filter((result): result is Character => result !== null).at(-1) ?? character;
   }, [commitQueuedCharacterUpdate, commitQueuedSpecFieldUpdate]);
 
-  // Context sections = active section (unless removed) + user-added sections
-  const contextSectionIds = React.useMemo<CharacterSection[]>(() => {
-    // Auto-add active section unless it's been removed or is image/extensions
-    const autoContext = ['image', 'extensions'].includes(activeSection) || removedSectionIds.includes(activeSection)
-      ? [] 
-      : [activeSection];
-    
-    // Merge with user-added, deduplicate, exclude removed
-    return [...new Set([...autoContext, ...userAddedContextIds])].filter(
-      id => !removedSectionIds.includes(id)
-    );
-  }, [activeSection, userAddedContextIds, removedSectionIds]);
-
   /**
    * Visible sections: sectionOrder minus hiddenSections.
    * Any new sections not in sectionOrder are appended.
@@ -269,7 +256,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   // Function to reload settings from database
   const reloadSettings = useCallback(async () => {
     try {
-      const [config, sampler, prompts, models, settings, secOrder, secHidden, spell] = await Promise.all([
+      const [config, sampler, prompts, models, settings, secOrder, secHidden, spell, contextIds] = await Promise.all([
         characterSettingsService.getAISettings(),
         characterSettingsService.getSamplerSettings(),
         characterSettingsService.getPromptSettings(),
@@ -278,6 +265,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
         characterSettingsService.getSectionOrder(),
         characterSettingsService.getHiddenSections(),
         characterSettingsService.getSpellcheckSettings(),
+        characterSettingsService.getContextSectionIds(),
       ]);
       setAIConfig(config);
       setSamplerSettings(sampler);
@@ -287,6 +275,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setSectionOrder(secOrder);
       setHiddenSections(secHidden);
       setSpellcheckState(spell);
+      setContextSectionIdsState(contextIds);
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
@@ -315,8 +304,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setIsDirty(false);
       setSaveStatus('saved');
       setSelectedText('');
-      setUserAddedContextIds([]);
-      setRemovedSectionIds([]);
+      // Context pins are global settings — leave them so they restore for the next character
       // Clear any pending debounce timers
       specSaveTimerRef.current.forEach(timerId => window.clearTimeout(timerId));
       specSaveTimerRef.current.clear();
@@ -359,21 +347,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
     void refreshSnapshotsForCharacter(currentCharacterId);
   }, [currentCharacterId, isHistoryOpen, refreshSnapshotsForCharacter]);
-
-  // Clear removed sections when navigating so they can be auto-added again
-  // Using a ref to track previous active section to avoid cascading renders
-  const prevActiveSectionRef = useRef<CharacterSection>(activeSection);
-  
-  useEffect(() => {
-    if (prevActiveSectionRef.current !== activeSection) {
-      prevActiveSectionRef.current = activeSection;
-      // Use setTimeout to defer state update and avoid cascading renders
-      const timeoutId = setTimeout(() => {
-        setRemovedSectionIds([]);
-      }, 0);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [activeSection]);
 
   /**
    * Update the character
@@ -561,28 +534,22 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   }, []);
 
   /**
-   * Set context section IDs (replaces user-added sections)
-   * Note: The active section is always included automatically
+   * Replace the full AI context selection (user-driven; not tied to active section)
    */
   const setContextSectionIdsCallback = useCallback((ids: CharacterSection[] | ((prev: CharacterSection[]) => CharacterSection[])) => {
-    setUserAddedContextIds(prev => {
+    setContextSectionIdsState(prev => {
       const newIds = typeof ids === 'function' ? ids(prev) : ids;
-      // Filter out the active section since it's auto-included
-      const userIds = newIds.filter(id => id !== activeSection);
-      // Persist to database
-      void characterSettingsService.saveContextSectionIds(userIds);
-      return userIds;
+      const unique = [...new Set(newIds)];
+      void characterSettingsService.saveContextSectionIds(unique);
+      return unique;
     });
-  }, [activeSection]);
+  }, []);
 
   /**
-   * Add a context section (user-added)
+   * Add a section to AI context
    */
   const addContextSection = useCallback((sectionId: CharacterSection) => {
-    // Remove from removed list (if it was previously removed)
-    setRemovedSectionIds(prev => prev.filter(id => id !== sectionId));
-    
-    setUserAddedContextIds(prev => {
+    setContextSectionIdsState(prev => {
       if (prev.includes(sectionId)) return prev;
       const newIds = [...prev, sectionId];
       void characterSettingsService.addContextSection(sectionId);
@@ -591,13 +558,11 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   }, []);
 
   /**
-   * Remove a context section (user-added or auto-added)
+   * Remove a section from AI context
    */
   const removeContextSection = useCallback((sectionId: CharacterSection) => {
-    // Add to removed list to prevent auto-re-adding
-    setRemovedSectionIds(prev => [...new Set([...prev, sectionId])]);
-    
-    setUserAddedContextIds(prev => {
+    setContextSectionIdsState(prev => {
+      if (!prev.includes(sectionId)) return prev;
       const newIds = prev.filter(id => id !== sectionId);
       void characterSettingsService.removeContextSection(sectionId);
       return newIds;
@@ -1012,7 +977,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     fontSize,
     selectedText,
     contextSectionIds,
-    userAddedContextIds,
     aiConfig,
     samplerSettings,
     promptSettings,
