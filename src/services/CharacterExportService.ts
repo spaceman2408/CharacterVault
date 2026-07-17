@@ -100,24 +100,24 @@ export class CharacterExportService {
 
   /**
    * Export the entire vault as a ZIP archive.
+   * Accepts an async iterable so callers can stream cards from IndexedDB one-by-one
+   * instead of materializing every full Character (imageData + lorebook) in an array.
    * Uses PNG (embedded data) when the character has an image; otherwise JSON (V3).
    */
-  async exportVaultAsZip(characters: Character[]): Promise<ExportCharacterResult> {
+  async exportVaultAsZip(
+    characters: AsyncIterable<Character> | Iterable<Character>
+  ): Promise<ExportCharacterResult> {
     try {
-      if (characters.length === 0) {
-        return {
-          success: false,
-          error: 'No characters to export.',
-        };
-      }
-
       const zip = new JSZip();
       const usedNames = new Map<string, number>();
+      let total = 0;
       let exported = 0;
       const failures: string[] = [];
 
-      for (const character of characters) {
-        const result = character.imageData
+      for await (const character of characters) {
+        total += 1;
+        const hasImage = Boolean(character.imageData);
+        const result = hasImage
           ? await this.exportAsPNG(character)
           : await this.exportAsJSON(character);
 
@@ -125,7 +125,7 @@ export class CharacterExportService {
         const finalResult =
           result.success && result.blob
             ? result
-            : character.imageData
+            : hasImage
               ? await this.exportAsJSON(character)
               : result;
 
@@ -137,6 +137,14 @@ export class CharacterExportService {
         const uniqueName = this.uniqueZipFilename(finalResult.filename, usedNames);
         zip.file(uniqueName, finalResult.blob);
         exported += 1;
+        // character + export intermediates are eligible for GC before the next card loads
+      }
+
+      if (total === 0) {
+        return {
+          success: false,
+          error: 'No characters to export.',
+        };
       }
 
       if (exported === 0) {
@@ -152,7 +160,7 @@ export class CharacterExportService {
       const dateStamp = new Date().toISOString().slice(0, 10);
       const note =
         failures.length > 0
-          ? `Exported ${exported} of ${characters.length}; skipped: ${failures.join(', ')}`
+          ? `Exported ${exported} of ${total}; skipped: ${failures.join(', ')}`
           : undefined;
 
       return {

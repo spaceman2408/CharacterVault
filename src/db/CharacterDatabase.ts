@@ -207,6 +207,21 @@ export class CharacterDatabase extends Dexie {
   }
 
   /**
+   * Yield every full character one at a time (by primary key).
+   * Prefer this over getAllCharacters() when building exports so peak heap
+   * stays near one card (+ output buffers) instead of the whole vault.
+   */
+  async *iterateAllCharacters(): AsyncGenerator<Character, void, undefined> {
+    const ids = await this.characters.orderBy('updatedAt').reverse().primaryKeys();
+    for (const id of ids) {
+      const character = await this.characters.get(id);
+      if (character) {
+        yield character;
+      }
+    }
+  }
+
+  /**
    * Get lightweight list items for vault view.
    * Reads `characterListIndex` only — never loads full cards (imageData / lorebook).
    */
@@ -453,11 +468,10 @@ export class CharacterDatabase extends Dexie {
   }
 
   /**
-   * Update last opened timestamp
-   * @param {string} id - Character ID
-   * @returns {Promise<void>}
+   * Update last opened timestamp on the character and vault list index.
+   * @returns ISO timestamp written (for in-memory list patches without a full reload)
    */
-  async updateLastOpened(id: string): Promise<void> {
+  async updateLastOpened(id: string): Promise<string> {
     const timestamp = new Date().toISOString();
     await this.transaction('rw', this.characters, this.characterListIndex, async () => {
       await this.characters.update(id, { lastOpenedAt: timestamp });
@@ -467,6 +481,7 @@ export class CharacterDatabase extends Dexie {
         await this.characterListIndex.put({ ...existing, lastOpenedAt: timestamp });
       }
     });
+    return timestamp;
   }
 
   // ============================================================================

@@ -50,21 +50,28 @@ export class CharacterImportService {
   /**
    * Import multiple character files sequentially.
    * Continues past individual failures so bulk import is resilient.
+   * Does not retain full Character payloads (imageData / lorebook) in the result —
+   * only counts, errors, and a display name for toasts.
    */
   async importFromFiles(files: FileList | File[]): Promise<{
     successCount: number;
     failCount: number;
-    characters: Character[];
+    firstImportedName?: string;
     errors: { filename: string; error: string }[];
   }> {
     const fileArray = Array.from(files);
-    const characters: Character[] = [];
+    let successCount = 0;
+    let firstImportedName: string | undefined;
     const errors: { filename: string; error: string }[] = [];
 
     for (const file of fileArray) {
       const result = await this.importFromFile(file);
       if (result.success && result.character) {
-        characters.push(result.character);
+        successCount += 1;
+        if (firstImportedName === undefined) {
+          firstImportedName = result.character.name;
+        }
+        // Drop the full card reference so imageData is not stacked across the batch
       } else {
         errors.push({
           filename: file.name,
@@ -74,9 +81,9 @@ export class CharacterImportService {
     }
 
     return {
-      successCount: characters.length,
+      successCount,
       failCount: errors.length,
-      characters,
+      firstImportedName,
       errors,
     };
   }

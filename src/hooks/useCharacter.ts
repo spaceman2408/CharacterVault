@@ -125,7 +125,14 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
         // Replace — do not accumulate every previously opened card in heap
         setCharacters([character]);
 
-        await characterDb.updateLastOpened(characterId);
+        const lastOpenedAt = await characterDb.updateLastOpened(characterId);
+        // Patch one list row — avoid reloading every thumbnail from IndexedDB
+        setCharacterListItems((prev) =>
+          prev.map((item) =>
+            item.id === characterId ? { ...item, lastOpenedAt } : item
+          )
+        );
+
         if (character.data.extensions?.[IMPORTED_CHARACTER_FLAG] === true) {
           await characterSnapshotService.createSnapshot(character, 'open').catch(error => {
             console.error('Failed to create baseline snapshot:', error);
@@ -138,14 +145,11 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
           await characterDb.updateSettings({ lastActiveCharacterId: characterId });
           setSettings({ ...settings, lastActiveCharacterId: characterId });
         }
-
-        // Refresh vault index only (lightweight rows — not full cards)
-        await refreshCharacters();
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to open character'));
     }
-  }, [settings, refreshCharacters]);
+  }, [settings]);
 
   /**
    * Close the current character

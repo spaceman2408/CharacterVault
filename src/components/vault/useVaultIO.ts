@@ -69,7 +69,7 @@ export function useVaultIO({ characterCount, refreshCharacters }: UseVaultIOOpti
         } else {
           showStatus(
             result.successCount === 1
-              ? `Imported “${result.characters[0]?.name ?? 'character'}”.`
+              ? `Imported “${result.firstImportedName ?? 'character'}”.`
               : `Imported ${result.successCount} characters.`
           );
         }
@@ -103,14 +103,16 @@ export function useVaultIO({ characterCount, refreshCharacters }: UseVaultIOOpti
     if (characterCount === 0 || isExportingVault) return;
     setIsExportingVault(true);
     try {
-      const characters = await characterDb.getAllCharacters();
-      const result = await characterExportService.exportVaultAsZip(characters);
+      // Stream full cards one-by-one from IndexedDB — never materialize the whole vault
+      const result = await characterExportService.exportVaultAsZip(
+        characterDb.iterateAllCharacters()
+      );
       if (result.success && result.blob && result.filename) {
         downloadBlob(result.blob, result.filename);
         showStatus(
           result.error
             ? `Backup downloaded. ${result.error}`
-            : `Vault backup downloaded (${characters.length} cards).`,
+            : `Vault backup downloaded (${characterCount} cards).`,
           6000
         );
         setBackupConfirmOpen(false);
