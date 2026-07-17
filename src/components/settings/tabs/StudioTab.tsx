@@ -13,7 +13,7 @@ export const StudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   return (
     <div className="space-y-5">
       <SettingsCard>
-        <h3 className="text-xs font-bold text-vault-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
           <Wand2 className="w-4 h-4" />
           AI Creation Studio
         </h3>
@@ -33,7 +33,7 @@ export const StudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
       </SettingsCard>
 
       <SettingsCard>
-        <h3 className="text-xs font-bold text-vault-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
           <Languages className="w-4 h-4" />
           Spellcheck
         </h3>
@@ -55,8 +55,8 @@ export const StudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
           />
 
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
-              <span className="p-1.5 rounded-md bg-vault-100 dark:bg-vault-800 text-vault-600 dark:text-vault-400">
+            <label className="flex items-center gap-2 text-sm font-medium text-fg-muted mb-2">
+              <span className="p-1.5 rounded-md bg-muted text-fg-muted">
                 <Languages className="w-4 h-4" />
               </span>
               Language
@@ -66,11 +66,11 @@ export const StudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
               onChange={(e) =>
                 setDraft((prev) => ({ ...prev, spellcheckLanguage: e.target.value }))
               }
-              className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+              className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
             >
               <option value="en">English (en-US)</option>
             </select>
-            <p className="mt-2 text-xs text-vault-500">
+            <p className="mt-2 text-xs text-fg-muted">
               Additional language packs will appear here as they&apos;re bundled.
             </p>
           </div>

@@ -75,8 +75,8 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
         disabled={isGenerating}
         className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
           isSelected
-            ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border-violet-200 dark:border-violet-800'
-            : 'border-vault-200 dark:border-vault-700 text-vault-600 dark:text-vault-400 hover:border-vault-400 dark:hover:border-vault-500 hover:bg-vault-50 dark:hover:bg-vault-800/50'
+            ? 'bg-muted text-fg border-border'
+            : 'border-border text-fg-muted hover:border-border-strong hover:bg-hover/50'
         }`}
       >
         {formatTag(tag)}
@@ -85,19 +85,19 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
   };
 
   return (
-    <div className="space-y-3 p-4 bg-vault-50 dark:bg-vault-900/50 border border-vault-200 dark:border-vault-800 rounded-xl">
+    <div className="space-y-3 p-4 bg-bg/50 border border-border rounded-xl">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold text-vault-600 dark:text-vault-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
           Generation Style
         </span>
-        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
           Required
         </span>
       </div>
 
       <div className="space-y-2">
         <div>
-          <p className="text-[11px] font-medium text-vault-500 dark:text-vault-400 mb-1.5">
+          <p className="text-[11px] font-medium text-fg-muted mb-1.5">
             Perspective
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -105,7 +105,7 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
           </div>
         </div>
         <div>
-          <p className="text-[11px] font-medium text-vault-500 dark:text-vault-400 mb-1.5">
+          <p className="text-[11px] font-medium text-fg-muted mb-1.5">
             Tense
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -115,7 +115,7 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
       </div>
 
       {(!generationTags.perspective || !generationTags.tense) && (
-        <p className="text-xs text-amber-600 dark:text-amber-400">
+        <p className="text-xs text-warning">
           Choose one perspective and one tense before generating.
         </p>
       )}
@@ -146,13 +146,13 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
   return (
     <div className="space-y-5">
       {/* Write / Tags tab toggle */}
-      <div className="flex p-1 bg-vault-100 dark:bg-vault-800/60 rounded-xl">
+      <div className="flex p-1 bg-muted/60 rounded-xl">
         <button
           onClick={() => onInputModeChange('write')}
           className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
             inputMode === 'write'
-              ? 'bg-white dark:bg-vault-700 text-vault-900 dark:text-vault-100 shadow-sm'
-              : 'text-vault-500 dark:text-vault-400 hover:text-vault-700 dark:hover:text-vault-200'
+              ? 'bg-surface text-fg shadow-sm'
+              : 'text-fg-muted hover:text-fg'
           }`}
         >
           <PenLine className="w-4 h-4" />
@@ -162,8 +162,8 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
           onClick={() => onInputModeChange('tags')}
           className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
             inputMode === 'tags'
-              ? 'bg-white dark:bg-vault-700 text-vault-900 dark:text-vault-100 shadow-sm'
-              : 'text-vault-500 dark:text-vault-400 hover:text-vault-700 dark:hover:text-vault-200'
+              ? 'bg-surface text-fg shadow-sm'
+              : 'text-fg-muted hover:text-fg'
           }`}
         >
           <Tag className="w-4 h-4" />
@@ -181,10 +181,10 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
 
           {/* Header */}
           <div className="text-center sm:text-left">
-            <h2 className="text-lg font-bold text-vault-900 dark:text-vault-100">
+            <h2 className="text-lg font-bold text-fg">
               What character do you want to create?
             </h2>
-            <p className="text-sm text-vault-500 dark:text-vault-400 mt-1">
+            <p className="text-sm text-fg-muted mt-1">
               Describe your idea and the AI will generate a complete character card.
             </p>
           </div>
@@ -196,15 +196,15 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
               onChange={(e) => onConceptChange(e.target.value)}
               placeholder="A cynical dwarven blacksmith with a secret past, living in a mountain fortress who speaks in riddles..."
               disabled={isGenerating}
-              className="w-full h-36 p-4 bg-vault-50 dark:bg-vault-950/50 border border-vault-200 dark:border-vault-800 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-vault-500/50 dark:focus:ring-vault-400/50 focus:bg-white dark:focus:bg-vault-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all placeholder:text-vault-400 dark:placeholder:text-vault-600"
+              className="w-full h-36 p-4 bg-bg/50 border border-border rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-accent/50 focus:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-all placeholder:text-fg-subtle"
             />
             <div className="absolute bottom-3 right-3 flex items-center gap-2">
               {isConfigured && (
                 <span
                   className={`text-xs font-medium tabular-nums ${
                     hasMinimumWords
-                      ? 'text-vault-400 dark:text-vault-500'
-                      : 'text-amber-600 dark:text-amber-400'
+                      ? 'text-fg-subtle'
+                      : 'text-warning'
                   }`}
                 >
                   {wordCount} {wordCount === 1 ? 'word' : 'words'}
@@ -215,21 +215,21 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
 
           {/* Not Configured State */}
           {!isConfigured && (
-            <div className="flex flex-col items-center text-center gap-3 p-5 bg-amber-50/60 dark:bg-amber-900/10 border border-amber-200/60 dark:border-amber-800/40 rounded-xl">
-              <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <div className="flex flex-col items-center text-center gap-3 p-5 bg-warning-soft/60 border border-warning/30 rounded-xl">
+              <div className="w-10 h-10 rounded-full bg-warning-soft flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-warning" />
               </div>
               <div>
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                <p className="text-sm font-medium text-warning-soft-fg">
                   AI Provider Not Configured
                 </p>
-                <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                <p className="text-xs text-warning-soft-fg mt-0.5">
                   Configure your AI provider and choose a model to start generating characters.
                 </p>
               </div>
               <button
                 onClick={onOpenSettings}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-800/40 hover:bg-amber-200 dark:hover:bg-amber-800 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-warning-soft-fg bg-warning-soft hover:opacity-90 rounded-lg transition-colors"
               >
                 <Settings2 className="w-4 h-4" />
                 Configure AI
@@ -238,7 +238,7 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
           )}
 
           {/* API call cost notice */}
-          <p className="text-xs text-vault-400 dark:text-vault-500 text-center">
+          <p className="text-xs text-fg-subtle text-center">
             Generation uses a minimum of 4 API calls. At least one per field.
           </p>
 
@@ -247,7 +247,7 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
             <button
               onClick={onGenerate}
               disabled={!canGenerate}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-inverse text-fg-inverse font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
             >
               {isGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -259,7 +259,7 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
             {isGenerating && (
               <button
                 onClick={onAbort}
-                className="flex items-center gap-2 px-4 py-2.5 border border-vault-300 dark:border-vault-700 text-vault-700 dark:text-vault-300 font-medium rounded-xl hover:bg-vault-50 dark:hover:bg-vault-900 active:scale-[0.98] transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 border border-border-strong text-fg-muted font-medium rounded-xl hover:bg-hover active:scale-[0.98] transition-all"
               >
                 <X className="w-4 h-4" />
                 Stop
@@ -269,13 +269,13 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
 
           {/* Subtle hint when configured but too short */}
           {isConfigured && !isGenerating && trimmed && !hasMinimumWords && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+            <p className="text-xs text-warning text-center">
               Add a few more words to help the AI understand your concept.
             </p>
           )}
 
           {isConfigured && !isGenerating && hasMinimumWords && !hasGenerationTags && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+            <p className="text-xs text-warning text-center">
               Choose a generation style before creating the character.
             </p>
           )}

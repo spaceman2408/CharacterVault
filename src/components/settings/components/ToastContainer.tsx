@@ -20,10 +20,10 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove
           key={toast.id}
           className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 animate-in slide-in-from-right ${
             toast.type === 'success'
-              ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+              ? 'bg-success-soft border border-success/30 text-success'
               : toast.type === 'error'
-                ? 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
-                : 'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400'
+                ? 'bg-danger-soft border border-danger/30 text-danger'
+                : 'bg-warning-soft border border-warning/30 text-warning-soft-fg'
           }`}
         >
           {toast.type === 'success' ? (
@@ -34,7 +34,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove
           <span className="text-sm font-medium">{toast.message}</span>
           <button
             onClick={() => onRemove(toast.id)}
-            className="ml-2 p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded"
+            className="ml-2 p-1 hover:bg-hover rounded"
           >
             <X className="w-3 h-3" />
           </button>

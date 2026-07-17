@@ -122,18 +122,18 @@ function LorebookEntryListItem({
       className={`
         relative group cursor-pointer p-3 rounded-lg border transition-all duration-150
         ${isSelected
-          ? 'bg-vault-200 dark:bg-vault-700 border-vault-500 dark:border-vault-400 ring-1 ring-vault-500 dark:ring-vault-400'
-          : 'bg-white dark:bg-vault-800 border-vault-200 dark:border-vault-700'
+          ? 'bg-hover border-accent ring-1 ring-accent'
+          : 'bg-surface border-border'
         }
       `}
     >
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-vault-900 dark:text-vault-100 truncate">
+          <div className="text-sm font-medium text-fg truncate">
             {entry.comment || entry.name || `Entry ${index}`}
           </div>
 
-          <div className="flex items-center gap-2 mt-1 text-xs text-vault-500 dark:text-vault-400">
+          <div className="flex items-center gap-2 mt-1 text-xs text-fg-muted">
             <span>{entry.keys.length} key{entry.keys.length !== 1 ? 's' : ''}</span>
             {tokenCount !== null ? (
               <>
@@ -151,8 +151,8 @@ function LorebookEntryListItem({
             className={`
               p-1.5 rounded transition-all
               ${isContextEnabled
-                ? 'text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-900/20'
-                : 'text-vault-400 hover:text-vault-600 hover:bg-vault-100 dark:text-vault-500 dark:hover:text-vault-300 dark:hover:bg-vault-700'
+                ? 'text-success hover:opacity-90 hover:bg-success-soft'
+                : 'text-fg-subtle hover:text-fg hover:bg-hover text-fg0 hover:text-fg hover:bg-hover'
               }
             `}
             title={isContextEnabled ? 'In context (click to exclude)' : 'Not in context (click to include)'}
@@ -167,8 +167,8 @@ function LorebookEntryListItem({
           <button
             onClick={handleDelete}
             className="
-              p-1.5 text-vault-400 hover:text-red-500 dark:text-vault-500 dark:hover:text-red-400
-              hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all
+              p-1.5 text-fg-subtle hover:text-danger text-fg0 hover:text-danger
+              hover:bg-danger-soft rounded transition-all
             "
             title="Delete entry"
           >
@@ -370,7 +370,7 @@ function LorebookEntryDetail({
     <div className="flex flex-col gap-2 md:flex-1 md:min-h-0">
       {/* Comment Field (Entry Name in SillyTavern) */}
       <div className="shrink-0">
-        <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+        <label className="block text-sm font-medium text-fg-muted mb-2">
           Entry Name
         </label>
         <input
@@ -378,27 +378,27 @@ function LorebookEntryDetail({
           value={draftEntry.comment || ''}
           onChange={(e) => handleCommentChange(e.target.value)}
           placeholder="Entry display name (optional)"
-          className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-            text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-            focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
+          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
+            text-fg placeholder:text-fg-subtle
+            focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
         />
       </div>
 
       {/* Keys Field */}
       <div className="shrink-0">
         <div className="flex items-center gap-2 mb-2">
-          <label className="text-sm font-medium text-vault-700 dark:text-vault-300">
+          <label className="text-sm font-medium text-fg-muted">
             Trigger Keys
           </label>
-          <span className="text-xs text-vault-400">(comma, separated)</span>
+          <span className="text-xs text-fg-subtle">(comma, separated)</span>
           <button
             onClick={handleGenerateKeys}
             disabled={!generatingKeys && !draftEntry.content.trim()}
             title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
             className={`p-1.5 rounded transition-colors ${
               generatingKeys
-                ? 'text-red-400 animate-pulse cursor-pointer hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
-                : 'text-vault-400 hover:text-vault-600 dark:hover:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700 disabled:opacity-40 disabled:cursor-not-allowed'
+                ? 'text-red-400 animate-pulse cursor-pointer hover:text-danger hover:bg-danger-soft'
+                : 'text-fg-subtle hover:text-fg hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed'
             }`}
           >
             {generatingKeys ? (
@@ -414,9 +414,9 @@ function LorebookEntryDetail({
           onChange={(e) => handleKeysChange(e.target.value)}
           onBlur={handleKeysBlur}
           placeholder="castle, fortress, stronghold"
-          className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-            text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-            focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
+          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
+            text-fg placeholder:text-fg-subtle
+            focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
         />
       </div>
 
@@ -424,30 +424,30 @@ function LorebookEntryDetail({
       <div className="shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Priority */}
         <div>
-          <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+          <label className="block text-sm font-medium text-fg-muted mb-2">
             Priority
           </label>
           <input
             type="number"
             value={draftEntry.priority ?? 0}
             onChange={(e) => handlePriorityChange(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-              text-vault-900 dark:text-vault-100
-              focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
+            className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
+              text-fg
+              focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
           />
         </div>
 
         {/* Position */}
         <div>
-          <label className="block text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
+          <label className="block text-sm font-medium text-fg-muted mb-2">
             Position
           </label>
           <select
             value={entry.position || 'before_char'}
             onChange={(e) => handlePositionChange(e.target.value as LorebookEntry['position'])}
-            className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-              text-vault-900 dark:text-vault-100
-              focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
+            className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
+              text-fg
+              focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
           >
             {POSITION_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -463,27 +463,27 @@ function LorebookEntryDetail({
             type="checkbox"
             checked={entry.enabled}
             onChange={(e) => handleEnabledChange(e.target.checked)}
-            className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
+            className="w-4 h-4 rounded border-border-strong text-fg-muted focus:ring-accent"
           />
-          <span className="text-sm text-vault-700 dark:text-vault-300">Enabled</span>
+          <span className="text-sm text-fg-muted">Enabled</span>
         </label>
         <label className="flex items-center gap-2.5 cursor-pointer">
           <input
             type="checkbox"
             checked={entry.case_sensitive ?? false}
             onChange={(e) => handleCaseSensitiveChange(e.target.checked)}
-            className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
+            className="w-4 h-4 rounded border-border-strong text-fg-muted focus:ring-accent"
           />
-          <span className="text-sm text-vault-700 dark:text-vault-300">Case Sensitive</span>
+          <span className="text-sm text-fg-muted">Case Sensitive</span>
         </label>
         <label className="flex items-center gap-2.5 cursor-pointer">
           <input
             type="checkbox"
             checked={entry.constant ?? false}
             onChange={(e) => handleConstantChange(e.target.checked)}
-            className="w-4 h-4 rounded border-vault-300 text-vault-600 focus:ring-vault-500"
+            className="w-4 h-4 rounded border-border-strong text-fg-muted focus:ring-accent"
           />
-          <span className="text-sm text-vault-700 dark:text-vault-300">Constant</span>
+          <span className="text-sm text-fg-muted">Constant</span>
         </label>
       </div>
 
@@ -491,7 +491,7 @@ function LorebookEntryDetail({
       <div className="h-[50vh] min-h-[200px] md:h-auto md:flex-1 md:min-h-0 md:flex md:flex-col">
         <div
           ref={editorRef}
-          className="h-full md:flex-1 md:min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+          className="h-full md:flex-1 md:min-h-0 border border-border rounded-xl overflow-hidden"
           style={{ minHeight: '200px' }}
         />
       </div>
@@ -503,9 +503,9 @@ function LorebookEntryDetail({
           value={draftEntry.name || ''}
           onChange={(e) => handleNameChange(e.target.value)}
           placeholder="Internal notes about this entry, not used in output (optional)"
-          className="w-full px-3 py-2.5 text-sm bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded-lg
-            text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-            focus:outline-none focus:ring-2 focus:ring-vault-500 focus:border-transparent"
+          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg
+            text-fg placeholder:text-fg-subtle
+            focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
         />
       </div>
     </div>
@@ -869,15 +869,15 @@ function LorebookEditorInner({
     <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
       {/* Left Sidebar - Hidden on mobile when viewing detail */}
       <div className={`
-        w-full md:w-64 shrink-0 min-h-0 max-h-[50dvh] md:max-h-none overflow-hidden border-r border-vault-200 dark:border-vault-700 
-        bg-vault-50/30 dark:bg-vault-800/20 flex flex-col
+        w-full md:w-64 shrink-0 min-h-0 max-h-[50dvh] md:max-h-none overflow-hidden border-r border-border 
+        bg-muted/30 bg-muted/50 flex flex-col
         ${isMobileViewOpen ? 'hidden md:flex' : 'flex'}
       `}>
         {/* Book Settings Toggle */}
-        <div className="shrink-0 border-b border-vault-200 dark:border-vault-700">
+        <div className="shrink-0 border-b border-border">
           <button
             onClick={() => setIsBookSettingsOpen(!isBookSettingsOpen)}
-            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-vault-700 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700/50 transition-colors"
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-fg-muted hover:bg-hover/50 transition-colors"
           >
             <div className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
@@ -893,7 +893,7 @@ function LorebookEditorInner({
           {isBookSettingsOpen && (
             <div className="px-3 pb-3 space-y-3">
               <div>
-                <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1">
+                <label className="block text-xs font-medium text-fg-muted mb-1">
                   Book Name
                 </label>
                 <input
@@ -901,13 +901,13 @@ function LorebookEditorInner({
                   value={bookName}
                   onChange={(e) => handleBookNameChange(e.target.value)}
                   placeholder="Character Lorebook"
-                  className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded
-                    text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-                    focus:outline-none focus:ring-1 focus:ring-vault-500"
+                  className="w-full px-2.5 py-1.5 text-xs bg-surface border border-border rounded
+                    text-fg placeholder:text-fg-subtle
+                    focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-vault-600 dark:text-vault-400 mb-1">
+                <label className="block text-xs font-medium text-fg-muted mb-1">
                   Description
                 </label>
                 <input
@@ -915,29 +915,29 @@ function LorebookEditorInner({
                   value={bookDescription}
                   onChange={(e) => handleBookDescriptionChange(e.target.value)}
                   placeholder="Brief description"
-                  className="w-full px-2.5 py-1.5 text-xs bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded
-                    text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-                    focus:outline-none focus:ring-1 focus:ring-vault-500"
+                  className="w-full px-2.5 py-1.5 text-xs bg-surface border border-border rounded
+                    text-fg placeholder:text-fg-subtle
+                    focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
               {/* Context Visibility Controls */}
               {entries.length > 0 && (
-                <div className="flex items-center justify-between pt-2 border-t border-vault-200 dark:border-vault-700">
-                  <label className="text-xs font-medium text-vault-600 dark:text-vault-400">
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <label className="text-xs font-medium text-fg-muted">
                     Context Visibility
                   </label>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleEnableAllContext}
-                      className="text-xs text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 transition-colors"
+                      className="text-xs text-fg-muted hover:text-fg transition-colors"
                       title="Enable all entries in context"
                     >
                       Enable All
                     </button>
-                    <span className="text-vault-300 dark:text-vault-600">|</span>
+                    <span className="text-fg-subtle">|</span>
                     <button
                       onClick={handleDisableAllContext}
-                      className="text-xs text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 transition-colors"
+                      className="text-xs text-fg-muted hover:text-fg transition-colors"
                       title="Disable all entries in context"
                     >
                       Disable All
@@ -948,12 +948,12 @@ function LorebookEditorInner({
 
               {/* Delete Lorebook */}
               {onDelete && (
-                <div className="pt-2 border-t border-vault-200 dark:border-vault-700">
+                <div className="pt-2 border-t border-border">
                   <button
                     onClick={handleDeleteLorebook}
                     className="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 text-xs
-                      text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300
-                      hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-900/40
+                      text-danger hover:text-danger
+                      hover:bg-danger-soft border border-danger/30
                       rounded transition-colors"
                     title="Delete the entire lorebook"
                   >
@@ -968,29 +968,29 @@ function LorebookEditorInner({
 
         {/* Search Bar */}
         {entries.length > 0 && (
-          <div className="shrink-0 px-3 py-2 border-b border-vault-200 dark:border-vault-700">
+          <div className="shrink-0 px-3 py-2 border-b border-border">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-vault-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-fg-subtle" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`Search ${entries.length} entries...`}
-                className="w-full pl-8 pr-7 py-1.5 text-xs bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-700 rounded
-                  text-vault-900 dark:text-vault-100 placeholder:text-vault-400
-                  focus:outline-none focus:ring-1 focus:ring-vault-500"
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface border border-border rounded
+                  text-fg placeholder:text-fg-subtle
+                  focus:outline-none focus:ring-1 focus:ring-accent"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-vault-400 hover:text-vault-600 dark:hover:text-vault-300"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
             {searchQuery && (
-              <div className="text-[10px] text-vault-500 dark:text-vault-400 mt-1">
+              <div className="text-[10px] text-fg-muted mt-1">
                 {filteredEntries.length} of {entries.length} entries
               </div>
             )}
@@ -1000,12 +1000,12 @@ function LorebookEditorInner({
         {/* Entry List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {entries.length === 0 ? (
-            <div className="text-center py-8 text-vault-400 dark:text-vault-500">
+            <div className="text-center py-8 text-fg-subtle">
               <Book className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p className="text-xs">No entries yet</p>
             </div>
           ) : filteredEntries.length === 0 ? (
-            <div className="text-center py-8 text-vault-400 dark:text-vault-500">
+            <div className="text-center py-8 text-fg-subtle">
               <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p className="text-xs">No entries match</p>
               <p className="text-[10px] mt-0.5">Try a different search term</p>
@@ -1039,7 +1039,7 @@ function LorebookEditorInner({
         </div>
 
         {/* Import/Export/Add Buttons at Bottom */}
-        <div className="shrink-0 p-3 border-t border-vault-200 dark:border-vault-700 space-y-2">
+        <div className="shrink-0 p-3 border-t border-border space-y-2">
           {/* Import/Export Row */}
           <div className="flex gap-2">
             {/* Hidden file input for import */}
@@ -1052,9 +1052,9 @@ function LorebookEditorInner({
             />
             <button
               onClick={handleImportClick}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-vault-200 dark:border-vault-700
-                text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200
-                hover:bg-vault-50 dark:hover:bg-vault-700/30
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-border
+                text-fg-muted hover:text-fg
+                hover:bg-hover/30
                 rounded-lg text-sm transition-colors"
               title="Import lorebook from JSON file"
             >
@@ -1064,9 +1064,9 @@ function LorebookEditorInner({
             <button
               onClick={handleExport}
               disabled={entries.length === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-vault-200 dark:border-vault-700
-                text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200
-                hover:bg-vault-50 dark:hover:bg-vault-700/30
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-border
+                text-fg-muted hover:text-fg
+                hover:bg-hover/30
                 disabled:opacity-40 disabled:cursor-not-allowed
                 rounded-lg text-sm transition-colors"
               title="Export lorebook to JSON file"
@@ -1079,9 +1079,9 @@ function LorebookEditorInner({
           {/* New Entry Button */}
           <button
             onClick={handleAddEntry}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-vault-300 dark:border-vault-600
-              text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200
-              hover:border-vault-400 dark:hover:border-vault-500 hover:bg-vault-50 dark:hover:bg-vault-700/30
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border-strong
+              text-fg-muted hover:text-fg
+              hover:border-border-strong hover:bg-hover/30
               rounded-lg text-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -1092,7 +1092,7 @@ function LorebookEditorInner({
 
       {/* Right Detail Panel */}
       <div className={`
-        flex-1 min-h-0 bg-white dark:bg-vault-900
+        flex-1 min-h-0 bg-surface
         ${!isMobileViewOpen ? 'hidden md:flex md:flex-col md:overflow-hidden' : 'block overflow-y-auto md:flex md:flex-col md:overflow-hidden'}
       `}>
         {selectedEntry ? (
@@ -1100,7 +1100,7 @@ function LorebookEditorInner({
             {/* Mobile Back Button */}
             <button
               onClick={handleBackToList}
-              className="md:hidden mb-4 shrink-0 flex items-center gap-1 text-sm text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200"
+              className="md:hidden mb-4 shrink-0 flex items-center gap-1 text-sm text-fg-muted hover:text-fg"
             >
               <ChevronLeft className="w-4 h-4" />
               Back to entries
@@ -1121,7 +1121,7 @@ function LorebookEditorInner({
             />
           </div>
         ) : (
-          <div className="h-full flex items-center justify-center text-vault-400 dark:text-vault-500">
+          <div className="h-full flex items-center justify-center text-fg-subtle">
             <div className="text-center">
               <Book className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p className="text-sm">Select an entry to edit</p>

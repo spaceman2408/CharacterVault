@@ -208,7 +208,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-vault-950/80 dark:bg-black/85 tutorial-backdrop"
+        className="fixed inset-0 bg-overlay tutorial-backdrop"
         onClick={handleSkip}
       />
 
@@ -218,7 +218,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
           ${isVisible ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-8 opacity-0'}`}
       >
         {/* Main Card - max height with scroll on mobile */}
-        <div className="bg-white dark:bg-vault-900 rounded-2xl shadow-2xl border border-vault-200 dark:border-vault-800 overflow-hidden tutorial-card-enter max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
+        <div className="bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden tutorial-card-enter max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
           
           {/* Header band with accent */}
           <div className="relative px-4 pt-3 pb-3 sm:px-8 sm:pt-8 sm:pb-6 overflow-hidden shrink-0">
@@ -227,7 +227,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
               <button
                 onClick={handleSkip}
                 className="absolute top-2 right-10 sm:top-4 sm:right-16 z-20 flex items-center gap-1 px-2 py-1 text-xs font-medium
-                  text-vault-400 hover:text-vault-600 dark:hover:text-vault-200 transition-colors rounded-lg hover:bg-vault-100 dark:hover:bg-vault-800"
+                  text-fg-subtle hover:text-fg transition-colors rounded-lg hover:bg-hover"
               >
                 <span>Skip</span>
                 <X className="w-3 h-3" />
@@ -248,24 +248,24 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
                   key={i}
                   className={`h-1.5 rounded-full tutorial-dot
                     ${i === currentStep
-                      ? 'w-8 bg-vault-900 dark:bg-vault-100'
+                      ? 'w-8 bg-inverse'
                       : i < currentStep
-                        ? 'w-3 bg-vault-400 dark:bg-vault-500'
-                        : 'w-3 bg-vault-200 dark:bg-vault-700'
+                        ? 'w-3 bg-fg-subtle'
+                        : 'w-3 bg-hover'
                     }`}
                 />
               ))}
-              <span className="ml-auto text-xs font-medium text-vault-400 dark:text-vault-500 tabular-nums">
+              <span className="ml-auto text-xs font-medium text-fg-subtle tabular-nums">
                 {currentStep + 1} / {TUTORIAL_STEPS.length}
               </span>
             </div>
 
             {/* Title area with transition */}
             <div className={`tutorial-step-content ${stepContentClass}`}>
-              <p className="text-xs font-bold uppercase tracking-widest text-vault-400 dark:text-vault-500 mb-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-fg-subtle mb-2">
                 {step.subtitle}
               </p>
-              <h2 className="text-2xl sm:text-3xl font-bold text-vault-900 dark:text-vault-50 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold text-fg tracking-tight">
                 {step.title}
               </h2>
             </div>
@@ -274,7 +274,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
           {/* Body - scrollable on mobile */}
           <div className="px-4 pb-4 sm:px-8 sm:pb-6 overflow-y-auto">
             <div className={`tutorial-step-content ${stepContentClass}`}>
-              <p className="text-vault-600 dark:text-vault-400 text-sm sm:text-[15px] leading-relaxed mb-4 sm:mb-6">
+              <p className="text-fg-muted text-sm sm:text-[15px] leading-relaxed mb-4 sm:mb-6">
                 {step.description}
               </p>
 
@@ -286,26 +286,26 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
                     <div
                       key={`${step.id}-${idx}`}
                       className="tutorial-feature-card group flex items-start gap-2.5 sm:gap-4 p-2.5 sm:p-4 rounded-lg sm:rounded-xl
-                        bg-vault-50 dark:bg-vault-800/60
-                        border border-vault-100 dark:border-vault-800
-                        hover:border-vault-300 dark:hover:border-vault-600"
+                        bg-muted
+                        border border-border
+                        hover:border-border-strong"
                       style={{
                         opacity: isAnimating ? 0 : 1,
                         transform: isAnimating ? 'translateY(8px)' : 'translateY(0)',
                       }}
                     >
-                      <div className="shrink-0 p-2 sm:p-2.5 rounded-md sm:rounded-lg bg-vault-200/70 dark:bg-vault-700/50
-                        group-hover:bg-vault-900 dark:group-hover:bg-vault-100
+                      <div className="shrink-0 p-2 sm:p-2.5 rounded-md sm:rounded-lg bg-hover
+                        group-hover:bg-inverse
                         transition-colors duration-200">
-                        <FeatureIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-vault-600 dark:text-vault-300
-                          group-hover:text-white dark:group-hover:text-vault-900
+                        <FeatureIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-fg-muted
+                          group-hover:text-fg-inverse
                           transition-colors duration-200" />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-sm font-semibold text-vault-900 dark:text-vault-100 mb-0.5">
+                        <h4 className="text-sm font-semibold text-fg mb-0.5">
                           {feature.label}
                         </h4>
-                        <p className="text-xs text-vault-500 dark:text-vault-400 leading-relaxed">
+                        <p className="text-xs text-fg-muted leading-relaxed">
                           {feature.detail}
                         </p>
                       </div>
@@ -333,7 +333,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
                     href="https://github.com/spaceman2408/SillyTavern-CharacterVaultExport"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="relative shrink-0 ml-auto p-1.5 text-amber-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                    className="relative shrink-0 ml-auto p-1.5 text-amber-300 hover:text-white hover:bg-surface/10 rounded-lg transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
@@ -350,14 +350,14 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
           </div>
 
           {/* Footer / Navigation */}
-          <div className="px-4 py-3 sm:px-8 sm:py-5 border-t border-vault-100 dark:border-vault-800 bg-vault-50/50 dark:bg-vault-800/30 flex items-center justify-between shrink-0">
+          <div className="px-4 py-3 sm:px-8 sm:py-5 border-t border-border bg-muted/50 bg-muted flex items-center justify-between shrink-0">
             <button
               onClick={handlePrev}
               disabled={isFirst}
               className={`flex items-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200
                 ${isFirst
-                  ? 'text-vault-300 dark:text-vault-700 cursor-not-allowed'
-                  : 'text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 active:scale-95'
+                  ? 'text-fg-subtle cursor-not-allowed'
+                  : 'text-fg-muted hover:bg-hover active:scale-95'
                 }`}
             >
               <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -367,7 +367,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
             <button
               onClick={isLast ? handleComplete : handleNext}
               className="flex items-center gap-1.5 sm:gap-2 px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg
-                bg-vault-900 dark:bg-vault-100 text-white dark:text-vault-900
+                bg-inverse text-fg-inverse
                 hover:opacity-90 active:scale-95
                 shadow-sm hover:shadow-md transition-all duration-200"
             >

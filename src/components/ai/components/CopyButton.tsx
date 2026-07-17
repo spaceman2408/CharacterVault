@@ -50,7 +50,7 @@ export const CopyButton: React.FC<CopyButtonProps> = memo(({ content }) => {
   return (
     <button
       onClick={handleCopy}
-      className="p-1.5 rounded-md text-vault-400 hover:text-vault-600 dark:hover:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700/50 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+      className="p-1.5 rounded-md text-fg-subtle hover:text-fg hover:bg-hover/50 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
       title={copied ? 'Copied!' : 'Copy to clipboard'}
     >
       {copied ? (

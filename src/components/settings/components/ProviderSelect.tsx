@@ -19,7 +19,7 @@ interface ProviderSelectProps {
 }
 
 const fieldClass =
-  'w-full min-h-11 px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50';
+  'w-full min-h-11 px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent/50';
 
 export const ProviderSelect: React.FC<ProviderSelectProps> = ({
   providers,
@@ -75,25 +75,25 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="relative z-[201] w-full sm:max-w-md sm:mx-4 max-h-[min(85dvh,36rem)] flex flex-col bg-white dark:bg-vault-900 rounded-t-2xl sm:rounded-2xl shadow-2xl ring-1 ring-vault-200 dark:ring-vault-700 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          className="relative z-[201] w-full sm:max-w-md sm:mx-4 max-h-[min(85dvh,36rem)] flex flex-col bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl ring-1 ring-border pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         >
-          <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2 sm:px-5 sm:pt-4 border-b border-vault-200 dark:border-vault-700 shrink-0">
+          <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2 sm:px-5 sm:pt-4 border-b border-border shrink-0">
             <div className="min-w-0">
-              <div className="mx-auto sm:hidden w-10 h-1 rounded-full bg-vault-300 dark:bg-vault-600 mb-3" />
+              <div className="mx-auto sm:hidden w-10 h-1 rounded-full bg-fg-subtle mb-3" />
               <h3
                 id={titleId}
-                className="text-base font-semibold text-vault-900 dark:text-vault-100"
+                className="text-base font-semibold text-fg"
               >
                 Choose provider
               </h3>
-              <p className="text-xs text-vault-500 dark:text-vault-400 mt-0.5">
+              <p className="text-xs text-fg-muted mt-0.5">
                 NanoGPT inference host for this model
               </p>
             </div>
             <button
               type="button"
               onClick={closePicker}
-              className="shrink-0 min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-vault-500 hover:text-vault-800 dark:hover:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800 focus:outline-none focus:ring-2 focus:ring-vault-500/50"
+              className="shrink-0 min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-hover focus:outline-none focus:ring-2 focus:ring-accent/50"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -107,14 +107,14 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
                 onSelect('');
                 closePicker();
               }}
-              className={`w-full min-h-12 px-4 sm:px-5 py-3 text-left transition-colors active:bg-vault-100 dark:active:bg-vault-800 ${
+              className={`w-full min-h-12 px-4 sm:px-5 py-3 text-left transition-colors active:bg-hover ${
                 !selectedProvider
-                  ? 'bg-vault-100 dark:bg-vault-800 text-vault-900 dark:text-vault-100'
-                  : 'text-vault-700 dark:text-vault-300'
+                  ? 'bg-muted text-fg'
+                  : 'text-fg-muted'
               }`}
             >
               <div className="font-medium text-base sm:text-sm">Platform default</div>
-              <div className="text-xs text-vault-500 mt-0.5">
+              <div className="text-xs text-fg-muted mt-0.5">
                 Let NanoGPT select the best provider
               </div>
             </button>
@@ -134,10 +134,10 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
                   title={isUnavailable ? 'This provider is currently unavailable' : undefined}
                   className={`w-full min-h-12 px-4 sm:px-5 py-3 text-left transition-colors ${
                     isUnavailable
-                      ? 'text-vault-400 dark:text-vault-500 cursor-not-allowed opacity-70'
+                      ? 'text-fg-subtle cursor-not-allowed opacity-70'
                       : selected
-                        ? 'bg-vault-100 dark:bg-vault-800 text-vault-900 dark:text-vault-100'
-                        : 'text-vault-700 dark:text-vault-300 active:bg-vault-100 dark:active:bg-vault-800'
+                        ? 'bg-muted text-fg'
+                        : 'text-fg-muted active:bg-hover'
                   }`}
                 >
                   <div className="font-medium text-base sm:text-sm break-words">
@@ -148,7 +148,7 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-vault-500 mt-0.5">
+                  <div className="text-xs text-fg-muted mt-0.5">
                     In: {formatPrice(provider.pricing.inputPer1kTokens)}/1k · Out:{' '}
                     {formatPrice(provider.pricing.outputPer1kTokens)}/1k
                   </div>
@@ -163,8 +163,8 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="flex items-center gap-2 text-sm font-semibold text-vault-800 dark:text-vault-200">
-        <span className="p-1.5 rounded-md bg-vault-100 dark:bg-vault-800 text-vault-600 dark:text-vault-400">
+      <label className="flex items-center gap-2 text-sm font-semibold text-fg">
+        <span className="p-1.5 rounded-md bg-muted text-fg-muted">
           <Zap className="w-4 h-4" />
         </span>
         Provider
@@ -175,29 +175,29 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
         disabled={disabled || isLoading}
         className={`${fieldClass} text-left flex items-center justify-between gap-2 ${
           disabled || isLoading
-            ? 'bg-vault-100 dark:bg-vault-800 text-vault-400 cursor-not-allowed border-vault-200 dark:border-vault-700'
-            : 'hover:border-vault-400 dark:hover:border-vault-500'
+            ? 'bg-muted text-fg-subtle cursor-not-allowed border-border'
+            : 'hover:border-border-strong'
         }`}
       >
         <span className="flex items-center gap-2 min-w-0 flex-wrap">
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-              <span className="text-vault-400">Loading providers…</span>
+              <span className="text-fg-subtle">Loading providers…</span>
             </>
           ) : selectedProvider ? (
             <>
               <span className="font-medium truncate">{selectedProvider}</span>
-              <span className="text-vault-500 text-xs">
+              <span className="text-fg-muted text-xs">
                 (In: {formatPrice(selectedProviderInfo?.pricing.inputPer1kTokens ?? 0)}/1k, Out:{' '}
                 {formatPrice(selectedProviderInfo?.pricing.outputPer1kTokens ?? 0)}/1k)
               </span>
             </>
           ) : (
-            <span className="text-vault-400">Platform default (auto-selected)</span>
+            <span className="text-fg-subtle">Platform default (auto-selected)</span>
           )}
         </span>
-        <ChevronDown className="w-4 h-4 text-vault-400 shrink-0" />
+        <ChevronDown className="w-4 h-4 text-fg-subtle shrink-0" />
       </button>
       {picker}
     </div>

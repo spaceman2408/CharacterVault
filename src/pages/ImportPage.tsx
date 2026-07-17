@@ -45,11 +45,11 @@ const IconButton: React.FC<IconButtonProps> = ({
   const baseStyle = 'p-2 rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed';
   const variants = {
     ghost:
-      'text-vault-500 hover:text-vault-900 dark:text-vault-400 dark:hover:text-vault-100 hover:bg-vault-100 dark:hover:bg-vault-800',
+      'text-fg-muted hover:text-fg hover:bg-hover',
     primary:
-      'bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 hover:opacity-90 shadow-sm',
+      'bg-inverse text-fg-inverse hover:opacity-90 shadow-sm',
     danger:
-      'text-vault-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20',
+      'text-fg-subtle hover:text-danger hover:bg-danger-soft',
   };
 
   return (
@@ -88,10 +88,10 @@ const CharacterPreviewCard: React.FC<CharacterPreviewCardProps> = ({
       : data.description || 'No description';
 
   return (
-    <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-lg overflow-hidden">
+    <div className="bg-surface rounded-2xl border border-border shadow-lg overflow-hidden">
       {/* Header with image */}
       <div className="relative">
-        <div className="aspect-3/4 w-full bg-vault-100 dark:bg-vault-800 flex items-center justify-center overflow-hidden">
+        <div className="aspect-3/4 w-full bg-muted flex items-center justify-center overflow-hidden">
           {imageSrc ? (
             <img
               src={imageSrc}
@@ -99,7 +99,7 @@ const CharacterPreviewCard: React.FC<CharacterPreviewCardProps> = ({
               className="w-full h-full object-cover object-top"
             />
           ) : (
-            <div className="flex flex-col items-center justify-center text-vault-300 dark:text-vault-700">
+            <div className="flex flex-col items-center justify-center text-fg-subtle">
               <User className="w-16 h-16 mb-2" />
               <span className="text-sm">No avatar</span>
             </div>
@@ -121,7 +121,7 @@ const CharacterPreviewCard: React.FC<CharacterPreviewCardProps> = ({
       {/* Content */}
       <div className="p-6 space-y-4">
         {/* Stats row */}
-        <div className="flex flex-wrap gap-4 text-sm text-vault-600 dark:text-vault-400">
+        <div className="flex flex-wrap gap-4 text-sm text-fg-muted">
           {lorebookCount > 0 && (
             <div className="flex items-center gap-1.5">
               <BookOpen className="w-4 h-4" />
@@ -141,34 +141,34 @@ const CharacterPreviewCard: React.FC<CharacterPreviewCardProps> = ({
         </div>
 
         {/* Description */}
-        <div className="border-t border-vault-200 dark:border-vault-800 pt-4">
-          <h3 className="text-sm font-semibold text-vault-900 dark:text-vault-100 mb-2">
+        <div className="border-t border-border pt-4">
+          <h3 className="text-sm font-semibold text-fg mb-2">
             Description
           </h3>
-          <p className="text-sm text-vault-600 dark:text-vault-400 whitespace-pre-wrap line-clamp-6">
+          <p className="text-sm text-fg-muted whitespace-pre-wrap line-clamp-6">
             {previewDescription}
           </p>
         </div>
 
         {/* Additional info */}
         {(data.personality || data.scenario) && (
-          <div className="border-t border-vault-200 dark:border-vault-800 pt-4 space-y-3">
+          <div className="border-t border-border pt-4 space-y-3">
             {data.personality && (
               <div>
-                <h3 className="text-sm font-semibold text-vault-900 dark:text-vault-100 mb-1">
+                <h3 className="text-sm font-semibold text-fg mb-1">
                   Personality
                 </h3>
-                <p className="text-sm text-vault-600 dark:text-vault-400 line-clamp-3">
+                <p className="text-sm text-fg-muted line-clamp-3">
                   {data.personality}
                 </p>
               </div>
             )}
             {data.scenario && (
               <div>
-                <h3 className="text-sm font-semibold text-vault-900 dark:text-vault-100 mb-1">
+                <h3 className="text-sm font-semibold text-fg mb-1">
                   Scenario
                 </h3>
-                <p className="text-sm text-vault-600 dark:text-vault-400 line-clamp-3">
+                <p className="text-sm text-fg-muted line-clamp-3">
                   {data.scenario}
                 </p>
               </div>
@@ -178,8 +178,8 @@ const CharacterPreviewCard: React.FC<CharacterPreviewCardProps> = ({
 
         {/* Version info */}
         {data.character_version && (
-          <div className="border-t border-vault-200 dark:border-vault-800 pt-4">
-            <span className="text-xs text-vault-500 dark:text-vault-500">
+          <div className="border-t border-border pt-4">
+            <span className="text-xs text-fg-muted">
               Version: {data.character_version}
             </span>
           </div>
@@ -219,11 +219,11 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Paste character JSON here..."
-          className="w-full h-48 p-4 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-xl text-sm font-mono resize-none focus:outline-hidden focus:ring-2 focus:ring-vault-500 dark:focus:ring-vault-400"
+          className="w-full h-48 p-4 bg-surface border border-border rounded-xl text-sm font-mono resize-none focus:outline-hidden focus:ring-2 focus:ring-accent"
           spellCheck={false}
         />
         {errorMessage && (
-          <div className="flex items-center gap-2 text-red-500 text-sm">
+          <div className="flex items-center gap-2 text-danger text-sm">
             <AlertCircle className="w-4 h-4" />
             <span>{errorMessage}</span>
           </div>
@@ -242,7 +242,7 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
                 // This can happen if permission is denied
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors"
           >
             <ClipboardPaste className="w-4 h-4" />
             Paste from Clipboard
@@ -250,7 +250,7 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
           <button
             type="submit"
             disabled={!text.trim()}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-vault-900 dark:bg-vault-700 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-inverse text-fg-inverse rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             <Upload className="w-4 h-4" />
             Load Preview
@@ -281,15 +281,15 @@ export const ImportPage: React.FC = () => {
   const isSillyTavernSource = source === 'st';
 
   return (
-    <div className="h-dvh flex flex-col bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 overflow-hidden">
+    <div className="h-dvh flex flex-col bg-bg text-fg overflow-hidden">
       {/* Header */}
-      <header className="shrink-0 w-full backdrop-blur-xl bg-white/80 dark:bg-vault-950/80 border-b border-vault-200 dark:border-vault-800">
+      <header className="shrink-0 w-full backdrop-blur-xl bg-surface/80 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <IconButton icon={ArrowLeft} onClick={goToLibrary} title="Back to Library" />
             <h1 className="text-lg font-semibold">Import Character</h1>
             {isSillyTavernSource && (
-              <span className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+              <span className="px-2 py-0.5 text-xs bg-info-soft text-info-soft-fg rounded-full">
                 SillyTavern
               </span>
             )}
@@ -303,11 +303,11 @@ export const ImportPage: React.FC = () => {
         {/* Idle / Reading State */}
         {(importState === 'idle' || importState === 'reading') && (
           <div className="flex flex-col items-center justify-center py-24 text-center animate-fade-in">
-            <div className="w-16 h-16 bg-vault-100 dark:bg-vault-900 rounded-full flex items-center justify-center mb-6">
-              <Loader2 className="w-8 h-8 text-vault-500 animate-spin" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-6">
+              <Loader2 className="w-8 h-8 text-fg-muted animate-spin" />
             </div>
             <h2 className="text-xl font-semibold mb-2">Reading clipboard...</h2>
-            <p className="text-vault-500 dark:text-vault-400 max-w-sm">
+            <p className="text-fg-muted max-w-sm">
               Attempting to read character data from your clipboard automatically.
             </p>
           </div>
@@ -316,13 +316,13 @@ export const ImportPage: React.FC = () => {
         {/* Clipboard Unavailable / Manual Paste State */}
         {importState === 'clipboard-unavailable' && (
           <div className="space-y-6 animate-fade-in">
-            <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 bg-warning-soft border border-warning/30 rounded-xl">
+              <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
               <div>
-                <h3 className="font-medium text-amber-900 dark:text-amber-100">
+                <h3 className="font-medium text-warning-soft-fg">
                   Could not read clipboard automatically
                 </h3>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1 whitespace-pre-line">
+                <p className="text-sm text-warning-soft-fg mt-1 whitespace-pre-line">
                   {errorMessage || 'Please paste the character data manually below.'}
                 </p>
               </div>
@@ -338,7 +338,7 @@ export const ImportPage: React.FC = () => {
               <h2 className="text-xl font-semibold">Character Preview</h2>
               <button
                 onClick={goToLibrary}
-                className="flex items-center gap-1.5 text-sm text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200"
+                className="flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
               >
                 <X className="w-4 h-4" />
                 Cancel
@@ -350,14 +350,14 @@ export const ImportPage: React.FC = () => {
             <div className="flex gap-3">
               <button
                 onClick={importCharacter}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 font-medium rounded-xl hover:opacity-90 transition-opacity"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-inverse text-fg-inverse font-medium rounded-xl hover:opacity-90 transition-opacity"
               >
                 <Upload className="w-4 h-4" />
                 Import Character
               </button>
               <button
                 onClick={goToLibrary}
-                className="flex items-center gap-2 px-6 py-3 border border-vault-300 dark:border-vault-700 text-vault-700 dark:text-vault-300 font-medium rounded-xl hover:bg-vault-50 dark:hover:bg-vault-900 transition-colors"
+                className="flex items-center gap-2 px-6 py-3 border border-border-strong text-fg-muted font-medium rounded-xl hover:bg-hover transition-colors"
               >
                 Cancel
               </button>
@@ -368,11 +368,11 @@ export const ImportPage: React.FC = () => {
         {/* Importing State */}
         {importState === 'importing' && (
           <div className="flex flex-col items-center justify-center py-24 text-center animate-fade-in">
-            <div className="w-16 h-16 bg-vault-100 dark:bg-vault-900 rounded-full flex items-center justify-center mb-6">
-              <Loader2 className="w-8 h-8 text-vault-500 animate-spin" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-6">
+              <Loader2 className="w-8 h-8 text-fg-muted animate-spin" />
             </div>
             <h2 className="text-xl font-semibold mb-2">Importing character...</h2>
-            <p className="text-vault-500 dark:text-vault-400">
+            <p className="text-fg-muted">
               Saving to your CharacterVault library.
             </p>
           </div>
@@ -381,12 +381,12 @@ export const ImportPage: React.FC = () => {
         {/* Success State */}
         {importState === 'success' && importedCharacter && (
           <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in">
-            <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
-              <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
+            <div className="w-20 h-20 bg-success-soft rounded-full flex items-center justify-center mb-6">
+              <CheckCircle className="w-10 h-10 text-success" />
             </div>
             <h2 className="text-2xl font-bold mb-2">Character Imported!</h2>
-            <p className="text-vault-600 dark:text-vault-400 mb-8 max-w-sm">
-              <span className="font-medium text-vault-900 dark:text-vault-100">
+            <p className="text-fg-muted mb-8 max-w-sm">
+              <span className="font-medium text-fg">
                 {importedCharacter.name}
               </span>{' '}
               has been added to your library.
@@ -394,14 +394,14 @@ export const ImportPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
               <button
                 onClick={openImportedCharacter}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 font-medium rounded-xl hover:opacity-90 transition-opacity"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-inverse text-fg-inverse font-medium rounded-xl hover:opacity-90 transition-opacity"
               >
                 <ExternalLink className="w-4 h-4" />
                 Open Character
               </button>
               <button
                 onClick={goToLibrary}
-                className="flex items-center justify-center gap-2 px-6 py-3 border border-vault-300 dark:border-vault-700 text-vault-700 dark:text-vault-300 font-medium rounded-xl hover:bg-vault-50 dark:hover:bg-vault-900 transition-colors"
+                className="flex items-center justify-center gap-2 px-6 py-3 border border-border-strong text-fg-muted font-medium rounded-xl hover:bg-hover transition-colors"
               >
                 <Library className="w-4 h-4" />
                 Back to Library
@@ -414,11 +414,11 @@ export const ImportPage: React.FC = () => {
         {importState === 'error' && (
           <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6">
-                <AlertCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
+              <div className="w-20 h-20 bg-danger-soft rounded-full flex items-center justify-center mb-6">
+                <AlertCircle className="w-10 h-10 text-danger" />
               </div>
               <h2 className="text-2xl font-bold mb-2">Import Failed</h2>
-              <p className="text-vault-600 dark:text-vault-400 mb-8 max-w-sm">
+              <p className="text-fg-muted mb-8 max-w-sm">
                 {errorMessage || 'Something went wrong while importing the character.'}
               </p>
             </div>
@@ -426,7 +426,7 @@ export const ImportPage: React.FC = () => {
             <div className="flex justify-center">
               <button
                 onClick={goToLibrary}
-                className="flex items-center gap-2 px-6 py-3 text-vault-600 dark:text-vault-400 hover:text-vault-900 dark:hover:text-vault-200 transition-colors"
+                className="flex items-center gap-2 px-6 py-3 text-fg-muted hover:text-fg transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Library

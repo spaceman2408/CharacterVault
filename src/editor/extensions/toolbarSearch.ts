@@ -192,22 +192,13 @@ function applyQueryToControls(query: SearchQuery, controls: SearchPanelControls)
   controls.regexpCb.checked = query.regexp;
 }
 
-// CSS variable helpers
-const cssVar = (name: string, fallback: string) => `var(${name}, ${fallback})`;
-
-// Check if dark mode is active
-const isDarkMode = () => {
-  if (typeof document === 'undefined') return false;
-  return document.documentElement.classList.contains('dark');
-};
-
 // Create search panel DOM
 function createSearchPanelControls(view: EditorView): SearchPanelControls {
   const dom = document.createElement('div');
   dom.className = 'cm-toolbar-search-panel';
   dom.style.cssText = `
-    background-color: ${cssVar('--ai-toolbar-bg', '#ffffff')};
-    border-bottom: 1px solid ${cssVar('--ai-toolbar-border', '#e5e7eb')};
+    background-color: var(--ai-toolbar-bg);
+    border-bottom: 1px solid var(--ai-toolbar-border);
     padding: 8px 12px;
   `;
   dom.addEventListener('mousedown', (e) => {
@@ -250,10 +241,10 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
     flex: 1;
     padding: 6px 10px;
     font-size: 14px;
-    border: 1px solid ${cssVar('--ai-toolbar-input-border', '#d1d5db')};
+    border: 1px solid var(--ai-toolbar-input-border);
     border-radius: 6px;
-    background-color: ${cssVar('--ai-toolbar-input-bg', '#ffffff')};
-    color: ${cssVar('--ai-toolbar-text', '#374151')};
+    background-color: var(--ai-toolbar-input-bg);
+    color: var(--ai-toolbar-text);
     outline: none;
   `;
   searchRow.appendChild(searchInput);
@@ -271,23 +262,22 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
     padding: 6px 10px;
     font-size: 13px;
     font-weight: 500;
-    border: 1px solid ${cssVar('--ai-toolbar-input-border', '#d1d5db')};
+    border: 1px solid var(--ai-toolbar-input-border);
     border-radius: 6px;
     background-color: transparent;
-    color: ${cssVar('--ai-toolbar-text-secondary', '#6b7280')};
+    color: var(--ai-toolbar-text-secondary);
     cursor: pointer;
     transition: all 0.15s ease;
   `;
   prevBtn.addEventListener('mouseenter', () => {
-    const isDark = isDarkMode();
-    prevBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
-    prevBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
-    prevBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+    prevBtn.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
+    prevBtn.style.borderColor = 'var(--ai-toolbar-active)';
+    prevBtn.style.color = 'var(--ai-toolbar-active)';
   });
   prevBtn.addEventListener('mouseleave', () => {
     prevBtn.style.backgroundColor = 'transparent';
-    prevBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
-    prevBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+    prevBtn.style.borderColor = 'var(--ai-toolbar-input-border)';
+    prevBtn.style.color = 'var(--ai-toolbar-text-secondary)';
   });
   searchRow.appendChild(prevBtn);
 
@@ -299,15 +289,14 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   nextBtn.setAttribute('aria-label', 'Next match');
   nextBtn.style.cssText = prevBtn.style.cssText;
   nextBtn.addEventListener('mouseenter', () => {
-    const isDark = isDarkMode();
-    nextBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
-    nextBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
-    nextBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+    nextBtn.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
+    nextBtn.style.borderColor = 'var(--ai-toolbar-active)';
+    nextBtn.style.color = 'var(--ai-toolbar-active)';
   });
   nextBtn.addEventListener('mouseleave', () => {
     nextBtn.style.backgroundColor = 'transparent';
-    nextBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
-    nextBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+    nextBtn.style.borderColor = 'var(--ai-toolbar-input-border)';
+    nextBtn.style.color = 'var(--ai-toolbar-text-secondary)';
   });
   searchRow.appendChild(nextBtn);
 
@@ -316,7 +305,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   countEl.style.cssText = `
     font-size: 12px;
     font-weight: 500;
-    color: ${cssVar('--ai-toolbar-text-muted', '#9ca3af')};
+    color: var(--ai-toolbar-text-muted);
     padding: 0 6px;
   `;
   searchRow.appendChild(countEl);
@@ -337,8 +326,8 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
       padding: 4px 8px;
       font-size: 12px;
       font-weight: 500;
-      color: ${cssVar('--ai-toolbar-text-secondary', '#6b7280')};
-      border: 1px solid ${cssVar('--ai-toolbar-input-border', '#d1d5db')};
+      color: var(--ai-toolbar-text-secondary);
+      border: 1px solid var(--ai-toolbar-input-border);
       border-radius: 4px;
       cursor: pointer;
       user-select: none;
@@ -357,19 +346,17 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
 
     // Update label appearance when checkbox is toggled
     const updateCheckedState = () => {
-      const isDark = isDarkMode();
       const isChecked = input.checked;
       if (isChecked) {
-        // Checked state: stronger accent color
-        label.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.2)' : 'rgba(124, 58, 237, 0.2)';
-        label.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
-        label.style.color = isDark ? '#22d3ee' : '#7c3aed';
+        label.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
+        label.style.borderColor = 'var(--ai-toolbar-active)';
+        label.style.color = 'var(--ai-toolbar-active)';
         label.style.fontWeight = '700';
       } else {
         // Unchecked state: reset to default
         label.style.backgroundColor = 'transparent';
-        label.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
-        label.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+        label.style.borderColor = 'var(--ai-toolbar-input-border)';
+        label.style.color = 'var(--ai-toolbar-text-secondary)';
         label.style.fontWeight = '500';
       }
     };
@@ -377,16 +364,15 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
 
     // Override mouseenter/mouseleave to respect checked state
     label.addEventListener('mouseenter', () => {
-      const isDark = isDarkMode();
       const isChecked = input.checked;
       if (isChecked) {
-        // Checked + hover: even stronger
-        label.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.3)' : 'rgba(124, 58, 237, 0.3)';
+        label.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
+        label.style.borderColor = 'var(--ai-toolbar-active)';
+        label.style.color = 'var(--ai-toolbar-active)';
       } else {
-        // Unchecked + hover: subtle accent
-        label.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
-        label.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
-        label.style.color = isDark ? '#22d3ee' : '#7c3aed';
+        label.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
+        label.style.borderColor = 'var(--ai-toolbar-active)';
+        label.style.color = 'var(--ai-toolbar-active)';
       }
     });
     label.addEventListener('mouseleave', () => {
@@ -419,23 +405,22 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
     height: 28px;
     font-size: 18px;
     font-weight: 600;
-    border: 1px solid ${cssVar('--ai-toolbar-input-border', '#d1d5db')};
+    border: 1px solid var(--ai-toolbar-input-border);
     border-radius: 6px;
     background-color: transparent;
-    color: ${cssVar('--ai-toolbar-text-secondary', '#6b7280')};
+    color: var(--ai-toolbar-text-secondary);
     cursor: pointer;
     transition: all 0.15s ease;
   `;
   closeBtn.addEventListener('mouseenter', () => {
-    const isDark = isDarkMode();
-    closeBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
-    closeBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
-    closeBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+    closeBtn.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
+    closeBtn.style.borderColor = 'var(--ai-toolbar-active)';
+    closeBtn.style.color = 'var(--ai-toolbar-active)';
   });
   closeBtn.addEventListener('mouseleave', () => {
     closeBtn.style.backgroundColor = 'transparent';
-    closeBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
-    closeBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+    closeBtn.style.borderColor = 'var(--ai-toolbar-input-border)';
+    closeBtn.style.color = 'var(--ai-toolbar-text-secondary)';
   });
   searchRow.appendChild(closeBtn);
 
@@ -454,15 +439,14 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   replaceBtn.setAttribute('aria-label', 'Replace current match');
   replaceBtn.style.cssText = prevBtn.style.cssText;
   replaceBtn.addEventListener('mouseenter', () => {
-    const isDark = isDarkMode();
-    replaceBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
-    replaceBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
-    replaceBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+    replaceBtn.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
+    replaceBtn.style.borderColor = 'var(--ai-toolbar-active)';
+    replaceBtn.style.color = 'var(--ai-toolbar-active)';
   });
   replaceBtn.addEventListener('mouseleave', () => {
     replaceBtn.style.backgroundColor = 'transparent';
-    replaceBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
-    replaceBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+    replaceBtn.style.borderColor = 'var(--ai-toolbar-input-border)';
+    replaceBtn.style.color = 'var(--ai-toolbar-text-secondary)';
   });
   replaceRow.appendChild(replaceBtn);
 
@@ -474,15 +458,14 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   replaceAllBtn.setAttribute('aria-label', 'Replace all matches');
   replaceAllBtn.style.cssText = prevBtn.style.cssText;
   replaceAllBtn.addEventListener('mouseenter', () => {
-    const isDark = isDarkMode();
-    replaceAllBtn.style.backgroundColor = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
-    replaceAllBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
-    replaceAllBtn.style.color = isDark ? '#22d3ee' : '#7c3aed';
+    replaceAllBtn.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
+    replaceAllBtn.style.borderColor = 'var(--ai-toolbar-active)';
+    replaceAllBtn.style.color = 'var(--ai-toolbar-active)';
   });
   replaceAllBtn.addEventListener('mouseleave', () => {
     replaceAllBtn.style.backgroundColor = 'transparent';
-    replaceAllBtn.style.borderColor = cssVar('--ai-toolbar-input-border', '#d1d5db');
-    replaceAllBtn.style.color = cssVar('--ai-toolbar-text-secondary', '#6b7280');
+    replaceAllBtn.style.borderColor = 'var(--ai-toolbar-input-border)';
+    replaceAllBtn.style.color = 'var(--ai-toolbar-text-secondary)';
   });
   replaceRow.appendChild(replaceAllBtn);
 
@@ -646,20 +629,20 @@ export function toolbarSearchTheme() {
     '& .cm-search': { display: 'none !important' },
     '& .cm-panels.cm-panels-bottom': { display: 'none !important' },
     '& .cm-searchMatch': {
-      backgroundColor: 'var(--vault-search-match-bg, rgba(253, 224, 71, 0.4))',
+      backgroundColor: 'var(--vault-search-match-bg))',
       borderRadius: '2px',
       boxShadow: 'inset 0 -1px 0 rgba(146, 64, 14, 0.2)',
     },
     '& .cm-searchMatch-selected': {
-      backgroundColor: 'var(--vault-search-match-selected, rgba(253, 224, 71, 0.8))',
+      backgroundColor: 'var(--vault-search-match-selected))',
       borderRadius: '2px',
-      outline: '1px solid var(--vault-search-match-selected-ring, rgba(180, 83, 9, 0.65))',
-      boxShadow: '0 0 0 1px var(--vault-search-match-selected-ring, rgba(180, 83, 9, 0.65))',
+      outline: '1px solid var(--vault-search-match-selected-ring))',
+      boxShadow: '0 0 0 1px var(--vault-search-match-selected-ring))',
     },
     // Toolbar search panel styling - matches aA button/popup theme
     '& .cm-toolbar-search-panel': {
-      backgroundColor: 'var(--ai-toolbar-bg, #ffffff)',
-      borderBottom: '1px solid var(--ai-toolbar-border, #e5e7eb)',
+      backgroundColor: 'var(--ai-toolbar-bg)',
+      borderBottom: '1px solid var(--ai-toolbar-border)',
       padding: '8px 12px',
     },
     '& .cm-toolbar-search-panel .search-container': {
@@ -676,14 +659,14 @@ export function toolbarSearchTheme() {
       flex: '1',
       padding: '6px 10px',
       fontSize: '14px',
-      border: '1px solid var(--ai-toolbar-input-border, #d1d5db)',
+      border: '1px solid var(--ai-toolbar-input-border)',
       borderRadius: '6px',
-      backgroundColor: 'var(--ai-toolbar-input-bg, #ffffff)',
-      color: 'var(--ai-toolbar-text, #374151)',
+      backgroundColor: 'var(--ai-toolbar-input-bg)',
+      color: 'var(--ai-toolbar-text)',
       outline: 'none',
     },
     '& .cm-toolbar-search-panel .search-input:focus, & .cm-toolbar-search-panel .replace-input:focus': {
-      borderColor: 'var(--ai-toolbar-accent-primary, #7c3aed)',
+      borderColor: 'var(--ai-toolbar-accent-primary)',
       boxShadow: '0 0 0 3px rgba(124, 58, 237, 0.1)',
     },
     '& .cm-toolbar-search-panel .search-btn': {
@@ -693,17 +676,17 @@ export function toolbarSearchTheme() {
       padding: '6px 10px',
       fontSize: '13px',
       fontWeight: '500',
-      border: '1px solid var(--ai-toolbar-input-border, #d1d5db)',
+      border: '1px solid var(--ai-toolbar-input-border)',
       borderRadius: '6px',
       backgroundColor: 'transparent',
-      color: 'var(--ai-toolbar-text-secondary, #6b7280)',
+      color: 'var(--ai-toolbar-text-secondary)',
       cursor: 'pointer',
       transition: 'all 0.15s ease',
     },
     '& .cm-toolbar-search-panel .search-btn:hover': {
-      backgroundColor: 'var(--ai-toolbar-hover-bg, rgba(124, 58, 237, 0.1))',
-      borderColor: 'var(--ai-toolbar-accent-primary, #7c3aed)',
-      color: 'var(--ai-toolbar-accent-primary, #7c3aed)',
+      backgroundColor: 'var(--ai-toolbar-hover-bg))',
+      borderColor: 'var(--ai-toolbar-accent-primary)',
+      color: 'var(--ai-toolbar-accent-primary)',
     },
     '& .cm-toolbar-search-panel .search-btn.close': {
       fontWeight: '600',
@@ -715,23 +698,23 @@ export function toolbarSearchTheme() {
       padding: '4px 8px',
       fontSize: '12px',
       fontWeight: '500',
-      color: 'var(--ai-toolbar-text-secondary, #6b7280)',
-      border: '1px solid var(--ai-toolbar-input-border, #d1d5db)',
+      color: 'var(--ai-toolbar-text-secondary)',
+      border: '1px solid var(--ai-toolbar-input-border)',
       borderRadius: '4px',
       cursor: 'pointer',
       userSelect: 'none',
     },
     '& .cm-toolbar-search-panel .search-option:hover': {
-      backgroundColor: 'var(--ai-toolbar-hover-bg, rgba(124, 58, 237, 0.1))',
-      borderColor: 'var(--ai-toolbar-accent-primary, #7c3aed)',
+      backgroundColor: 'var(--ai-toolbar-hover-bg))',
+      borderColor: 'var(--ai-toolbar-accent-primary)',
     },
     '& .cm-toolbar-search-panel .search-option input[type="checkbox"]': {
-      accentColor: 'var(--ai-toolbar-accent-primary, #7c3aed)',
+      accentColor: 'var(--ai-toolbar-accent-primary)',
     },
     '& .cm-toolbar-search-panel .search-match-count': {
       fontSize: '12px',
       fontWeight: '500',
-      color: 'var(--ai-toolbar-text-muted, #9ca3af)',
+      color: 'var(--ai-toolbar-text-muted)',
       padding: '0 6px',
     },
   });

@@ -127,8 +127,8 @@ function createFontSizePopup(
     position: absolute;
     top: calc(100% + 4px);
     ${isMobile ? 'left: 50%; transform: translateX(-50%);' : 'right: 0;'}
-    background: var(--ai-toolbar-bg, #ffffff);
-    border: 1px solid var(--ai-toolbar-border, #e5e7eb);
+    background: var(--ai-toolbar-bg);
+    border: 1px solid var(--ai-toolbar-border);
     border-radius: 8px;
     padding: ${isMobile ? '16px' : '12px 16px'};
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -147,7 +147,7 @@ function createFontSizePopup(
     justify-content: space-between;
     align-items: center;
     font-size: 13px;
-    color: var(--ai-toolbar-text, #374151);
+    color: var(--ai-toolbar-text);
   `;
 
   const label = document.createElement('span');
@@ -158,7 +158,7 @@ function createFontSizePopup(
   valueDisplay.style.cssText = `
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 12px;
-    color: var(--ai-toolbar-text-secondary, #6b7280);
+    color: var(--ai-toolbar-text-secondary);
   `;
 
   header.appendChild(label);
@@ -178,7 +178,7 @@ function createFontSizePopup(
   minLabel.textContent = `${MIN_FONT_SIZE}`;
   minLabel.style.cssText = `
     font-size: 11px;
-    color: var(--ai-toolbar-text-muted, #9ca3af);
+    color: var(--ai-toolbar-text-muted);
     min-width: 16px;
     text-align: center;
   `;
@@ -193,7 +193,7 @@ function createFontSizePopup(
     flex: 1;
     height: ${isMobile ? '8px' : '4px'};
     cursor: pointer;
-    accent-color: var(--ai-toolbar-accent-primary, #7c3aed);
+    accent-color: var(--ai-toolbar-accent-primary);
     min-height: ${isMobile ? '44px' : 'auto'};
     touch-action: manipulation;
   `;
@@ -203,7 +203,7 @@ function createFontSizePopup(
   maxLabel.textContent = `${MAX_FONT_SIZE}`;
   maxLabel.style.cssText = `
     font-size: 11px;
-    color: var(--ai-toolbar-text-muted, #9ca3af);
+    color: var(--ai-toolbar-text-muted);
     min-width: 20px;
     text-align: center;
   `;
@@ -246,12 +246,6 @@ function createFontSizePopup(
 
   return container;
 }
-
-// Check if dark mode is active
-const isDarkMode = () => {
-  if (typeof document === 'undefined') return false;
-  return document.documentElement.classList.contains('dark');
-};
 
 /**
  * Create the font size toggle button and popup for the AI toolbar
@@ -296,6 +290,7 @@ export function createFontSizeControl(
       popup = null;
       button.style.background = 'transparent';
       button.style.borderColor = 'var(--ai-toolbar-input-border)';
+      button.style.color = 'var(--ai-toolbar-text-secondary)';
     }
   };
 
@@ -312,10 +307,9 @@ export function createFontSizeControl(
     popup = createFontSizePopup(view, onFontSizeChange, closePopup);
     container.appendChild(popup);
 
-    // Highlight active button - cyan for dark mode, purple for light mode
-    const isDark = isDarkMode();
-    button.style.background = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
-    button.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+    button.style.background = 'var(--ai-toolbar-active-bg)';
+    button.style.borderColor = 'var(--ai-toolbar-active)';
+    button.style.color = 'var(--ai-toolbar-active)';
   };
 
   button.addEventListener('click', togglePopup);
@@ -363,12 +357,8 @@ export function fontSizeExtension(initialSize?: number) {
 export function fontSizeControlTheme() {
   return EditorView.baseTheme({
     '.cm-font-size-popup': {
-      backgroundColor: 'var(--ai-toolbar-bg, #ffffff)',
-      borderColor: 'var(--ai-toolbar-border, #e5e7eb)',
-    },
-    '&dark .cm-font-size-popup': {
-      backgroundColor: 'var(--ai-toolbar-bg, #1f2937)',
-      borderColor: 'var(--ai-toolbar-border, #374151)',
+      backgroundColor: 'var(--ai-toolbar-bg)',
+      borderColor: 'var(--ai-toolbar-border)',
     },
   });
 }

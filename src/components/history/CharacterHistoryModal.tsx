@@ -421,12 +421,12 @@ function isSectionCollapsedByDefault(section: SnapshotDiffEntry['section'], acti
 
 function SnapshotSourceBadge({ source }: { source: SnapshotMetadata['source'] }): React.ReactElement {
   const toneClassName = source === 'manual'
-    ? 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200'
+    ? 'bg-info-soft text-info-soft-fg'
     : source === 'rollback'
-      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200'
+      ? 'bg-warning-soft text-warning-soft-fg'
       : source === 'open'
-        ? 'bg-vault-200 text-vault-700 dark:bg-vault-800 dark:text-vault-200'
-        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200';
+        ? 'bg-muted text-fg'
+        : 'bg-success-soft text-success-soft-fg';
 
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${toneClassName}`}>
@@ -453,10 +453,10 @@ function HighlightedText({
       {lines.length > 0 ? lines.map((line) => (
         <div
           key={line.key}
-          className={`min-w-0 rounded px-1.5 py-0.5 text-vault-700 dark:text-vault-200 ${
+          className={`min-w-0 rounded px-1.5 py-0.5 text-fg ${
             textClassName
           } ${
-            line.changed ? 'bg-vault-100/80 dark:bg-vault-800/60' : ''
+            line.changed ? 'bg-muted/80 bg-muted' : ''
           }`}
         >
           {line.segments.length > 0 ? line.segments.map((segment, segmentIndex) => (
@@ -473,7 +473,7 @@ function HighlightedText({
           )}
         </div>
       )) : (
-        <div className="rounded px-2 py-1 text-sm text-vault-400 dark:text-vault-500">Empty</div>
+        <div className="rounded px-2 py-1 text-sm text-fg-subtle">Empty</div>
       )}
     </div>
   );
@@ -500,7 +500,7 @@ function HunkedHighlightedText({
           return (
             <div
               key={item.gap.key}
-              className="rounded border border-dashed border-vault-200 bg-vault-100/60 px-2 py-1 text-[11px] font-medium text-vault-500 dark:border-vault-700 dark:bg-vault-800/50 dark:text-vault-400"
+              className="rounded border border-dashed border-border bg-muted/60 px-2 py-1 text-[11px] font-medium text-fg-muted border-border bg-muted text-fg-muted"
             >
               {item.gap.hiddenLineCount} unchanged {item.gap.hiddenLineCount === 1 ? 'line' : 'lines'} hidden
             </div>
@@ -511,8 +511,8 @@ function HunkedHighlightedText({
         return (
           <div
             key={line.key}
-            className={`min-w-0 rounded px-1.5 py-0.5 font-mono text-[12px] leading-5 whitespace-pre-wrap break-all wrap-anywhere text-vault-700 dark:text-vault-200 ${
-              line.changed ? 'bg-vault-100/80 dark:bg-vault-800/60' : ''
+            className={`min-w-0 rounded px-1.5 py-0.5 font-mono text-[12px] leading-5 whitespace-pre-wrap break-all wrap-anywhere text-fg ${
+              line.changed ? 'bg-muted/80 bg-muted' : ''
             }`}
           >
             {line.segments.length > 0 ? line.segments.map((segment, segmentIndex) => (
@@ -530,7 +530,7 @@ function HunkedHighlightedText({
           </div>
         );
       }) : (
-        <div className="rounded px-2 py-1 text-sm text-vault-400 dark:text-vault-500">Empty</div>
+        <div className="rounded px-2 py-1 text-sm text-fg-subtle">Empty</div>
       )}
     </div>
   );
@@ -545,12 +545,12 @@ function ImagePreviewCard({
 }): React.ReactElement {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">{heading}</p>
-      <div className="flex min-h-32 items-center justify-center rounded-lg border border-vault-200 bg-vault-50 p-2 dark:border-vault-800 dark:bg-vault-900/60">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">{heading}</p>
+      <div className="flex min-h-32 items-center justify-center rounded-lg border border-border bg-muted p-2 border-border bg-surface">
         {typeof value === 'string' && value ? (
           <img src={value} alt={heading} className="max-h-40 rounded object-contain" />
         ) : (
-          <span className="text-sm text-vault-500 dark:text-vault-400">No image</span>
+          <span className="text-sm text-fg-muted">No image</span>
         )}
       </div>
     </div>
@@ -577,13 +577,13 @@ function SyncedDiffView({
 
   if (isSnapshotMissing && hasAttemptedLoad) {
     return (
-      <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
+      <div className="max-h-96 overflow-y-auto rounded border border-border bg-muted/70 border-border bg-muted">
         <div className="p-6 text-center">
-          <div className="rounded-xl bg-amber-100 p-3 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+          <div className="rounded-xl bg-warning-soft p-3 text-warning-soft-fg">
             <ShieldAlert className="mx-auto h-6 w-6" />
           </div>
-          <h4 className="mt-3 text-sm font-semibold text-vault-900 dark:text-vault-100">Snapshot data unavailable</h4>
-          <p className="mt-1 text-xs text-vault-500 dark:text-vault-400">
+          <h4 className="mt-3 text-sm font-semibold text-fg">Snapshot data unavailable</h4>
+          <p className="mt-1 text-xs text-fg-muted">
             This revision's snapshot could not be loaded. It may have been corrupted or failed to save properly.
           </p>
         </div>
@@ -592,17 +592,17 @@ function SyncedDiffView({
   }
 
   return (
-    <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
+    <div className="max-h-96 overflow-y-auto rounded border border-border bg-muted/70 border-border bg-muted">
       <div className="grid min-w-0 lg:grid-cols-2">
         {/* Revision snapshot */}
-        <div className="min-w-0 border-b border-vault-200 p-3 dark:border-vault-800 lg:border-b-0 lg:border-r">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+        <div className="min-w-0 border-b border-border p-3 border-border lg:border-b-0 lg:border-r">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
             Revision snapshot · {changedLineCountLeft} {changedLineCountLeft === 1 ? 'line' : 'lines'} changed
           </p>
-          <div className="space-y-1 overflow-x-auto rounded bg-white/50 p-2 dark:bg-vault-950/50">
+          <div className="space-y-1 overflow-x-auto rounded bg-surface/50 p-2 bg-bg/50">
             <HighlightedText
               lines={snapshotLines}
-              changedToneClassName="bg-amber-200/80 text-amber-950 dark:bg-amber-700/40 dark:text-amber-50"
+              changedToneClassName="bg-warning-soft text-warning-soft-fg"
               isCode={isCode}
             />
           </div>
@@ -610,13 +610,13 @@ function SyncedDiffView({
 
         {/* Current draft */}
         <div className="min-w-0 p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
             Current draft · {changedLineCountRight} {changedLineCountRight === 1 ? 'line' : 'lines'} changed
           </p>
-          <div className="space-y-1 overflow-x-auto rounded bg-white/50 p-2 dark:bg-vault-950/50">
+          <div className="space-y-1 overflow-x-auto rounded bg-surface/50 p-2 bg-bg/50">
             <HighlightedText
               lines={currentLines}
-              changedToneClassName="bg-emerald-200/80 text-emerald-950 dark:bg-emerald-700/40 dark:text-emerald-50"
+              changedToneClassName="bg-success-soft text-success-soft-fg"
               isCode={isCode}
             />
           </div>
@@ -663,22 +663,22 @@ function CreatorNotesDiffView({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-vault-900 dark:text-vault-100">Creator Notes diff</p>
-          <p className="text-xs text-vault-500 dark:text-vault-400">
+          <p className="text-sm font-medium text-fg">Creator Notes diff</p>
+          <p className="text-xs text-fg-muted">
             {hasCssDiffView
               ? 'Changed CSS is shown with nearby context so large style blocks stay readable.'
               : 'No embedded CSS blocks were found, so the full document diff is shown.'}
           </p>
         </div>
-        <div className="inline-flex rounded-lg border border-vault-200 bg-white p-1 dark:border-vault-800 dark:bg-vault-900">
+        <div className="inline-flex rounded-lg border border-border bg-surface p-1 border-border bg-surface">
           {hasCssDiffView ? (
             <button
               type="button"
               onClick={() => setViewMode('css')}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 resolvedViewMode === 'css'
-                  ? 'bg-vault-900 text-white dark:bg-vault-100 dark:text-vault-900'
-                  : 'text-vault-600 hover:bg-vault-100 dark:text-vault-300 dark:hover:bg-vault-800'
+                  ? 'bg-inverse text-fg-inverse'
+                  : 'text-fg-muted hover:bg-hover text-fg-muted hover:bg-hover'
               }`}
             >
               Changed CSS
@@ -689,8 +689,8 @@ function CreatorNotesDiffView({
             onClick={() => setViewMode('full')}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               resolvedViewMode === 'full'
-                ? 'bg-vault-900 text-white dark:bg-vault-100 dark:text-vault-900'
-                : 'text-vault-600 hover:bg-vault-100 dark:text-vault-300 dark:hover:bg-vault-800'
+                ? 'bg-inverse text-fg-inverse'
+                : 'text-fg-muted hover:bg-hover text-fg-muted hover:bg-hover'
             }`}
           >
             Full document
@@ -699,28 +699,28 @@ function CreatorNotesDiffView({
       </div>
 
       {resolvedViewMode === 'css' && hasCssDiffView ? (
-        <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
+        <div className="max-h-96 overflow-y-auto rounded border border-border bg-muted/70 border-border bg-muted">
           <div className="grid min-w-0 lg:grid-cols-2">
-            <div className="min-w-0 border-b border-vault-200 p-3 dark:border-vault-800 lg:border-b-0 lg:border-r">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+            <div className="min-w-0 border-b border-border p-3 border-border lg:border-b-0 lg:border-r">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
                 Revision Snapshot · {changedCssLineCountLeft} {changedCssLineCountLeft === 1 ? 'line' : 'lines'} changed
               </p>
-              <div className="space-y-1 overflow-x-auto rounded bg-white/50 p-2 dark:bg-vault-950/50">
+              <div className="space-y-1 overflow-x-auto rounded bg-surface/50 p-2 bg-bg/50">
                 <HunkedHighlightedText
                   lines={snapshotCssLines}
-                  changedToneClassName="bg-amber-200/80 text-amber-950 dark:bg-amber-700/40 dark:text-amber-50"
+                  changedToneClassName="bg-warning-soft text-warning-soft-fg"
                 />
               </div>
             </div>
 
             <div className="min-w-0 p-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
                 Current CSS · {changedCssLineCountRight} {changedCssLineCountRight === 1 ? 'line' : 'lines'} changed
               </p>
-              <div className="space-y-1 overflow-x-auto rounded bg-white/50 p-2 dark:bg-vault-950/50">
+              <div className="space-y-1 overflow-x-auto rounded bg-surface/50 p-2 bg-bg/50">
                 <HunkedHighlightedText
                   lines={currentCssLines}
-                  changedToneClassName="bg-emerald-200/80 text-emerald-950 dark:bg-emerald-700/40 dark:text-emerald-50"
+                  changedToneClassName="bg-success-soft text-success-soft-fg"
                 />
               </div>
             </div>
@@ -754,30 +754,30 @@ function LorebookDiffView({
   const changedLineCountRight = useMemo(() => currentLines.filter(line => line.changed).length, [currentLines]);
 
   return (
-    <div className="max-h-96 overflow-y-auto rounded border border-vault-200 bg-vault-50/70 dark:border-vault-800 dark:bg-vault-900/40">
+    <div className="max-h-96 overflow-y-auto rounded border border-border bg-muted/70 border-border bg-muted">
       <div className="grid lg:grid-cols-2">
         {/* Revision snapshot */}
-        <div className="border-b border-vault-200 p-3 dark:border-vault-800 lg:border-b-0 lg:border-r">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+        <div className="border-b border-border p-3 border-border lg:border-b-0 lg:border-r">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
             Revision snapshot · {changedLineCountLeft} {changedLineCountLeft === 1 ? 'line' : 'lines'} changed
           </p>
-          <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
+          <div className="space-y-1 rounded bg-surface/50 p-2 bg-bg/50">
             <HighlightedText
               lines={snapshotLines}
-              changedToneClassName="bg-amber-200/80 text-amber-950 dark:bg-amber-700/40 dark:text-amber-50"
+              changedToneClassName="bg-warning-soft text-warning-soft-fg"
             />
           </div>
         </div>
 
         {/* Current draft */}
         <div className="p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
             Current draft · {changedLineCountRight} {changedLineCountRight === 1 ? 'line' : 'lines'} changed
           </p>
-          <div className="space-y-1 rounded bg-white/50 p-2 dark:bg-vault-950/50">
+          <div className="space-y-1 rounded bg-surface/50 p-2 bg-bg/50">
             <HighlightedText
               lines={currentLines}
-              changedToneClassName="bg-emerald-200/80 text-emerald-950 dark:bg-emerald-700/40 dark:text-emerald-50"
+              changedToneClassName="bg-success-soft text-success-soft-fg"
             />
           </div>
         </div>
@@ -868,7 +868,7 @@ function ConfirmationDialog({
       title: 'Remove this revision?',
       description: 'This removes the saved revision from local history. Your current draft will not change.',
       confirmLabel: 'Delete revision',
-      confirmClassName: 'bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-400',
+      confirmClassName: 'bg-danger text-white hover:opacity-90',
     }
     : action.kind === 'restore-whole'
       ? {
@@ -876,7 +876,7 @@ function ConfirmationDialog({
         title: 'Restore the full card from this revision?',
         description: `Your current draft will be replaced with the "${formatSnapshotLabel(action.metadata.source)}" revision from ${new Date(action.metadata.createdAt).toLocaleString()}. A rollback snapshot will still be created automatically.`,
         confirmLabel: 'Restore card',
-        confirmClassName: 'bg-vault-900 text-white hover:bg-black dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white',
+        confirmClassName: 'bg-inverse text-fg-inverse hover:opacity-90',
       }
       : action.kind === 'restore-section'
         ? {
@@ -884,27 +884,27 @@ function ConfirmationDialog({
           title: `Restore ${action.entry.label}?`,
           description: `Only this section will be restored from the "${formatSnapshotLabel(action.metadata.source)}" revision. Other sections remain unchanged.`,
           confirmLabel: 'Restore section',
-          confirmClassName: 'bg-vault-900 text-white hover:bg-black dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white',
+          confirmClassName: 'bg-inverse text-fg-inverse hover:opacity-90',
         }
         : {
           eyebrow: 'Update base card',
           title: 'Overwrite the base card snapshot?',
           description: `This replaces the "Opened card" baseline revision with your current draft. The original baseline will be overwritten and cannot be recovered.`,
           confirmLabel: 'Overwrite base card',
-          confirmClassName: 'bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400',
+          confirmClassName: 'bg-warning text-white hover:opacity-90',
         };
 
   return (
     <div className="absolute inset-0 z-20 flex items-end justify-center bg-black/45 p-3 backdrop-blur-sm sm:items-center sm:p-6">
-      <div className="w-full max-w-md rounded-2xl border border-vault-200 bg-white p-5 shadow-2xl dark:border-vault-800 dark:bg-vault-900">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-2xl border-border bg-surface">
         <div className="mb-4 flex items-start gap-3">
-          <div className="rounded-xl bg-vault-100 p-2.5 text-vault-700 dark:bg-vault-800 dark:text-vault-100">
+          <div className="rounded-xl bg-muted p-2.5 text-fg-muted bg-muted text-fg">
             <ShieldAlert className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">{config.eyebrow}</p>
-            <h4 className="mt-1 text-lg font-semibold text-vault-950 dark:text-vault-50">{config.title}</h4>
-            <p className="mt-2 text-sm leading-6 text-vault-600 dark:text-vault-300">{config.description}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-fg-muted">{config.eyebrow}</p>
+            <h4 className="mt-1 text-lg font-semibold text-fg">{config.title}</h4>
+            <p className="mt-2 text-sm leading-6 text-fg-muted">{config.description}</p>
           </div>
         </div>
         <div className="mt-5 flex items-center justify-end gap-2">
@@ -912,7 +912,7 @@ function ConfirmationDialog({
             type="button"
             onClick={onCancel}
             disabled={isBusy}
-            className="rounded-lg border border-vault-300 px-4 py-2 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
+            className="rounded-lg border border-border-strong px-4 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50 border-border text-fg hover:bg-hover"
           >
             Cancel
           </button>
@@ -950,14 +950,14 @@ function TimelineCard({
     <div
       className={`rounded-xl border px-3 py-2.5 transition-all ${
         isSelected
-          ? 'border-vault-900 bg-white shadow-sm dark:border-vault-100 dark:bg-vault-900'
-          : 'border-vault-200 bg-white hover:border-vault-300 hover:bg-white dark:border-vault-800 dark:bg-vault-950 dark:hover:border-vault-700 dark:hover:bg-vault-900/80'
-      } ${isHighlighted ? 'ring-2 ring-emerald-300 dark:ring-emerald-700' : ''}`}
+          ? 'border-fg bg-surface shadow-sm'
+          : 'border-border bg-surface hover:border-border-strong hover:bg-hover'
+      } ${isHighlighted ? 'ring-2 ring-success/40' : ''}`}
     >
       <div className="flex items-center gap-2">
         <button type="button" onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <SnapshotSourceBadge source={metadata.source} />
-          <span className="shrink-0 text-xs text-vault-400">
+          <span className="shrink-0 text-xs text-fg-subtle">
             {new Date(metadata.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
           </span>
         </button>
@@ -965,7 +965,7 @@ function TimelineCard({
           <button
             type="button"
             onClick={onDelete}
-            className="shrink-0 rounded p-1.5 text-vault-400 transition-colors hover:bg-vault-100 hover:text-red-600 dark:hover:bg-vault-800"
+            className="shrink-0 rounded p-1.5 text-fg-subtle transition-colors hover:bg-hover hover:text-danger"
             title="Delete revision"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -1048,8 +1048,8 @@ function SnapshotSummary({
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="text-xl font-semibold text-vault-950 dark:text-vault-50">{formatSnapshotLabel(metadata.source)}</h3>
-            <p className="text-sm text-vault-500 dark:text-vault-400">{formatSnapshotDescription(metadata.source)}</p>
+          <h3 className="text-xl font-semibold text-fg">{formatSnapshotLabel(metadata.source)}</h3>
+            <p className="text-sm text-fg-muted">{formatSnapshotDescription(metadata.source)}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {isBaseline && (
@@ -1058,7 +1058,7 @@ function SnapshotSummary({
               onClick={onUpdateBaseline}
               disabled={isBusy || !canUpdateBaseline}
               title={canUpdateBaseline ? undefined : 'Accept the current draft as the new base card'}
-              className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200 dark:hover:bg-amber-900/50"
+              className="inline-flex items-center gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2 text-sm font-medium text-warning-soft-fg transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Check className="h-4 w-4" />
               Update base card
@@ -1069,7 +1069,7 @@ function SnapshotSummary({
             onClick={onRestore}
             disabled={isBusy || changedSectionCount === 0 || isSnapshotMissing}
             title={restoreDisabledReason}
-            className="inline-flex items-center gap-2 rounded-lg bg-vault-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
+            className="inline-flex items-center gap-2 rounded-lg bg-inverse px-3 py-2 text-sm font-medium text-fg-inverse transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RotateCcw className="h-4 w-4" />
             Restore card
@@ -1078,19 +1078,19 @@ function SnapshotSummary({
       </div>
 
       {isSnapshotMissing && hasAttemptedLoad && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+        <div className="rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning-soft-fg">
           <span className="font-medium">Warning:</span> This revision's snapshot data could not be loaded. It may have been corrupted or failed to save properly.
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-vault-200 pt-3 text-sm text-vault-500 dark:border-vault-800 dark:text-vault-400">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border pt-3 text-sm text-fg-muted border-border text-fg-muted">
         <span className="inline-flex items-center gap-1.5">
           <Clock3 className="h-3.5 w-3.5" />
           {new Date(metadata.createdAt).toLocaleString()}
         </span>
         <span>{changedSectionCount} {changedSectionCount === 1 ? 'section' : 'sections'} changed</span>
         {hasActiveSectionDiff && (
-          <span className="text-sky-600 dark:text-sky-400">Includes active section</span>
+          <span className="text-info">Includes active section</span>
         )}
       </div>
     </div>
@@ -1121,20 +1121,20 @@ function DiffSection({
   const isSnapshotMissing = snapshot === null;
 
   return (
-    <div className="border-t border-vault-200 pt-4 first:border-t-0 first:pt-0 dark:border-vault-800">
+    <div className="border-t border-border pt-4 first:border-t-0 first:pt-0 border-border">
       <button
         type="button"
         onClick={onToggle}
         className="flex w-full items-center gap-3 text-left"
       >
         <ChevronDown
-          className={`h-4 w-4 shrink-0 text-vault-500 transition-transform ${
+          className={`h-4 w-4 shrink-0 text-fg-muted transition-transform ${
             isCollapsed ? '-rotate-90' : 'rotate-0'
           }`}
         />
-        <span className="flex-1 text-base font-semibold text-vault-950 dark:text-vault-50">{entry.label}</span>
+        <span className="flex-1 text-base font-semibold text-fg">{entry.label}</span>
         {isActive && (
-          <span className="inline-flex shrink-0 items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800 dark:bg-sky-950/50 dark:text-sky-200">
+          <span className="inline-flex shrink-0 items-center rounded-full bg-info-soft px-2 py-0.5 text-[11px] font-semibold text-info-soft-fg">
             Active
           </span>
         )}
@@ -1143,12 +1143,12 @@ function DiffSection({
       {!isCollapsed && (
         <div className="mt-3 pl-7">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm text-vault-500 dark:text-vault-400">Compare snapshot vs. current draft</p>
+            <p className="text-sm text-fg-muted">Compare snapshot vs. current draft</p>
             <button
               type="button"
               onClick={onRestore}
               disabled={isBusy || isSnapshotMissing}
-              className="inline-flex items-center gap-2 rounded-lg border border-vault-300 px-3 py-1.5 text-sm font-medium text-vault-700 transition-colors hover:bg-vault-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-200 dark:hover:bg-vault-800"
+              className="inline-flex items-center gap-2 rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50 border-border text-fg hover:bg-hover"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Restore section
@@ -1530,16 +1530,16 @@ export function CharacterHistoryModal({
       onClick={requestClose}
     >
       <div
-        className={`relative flex h-dvh w-full flex-col overflow-hidden bg-white transition-all duration-200 dark:bg-vault-950 sm:h-[min(88vh,860px)] sm:max-w-7xl sm:rounded-2xl sm:border sm:border-vault-200 sm:shadow-2xl dark:sm:border-vault-800 ${
+        className={`relative flex h-dvh w-full flex-col overflow-hidden bg-surface transition-all duration-200 bg-bg sm:h-[min(88vh,860px)] sm:max-w-7xl sm:rounded-2xl sm:border sm:border-border sm:shadow-2xl ${
           isClosing ? 'translate-y-3 opacity-0 sm:translate-y-0 sm:scale-[0.98]' : 'translate-y-0 opacity-100 sm:scale-100'
         }`}
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header - Flattened */}
-        <div className="flex items-center justify-between gap-4 border-b border-vault-200 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-vault-800 dark:bg-vault-950/90 sm:px-6">
+        <div className="flex items-center justify-between gap-4 border-b border-border bg-surface/90 px-4 py-3 backdrop-blur-xl border-border bg-bg/90 sm:px-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-vault-500 dark:text-vault-400">Revisions</p>
-            <h2 className="text-lg font-semibold text-vault-950 dark:text-vault-50">{currentCharacter.name}</h2>
+            <p className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Revisions</p>
+            <h2 className="text-lg font-semibold text-fg">{currentCharacter.name}</h2>
           </div>
 
           <div className="flex items-center gap-2">
@@ -1547,7 +1547,7 @@ export function CharacterHistoryModal({
               type="button"
               onClick={() => void handleCreateSnapshot()}
               disabled={isBusy}
-              className="inline-flex items-center gap-2 rounded-lg bg-vault-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-vault-100 dark:text-vault-900 dark:hover:bg-white"
+              className="inline-flex items-center gap-2 rounded-lg bg-inverse px-3 py-2 text-sm font-medium text-fg-inverse transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
               Save snapshot
@@ -1556,7 +1556,7 @@ export function CharacterHistoryModal({
               type="button"
               onClick={requestClose}
               disabled={isBusy}
-              className="rounded-lg border border-vault-300 p-2 text-vault-500 transition-colors hover:bg-vault-100 hover:text-vault-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-vault-700 dark:text-vault-400 dark:hover:bg-vault-800 dark:hover:text-vault-100"
+              className="rounded-lg border border-border-strong p-2 text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-50 border-border text-fg-muted hover:bg-hover hover:text-fg"
               title="Close"
             >
               <X className="h-5 w-5" />
@@ -1566,9 +1566,9 @@ export function CharacterHistoryModal({
 
         <div className="flex min-h-0 flex-1 flex-col md:flex-row">
           {/* Sidebar - Flattened */}
-          <aside className="hidden min-h-0 w-full max-w-xs shrink-0 border-r border-vault-200 bg-vault-50/50 dark:border-vault-800 dark:bg-vault-950/50 md:flex md:flex-col">
-            <div className="flex items-center justify-between border-b border-vault-200 px-4 py-2.5 dark:border-vault-800">
-              <span className="text-sm font-medium text-vault-900 dark:text-vault-100">{snapshotMetadata.length} revisions</span>
+          <aside className="hidden min-h-0 w-full max-w-xs shrink-0 border-r border-border bg-muted/50 border-border bg-bg/50 md:flex md:flex-col">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5 border-border">
+              <span className="text-sm font-medium text-fg">{snapshotMetadata.length} revisions</span>
             </div>
             <div className={`flex-1 overflow-y-auto p-3 transition-opacity duration-200 ${isContentReady ? 'opacity-100' : 'opacity-0'}`}>
               {isSnapshotsLoading && snapshotMetadata.length === 0 ? (
@@ -1576,15 +1576,15 @@ export function CharacterHistoryModal({
                   {[0, 1, 2].map(index => (
                     <div
                       key={`timeline-skeleton-${index}`}
-                      className="animate-pulse rounded-xl border border-vault-200 bg-white p-3 dark:border-vault-800 dark:bg-vault-900/60"
+                      className="animate-pulse rounded-xl border border-border bg-surface p-3 border-border bg-surface"
                     >
-                      <div className="h-3.5 w-20 rounded bg-vault-200 dark:bg-vault-700" />
-                      <div className="mt-2 h-2.5 w-full rounded bg-vault-150 dark:bg-vault-800" />
+                      <div className="h-3.5 w-20 rounded bg-hover" />
+                      <div className="mt-2 h-2.5 w-full rounded bg-muted" />
                     </div>
                   ))}
                 </div>
               ) : snapshotMetadata.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-vault-300 bg-white/80 p-4 text-center text-sm text-vault-500 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-400">
+                <div className="rounded-xl border border-dashed border-border-strong bg-surface/80 p-4 text-center text-sm text-fg-muted border-border bg-surface text-fg-muted">
                   No revisions available yet.
                 </div>
               ) : (
@@ -1623,10 +1623,10 @@ export function CharacterHistoryModal({
 
             <div className={`flex-1 overflow-y-auto px-4 pb-6 pt-4 sm:px-6 transition-opacity duration-200 ${isContentReady ? 'opacity-100' : 'opacity-0'}`}>
               {!selectedSnapshotId ? (
-                <div className="animate-fade-in flex min-h-full items-center justify-center rounded-2xl border border-dashed border-vault-300 bg-vault-50/50 p-8 text-center dark:border-vault-700 dark:bg-vault-900/40">
+                <div className="animate-fade-in flex min-h-full items-center justify-center rounded-2xl border border-dashed border-border-strong bg-muted/50 p-8 text-center border-border bg-muted">
                   <div className="max-w-md">
-                    <h3 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Select a revision</h3>
-                    <p className="mt-1 text-sm text-vault-500 dark:text-vault-400">
+                    <h3 className="text-lg font-semibold text-fg">Select a revision</h3>
+                    <p className="mt-1 text-sm text-fg-muted">
                       Choose a save point from the timeline to review changes against your current draft.
                     </p>
                   </div>
@@ -1634,8 +1634,8 @@ export function CharacterHistoryModal({
               ) : isLoadingDiff ? (
                 <div className="flex min-h-full items-center justify-center">
                   <div className="text-center">
-                    <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-vault-400" />
-                    <p className="mt-2 text-sm text-vault-500 dark:text-vault-400">Loading diff...</p>
+                    <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-fg-subtle" />
+                    <p className="mt-2 text-sm text-fg-muted">Loading diff...</p>
                   </div>
                 </div>
               ) : (
@@ -1655,7 +1655,7 @@ export function CharacterHistoryModal({
                   )}
 
                   {changedSectionCount === 0 ? (
-                    <p className="text-sm text-vault-500 dark:text-vault-400">
+                    <p className="text-sm text-fg-muted">
                       This snapshot already matches the current draft. No restore action is needed.
                     </p>
                   ) : (

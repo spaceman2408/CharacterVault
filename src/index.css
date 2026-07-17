@@ -3,11 +3,18 @@
 /* Enable class-based dark mode for Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ============================================================================
-   THEME CONFIGURATION - Single Source of Truth
-   All colors and theme values are defined here for consistency.
-   ============================================================================ */
+/*
+  ============================================================================
+  THEME TOKENS — single source of truth
+  ============================================================================
+  Edit the :root (light) and .dark blocks below to retheme the whole app,
+  including React UI, CodeMirror chrome, AI toolbar, search, and syntax.
+  Components should use semantic roles (bg-surface, text-fg, border-border),
+  not raw palette steps or dark: pairs.
+  ============================================================================
+*/
 
+/* Neutral ramp (reference; prefer semantic tokens in UI) */
 @theme {
   --color-vault-50: #fafafa;
   --color-vault-100: #f5f5f5;
@@ -21,27 +28,34 @@
   --color-vault-900: #1a1a1a;
   --color-vault-950: #0a0a0a;
 
-  --color-accent-primary: #3b82f6;
-  --color-accent-primary-dark: #60a5fa;
-  --color-accent-secondary: #8b5cf6;
-  --color-accent-secondary-dark: #a78bfa;
-  --color-accent-success: #059669;
-  --color-accent-success-dark: #10b981;
-  --color-accent-warning: #d97706;
-  --color-accent-warning-dark: #f59e0b;
-  --color-accent-error: #ef4444;
-  --color-accent-error-dark: #f87171;
-  --color-accent-info: #0891b2;
-  --color-accent-info-dark: #22d3ee;
-  --color-accent-pink: #db2777;
-  --color-accent-pink-dark: #f472b6;
-  --color-accent-rose: #e11d48;
-  --color-accent-rose-dark: #fb7185;
-
-  --color-search-match: rgba(253, 224, 71, 0.4);
-  --color-search-match-dark: rgba(250, 204, 21, 0.3);
-  --color-search-match-selected: rgba(253, 224, 71, 0.8);
-  --color-search-match-selected-dark: rgba(250, 204, 21, 0.6);
+  /* Semantic → Tailwind utilities (bg-bg, text-fg, border-border, …) */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-inverse: var(--inverse);
+  --color-hover: var(--hover);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-inverse: var(--fg-inverse);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-fg: var(--success-soft-fg);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-fg: var(--warning-soft-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-fg: var(--danger-soft-fg);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-soft-fg: var(--info-soft-fg);
+  --color-overlay: var(--overlay);
+  --color-ring: var(--ring);
 
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
@@ -49,10 +63,9 @@
   --editor-font-size: 16px;
 }
 
-/* ============================================================================
-   CSS CUSTOM PROPERTIES - For JavaScript/TypeScript access
-   These mirror the @theme values and enable runtime theme switching.
-   ============================================================================ */
+/* -------------------------------------------------------------------------- */
+/* LIGHT                                                                      */
+/* -------------------------------------------------------------------------- */
 
 :root {
   font-family: var(--font-sans);
@@ -64,38 +77,77 @@
   -moz-osx-font-smoothing: grayscale;
 
   color-scheme: light;
-  --theme-text: #0f172a;
-  --theme-text-secondary: #64748b;
-  --theme-text-muted: #94a3b8;
-  --theme-bg: #f8fafc;
-  --theme-bg-secondary: #f1f5f9;
-  --theme-border: #e2e8f0;
-  --theme-border-strong: #cbd5e1;
 
+  /* Shell */
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --muted: #f0f0f0;
+  --inverse: #171717;
+  --hover: #e8e8e8;
+  --fg: #171717;
+  --fg-muted: #525252;
+  --fg-subtle: #a3a3a3;
+  --fg-inverse: #fafafa;
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+  --accent: #2563eb;
+  --accent-fg: #ffffff;
+  --success: #16a34a;
+  --success-soft: #dcfce7;
+  --success-soft-fg: #14532d;
+  --warning: #d97706;
+  --warning-soft: #fef3c7;
+  --warning-soft-fg: #78350f;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --danger-soft-fg: #7f1d1d;
+  --info: #2563eb;
+  --info-soft: #dbeafe;
+  --info-soft-fg: #1e3a8a;
+  --overlay: rgba(0, 0, 0, 0.45);
+  --ring: #525252;
+  --focus-ring-offset: 2px;
+
+  /* Editor chrome (matches shell neutrals) */
   --editor-bg: transparent;
-  --editor-text: #0f172a;
-  --editor-text-secondary: #64748b;
-  --editor-caret: #475569;
-  --editor-selection: rgba(148, 163, 184, 0.3);
-  --editor-gutter: #94a3b8;
-  --editor-active-line-gutter: rgba(226, 232, 240, 0.5);
-  --editor-active-line: rgba(241, 245, 249, 0.5);
-  --editor-fold-bg: #e2e8f0;
-  --editor-fold-text: #475569;
+  --editor-text: var(--fg);
+  --editor-text-secondary: var(--fg-muted);
+  --editor-caret: #404040;
+  --editor-selection: rgba(37, 99, 235, 0.18);
+  --editor-gutter: #a3a3a3;
+  --editor-active-line-gutter: rgba(0, 0, 0, 0.04);
+  --editor-active-line: rgba(0, 0, 0, 0.03);
+  --editor-fold-bg: #e5e5e5;
+  --editor-fold-text: #525252;
 
-  --ai-toolbar-bg: #f8fafc;
-  --ai-toolbar-border: #e2e8f0;
-  --ai-toolbar-input-bg: #ffffff;
-  --ai-toolbar-input-border: #cbd5e1;
-  --ai-toolbar-text: #0f172a;
-  --ai-toolbar-text-secondary: #64748b;
-  --ai-toolbar-text-muted: #94a3b8;
-  --ai-toolbar-btn-hover: #f1f5f9;
-  --ai-toolbar-result-bg: #ffffff;
-  --ai-toolbar-reasoning-bg: #f1f5f9;
-  --ai-toolbar-error-bg: rgba(239, 68, 68, 0.1);
-  --ai-toolbar-error-border: rgba(239, 68, 68, 0.3);
-  --ai-toolbar-error-text: #ef4444;
+  /* Syntax highlighting */
+  --syntax-keyword: #7c3aed;
+  --syntax-string: #059669;
+  --syntax-comment: #94a3b8;
+  --syntax-tag: #7c3aed;
+  --syntax-attribute: #2563eb;
+  --syntax-number: #d97706;
+  --syntax-punctuation: #6b7280;
+  --syntax-variable: #db2777;
+  --syntax-type: #e11d48;
+  --syntax-property: #0891b2;
+  --syntax-operator: #6b7280;
+  --syntax-meta: #94a3b8;
+
+  /* AI toolbar */
+  --ai-toolbar-bg: var(--surface);
+  --ai-toolbar-border: var(--border);
+  --ai-toolbar-input-bg: var(--bg);
+  --ai-toolbar-input-border: var(--border-strong);
+  --ai-toolbar-text: var(--fg);
+  --ai-toolbar-text-secondary: var(--fg-muted);
+  --ai-toolbar-text-muted: var(--fg-subtle);
+  --ai-toolbar-btn-hover: var(--hover);
+  --ai-toolbar-result-bg: var(--surface);
+  --ai-toolbar-reasoning-bg: var(--muted);
+  --ai-toolbar-error-bg: var(--danger-soft);
+  --ai-toolbar-error-border: rgba(220, 38, 38, 0.35);
+  --ai-toolbar-error-text: var(--danger);
   --ai-toolbar-accent-primary: #7c3aed;
   --ai-toolbar-accent-secondary: #2563eb;
   --ai-toolbar-accent-success: #059669;
@@ -103,76 +155,125 @@
   --ai-toolbar-accent-info: #0891b2;
   --ai-toolbar-accent-pink: #db2777;
   --ai-toolbar-accent-rose: #e11d48;
-  --ai-toolbar-accent-neutral: #475569;
-  --ai-toolbar-accept-bg: #16a34a;
+  --ai-toolbar-accent-neutral: #525252;
+  --ai-toolbar-accept-bg: var(--success);
+  --ai-toolbar-active: var(--accent);
+  --ai-toolbar-active-bg: rgba(37, 99, 235, 0.1);
+
+  /* AI ghost preview */
   --ai-ghost-text: rgba(91, 33, 182, 0.55);
   --ai-ghost-text-peak: rgba(91, 33, 182, 0.95);
   --ai-ghost-bg: rgba(124, 58, 237, 0.04);
   --ai-ghost-glow: rgba(124, 58, 237, 0.2);
   --ai-ghost-glow-peak: rgba(124, 58, 237, 0.55);
 
-  --vault-search-bg: #f8fafc;
-  --vault-search-border: #e2e8f0;
-  --vault-search-input-bg: #ffffff;
-  --vault-search-input-border: #cbd5e1;
-  --vault-search-text: #1e293b;
-  --vault-search-text-secondary: #64748b;
-  --vault-search-btn-bg: #ffffff;
-  --vault-search-btn-hover: #f1f5f9;
-  --vault-search-primary: #3b82f6;
-  --vault-search-match-bg: rgba(250, 204, 21, 0.32);
+  /* Find / replace */
+  --vault-search-bg: var(--surface);
+  --vault-search-border: var(--border);
+  --vault-search-input-bg: var(--bg);
+  --vault-search-input-border: var(--border-strong);
+  --vault-search-text: var(--fg);
+  --vault-search-text-secondary: var(--fg-muted);
+  --vault-search-btn-bg: var(--surface);
+  --vault-search-btn-hover: var(--hover);
+  --vault-search-primary: var(--accent);
+  --vault-search-match-bg: rgba(250, 204, 21, 0.35);
   --vault-search-match-selected: rgba(250, 204, 21, 0.72);
-  --vault-search-match-selected-ring: rgba(180, 83, 9, 0.62);
-  --vault-search-focus-shadow: rgba(59, 130, 246, 0.2);
+  --vault-search-match-selected-ring: rgba(180, 83, 9, 0.55);
+  --vault-search-focus-shadow: rgba(37, 99, 235, 0.22);
 
-  --tooltip-bg: #ffffff;
-  --tooltip-border: #e2e8f0;
-  --tooltip-text: #0f172a;
-  --tooltip-muted: #64748b;
-  --tooltip-accent: #3b82f6;
-  --tooltip-entry-hover: rgba(59, 130, 246, 0.05);
+  /* Tooltips (CodeMirror / spellcheck) */
+  --tooltip-bg: var(--surface);
+  --tooltip-border: var(--border);
+  --tooltip-text: var(--fg);
+  --tooltip-muted: var(--fg-muted);
+  --tooltip-accent: var(--accent);
+  --tooltip-entry-hover: rgba(37, 99, 235, 0.06);
 
   --category-ref-color: #8b5cf6;
   --category-ref-hover-bg: rgba(139, 92, 246, 0.1);
 
-  --focus-ring: #64748b;
-  --focus-ring-offset: 2px;
+  --focus-ring: var(--ring);
+  --scrollbar: #a3a3a3;
+  --scrollbar-hover: #737373;
+
+  color: var(--fg);
+  background-color: var(--bg);
 }
+
+/* -------------------------------------------------------------------------- */
+/* DARK                                                                       */
+/* -------------------------------------------------------------------------- */
 
 .dark {
   color-scheme: dark;
-  --theme-text: #e5e5e5;
-  --theme-text-secondary: #a3a3a3;
-  --theme-text-muted: #737373;
-  --theme-bg: #1a1a1a;
-  --theme-bg-secondary: #262626;
-  --theme-border: #404040;
-  --theme-border-strong: #525252;
 
-  --editor-bg: #282c34;
-  --editor-text: #e5e5e5;
-  --editor-text-secondary: #a3a3a3;
-  --editor-caret: #a3a3a3;
-  --editor-selection: rgba(82, 82, 82, 0.4);
+  --bg: #0a0a0a;
+  --surface: #1a1a1a;
+  --muted: #262626;
+  --inverse: #f5f5f5;
+  --hover: #2e2e2e;
+  --fg: #f0f0f0;
+  --fg-muted: #a3a3a3;
+  --fg-subtle: #737373;
+  --fg-inverse: #171717;
+  --border: #333333;
+  --border-strong: #404040;
+  --accent: #60a5fa;
+  --accent-fg: #0a0a0a;
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.15);
+  --success-soft-fg: #86efac;
+  --warning: #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.15);
+  --warning-soft-fg: #fcd34d;
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.15);
+  --danger-soft-fg: #fca5a5;
+  --info: #60a5fa;
+  --info-soft: rgba(96, 165, 250, 0.15);
+  --info-soft-fg: #93c5fd;
+  --overlay: rgba(0, 0, 0, 0.65);
+  --ring: #a3a3a3;
+
+  --editor-bg: transparent;
+  --editor-text: var(--fg);
+  --editor-text-secondary: var(--fg-muted);
+  --editor-caret: #d4d4d4;
+  --editor-selection: rgba(96, 165, 250, 0.28);
   --editor-gutter: #737373;
-  --editor-active-line-gutter: rgba(64, 64, 64, 0.5);
-  --editor-active-line: rgba(64, 64, 64, 0.3);
-  --editor-fold-bg: #404040;
+  --editor-active-line-gutter: rgba(255, 255, 255, 0.04);
+  --editor-active-line: rgba(255, 255, 255, 0.035);
+  --editor-fold-bg: #333333;
   --editor-fold-text: #a3a3a3;
 
-  --ai-toolbar-bg: #282c34;
-  --ai-toolbar-border: #404040;
-  --ai-toolbar-input-bg: #1a1a1a;
-  --ai-toolbar-input-border: #525252;
-  --ai-toolbar-text: #e5e5e5;
-  --ai-toolbar-text-secondary: #a3a3a3;
-  --ai-toolbar-text-muted: #737373;
-  --ai-toolbar-btn-hover: #404040;
-  --ai-toolbar-result-bg: #282c34;
-  --ai-toolbar-reasoning-bg: #262626;
-  --ai-toolbar-error-bg: rgba(239, 68, 68, 0.1);
-  --ai-toolbar-error-border: rgba(239, 68, 68, 0.3);
-  --ai-toolbar-error-text: #ef4444;
+  /* Syntax — One Dark–inspired, on neutral vault surfaces */
+  --syntax-keyword: #c678dd;
+  --syntax-string: #98c379;
+  --syntax-comment: #7d8799;
+  --syntax-tag: #c678dd;
+  --syntax-attribute: #61afef;
+  --syntax-number: #d19a66;
+  --syntax-punctuation: #abb2bf;
+  --syntax-variable: #e06c75;
+  --syntax-type: #e5c07b;
+  --syntax-property: #56b6c2;
+  --syntax-operator: #abb2bf;
+  --syntax-meta: #7d8799;
+
+  --ai-toolbar-bg: var(--surface);
+  --ai-toolbar-border: var(--border);
+  --ai-toolbar-input-bg: var(--bg);
+  --ai-toolbar-input-border: var(--border-strong);
+  --ai-toolbar-text: var(--fg);
+  --ai-toolbar-text-secondary: var(--fg-muted);
+  --ai-toolbar-text-muted: var(--fg-subtle);
+  --ai-toolbar-btn-hover: var(--hover);
+  --ai-toolbar-result-bg: var(--surface);
+  --ai-toolbar-reasoning-bg: var(--muted);
+  --ai-toolbar-error-bg: var(--danger-soft);
+  --ai-toolbar-error-border: rgba(248, 113, 113, 0.35);
+  --ai-toolbar-error-text: var(--danger);
   --ai-toolbar-accent-primary: #22d3ee;
   --ai-toolbar-accent-secondary: #60a5fa;
   --ai-toolbar-accent-success: #10b981;
@@ -181,49 +282,46 @@
   --ai-toolbar-accent-pink: #f472b6;
   --ai-toolbar-accent-rose: #fb7185;
   --ai-toolbar-accent-neutral: #a3a3a3;
-  --ai-toolbar-accept-bg: #22c55e;
+  --ai-toolbar-accept-bg: var(--success);
+  --ai-toolbar-active: var(--accent);
+  --ai-toolbar-active-bg: rgba(96, 165, 250, 0.12);
+
   --ai-ghost-text: rgba(248, 250, 252, 0.42);
   --ai-ghost-text-peak: rgba(248, 250, 252, 0.95);
   --ai-ghost-bg: rgba(248, 250, 252, 0.03);
   --ai-ghost-glow: rgba(248, 250, 252, 0.15);
   --ai-ghost-glow-peak: rgba(255, 255, 255, 0.55);
 
-  --vault-search-bg: #262626;
-  --vault-search-border: #404040;
-  --vault-search-input-bg: #1a1a1a;
-  --vault-search-input-border: #525252;
-  --vault-search-text: #e5e5e5;
-  --vault-search-text-secondary: #a3a3a3;
-  --vault-search-btn-bg: #404040;
-  --vault-search-btn-hover: #525252;
-  --vault-search-primary: #22d3ee;
+  --vault-search-bg: var(--surface);
+  --vault-search-border: var(--border);
+  --vault-search-input-bg: var(--bg);
+  --vault-search-input-border: var(--border-strong);
+  --vault-search-text: var(--fg);
+  --vault-search-text-secondary: var(--fg-muted);
+  --vault-search-btn-bg: var(--muted);
+  --vault-search-btn-hover: var(--hover);
+  --vault-search-primary: var(--accent);
   --vault-search-match-bg: rgba(251, 191, 36, 0.26);
   --vault-search-match-selected: rgba(251, 191, 36, 0.5);
   --vault-search-match-selected-ring: rgba(253, 186, 116, 0.7);
-  --vault-search-focus-shadow: rgba(34, 211, 238, 0.25);
+  --vault-search-focus-shadow: rgba(96, 165, 250, 0.28);
 
-  --tooltip-bg: #262626;
-  --tooltip-border: #404040;
-  --tooltip-text: #e5e5e5;
-  --tooltip-muted: #a3a3a3;
-  --tooltip-accent: #60a5fa;
+  --tooltip-bg: var(--muted);
+  --tooltip-border: var(--border);
+  --tooltip-text: var(--fg);
+  --tooltip-muted: var(--fg-muted);
+  --tooltip-accent: var(--accent);
   --tooltip-entry-hover: rgba(96, 165, 250, 0.1);
 
   --category-ref-color: #a78bfa;
   --category-ref-hover-bg: rgba(167, 139, 250, 0.2);
 
-  --focus-ring: #a3a3a3;
-}
+  --focus-ring: var(--ring);
+  --scrollbar: #525252;
+  --scrollbar-hover: #737373;
 
-/* Apply theme colors to root elements */
-:root {
-  color: var(--theme-text);
-  background-color: var(--theme-bg);
-}
-
-.dark {
-  color: var(--theme-text);
-  background-color: var(--theme-bg);
+  color: var(--fg);
+  background-color: var(--bg);
 }
 
 /* Layout reset */
@@ -429,22 +527,12 @@ textarea:focus:not(:focus-visible) {
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-vault-200) 25%,
-    var(--color-vault-300) 50%,
-    var(--color-vault-200) 75%
+    var(--muted) 25%,
+    var(--hover) 50%,
+    var(--muted) 75%
   );
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s ease-in-out infinite;
-}
-
-.dark .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-vault-700) 25%,
-    var(--color-vault-600) 50%,
-    var(--color-vault-700) 75%
-  );
-  background-size: 200% 100%;
 }
 
 @keyframes skeleton-loading {
@@ -486,29 +574,17 @@ textarea:focus:not(:focus-visible) {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-vault-400);
+  background: var(--scrollbar);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-vault-500);
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: var(--color-vault-600);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-vault-500);
+  background: var(--scrollbar-hover);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-vault-400) transparent;
-}
-
-.dark * {
-  scrollbar-color: var(--color-vault-600) transparent;
+  scrollbar-color: var(--scrollbar) transparent;
 }
 
 /* ============================================================================
@@ -615,8 +691,6 @@ textarea:focus:not(:focus-visible) {
   color: var(--vault-search-primary);
 }
 
-/* Checkbox styling is handled in JavaScript for dynamic theme support */
-
 .cm-searchMatch {
   background-color: var(--vault-search-match-bg) !important;
   border-radius: 2px;
@@ -630,9 +704,7 @@ textarea:focus:not(:focus-visible) {
   box-shadow: 0 0 0 1px var(--vault-search-match-selected-ring);
 }
 
-/* In-editor AI ghost preview (decoration widget; not committed until Accept).
-   Inline 1:1 replace. While streaming: calm static ghost (no flashy pulse —
-   tokens already draw the eye). When ready: soft pulse to invite Accept. */
+/* In-editor AI ghost preview */
 .cm-ai-ghost-preview {
   display: inline;
   white-space: pre-wrap;
@@ -649,13 +721,11 @@ textarea:focus:not(:focus-visible) {
   text-shadow: 0 0 8px var(--ai-ghost-glow);
 }
 
-/* Ready for Accept/Reject — gentle pulse only in this state */
 .cm-ai-ghost-preview:not(.cm-ai-ghost-preview--streaming) {
   animation: ai-ghost-pulse 1.6s ease-in-out infinite;
   will-change: color, text-shadow, opacity;
 }
 
-/* Streaming: steady dim text, no pulse, no second caret */
 .cm-ai-ghost-preview--streaming {
   color: var(--ai-ghost-text);
   opacity: 0.7;
@@ -743,7 +813,6 @@ textarea:focus:not(:focus-visible) {
   }
 }
 
-/* Fix CodeMirror panels border - override CodeMirror's default black border */
 .cm-panels.cm-panels-top {
   border-bottom: 1px solid var(--ai-toolbar-border) !important;
   background-color: var(--ai-toolbar-bg) !important;
@@ -753,7 +822,6 @@ textarea:focus:not(:focus-visible) {
   overflow: visible;
 }
 
-/* Higher specificity for dark mode to override scoped CodeMirror styles */
 .dark .cm-panels.cm-panels-top,
 .dark div.cm-panels.cm-panels-top,
 .cm-panels.cm-panels-top[data-theme="dark"] {
@@ -766,13 +834,11 @@ textarea:focus:not(:focus-visible) {
    ============================================================================ */
 
 @media (max-width: 640px) {
-  /* Hide separator on mobile */
   .ai-toolbar-panel .ai-toolbar-info ~ div,
   .ai-toolbar-panel div[style*="width: 1px"][style*="height: 24px"] {
     display: none !important;
   }
 
-  /* Shrink button padding and font size on mobile */
   .ai-toolbar-panel button.ai-toolbar-btn-expand,
   .ai-toolbar-panel button.ai-toolbar-btn-rewrite,
   .ai-toolbar-panel button.ai-toolbar-btn-instruct,
@@ -781,7 +847,6 @@ textarea:focus:not(:focus-visible) {
     font-size: 12px !important;
   }
 
-  /* Compact result chrome on mobile (body is in-editor ghost) */
   .ai-toolbar-panel .ai-result-container {
     max-height: min(35vh, 180px) !important;
     padding: 6px 10px !important;
@@ -797,16 +862,14 @@ textarea:focus:not(:focus-visible) {
   .cm-toolbar-search-panel .replace-row {
     flex-wrap: wrap;
     gap: 8px;
-    padding-right: 30px; /* Space for close button */
+    padding-right: 30px;
   }
 
-  /* Make inputs full width */
   .cm-toolbar-search-panel input[type="text"] {
     min-width: 100%;
     order: 1;
   }
 
-  /* Position close button absolutely at top-right */
   .cm-toolbar-search-panel .search-btn.close {
     position: absolute;
     top: 8px;
@@ -818,7 +881,6 @@ textarea:focus:not(:focus-visible) {
     z-index: 10;
   }
 
-  /* Navigation buttons group */
   .cm-toolbar-search-panel .search-btn.prev,
   .cm-toolbar-search-panel .search-btn.next {
     flex-grow: 1;
@@ -827,14 +889,12 @@ textarea:focus:not(:focus-visible) {
     padding: 8px;
   }
 
-  /* Match count */
   .search-match-count {
     order: 3;
     width: 100%;
     margin: 4px 0;
   }
 
-  /* Options row */
   .cm-toolbar-search-panel .search-option {
     order: 4;
     flex-grow: 1;
@@ -843,7 +903,6 @@ textarea:focus:not(:focus-visible) {
     border: 1px solid var(--vault-search-border);
   }
 
-  /* Replace buttons */
   .cm-toolbar-search-panel .search-btn.replace,
   .cm-toolbar-search-panel .search-btn.replace-all {
     flex-grow: 1;
@@ -946,7 +1005,8 @@ textarea:focus:not(:focus-visible) {
 }
 
 @keyframes vortex-pulse-slow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.3;
     transform: scale(1);
   }
@@ -957,7 +1017,8 @@ textarea:focus:not(:focus-visible) {
 }
 
 @keyframes vortex-pulse-glow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.4;
     transform: scale(1);
   }
@@ -979,7 +1040,8 @@ textarea:focus:not(:focus-visible) {
 }
 
 @keyframes vortex-dice-spin {
-  0%, 100% {
+  0%,
+  100% {
     transform: rotate(0deg);
   }
   25% {
@@ -996,25 +1058,4 @@ textarea:focus:not(:focus-visible) {
 .animate-revealScale {
   animation: revealScale 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   opacity: 0;
-}
-
-.animate-revealText {
-  animation: revealText 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s forwards;
-  opacity: 0;
-}
-
-.animate-vortex-pulse-slow {
-  animation: vortex-pulse-slow 3s ease-in-out infinite;
-}
-
-.animate-vortex-pulse-glow {
-  animation: vortex-pulse-glow 2s ease-in-out infinite;
-}
-
-.animate-vortex-ping-slow {
-  animation: vortex-ping-slow 2s ease-out infinite;
-}
-
-.animate-vortex-dice-spin {
-  animation: vortex-dice-spin 3s ease-in-out infinite;
 }

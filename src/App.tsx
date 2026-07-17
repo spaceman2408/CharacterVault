@@ -67,9 +67,9 @@ const IconButton = ({
 }) => {
   const baseStyle = "p-2 rounded-lg transition-all duration-200 active:scale-95";
   const variants = {
-    ghost: "text-vault-500 hover:text-vault-900 dark:text-vault-400 dark:hover:text-vault-100 hover:bg-vault-100 dark:hover:bg-vault-800",
-    primary: "bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 hover:opacity-90 shadow-sm",
-    danger: "text-vault-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+    ghost: "text-fg-muted hover:text-fg hover:bg-hover",
+    primary: "bg-inverse text-fg-inverse hover:opacity-90 shadow-sm",
+    danger: "text-fg-subtle hover:text-danger hover:bg-danger-soft"
   };
 
   return (
@@ -101,7 +101,7 @@ interface CharacterCardProps {
 
 function CharacterCardSkeleton(): React.ReactElement {
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900 shadow-xs">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
       <div className="aspect-3/4 w-full skeleton" />
       <div className="flex flex-col gap-3 p-4">
         <div className="h-4 w-3/4 rounded-md skeleton" />
@@ -113,9 +113,9 @@ function CharacterCardSkeleton(): React.ReactElement {
 
 const cardActionBtnClass =
   'inline-flex items-center justify-center min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 p-2 sm:p-1.5 ' +
-  'bg-white/95 dark:bg-vault-900/95 backdrop-blur-sm rounded-lg shadow-sm ' +
-  'text-vault-600 dark:text-vault-300 hover:text-vault-900 hover:bg-white ' +
-  'dark:hover:text-vault-50 dark:hover:bg-vault-800 ' +
+  'bg-surface/95 backdrop-blur-sm rounded-lg shadow-sm ' +
+  'text-fg-muted hover:text-fg hover:bg-surface ' +
+  'hover:text-fg hover:bg-hover ' +
   'active:scale-95 transition-colors disabled:opacity-50 touch-manipulation';
 
 function CharacterCard({
@@ -205,13 +205,13 @@ function CharacterCard({
 
   return (
     <div 
-      className="group relative flex flex-col bg-white dark:bg-vault-900 rounded-xl border border-vault-200 dark:border-vault-800 
-      hover:border-vault-300 dark:hover:border-vault-700 shadow-xs hover:shadow-lg
+      className="group relative flex flex-col bg-surface rounded-xl border border-border 
+      hover:border-border-strong shadow-xs hover:shadow-lg
       transition-all duration-300 overflow-hidden cursor-pointer"
       onClick={() => onOpen(character.id)}
     >
       {/* Image Area - Aspect Ratio for Character Cards */}
-      <div className="relative aspect-3/4 w-full overflow-hidden bg-vault-100 dark:bg-vault-800">
+      <div className="relative aspect-3/4 w-full overflow-hidden bg-muted">
         {character.thumbnailData ? (
           <img
             src={character.thumbnailData}
@@ -220,7 +220,7 @@ function CharacterCard({
             loading="lazy"
           />
         ) : (
-          <div className="flex items-center justify-center w-full h-full text-vault-300 dark:text-vault-700">
+          <div className="flex items-center justify-center w-full h-full text-fg-subtle">
             <User className="w-16 h-16" />
           </div>
         )}
@@ -266,7 +266,7 @@ function CharacterCard({
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onDelete(character.id, character.name); }}
-            className={`${cardActionBtnClass} text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300`}
+            className={`${cardActionBtnClass} text-danger hover:text-danger`}
             title="Delete"
             aria-label={`Delete ${character.name}`}
           >
@@ -278,25 +278,25 @@ function CharacterCard({
       {/* Content Area */}
       <div className="p-3 sm:p-4 flex flex-col gap-1">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-vault-900 dark:text-vault-50 truncate text-sm leading-tight">
+          <h3 className="font-semibold text-fg truncate text-sm leading-tight">
             {character.name}
           </h3>
         </div>
         
         <div className="flex items-center justify-between gap-2 mt-1.5 sm:mt-2">
-          <div className="flex items-center gap-1.5 text-xs text-vault-500 dark:text-vault-400 min-w-0">
+          <div className="flex items-center gap-1.5 text-xs text-fg-muted min-w-0">
             <Clock className="w-3 h-3 shrink-0" />
             <span className="truncate">{formatRelativeTime(character.lastOpenedAt)}</span>
           </div>
           <span
-            className="text-[10px] sm:text-[11px] tabular-nums text-vault-400 dark:text-vault-500 shrink-0"
+            className="text-[10px] sm:text-[11px] tabular-nums text-fg-subtle shrink-0"
             title={
               `Active (RP always-on): ${character.activeTokens.toLocaleString()} tokens\n` +
               `Total (incl. greetings & lorebook): ${character.totalTokens.toLocaleString()} tokens`
             }
           >
             {formatTokenEstimate(character.activeTokens)}
-            <span className="text-vault-300 dark:text-vault-600"> / </span>
+            <span className="text-fg-subtle"> / </span>
             {formatTokenEstimate(character.totalTokens)}
           </span>
         </div>
@@ -308,26 +308,26 @@ function CharacterCard({
           ref={exportMenuRef}
           role="menu"
           aria-label={`Export ${character.name}`}
-          className="fixed z-9999 w-44 rounded-xl border border-vault-200 dark:border-vault-700 bg-white dark:bg-vault-900 shadow-xl py-1 animate-in fade-in zoom-in-95"
+          className="fixed z-9999 w-44 rounded-xl border border-border bg-surface shadow-xl py-1 animate-in fade-in zoom-in-95"
           style={{ top: menuPosition.top, left: menuPosition.left }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-vault-700 dark:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800 active:bg-vault-100 dark:active:bg-vault-800 touch-manipulation"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-fg hover:bg-hover active:bg-hover touch-manipulation"
             onClick={() => void handleExport('png')}
           >
-            <ImageIcon className="w-4 h-4 shrink-0 text-vault-500" />
+            <ImageIcon className="w-4 h-4 shrink-0 text-fg-muted" />
             <span>Export PNG</span>
           </button>
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-vault-700 dark:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800 active:bg-vault-100 dark:active:bg-vault-800 touch-manipulation"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-fg hover:bg-hover active:bg-hover touch-manipulation"
             onClick={() => void handleExport('json')}
           >
-            <FileJson className="w-4 h-4 shrink-0 text-vault-500" />
+            <FileJson className="w-4 h-4 shrink-0 text-fg-muted" />
             <span>Export JSON</span>
           </button>
         </div>,
@@ -793,7 +793,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
   return (
     <div
-      className="h-dvh overflow-y-auto bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 transition-colors duration-500 animate-fade-in-slow relative"
+      className="h-dvh overflow-y-auto bg-bg text-fg transition-colors duration-500 animate-fade-in-slow relative"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -801,7 +801,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
     >
       {/* Drag-and-drop import overlay */}
       {isDragOver && (
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-vault-950/60 backdrop-blur-sm">
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-overlay backdrop-blur-sm">
           <div className="rounded-2xl border-2 border-dashed border-white/50 bg-white/10 px-10 py-8 text-center text-white shadow-2xl">
             <Upload className="mx-auto mb-3 h-10 w-10 opacity-90" />
             <p className="text-lg font-semibold">Drop character cards to import</p>
@@ -812,13 +812,13 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
       {/* Status toast */}
       {statusMessage && (
-        <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-in slide-in-from-bottom-2 rounded-xl border border-vault-200 bg-white/95 px-4 py-3 text-sm shadow-xl dark:border-vault-700 dark:bg-vault-900/95">
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm animate-in slide-in-from-bottom-2 rounded-xl border border-border bg-surface/95 px-4 py-3 text-sm shadow-xl">
           <div className="flex items-start gap-2">
-            <p className="flex-1 text-vault-800 dark:text-vault-100">{statusMessage}</p>
+            <p className="flex-1 text-fg">{statusMessage}</p>
             <button
               type="button"
               onClick={() => setStatusMessage(null)}
-              className="rounded p-0.5 text-vault-400 hover:bg-vault-100 hover:text-vault-700 dark:hover:bg-vault-800 dark:hover:text-vault-200"
+              className="rounded p-0.5 text-fg-subtle hover:bg-hover hover:text-fg hover:bg-hover hover:text-fg"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -827,7 +827,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
       )}
       
       {/* --- Sticky Header --- */}
-      <header className="sticky top-0 z-30 w-full backdrop-blur-xl bg-white/80 dark:bg-vault-950/80 border-b border-vault-200 dark:border-vault-800">
+      <header className="sticky top-0 z-30 w-full backdrop-blur-xl bg-surface/80 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           
           <div className="flex items-center gap-2">
@@ -840,13 +840,13 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
           <div className="flex-1 max-w-md hidden sm:block">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-vault-400 group-focus-within:text-vault-600 dark:group-focus-within:text-vault-300 transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle group-focus-within:text-fg-muted transition-colors" />
               <input 
                 type="text" 
                 placeholder="Search name or tags..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-vault-100 dark:bg-vault-900 border border-transparent focus:bg-white dark:focus:bg-vault-800 focus:border-vault-300 dark:focus:border-vault-700 rounded-full py-1.5 pl-9 pr-4 text-sm transition-all outline-none"
+                className="w-full bg-muted border border-transparent focus:bg-surface focus:border-border-strong rounded-full py-1.5 pl-9 pr-4 text-sm transition-all outline-none"
               />
             </div>
           </div>
@@ -864,7 +864,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button 
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
             >
               {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               Import
@@ -873,7 +873,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50"
+              className="sm:hidden p-2 text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
               title="Import"
             >
               {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -882,7 +882,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button
               onClick={handleBackupClick}
               disabled={characterListItems.length === 0 || isExportingVault}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
               title="Download a ZIP backup of every character"
             >
               {isExportingVault ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -892,7 +892,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button
               onClick={handleBackupClick}
               disabled={characterListItems.length === 0 || isExportingVault}
-              className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50"
+              className="sm:hidden p-2 text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
               title="Backup vault"
             >
               {isExportingVault ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -900,19 +900,19 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
             <button
               onClick={() => setIsCreating(true)}
-              className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+              className="sm:hidden p-2 text-fg-muted hover:bg-hover rounded-lg transition-colors"
               title="Create New"
             >
               <Plus className="w-4 h-4" />
             </button>
 
-            <div className="h-6 w-px bg-vault-200 dark:bg-vault-800 mx-1 hidden sm:block" />
+            <div className="h-6 w-px bg-hover mx-1 hidden sm:block" />
 
             <a
               href="#/ai-create"
               className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
-              text-vault-700 dark:text-vault-300
-              hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+              text-fg-muted
+              hover:bg-hover/50 rounded-xl
               transition-colors duration-200"
             >
               <Sparkles className="w-4 h-4" />
@@ -921,7 +921,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
             <a
               href="#/ai-create"
-              className="sm:hidden p-2 text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+              className="sm:hidden p-2 text-fg-muted hover:bg-hover rounded-lg transition-colors"
               title="AI Create"
             >
               <Sparkles className="w-4 h-4" />
@@ -930,8 +930,8 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button
               onClick={() => setIsCreating(true)}
               className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
-            text-vault-700 dark:text-vault-300
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+            text-fg-muted
+            hover:bg-hover/50 rounded-xl
             transition-colors duration-200"
             >
               <Plus className="w-4 h-4" />
@@ -954,7 +954,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               href={`${import.meta.env.BASE_URL}docs/`}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-lg transition-all duration-200 active:scale-95 text-vault-500 hover:text-vault-900 dark:text-vault-400 dark:hover:text-vault-100 hover:bg-vault-100 dark:hover:bg-vault-800"
+              className="p-2 rounded-lg transition-all duration-200 active:scale-95 text-fg-muted hover:text-fg hover:bg-hover"
               title="Documentation"
             >
               <BookOpen className="w-4 h-4" />
@@ -967,13 +967,13 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
       {/* Mobile Search Bar */}
       <div className="sm:hidden px-4 pt-3">
         <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-vault-400 group-focus-within:text-vault-600 dark:group-focus-within:text-vault-300 transition-colors" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle group-focus-within:text-fg-muted transition-colors" />
           <input 
             type="text" 
             placeholder="Search name or tags..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-vault-100 dark:bg-vault-900 border border-transparent focus:bg-white dark:focus:bg-vault-800 focus:border-vault-300 dark:focus:border-vault-700 rounded-full py-2 pl-9 pr-4 text-sm transition-all outline-none"
+            className="w-full bg-muted border border-transparent focus:bg-surface focus:border-border-strong rounded-full py-2 pl-9 pr-4 text-sm transition-all outline-none"
           />
         </div>
       </div>
@@ -984,21 +984,21 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
         {/* Create Modal/Inline Area */}
         {isCreating && (
           <div className="mb-8 animate-in fade-in slide-in-from-top-2">
-            <form onSubmit={handleCreate} className="bg-white dark:bg-vault-900 p-4 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-lg max-w-lg mx-auto flex flex-col sm:flex-row gap-3 sm:gap-2 sm:items-center">
+            <form onSubmit={handleCreate} className="bg-surface p-4 rounded-2xl border border-border shadow-lg max-w-lg mx-auto flex flex-col sm:flex-row gap-3 sm:gap-2 sm:items-center">
               <input
                 autoFocus
                 type="text"
                 placeholder="Character Name..."
                 value={newCharacterName}
                 onChange={(e) => setNewCharacterName(e.target.value)}
-                className="flex-1 bg-transparent border-none focus:ring-0 text-base sm:text-lg font-medium placeholder:text-vault-300 dark:placeholder:text-vault-700 min-w-0"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-base sm:text-lg font-medium placeholder:text-fg-subtle min-w-0"
               />
               <div className="flex gap-2 shrink-0">
                 <IconButton icon={X} onClick={() => setIsCreating(false)} title="Cancel" />
                 <button
                   type="submit"
                   disabled={!newCharacterName.trim()}
-                  className="px-4 py-2 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+                  className="px-4 py-2 bg-inverse text-fg-inverse rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
                 >
                   Create
                 </button>
@@ -1012,7 +1012,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">Library</h2>
-              <p className="text-vault-500 dark:text-vault-400 text-sm mt-1">
+              <p className="text-fg-muted text-sm mt-1">
                 {searchQuery
                   ? `${sortedCharacters.length} of ${characterListItems.length} ${characterListItems.length === 1 ? 'character' : 'characters'}`
                   : `${characterListItems.length} ${characterListItems.length === 1 ? 'character' : 'characters'} stored locally`}
@@ -1020,15 +1020,15 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-              <div className="inline-flex items-center gap-1 rounded-full border border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900 p-1">
-                <ArrowUpDown className="w-3.5 h-3.5 text-vault-400 ml-2" />
+              <div className="inline-flex items-center gap-1 rounded-full border border-border bg-surface p-1">
+                <ArrowUpDown className="w-3.5 h-3.5 text-fg-subtle ml-2" />
                 <button
                   type="button"
                   onClick={() => handleSortChange('name')}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                     sortMode === 'name'
-                      ? 'bg-vault-900 text-white dark:bg-vault-50 dark:text-vault-900'
-                      : 'text-vault-500 hover:text-vault-800 dark:text-vault-400 dark:hover:text-vault-200'
+                      ? 'bg-inverse text-fg-inverse'
+                      : 'text-fg-muted hover:text-fg'
                   }`}
                 >
                   Name
@@ -1038,8 +1038,8 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                   onClick={() => handleSortChange('recent')}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                     sortMode === 'recent'
-                      ? 'bg-vault-900 text-white dark:bg-vault-50 dark:text-vault-900'
-                      : 'text-vault-500 hover:text-vault-800 dark:text-vault-400 dark:hover:text-vault-200'
+                      ? 'bg-inverse text-fg-inverse'
+                      : 'text-fg-muted hover:text-fg'
                   }`}
                 >
                   Recent
@@ -1049,13 +1049,13 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               {!searchQuery && lastActive && (
                 <button
                   onClick={() => openCharacter(lastActive.id)}
-                  className="group flex items-center gap-3 pl-4 pr-3 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-300 dark:hover:border-vault-700 hover:shadow-md transition-all"
+                  className="group flex items-center gap-3 pl-4 pr-3 py-2 bg-surface border border-border rounded-full hover:border-border-strong hover:shadow-md transition-all"
                 >
                   <div className="text-right">
-                    <p className="text-[10px] font-bold text-vault-400 uppercase tracking-wider">Continue</p>
+                    <p className="text-[10px] font-bold text-fg-subtle uppercase tracking-wider">Continue</p>
                     <p className="text-sm font-semibold max-w-37.5 truncate">{lastActive.name}</p>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-vault-100 dark:bg-vault-800 flex items-center justify-center group-hover:bg-vault-900 group-hover:text-white dark:group-hover:bg-vault-50 dark:group-hover:text-vault-900 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-inverse group-hover:text-fg-inverse transition-colors">
                     <Play className="w-4 h-4 fill-current" />
                   </div>
                 </button>
@@ -1089,17 +1089,17 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
           </div>
         ) : sortedCharacters.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-24 h-24 bg-vault-100 dark:bg-vault-900 rounded-full flex items-center justify-center mb-6">
-              <Users className="w-10 h-10 text-vault-300 dark:text-vault-700" />
+            <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
+              <Users className="w-10 h-10 text-fg-subtle" />
             </div>
             <h3 className="text-lg font-medium">No characters found</h3>
-            <p className="text-vault-500 dark:text-vault-400 mt-2 mb-8 max-w-sm">
+            <p className="text-fg-muted mt-2 mb-8 max-w-sm">
               {searchQuery ? `No results for "${searchQuery}"` : "Get started by creating a new character or importing a card."}
             </p>
             {!searchQuery && (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-6 py-2.5 border border-vault-300 dark:border-vault-700 rounded-xl hover:bg-vault-50 dark:hover:bg-vault-900 transition-colors font-medium"
+                className="px-6 py-2.5 border border-border-strong rounded-xl hover:bg-hover transition-colors font-medium"
               >
                 Import Card
               </button>
@@ -1123,21 +1123,21 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                 : visibleCharacters.map((char) => <CharacterCardSkeleton key={char.id} />)}
             </div>
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 pb-20">
-              <p className="text-sm text-vault-500 dark:text-vault-400">
+              <p className="text-sm text-fg-muted">
                 Page {safeCurrentPage} of {totalPages}
               </p>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={safeCurrentPage === 1}
-                  className="px-4 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-400 dark:hover:border-vault-600 hover:shadow-md transition-all text-sm font-medium text-vault-600 dark:text-vault-300 disabled:opacity-50 disabled:hover:border-vault-200 dark:disabled:hover:border-vault-800 disabled:hover:shadow-none"
+                  className="px-4 py-2 bg-surface border border-border rounded-full hover:border-border-strong hover:shadow-md transition-all text-sm font-medium text-fg-muted disabled:opacity-50 disabled:hover:border-border disabled:hover:shadow-none"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={safeCurrentPage === totalPages}
-                  className="px-4 py-2 bg-white dark:bg-vault-900 border border-vault-200 dark:border-vault-800 rounded-full hover:border-vault-400 dark:hover:border-vault-600 hover:shadow-md transition-all text-sm font-medium text-vault-600 dark:text-vault-300 disabled:opacity-50 disabled:hover:border-vault-200 dark:disabled:hover:border-vault-800 disabled:hover:shadow-none"
+                  className="px-4 py-2 bg-surface border border-border rounded-full hover:border-border-strong hover:shadow-md transition-all text-sm font-medium text-fg-muted disabled:opacity-50 disabled:hover:border-border disabled:hover:shadow-none"
                 >
                   Next
                 </button>
@@ -1149,7 +1149,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
       {/* Footer Note */}
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="flex items-center justify-center gap-2 text-xs text-vault-400 dark:text-vault-600">
+        <div className="flex items-center justify-center gap-2 text-xs text-fg-subtle">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
           </svg>
@@ -1159,28 +1159,28 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-vault-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay backdrop-blur-sm animate-in fade-in">
+          <div className="bg-surface rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
-                <Trash2 className="w-6 h-6 text-red-500" />
+              <div className="p-3 bg-danger-soft rounded-full">
+                <Trash2 className="w-6 h-6 text-danger" />
               </div>
-              <h3 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Delete Character?</h3>
+              <h3 className="text-lg font-semibold text-fg">Delete Character?</h3>
             </div>
-            <p className="text-vault-600 dark:text-vault-400 mb-6">
-              Are you sure you want to delete <span className="font-medium text-vault-900 dark:text-vault-100">{deleteConfirmState.name}</span>? 
+            <p className="text-fg-muted mb-6">
+              Are you sure you want to delete <span className="font-medium text-fg">{deleteConfirmState.name}</span>? 
               This action cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={handleDeleteCancel}
-                className="px-4 py-2 text-sm font-medium text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-danger hover:opacity-90 rounded-lg transition-colors"
               >
                 Delete
               </button>
@@ -1191,27 +1191,27 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
       {/* Copy Confirmation Modal */}
       {copyConfirmState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-vault-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay backdrop-blur-sm animate-in fade-in">
+          <div className="bg-surface rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                <Copy className="w-6 h-6 text-blue-500" />
+              <div className="p-3 bg-info-soft rounded-full">
+                <Copy className="w-6 h-6 text-info" />
               </div>
-              <h3 className="text-lg font-semibold text-vault-900 dark:text-vault-100">Copy Character?</h3>
+              <h3 className="text-lg font-semibold text-fg">Copy Character?</h3>
             </div>
-            <p className="text-vault-600 dark:text-vault-400 mb-6">
-              Are you sure you want to create a copy of <span className="font-medium text-vault-900 dark:text-vault-100">{copyConfirmState.name}</span>?
+            <p className="text-fg-muted mb-6">
+              Are you sure you want to create a copy of <span className="font-medium text-fg">{copyConfirmState.name}</span>?
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={handleCopyCancel}
-                className="px-4 py-2 text-sm font-medium text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCopyConfirm}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-info hover:opacity-90 rounded-lg transition-colors"
               >
                 Copy
               </button>
@@ -1223,7 +1223,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
       {/* Vault Backup Confirmation Modal */}
       {backupConfirmOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70 backdrop-blur-sm animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-overlay backdrop-blur-sm animate-in fade-in"
           role="dialog"
           aria-modal="true"
           aria-labelledby="vault-backup-title"
@@ -1231,23 +1231,23 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             if (e.target === e.currentTarget) handleBackupCancel();
           }}
         >
-          <div className="bg-white dark:bg-vault-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95">
+          <div className="bg-surface rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-full">
-                <Download className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              <div className="p-3 bg-success-soft rounded-full">
+                <Download className="w-6 h-6 text-success" />
               </div>
-              <h3 id="vault-backup-title" className="text-lg font-semibold text-vault-900 dark:text-vault-100">
+              <h3 id="vault-backup-title" className="text-lg font-semibold text-fg">
                 Backup vault?
               </h3>
             </div>
-            <p className="text-vault-600 dark:text-vault-400 mb-2">
+            <p className="text-fg-muted mb-2">
               Download a ZIP of{' '}
-              <span className="font-medium text-vault-900 dark:text-vault-100">
+              <span className="font-medium text-fg">
                 {characterListItems.length} {characterListItems.length === 1 ? 'character' : 'characters'}
               </span>
               ?
             </p>
-            <p className="text-sm text-vault-500 dark:text-vault-500 mb-6">
+            <p className="text-sm text-fg-muted mb-6">
               Cards with images export as PNG; cards without export as JSON. This may take a moment for large vaults.
             </p>
             <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end">
@@ -1255,7 +1255,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                 type="button"
                 onClick={handleBackupCancel}
                 disabled={isExportingVault}
-                className="px-4 py-2.5 sm:py-2 text-sm font-medium text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50 touch-manipulation"
+                className="px-4 py-2.5 sm:py-2 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50 touch-manipulation"
               >
                 Cancel
               </button>

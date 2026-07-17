@@ -156,19 +156,19 @@ const statusBadgeStyles: Record<
   active: {
     label: 'Active',
     className:
-      'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border-green-200 dark:border-green-800',
-    dot: 'bg-green-500',
+      'bg-success-soft text-success-soft-fg border-success/30',
+    dot: 'bg-success',
   },
   grace: {
     label: 'Grace period',
     className:
-      'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      'bg-warning-soft text-warning-soft-fg border-warning/30',
     dot: 'bg-amber-500',
   },
   inactive: {
     label: 'Not active',
     className:
-      'bg-vault-100 text-vault-600 dark:bg-vault-800 dark:text-vault-300 border-vault-200 dark:border-vault-700',
+      'bg-muted text-fg-muted bg-muted text-fg-muted border-border',
     dot: 'bg-vault-400',
   },
 };
@@ -188,15 +188,15 @@ function normalizeCacheKey(baseUrl: string): string {
 }
 
 const barFillStyles: Record<BarStatus, string> = {
-  good: 'bg-green-500',
+  good: 'bg-success',
   warning: 'bg-yellow-500',
-  danger: 'bg-red-500',
+  danger: 'bg-danger',
 };
 
 const barTextStyles: Record<BarStatus, string> = {
-  good: 'text-green-600 dark:text-green-400',
-  warning: 'text-yellow-600 dark:text-yellow-400',
-  danger: 'text-red-600 dark:text-red-400',
+  good: 'text-success',
+  warning: 'text-warning',
+  danger: 'text-danger',
 };
 
 interface QuotaBarProps {
@@ -220,30 +220,30 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
   const fullRemaining = w.remaining.toLocaleString();
 
   return (
-    <div className="p-3 rounded-lg bg-vault-50 dark:bg-vault-900/40 border border-vault-200 dark:border-vault-700">
+    <div className="p-3 rounded-lg bg-bg/40 border border-border">
       <div className="flex items-center justify-between mb-2 gap-2">
-        <span className="text-xs font-medium text-vault-700 dark:text-vault-300">{label}</span>
+        <span className="text-xs font-medium text-fg-muted">{label}</span>
         <span className={`text-xs font-semibold tabular-nums ${barTextStyles[status]}`}>
           {pct.toFixed(0)}%
         </span>
       </div>
-      <div className="h-2 bg-vault-200 dark:bg-vault-700 rounded-full overflow-hidden mb-2">
+      <div className="h-2 bg-hover rounded-full overflow-hidden mb-2">
         <div
           className={`h-full transition-all duration-300 ${barFillStyles[status]}`}
           style={{ width: `${pct}%` }}
         />
       </div>
       <div
-        className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs text-vault-500 dark:text-vault-400"
+        className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs text-fg-muted"
         title={`${fullUsed} / ${fullLimit} ${unitLabel} used · ${fullRemaining} left`}
       >
         <span>
-          <span className="font-medium text-vault-700 dark:text-vault-300">
+          <span className="font-medium text-fg-muted">
             {formatUsed(w.used)}
           </span>
           {' / '}
           {formatUsed(limit)} {unitLabel} used
-          <span className="text-vault-400 dark:text-vault-500">
+          <span className="text-fg-subtle">
             {' · '}
             {formatUsed(w.remaining)} left
           </span>
@@ -421,8 +421,8 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
   return (
     <SettingsCard>
       <div className="flex items-center justify-between gap-2 mb-4">
-        <h3 className="text-sm font-semibold text-vault-800 dark:text-vault-200 flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-vault-600 dark:text-vault-400" />
+        <h3 className="text-sm font-semibold text-fg flex items-center gap-2">
+          <Wallet className="w-4 h-4 text-fg-muted" />
           NanoGPT Account
         </h3>
         {apiKey.trim() && (
@@ -435,7 +435,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                 ? `Wait ${cooldownSec}s before refreshing again`
                 : 'Refresh balance and subscription usage'
             }
-            className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-vault-500/50"
+            className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-fg-muted hover:bg-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent/50"
             aria-label={
               cooldownSec > 0
                 ? `Refresh available in ${cooldownSec} seconds`
@@ -451,13 +451,13 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
       </div>
 
       {!apiKey.trim() && (
-        <div className="flex items-start gap-3 p-3 rounded-lg bg-vault-50 dark:bg-vault-900/40 border border-vault-200 dark:border-vault-700">
-          <KeyRound className="w-4 h-4 text-vault-500 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-bg/40 border border-border">
+          <KeyRound className="w-4 h-4 text-fg-muted shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-vault-800 dark:text-vault-200">
+            <p className="text-sm font-medium text-fg">
               Add your API key to view account info
             </p>
-            <p className="text-xs text-vault-500 dark:text-vault-400 mt-0.5">
+            <p className="text-xs text-fg-muted mt-0.5">
               Enter a key above or use Sign in with NanoGPT to see balance and subscription usage.
             </p>
           </div>
@@ -465,19 +465,19 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
       )}
 
       {apiKey.trim() && bothFailed && (
-        <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-danger-soft border border-danger/30">
+          <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-red-800 dark:text-red-300">
+            <p className="text-sm font-medium text-danger-soft-fg">
               Could not load account info
             </p>
-            <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
+            <p className="text-xs text-danger mt-0.5">
               {usageError || balanceError || 'Unknown error'}
             </p>
             <button
               type="button"
               onClick={() => void fetchAccount({ manual: true })}
-              className="mt-2 text-xs font-medium text-red-700 dark:text-red-300 hover:underline"
+              className="mt-2 text-xs font-medium text-danger-soft-fg hover:underline"
             >
               Try again
             </button>
@@ -497,36 +497,36 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
         >
           {/* Hero: balance + status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-lg bg-linear-to-br from-vault-50 to-white dark:from-vault-900/50 dark:to-vault-800/30 border border-vault-200 dark:border-vault-700 min-h-[88px]">
-              <div className="text-xs font-medium text-vault-500 dark:text-vault-400 mb-1">
+            <div className="p-3 rounded-lg bg-linear-to-br from-muted to-surface border border-border min-h-[88px]">
+              <div className="text-xs font-medium text-fg-muted mb-1">
                 Balance
               </div>
               {showContent && balance ? (
                 <>
-                  <div className="text-xl font-bold text-vault-900 dark:text-vault-100 tabular-nums tracking-tight">
+                  <div className="text-xl font-bold text-fg tabular-nums tracking-tight">
                     {formatUsd(balance.usdBalance)}
                   </div>
-                  <div className="text-xs text-vault-500 dark:text-vault-400 mt-0.5">
+                  <div className="text-xs text-fg-muted mt-0.5">
                     {formatNano(balance.nanoBalance)} XNO
                   </div>
                 </>
               ) : showContent && balanceError ? (
-                <div className="flex items-start gap-1.5 text-xs text-vault-500 dark:text-vault-400">
+                <div className="flex items-start gap-1.5 text-xs text-fg-muted">
                   <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                   <span>{balanceError}</span>
                 </div>
               ) : showContent ? (
-                <span className="text-vault-400 text-xs">—</span>
+                <span className="text-fg-subtle text-xs">—</span>
               ) : (
                 <div className="animate-pulse space-y-2" aria-hidden>
-                  <div className="h-7 w-24 rounded bg-vault-200 dark:bg-vault-700" />
-                  <div className="h-3 w-16 rounded bg-vault-200/80 dark:bg-vault-700/80" />
+                  <div className="h-7 w-24 rounded bg-hover" />
+                  <div className="h-3 w-16 rounded bg-vault-200/80 bg-hover/80" />
                 </div>
               )}
             </div>
 
-            <div className="p-3 rounded-lg bg-linear-to-br from-vault-50 to-white dark:from-vault-900/50 dark:to-vault-800/30 border border-vault-200 dark:border-vault-700 min-h-[88px]">
-              <div className="text-xs font-medium text-vault-500 dark:text-vault-400 mb-1">
+            <div className="p-3 rounded-lg bg-linear-to-br from-muted to-surface border border-border min-h-[88px]">
+              <div className="text-xs font-medium text-fg-muted mb-1">
                 Subscription
               </div>
               {showContent && usage && badge && subState ? (
@@ -540,19 +540,19 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                     </span>
                   </div>
                   {subState === 'inactive' && (
-                    <p className="text-xs text-vault-500 dark:text-vault-400 mt-1.5 leading-relaxed">
+                    <p className="text-xs text-fg-muted mt-1.5 leading-relaxed">
                       No active subscription. Requests use your balance (pay-as-you-go).
                     </p>
                   )}
                   {subState === 'active' && periodEnd && (
-                    <div className="text-xs text-vault-500 dark:text-vault-400 mt-1.5">
+                    <div className="text-xs text-fg-muted mt-1.5">
                       Period ends {periodEnd}
                     </div>
                   )}
                   {subState === 'grace' && (
                     <>
                       {usage.graceUntil && (
-                        <div className="text-xs text-amber-600 dark:text-amber-400 mt-1.5">
+                        <div className="text-xs text-warning mt-1.5">
                           Grace until{' '}
                           {new Date(usage.graceUntil).toLocaleDateString(undefined, {
                             month: 'short',
@@ -561,7 +561,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                         </div>
                       )}
                       {periodEnd && !usage.graceUntil && (
-                        <div className="text-xs text-vault-500 dark:text-vault-400 mt-1.5">
+                        <div className="text-xs text-fg-muted mt-1.5">
                           Period ends {periodEnd}
                         </div>
                       )}
@@ -569,7 +569,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                   )}
                 </>
               ) : showContent && usageError ? (
-                <div className="flex items-start gap-1.5 text-xs text-vault-500 dark:text-vault-400">
+                <div className="flex items-start gap-1.5 text-xs text-fg-muted">
                   <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                   <span>
                     {/cors/i.test(usageError)
@@ -578,11 +578,11 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                   </span>
                 </div>
               ) : showContent ? (
-                <span className="text-vault-400 text-xs">—</span>
+                <span className="text-fg-subtle text-xs">—</span>
               ) : (
                 <div className="animate-pulse space-y-2" aria-hidden>
-                  <div className="h-6 w-20 rounded-full bg-vault-200 dark:bg-vault-700" />
-                  <div className="h-3 w-28 rounded bg-vault-200/80 dark:bg-vault-700/80" />
+                  <div className="h-6 w-20 rounded-full bg-hover" />
+                  <div className="h-3 w-28 rounded bg-vault-200/80 bg-hover/80" />
                 </div>
               )}
             </div>
@@ -620,27 +620,27 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                 {!usage.weeklyInputTokens &&
                   !usage.dailyInputTokens &&
                   !usage.dailyImages && (
-                    <p className="text-xs text-vault-500 dark:text-vault-400">
+                    <p className="text-xs text-fg-muted">
                       No quota windows reported for this account.
                     </p>
                   )}
                 {usage.allowOverage && (
-                  <p className="text-xs text-vault-500 dark:text-vault-400">
+                  <p className="text-xs text-fg-muted">
                     Overage enabled — after included limits, usage bills to your balance.
                   </p>
                 )}
-                <p className="text-[11px] text-vault-400 dark:text-vault-500">
+                <p className="text-[11px] text-fg-subtle">
                   Weekly input tokens are subscription-covered input only (not $ spend).
                 </p>
               </div>
             )}
 
             {showContent && usage && subState === 'inactive' && (
-              <div className="p-3 rounded-lg bg-vault-50 dark:bg-vault-900/40 border border-dashed border-vault-300 dark:border-vault-600">
-                <p className="text-sm font-medium text-vault-800 dark:text-vault-200">
+              <div className="p-3 rounded-lg bg-bg/40 border border-dashed border-border-strong">
+                <p className="text-sm font-medium text-fg">
                   Subscription not active
                 </p>
-                <p className="text-xs text-vault-500 dark:text-vault-400 mt-1 leading-relaxed">
+                <p className="text-xs text-fg-muted mt-1 leading-relaxed">
                   You don&apos;t have an active NanoGPT subscription, so included weekly token
                   limits don&apos;t apply. Your balance above is used for pay-as-you-go models.
                 </p>
@@ -648,7 +648,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                   href="https://nano-gpt.com/subscription"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                  className="inline-block mt-2 text-xs font-medium text-info hover:underline"
                 >
                   View NanoGPT subscription ↗
                 </a>
@@ -657,15 +657,15 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
 
             {!showContent && (
               <div className="space-y-3" aria-hidden>
-                <div className="p-3 rounded-lg bg-vault-50 dark:bg-vault-900/40 border border-vault-200 dark:border-vault-700 animate-pulse">
+                <div className="p-3 rounded-lg bg-bg/40 border border-border animate-pulse">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="h-3 w-32 rounded bg-vault-200 dark:bg-vault-700" />
-                    <div className="h-3 w-8 rounded bg-vault-200 dark:bg-vault-700" />
+                    <div className="h-3 w-32 rounded bg-hover" />
+                    <div className="h-3 w-8 rounded bg-hover" />
                   </div>
-                  <div className="h-2 rounded-full bg-vault-200 dark:bg-vault-700 mb-2" />
-                  <div className="h-3 w-48 rounded bg-vault-200/80 dark:bg-vault-700/80" />
+                  <div className="h-2 rounded-full bg-hover mb-2" />
+                  <div className="h-3 w-48 rounded bg-vault-200/80 bg-hover/80" />
                 </div>
-                <div className="flex items-center gap-2 text-xs text-vault-500 dark:text-vault-400">
+                <div className="flex items-center gap-2 text-xs text-fg-muted">
                   <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                   Loading account…
                 </div>

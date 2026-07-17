@@ -25,7 +25,7 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
 }) => {
   if (stacked) {
     return (
-      <label className="flex items-start gap-3 text-sm text-vault-700 dark:text-vault-300 cursor-pointer group">
+      <label className="flex items-start gap-3 text-sm text-fg-muted cursor-pointer group">
         <div className="relative mt-0.5">
           <input
             type="checkbox"
@@ -34,15 +34,15 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
             onChange={(e) => onChange(e.target.checked)}
             className="peer sr-only"
           />
-          <div className="w-10 h-6 bg-vault-300 dark:bg-vault-700 rounded-full peer-checked:bg-vault-600 dark:peer-checked:bg-vault-500 transition-colors duration-200 peer-disabled:opacity-50" />
-          <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
+          <div className="w-10 h-6 bg-hover rounded-full peer-checked:bg-accent transition-colors duration-200 peer-disabled:opacity-50" />
+          <div className="absolute left-1 top-1 w-4 h-4 bg-surface rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
         </div>
         <div className="flex-1">
-          <span className="group-hover:text-vault-900 dark:group-hover:text-vault-100 transition-colors font-medium">
+          <span className="group-hover:text-fg transition-colors font-medium">
             {label}
           </span>
           {description != null && (
-            <p className="text-xs text-vault-500 dark:text-vault-400 mt-1 leading-relaxed">
+            <p className="text-xs text-fg-muted mt-1 leading-relaxed">
               {description}
             </p>
           )}
@@ -52,7 +52,7 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
   }
 
   return (
-    <label className="flex items-center gap-3 text-sm text-vault-700 dark:text-vault-300 cursor-pointer group">
+    <label className="flex items-center gap-3 text-sm text-fg-muted cursor-pointer group">
       <div className="relative">
         <input
           type="checkbox"
@@ -61,10 +61,10 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
           onChange={(e) => onChange(e.target.checked)}
           className="peer sr-only"
         />
-        <div className="w-10 h-6 bg-vault-300 dark:bg-vault-700 rounded-full peer-checked:bg-vault-600 dark:peer-checked:bg-vault-500 transition-colors duration-200 peer-disabled:opacity-50" />
-        <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
+        <div className="w-10 h-6 bg-hover rounded-full peer-checked:bg-accent transition-colors duration-200 peer-disabled:opacity-50" />
+        <div className="absolute left-1 top-1 w-4 h-4 bg-surface rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
       </div>
-      <span className="group-hover:text-vault-900 dark:group-hover:text-vault-100 transition-colors">
+      <span className="group-hover:text-fg transition-colors">
         {label}
       </span>
     </label>

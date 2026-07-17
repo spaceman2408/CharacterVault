@@ -168,7 +168,7 @@ export function AIChatPanel({
   };
 
   return (
-    <div className="h-full flex flex-col bg-vault-50 dark:bg-vault-900 border-l border-vault-200 dark:border-vault-800 animate-fade-in-slow">
+    <div className="h-full flex flex-col bg-bg border-l border-border animate-fade-in-slow">
       {/* Animation styles for smooth message appearance */}
       <style>{`
         @keyframes message-appear {
@@ -186,10 +186,10 @@ export function AIChatPanel({
         }
       `}</style>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-vault-200 dark:border-vault-800 bg-vault-100 dark:bg-vault-800/50 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50 shrink-0">
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-vault-600 dark:text-vault-400" />
-          <h2 className="font-semibold text-vault-900 dark:text-vault-100">
+          <MessageSquare className="w-4 h-4 text-fg-muted" />
+          <h2 className="font-semibold text-fg">
             Ask Orion
           </h2>
         </div>
@@ -197,7 +197,7 @@ export function AIChatPanel({
           {chatHistory.length > 0 && (
             <button
               onClick={handleNewChat}
-              className="p-1.5 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-200 dark:hover:bg-vault-800 rounded-lg transition-colors"
+              className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-colors"
               title="New Chat"
             >
               <Plus className="w-4 h-4" />
@@ -206,7 +206,7 @@ export function AIChatPanel({
           {isMobile && onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-200 dark:hover:bg-vault-800 rounded-lg transition-colors ml-1"
+              className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-colors ml-1"
               title="Close AI Chat Panel"
             >
               <X className="w-4 h-4" />
@@ -217,12 +217,12 @@ export function AIChatPanel({
 
       {/* Error Message */}
       {error && (
-        <div className="mx-3 mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2 text-red-600 dark:text-red-400 text-sm shrink-0">
+        <div className="mx-3 mt-3 p-3 bg-danger-soft border border-danger/30 rounded-lg flex items-start gap-2 text-danger text-sm shrink-0">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span className="flex-1">{error}</span>
           <button
             onClick={clearError}
-            className="p-0.5 text-red-400 hover:text-red-600 dark:hover:text-red-300"
+            className="p-0.5 text-red-400 hover:text-danger"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -230,13 +230,13 @@ export function AIChatPanel({
       )}
 
       {/* Chat Messages - flex-1 to push input to bottom */}
-      <div className="border-b border-vault-200 dark:border-vault-800 flex-1 flex flex-col min-h-0">
+      <div className="border-b border-border flex-1 flex flex-col min-h-0">
         <div
           ref={chatContainerRef}
           className="px-4 pt-2 pb-4 space-y-4 overflow-y-auto flex-1 min-h-0"
         >
           {chatHistory.length === 0 && (
-            <div className="text-center py-8 text-vault-400 dark:text-vault-500">
+            <div className="text-center py-8 text-fg-subtle">
               <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p className="text-sm">Hi, I'm Orion!</p>
               <p className="text-xs mt-1">Ask me anything about your character card, or just chat with me! Don't forget to add your context!</p>
@@ -258,25 +258,25 @@ export function AIChatPanel({
           {/* Streaming indicator in chat */}
           {isStreaming && (typewriter.displayedContent || typewriter.displayedReasoning) && (
             <div className="flex justify-start">
-              <div className="max-w-[90%] bg-white dark:bg-vault-800 border border-vault-200 dark:border-vault-700 rounded-lg rounded-bl-none px-3 py-2 message-animate">
+              <div className="max-w-[90%] bg-surface border border-border rounded-lg rounded-bl-none px-3 py-2 message-animate">
                 {/* Display streaming reasoning if available and showReasoning is not false - collapsed by default */}
                 {typewriter.displayedReasoning && aiConfig.showReasoning !== false && (
-                  <div className="mb-2 border border-vault-300 dark:border-vault-600 rounded-md overflow-hidden">
+                  <div className="mb-2 border border-border-strong rounded-md overflow-hidden">
                     <button
                       onClick={() => setIsStreamingReasoningExpanded(!isStreamingReasoningExpanded)}
-                      className="w-full flex items-center justify-between px-2 py-1.5 bg-vault-100 dark:bg-vault-700/50 hover:bg-vault-200 dark:hover:bg-vault-700 transition-colors text-left"
+                      className="w-full flex items-center justify-between px-2 py-1.5 bg-muted bg-hover hover:bg-hover transition-colors text-left"
                     >
-                      <span className="text-xs font-medium text-vault-600 dark:text-vault-400 flex items-center gap-1">
+                      <span className="text-xs font-medium text-fg-muted flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
                         Thinking process
                       </span>
-                      <span className="text-xs text-vault-500 dark:text-vault-500">
+                      <span className="text-xs text-fg-muted">
                         {isStreamingReasoningExpanded ? 'Hide' : 'Show'}
                       </span>
                     </button>
                     {isStreamingReasoningExpanded && (
-                      <div ref={streamingReasoningRef} className="max-h-40 overflow-y-auto px-2 py-2 bg-vault-50 dark:bg-vault-800/50 border-t border-vault-200 dark:border-vault-700">
-                        <pre className="text-xs font-mono text-vault-700 dark:text-vault-300 whitespace-pre-wrap wrap-break-word leading-relaxed">
+                      <div ref={streamingReasoningRef} className="max-h-40 overflow-y-auto px-2 py-2 bg-muted border-t border-border">
+                        <pre className="text-xs font-mono text-fg-muted whitespace-pre-wrap wrap-break-word leading-relaxed">
                           {typewriter.displayedReasoning}
                         </pre>
                       </div>
@@ -284,7 +284,7 @@ export function AIChatPanel({
                   </div>
                 )}
                 {typewriter.displayedContent && (
-                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none text-vault-900 dark:text-vault-100">
+                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none text-fg">
                     <StreamingMarkdown
                       content={typewriter.displayedContent}
                       isStreaming={typewriter.isTyping}
@@ -299,9 +299,9 @@ export function AIChatPanel({
           {/* Loading indicator in chat */}
           {isProcessing && (!isStreaming || (!typewriter.displayedContent && !typewriter.displayedReasoning)) && (
             <div className="flex justify-start">
-              <div className="bg-white dark:bg-vault-800 border border-vault-200 dark:border-vault-700 rounded-lg rounded-bl-none px-3 py-2 flex items-center gap-2 message-animate">
-                <Loader2 className="w-4 h-4 animate-spin text-vault-600 dark:text-vault-400" />
-                <span className="text-sm text-vault-600 dark:text-vault-400">AI is thinking...</span>
+              <div className="bg-surface border border-border rounded-lg rounded-bl-none px-3 py-2 flex items-center gap-2 message-animate">
+                <Loader2 className="w-4 h-4 animate-spin text-fg-muted" />
+                <span className="text-sm text-fg-muted">AI is thinking...</span>
               </div>
             </div>
           )}
@@ -309,7 +309,7 @@ export function AIChatPanel({
       </div>
 
       {/* Input Area */}
-      <div className="p-3 space-y-3 bg-vault-100 dark:bg-vault-800/50 shrink-0">
+      <div className="p-3 space-y-3 bg-muted/50 shrink-0">
         <div className="flex gap-2">
           <textarea
             ref={inputRef}
@@ -317,7 +317,7 @@ export function AIChatPanel({
             onChange={(e) => setAskQuestion(e.target.value)}
             placeholder="Ask a question..."
             rows={1}
-            className="flex-1 px-3 py-2 text-sm border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-700 text-vault-900 dark:text-vault-100 placeholder-vault-400 focus:outline-none focus:ring-2 focus:ring-vault-500 resize-none overflow-y-auto min-h-9.5 max-h-30"
+            className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-lg bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent resize-none overflow-y-auto min-h-9.5 max-h-30"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey && !isProcessing && askQuestion.trim()) {
                 e.preventDefault();
@@ -336,8 +336,8 @@ export function AIChatPanel({
             disabled={!isProcessing && !askQuestion.trim() && (!chatHistory.length || chatHistory[chatHistory.length - 1]?.role !== 'user')}
             className={`px-3 py-2 h-9.5] text-white text-sm rounded-lg transition-colors flex items-center gap-1.5 self-center ${
               isProcessing
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-vault-600 hover:bg-vault-700 disabled:opacity-50'
+                ? 'bg-danger hover:opacity-90'
+                : 'bg-inverse hover:opacity-90 disabled:opacity-50'
             }`}
           >
             {isProcessing ? (

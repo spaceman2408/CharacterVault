@@ -97,8 +97,8 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
     <div className="space-y-6">
       <SettingsCard variant="gradient">
         <div className="flex items-center gap-2 mb-3">
-          <Wand2 className="w-4 h-4 text-vault-600 dark:text-vault-400" />
-          <span className="text-sm font-semibold text-vault-700 dark:text-vault-300">
+          <Wand2 className="w-4 h-4 text-fg-muted" />
+          <span className="text-sm font-semibold text-fg-muted">
             Quick Presets
           </span>
         </div>
@@ -107,7 +107,7 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             <button
               key={preset}
               onClick={() => handlePreset(preset)}
-              className="flex-1 px-3 py-2 text-sm font-medium bg-white dark:bg-vault-700 hover:bg-vault-50 dark:hover:bg-vault-600 text-vault-700 dark:text-vault-300 rounded-lg transition-all duration-200 border border-vault-200 dark:border-vault-600 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50"
+              className="flex-1 px-3 py-2 text-sm font-medium bg-surface hover:bg-hover text-fg-muted rounded-lg transition-all duration-200 border border-border hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
             >
               <span className="capitalize">{preset}</span>
             </button>
@@ -117,8 +117,8 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
 
       <SettingsCard>
         <div className="flex items-center gap-2 mb-4">
-          <Sliders className="w-4 h-4 text-vault-600 dark:text-vault-400" />
-          <span className="text-sm font-semibold text-vault-700 dark:text-vault-300">
+          <Sliders className="w-4 h-4 text-fg-muted" />
+          <span className="text-sm font-semibold text-fg-muted">
             Primary Samplers
           </span>
         </div>
@@ -172,8 +172,8 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
 
       <SettingsCard>
         <div className="flex items-center gap-2 mb-4">
-          <Target className="w-4 h-4 text-vault-600 dark:text-vault-400" />
-          <span className="text-sm font-semibold text-vault-700 dark:text-vault-300">
+          <Target className="w-4 h-4 text-fg-muted" />
+          <span className="text-sm font-semibold text-fg-muted">
             Secondary Samplers
           </span>
         </div>
@@ -201,8 +201,8 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             formatValue={(v) => Math.round(v).toString()}
           />
           <div className="sm:col-span-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
-              <span className="p-1.5 rounded-md bg-vault-100 dark:bg-vault-800 text-vault-600 dark:text-vault-400">
+            <label className="flex items-center gap-2 text-sm font-medium text-fg-muted mb-2">
+              <span className="p-1.5 rounded-md bg-muted text-fg-muted">
                 <BookOpen className="w-4 h-4" />
               </span>
               Context Length
@@ -210,7 +210,7 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             <select
               value={isCustomContext ? 'custom' : settings.contextLength}
               onChange={(e) => handleContextSelect(e.target.value)}
-              className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+              className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
             >
               {CONTEXT_LENGTH_PRESETS.map((preset) => (
                 <option key={preset.value} value={preset.value}>
@@ -228,11 +228,11 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
                 value={settings.contextLength}
                 onChange={(e) => handleCustomContextChange(e.target.value)}
                 onBlur={handleCustomContextBlur}
-                className="mt-2 w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+                className="mt-2 w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
                 aria-label="Custom context length in tokens"
               />
             )}
-            <p className="mt-2 text-xs text-vault-500">
+            <p className="mt-2 text-xs text-fg-muted">
               Maximum context window for AI requests
               {isCustomContext
                 ? ` (custom: ${CONTEXT_LENGTH_CUSTOM_MIN.toLocaleString()}–${CONTEXT_LENGTH_MAX.toLocaleString()} tokens)`

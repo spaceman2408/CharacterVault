@@ -118,7 +118,7 @@ export function StreamingText({
   }, [isStreaming, content]);
 
   const cursorElement = showCursor && isStreaming ? (
-    <span className="inline-block w-2 h-4 ml-1 bg-vault-600 animate-pulse" />
+    <span className="inline-block w-2 h-4 ml-1 bg-fg-muted animate-pulse" />
   ) : null;
 
   if (renderMarkdown) {

@@ -88,7 +88,7 @@ export function PromoBanner({ onDismiss }: PromoBannerProps): React.ReactElement
             absolute top-3 right-3 z-20
             p-1.5 rounded-lg
             text-white/50 hover:text-white
-            hover:bg-white/10
+            hover:bg-surface/10
             transition-all duration-200
             focus:outline-none focus:ring-2 focus:ring-white/30
           "
@@ -101,7 +101,7 @@ export function PromoBanner({ onDismiss }: PromoBannerProps): React.ReactElement
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-4">
             <div
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/10"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface/10 border border-white/10"
               style={{ animation: 'badge-pulse 2s ease-in-out infinite' }}
             >
               <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
@@ -125,7 +125,7 @@ export function PromoBanner({ onDismiss }: PromoBannerProps): React.ReactElement
               group relative w-full
               flex items-center justify-center gap-2
               px-4 py-3
-              bg-white text-vault-900
+              bg-surface text-fg
               rounded-xl
               font-semibold text-sm
               overflow-hidden
@@ -143,7 +143,7 @@ export function PromoBanner({ onDismiss }: PromoBannerProps): React.ReactElement
             <ExternalLink className="relative w-4 h-4 transition-all duration-150 ease-out group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </button>
 
-          <p className="mt-4 text-[10px] text-vault-400/60 text-center">
+          <p className="mt-4 text-[10px] text-fg-subtle/60 text-center">
             Free & open source
           </p>
         </div>

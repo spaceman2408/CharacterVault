@@ -196,19 +196,19 @@ export function ContextPanel({
   if (!hasCurrentCharacter) return <></>;
 
   return (
-    <div className="h-full flex flex-col bg-vault-50 dark:bg-vault-900 border-r border-vault-200 dark:border-vault-800 animate-fade-in-slow">
+    <div className="h-full flex flex-col bg-bg border-r border-border animate-fade-in-slow">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-vault-200 dark:border-vault-800 bg-vault-100 dark:bg-vault-800/50 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50 shrink-0">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-vault-600 dark:text-vault-400" />
-          <h2 className="font-semibold text-vault-900 dark:text-vault-100">
+          <Sparkles className="w-4 h-4 text-fg-muted" />
+          <h2 className="font-semibold text-fg">
             AI Context
           </h2>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setContextSectionIds([])}
-            className="p-1.5 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-200 dark:hover:bg-vault-800 rounded-lg transition-colors disabled:opacity-50"
+            className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
             title="Clear all context"
             disabled={contextSectionIds.length === 0}
           >
@@ -217,7 +217,7 @@ export function ContextPanel({
           {isMobile && onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-200 dark:hover:bg-vault-800 rounded-lg transition-colors"
+              className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-colors"
               title="Close Context Panel"
             >
               <X className="w-4 h-4" />
@@ -227,18 +227,18 @@ export function ContextPanel({
       </div>
 
       {/* Selected Context Section - Collapsible */}
-      <div className="border-b border-vault-200 dark:border-vault-800 shrink-0">
+      <div className="border-b border-border shrink-0">
         <button
           onClick={() => setIsSelectedContextExpanded(!isSelectedContextExpanded)}
-          className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-vault-100 dark:hover:bg-vault-800/50 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-hover/50 transition-colors"
         >
-          <h3 className="text-xs font-medium text-vault-500 dark:text-vault-400 uppercase tracking-wide">
+          <h3 className="text-xs font-medium text-fg-muted uppercase tracking-wide">
             Selected Context ({contextSections.length})
           </h3>
           {isSelectedContextExpanded ? (
-            <ChevronUp className="w-4 h-4 text-vault-400" />
+            <ChevronUp className="w-4 h-4 text-fg-subtle" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-vault-400" />
+            <ChevronDown className="w-4 h-4 text-fg-subtle" />
           )}
         </button>
         
@@ -246,39 +246,39 @@ export function ContextPanel({
           <div className="px-4 pb-4 space-y-3">
             {/* Context Usage Indicator */}
             {contextSections.length > 0 && (
-              <div className="p-3 bg-white dark:bg-vault-800 rounded-lg border border-vault-200 dark:border-vault-700">
+              <div className="p-3 bg-surface rounded-lg border border-border">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-vault-600 dark:text-vault-400">
+                  <span className="text-xs text-fg-muted">
                     Context Usage
                   </span>
                   <span className={`text-xs font-medium ${
                     usageData.status === 'good' 
-                      ? 'text-green-600 dark:text-green-400' 
+                      ? 'text-success' 
                       : usageData.status === 'warning'
-                      ? 'text-yellow-600 dark:text-yellow-400'
-                      : 'text-red-600 dark:text-red-400'
+                      ? 'text-warning'
+                      : 'text-danger'
                   }`}>
                     {usageData.percentage.toFixed(0)}%
                   </span>
                 </div>
-                <div className="h-2 bg-vault-200 dark:bg-vault-700 rounded-full overflow-hidden mb-2">
+                <div className="h-2 bg-hover rounded-full overflow-hidden mb-2">
                   <div
                     className={`h-full transition-all duration-300 ${
                       usageData.status === 'good'
-                        ? 'bg-green-500'
+                        ? 'bg-success'
                         : usageData.status === 'warning'
                         ? 'bg-yellow-500'
-                        : 'bg-red-500'
+                        : 'bg-danger'
                     }`}
                     style={{ width: `${usageData.percentage}%` }}
                   />
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-vault-500 dark:text-vault-400">
+                  <span className="text-fg-muted">
                     {usageData.tokenCount.toLocaleString()} / {contextLimit.toLocaleString()} tokens
                   </span>
                   {usageData.status === 'danger' && (
-                    <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                    <span className="flex items-center gap-1 text-danger">
                       <AlertCircle className="w-3 h-3" />
                       Over limit
                     </span>
@@ -288,14 +288,14 @@ export function ContextPanel({
             )}
             
             {/* Info about auto-included section */}
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400">
+            <div className="p-2 bg-info-soft border border-info/30 rounded-lg">
+              <div className="flex items-center gap-2 text-xs text-info-soft-fg">
                 <div className="group relative">
                   <Info className="w-4 h-4 shrink-0 cursor-help" />
-                  <div className="absolute top-full left-0 mt-2 w-64 p-2 bg-vault-800 text-vault-100 text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-lg">
+                  <div className="absolute top-full left-0 mt-2 w-64 p-2 bg-surface text-fg text-xs rounded-lg border border-border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 shadow-lg">
                     <p className="font-medium mb-1">How tokens are estimated:</p>
                     <p>Text size in bytes ÷ {BYTES_PER_TOKEN} (rounded up)</p>
-                    <p className="text-vault-400 mt-1">Actual token counts may vary by model.</p>
+                    <p className="text-fg-subtle mt-1">Actual token counts may vary by model.</p>
                     <div className="absolute bottom-full left-4 -mb-px border-4 border-transparent border-b-vault-800"></div>
                   </div>
                 </div>
@@ -304,7 +304,7 @@ export function ContextPanel({
             </div>
 
             {contextSections.length === 0 ? (
-              <div className="text-center py-4 text-vault-400 dark:text-vault-500">
+              <div className="text-center py-4 text-fg-subtle">
                 <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No context selected</p>
                 <p className="text-xs mt-1">Add sections to provide context for AI</p>
@@ -314,14 +314,14 @@ export function ContextPanel({
                 {contextSections.map((section) => (
                   <div
                     key={section.id}
-                    className="flex items-center justify-between p-2 rounded-lg border bg-white dark:bg-vault-800 border-vault-200 dark:border-vault-700"
+                    className="flex items-center justify-between p-2 rounded-lg border bg-surface border-border"
                   >
-                    <span className="text-sm font-medium text-vault-900 dark:text-vault-100">
+                    <span className="text-sm font-medium text-fg">
                       {section.label}
                     </span>
                     <button
                       onClick={() => removeContextSection(section.id)}
-                      className="p-1.5 text-vault-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors ml-2"
+                      className="p-1.5 text-fg-subtle hover:text-danger hover:bg-danger-soft rounded transition-colors ml-2"
                       title="Remove from context"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -338,30 +338,30 @@ export function ContextPanel({
       <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <button
           onClick={() => setIsAddContextExpanded(!isAddContextExpanded)}
-          className="w-full flex items-center justify-between px-4 py-2.5 border-b border-vault-200 dark:border-vault-800 hover:bg-vault-100 dark:hover:bg-vault-800/50 transition-colors shrink-0"
+          className="w-full flex items-center justify-between px-4 py-2.5 border-b border-border hover:bg-hover/50 transition-colors shrink-0"
         >
-          <h3 className="text-xs font-medium text-vault-500 dark:text-vault-400 uppercase tracking-wide">
+          <h3 className="text-xs font-medium text-fg-muted uppercase tracking-wide">
             Add Context
           </h3>
           {isAddContextExpanded ? (
-            <ChevronUp className="w-4 h-4 text-vault-400" />
+            <ChevronUp className="w-4 h-4 text-fg-subtle" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-vault-400" />
+            <ChevronDown className="w-4 h-4 text-fg-subtle" />
           )}
         </button>
 
         {isAddContextExpanded && (
           <>
             {/* Search Input */}
-            <div className="p-4 border-b border-vault-200 dark:border-vault-800 shrink-0">
+            <div className="p-4 border-b border-border shrink-0">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-vault-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={handleSearchQueryChange}
                   placeholder="Search sections..."
-                  className="w-full pl-9 pr-4 py-2 text-sm border border-vault-300 dark:border-vault-700 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 placeholder-vault-400 focus:outline-none focus:ring-2 focus:ring-vault-500"
+                  className="w-full pl-9 pr-4 py-2 text-sm border border-border-strong rounded-lg bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
             </div>
@@ -369,7 +369,7 @@ export function ContextPanel({
             {/* Available Sections List */}
             <div className="flex-1 overflow-y-auto p-4">
               {filteredSections.length === 0 ? (
-                <div className="text-center py-8 text-vault-400 dark:text-vault-500">
+                <div className="text-center py-8 text-fg-subtle">
                   <p className="text-sm">
                     {searchQuery.trim() ? 'No matching sections found' : 'All sections are in context'}
                   </p>
@@ -383,18 +383,18 @@ export function ContextPanel({
                         addContextSection(section.id);
                         setSearchQuery('');
                       }}
-                      className="w-full text-left p-3 bg-white dark:bg-vault-800 hover:bg-vault-100 dark:hover:bg-vault-700 border border-vault-200 dark:border-vault-700 rounded-lg transition-colors group"
+                      className="w-full text-left p-3 bg-surface hover:bg-hover border border-border rounded-lg transition-colors group"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-vault-900 dark:text-vault-100 truncate group-hover:text-vault-600 dark:group-hover:text-vault-400">
+                          <p className="text-sm font-medium text-fg truncate group-hover:text-fg">
                             {section.label}
                           </p>
-                          <p className="text-xs text-vault-500 mt-1">
+                          <p className="text-xs text-fg-muted mt-1">
                             {section.description}
                           </p>
                         </div>
-                        <Plus className="w-4 h-4 text-vault-400 group-hover:text-vault-600 dark:group-hover:text-vault-400 shrink-0 mt-0.5" />
+                        <Plus className="w-4 h-4 text-fg-subtle group-hover:text-fg shrink-0 mt-0.5" />
                       </div>
                     </button>
                   ))}

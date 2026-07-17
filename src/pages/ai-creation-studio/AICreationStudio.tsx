@@ -263,7 +263,7 @@ export const AICreationStudio: React.FC = () => {
   const hasRemainingFields = remainingFields.length > 0;
 
   return (
-    <div className="h-dvh flex flex-col bg-vault-50 dark:bg-vault-950 text-vault-900 dark:text-vault-100 overflow-hidden">
+    <div className="h-dvh flex flex-col bg-bg text-fg overflow-hidden">
       {/* Vortex Animation Overlay */}
       <TagVortexOverlay
         selectedTags={vortexTags}
@@ -273,25 +273,25 @@ export const AICreationStudio: React.FC = () => {
       />
 
       {/* Header */}
-      <header className="shrink-0 w-full backdrop-blur-xl bg-white/80 dark:bg-vault-950/80 border-b border-vault-200 dark:border-vault-800">
+      <header className="shrink-0 w-full backdrop-blur-xl bg-surface/80 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={handleBackToLibrary}
-              className="p-2 rounded-lg transition-all duration-200 active:scale-95 text-vault-500 hover:text-vault-900 dark:text-vault-400 dark:hover:text-vault-100 hover:bg-vault-100 dark:hover:bg-vault-800"
+              className="p-2 rounded-lg transition-all duration-200 active:scale-95 text-fg-muted hover:text-fg hover:bg-hover"
               title="Back to Library"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-vault-600 dark:text-vault-400" />
+              <Sparkles className="w-5 h-5 text-fg-muted" />
               <h1 className="text-lg font-semibold">AI Creation Studio</h1>
             </div>
           </div>
 
           <button
             onClick={handleOpenSettings}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-vault-600 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors"
           >
             <Settings2 className="w-4 h-4" />
             <span className="hidden sm:inline">Settings</span>
@@ -305,15 +305,15 @@ export const AICreationStudio: React.FC = () => {
           {/* Success State */}
           {saveSuccess && savedCharacterId && (
             <div className="mb-6 animate-fade-in">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center">
-                <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <CheckCircle className="w-7 h-7 text-green-600 dark:text-green-400" />
+              <div className="bg-success-soft border border-success/30 rounded-xl p-6 text-center">
+                <div className="w-14 h-14 bg-success-soft rounded-full flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle className="w-7 h-7 text-success" />
                 </div>
-                <h2 className="text-xl font-bold text-green-800 dark:text-green-300 mb-2">
+                <h2 className="text-xl font-bold text-success-soft-fg mb-2">
                   Character Saved!
                 </h2>
-                <p className="text-green-700 dark:text-green-400 mb-6">
-                  <span className="font-medium text-green-900 dark:text-green-200">
+                <p className="text-success mb-6">
+                  <span className="font-medium text-success-soft-fg">
                     {state.generatedData.name}
                   </span>{' '}
                   has been added to your vault.
@@ -321,21 +321,21 @@ export const AICreationStudio: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
                   <button
                     onClick={handleOpenCharacter}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 font-medium rounded-xl hover:opacity-90 transition-opacity"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-inverse text-fg-inverse font-medium rounded-xl hover:opacity-90 transition-opacity"
                   >
                     <ExternalLink className="w-4 h-4" />
                     Open Character
                   </button>
                   <button
                     onClick={handleCreateAnother}
-                    className="flex items-center justify-center gap-2 px-6 py-2.5 border border-vault-300 dark:border-vault-700 text-vault-700 dark:text-vault-300 font-medium rounded-xl hover:bg-vault-50 dark:hover:bg-vault-900 transition-colors"
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 border border-border-strong text-fg-muted font-medium rounded-xl hover:bg-hover transition-colors"
                   >
                     <Sparkles className="w-4 h-4" />
                     Create Another
                   </button>
                   <button
                     onClick={handleBackToLibrary}
-                    className="flex items-center justify-center gap-2 px-6 py-2.5 text-vault-500 dark:text-vault-400 hover:text-vault-900 dark:hover:text-vault-200 transition-colors"
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 text-fg-muted hover:text-fg transition-colors"
                   >
                     <Library className="w-4 h-4" />
                     Library
@@ -353,7 +353,7 @@ export const AICreationStudio: React.FC = () => {
                 {/* Concept Input — hidden during generation or when results exist */}
                 {showEmptyState && (
                   <div 
-                    className={`bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-8 transition-opacity duration-200 ${
+                    className={`bg-surface rounded-2xl border border-border shadow-sm p-8 transition-opacity duration-200 ${
                       fadeInputModal ? 'opacity-0' : 'opacity-100'
                     }`}
                   >
@@ -376,20 +376,20 @@ export const AICreationStudio: React.FC = () => {
 
                 {/* Compact generation-progress card with Stop & Go Back */}
                 {isLoading && (
-                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6 space-y-4">
+                  <div className="bg-surface rounded-2xl border border-border shadow-sm p-6 space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
+                        <p className="text-sm font-semibold text-fg">
                           Generating character...
                         </p>
-                        <p className="text-xs text-vault-500 dark:text-vault-400">
+                        <p className="text-xs text-fg-muted">
                           This may take a moment.
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={handleAbort}
-                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-[0.98] transition-all"
+                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-danger border border-danger/40 rounded-lg hover:bg-danger-soft active:scale-[0.98] transition-all"
                           title="Stop generation and keep what's been generated"
                         >
                           <X className="w-4 h-4" />
@@ -397,7 +397,7 @@ export const AICreationStudio: React.FC = () => {
                         </button>
                         <button
                           onClick={handleGoBack}
-                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-800 active:scale-[0.98] transition-all"
+                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-fg-muted border border-border-strong rounded-lg hover:bg-hover active:scale-[0.98] transition-all"
                           title="Cancel and return to concept input"
                         >
                           <RotateCcw className="w-4 h-4" />
@@ -408,8 +408,8 @@ export const AICreationStudio: React.FC = () => {
 
                     {/* Tags used for this generation */}
                     {inputMode === 'tags' && (
-                      <div className="pt-3 border-t border-vault-100 dark:border-vault-800">
-                        <p className="text-[10px] font-semibold text-vault-500 dark:text-vault-400 uppercase tracking-wider mb-2">
+                      <div className="pt-3 border-t border-border">
+                        <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-wider mb-2">
                           Tags used
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -417,7 +417,7 @@ export const AICreationStudio: React.FC = () => {
                             (tagSelections[cat.key] ?? []).map((tag) => (
                               <span
                                 key={`${cat.key}-${tag}`}
-                                className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-200 dark:border-violet-800"
+                                className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md bg-muted text-fg border border-border"
                               >
                                 {formatTag(tag)}
                               </span>
@@ -428,11 +428,11 @@ export const AICreationStudio: React.FC = () => {
                     )}
 
                     {inputMode === 'write' && concept && (
-                      <div className="pt-3 border-t border-vault-100 dark:border-vault-800">
-                        <p className="text-[10px] font-semibold text-vault-500 dark:text-vault-400 uppercase tracking-wider mb-1">
+                      <div className="pt-3 border-t border-border">
+                        <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-wider mb-1">
                           Concept
                         </p>
-                        <p className="text-sm text-vault-700 dark:text-vault-300 italic">
+                        <p className="text-sm text-fg-muted italic">
                           &ldquo;{concept}&rdquo;
                         </p>
                       </div>
@@ -442,33 +442,33 @@ export const AICreationStudio: React.FC = () => {
 
                 {/* Status card when generation is done or errored */}
                 {!showEmptyState && !isLoading && (
-                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
+                  <div className="bg-surface rounded-2xl border border-border shadow-sm p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         {state.status === 'error' ? (
                           <>
-                            <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                            <p className="text-sm font-semibold text-danger-soft-fg">
                               Generation Failed
                             </p>
-                            <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                            <p className="text-xs text-danger mt-0.5">
                               {state.error || 'Something went wrong during generation.'}
                             </p>
                           </>
                         ) : hasRemainingFields ? (
                           <>
-                            <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
+                            <p className="text-sm font-semibold text-fg">
                               Partially Complete
                             </p>
-                            <p className="text-xs text-vault-500 dark:text-vault-400">
+                            <p className="text-xs text-fg-muted">
                               {remainingFields.length} field{remainingFields.length > 1 ? 's' : ''} remaining: {remainingFields.map((f) => f.label).join(', ')}.
                             </p>
                           </>
                         ) : (
                           <>
-                            <p className="text-sm font-semibold text-vault-900 dark:text-vault-100">
+                            <p className="text-sm font-semibold text-fg">
                               Character Complete
                             </p>
-                            <p className="text-xs text-vault-500 dark:text-vault-400">
+                            <p className="text-xs text-fg-muted">
                               Review or save your character, or start over.
                             </p>
                           </>
@@ -478,7 +478,7 @@ export const AICreationStudio: React.FC = () => {
                         {hasRemainingFields && (
                           <button
                             onClick={() => void continueGeneration()}
-                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-700 dark:text-vault-200 bg-vault-100 dark:bg-vault-800 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-200 dark:hover:bg-vault-700 active:scale-[0.98] transition-all"
+                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-fg bg-muted border border-border-strong rounded-lg hover:bg-hover active:scale-[0.98] transition-all"
                             title="Continue generating remaining fields"
                           >
                             <Sparkles className="w-4 h-4" />
@@ -487,7 +487,7 @@ export const AICreationStudio: React.FC = () => {
                         )}
                         <button
                           onClick={handleGoBack}
-                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-vault-600 dark:text-vault-300 border border-vault-300 dark:border-vault-700 rounded-lg hover:bg-vault-50 dark:hover:bg-vault-800 active:scale-[0.98] transition-all"
+                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-fg-muted border border-border-strong rounded-lg hover:bg-hover active:scale-[0.98] transition-all"
                           title="Start a new character"
                         >
                           <RotateCcw className="w-4 h-4" />
@@ -498,8 +498,8 @@ export const AICreationStudio: React.FC = () => {
 
                     {/* Tags used — persisted after generation completes */}
                     {inputMode === 'tags' && Object.values(tagSelections).some((t) => t.length > 0) && (
-                      <div className="pt-3 mt-3 border-t border-vault-100 dark:border-vault-800">
-                        <p className="text-[10px] font-semibold text-vault-500 dark:text-vault-400 uppercase tracking-wider mb-2">
+                      <div className="pt-3 mt-3 border-t border-border">
+                        <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-wider mb-2">
                           Tags used
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -507,7 +507,7 @@ export const AICreationStudio: React.FC = () => {
                             (tagSelections[cat.key] ?? []).map((tag) => (
                               <span
                                 key={`${cat.key}-${tag}`}
-                                className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-200 dark:border-violet-800"
+                                className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-md bg-muted text-fg border border-border"
                               >
                                 {formatTag(tag)}
                               </span>
@@ -517,11 +517,11 @@ export const AICreationStudio: React.FC = () => {
                       </div>
                     )}
                     {inputMode === 'write' && concept && (
-                      <div className="pt-3 mt-3 border-t border-vault-100 dark:border-vault-800">
-                        <p className="text-[10px] font-semibold text-vault-500 dark:text-vault-400 uppercase tracking-wider mb-1">
+                      <div className="pt-3 mt-3 border-t border-border">
+                        <p className="text-[10px] font-semibold text-fg-muted uppercase tracking-wider mb-1">
                           Concept
                         </p>
-                        <p className="text-sm text-vault-700 dark:text-vault-300 italic">
+                        <p className="text-sm text-fg-muted italic">
                           &ldquo;{concept}&rdquo;
                         </p>
                       </div>
@@ -530,7 +530,7 @@ export const AICreationStudio: React.FC = () => {
                 )}
 
                 {state.status !== 'idle' && (
-                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
+                  <div className="bg-surface rounded-2xl border border-border shadow-sm p-6">
                     <GenerationProgress
                       state={state}
                       isLoading={isLoading}
@@ -544,7 +544,7 @@ export const AICreationStudio: React.FC = () => {
               {/* Right Panel - Preview */}
               {hasGeneratedContent && (
                 <div className="space-y-6">
-                  <div className="bg-white dark:bg-vault-900 rounded-2xl border border-vault-200 dark:border-vault-800 shadow-sm p-6">
+                  <div className="bg-surface rounded-2xl border border-border shadow-sm p-6">
                     <GeneratedCardPreview
                       generatedData={state.generatedData}
                       generatedReasoning={state.generatedReasoning}
@@ -558,7 +558,7 @@ export const AICreationStudio: React.FC = () => {
                       <button
                         onClick={handleSaveToVault}
                         disabled={isSaving || !state.generatedData.name}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-vault-900 dark:bg-vault-50 text-white dark:text-vault-900 font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-inverse text-fg-inverse font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSaving ? (
                           <Loader2 className="w-4 h-4 animate-spin" />

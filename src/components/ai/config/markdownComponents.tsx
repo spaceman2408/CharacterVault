@@ -40,7 +40,7 @@ export const markdownComponents: Components = {
     return (
       <code
         className={`${className || ''} ${isInline
-          ? 'bg-vault-100 dark:bg-vault-700 px-1.5 py-0.5 rounded-md text-vault-800 dark:text-vault-200'
+          ? 'bg-muted bg-hover px-1.5 py-0.5 rounded-md text-fg'
           : ''} font-mono text-sm`}
         {...props}
       >
@@ -54,9 +54,9 @@ export const markdownComponents: Components = {
     const codeContent = extractText(children).replace(/\n$/, '');
 
     return (
-      <div className="my-3 overflow-hidden rounded-xl border border-vault-700/70 bg-vault-950 shadow-sm">
-        <div className="flex items-center justify-between border-b border-vault-800 bg-vault-900/90 px-3 py-2">
-          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-vault-400">
+      <div className="my-3 overflow-hidden rounded-xl border border-border bg-bg shadow-sm">
+        <div className="flex items-center justify-between border-b border-border bg-surface px-3 py-2">
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-fg-subtle">
             Code
           </span>
           <CodeBlockCopyButton
@@ -64,7 +64,7 @@ export const markdownComponents: Components = {
             className="shrink-0"
           />
         </div>
-        <pre className="overflow-x-auto bg-vault-950 px-4 py-3 text-[13px] leading-6 text-vault-100">
+        <pre className="overflow-x-auto bg-bg px-4 py-3 text-[13px] leading-6 text-fg">
           {children}
         </pre>
       </div>
@@ -76,7 +76,7 @@ export const markdownComponents: Components = {
     return (
       <a
         href={href}
-        className="text-vault-600 dark:text-vault-400 hover:underline"
+        className="text-fg-muted hover:underline"
         target="_blank"
         rel="noopener noreferrer"
         {...props}
@@ -98,7 +98,7 @@ export const markdownComponents: Components = {
   // Style blockquotes
   blockquote({ children }) {
     return (
-      <blockquote className="border-l-4 border-vault-300 dark:border-vault-600 pl-4 italic my-2 text-vault-600 dark:text-vault-400">
+      <blockquote className="border-l-4 border-border-strong pl-4 italic my-2 text-fg-muted">
         {children}
       </blockquote>
     );
@@ -106,7 +106,7 @@ export const markdownComponents: Components = {
 
   // Style horizontal rules
   hr() {
-    return <hr className="border-vault-200 dark:border-vault-700 my-4" />;
+    return <hr className="border-border my-4" />;
   },
 
   // Style headings
@@ -130,8 +130,8 @@ export const markdownComponents: Components = {
   // Style tables
   table({ children }) {
     return (
-      <div className="overflow-x-auto my-4 rounded-lg border border-vault-200 dark:border-vault-700">
-        <table className="min-w-full divide-y divide-vault-200 dark:divide-vault-700">
+      <div className="overflow-x-auto my-4 rounded-lg border border-border">
+        <table className="min-w-full divide-y divide-border">
           {children}
         </table>
       </div>
@@ -139,11 +139,11 @@ export const markdownComponents: Components = {
   },
 
   thead({ children }) {
-    return <thead className="bg-vault-100 dark:bg-vault-800">{children}</thead>;
+    return <thead className="bg-muted">{children}</thead>;
   },
 
   tbody({ children }) {
-    return <tbody className="divide-y divide-vault-200 dark:divide-vault-700">{children}</tbody>;
+    return <tbody className="divide-y divide-border">{children}</tbody>;
   },
 
   tr({ children }) {
@@ -152,7 +152,7 @@ export const markdownComponents: Components = {
 
   th({ children }) {
     return (
-      <th className="px-3 py-2 text-left text-xs font-medium text-vault-500 dark:text-vault-400 uppercase tracking-wider bg-vault-50 dark:bg-vault-900/50">
+      <th className="px-3 py-2 text-left text-xs font-medium text-fg-muted uppercase tracking-wider bg-bg/50">
         {children}
       </th>
     );
@@ -160,7 +160,7 @@ export const markdownComponents: Components = {
 
   td({ children }) {
     return (
-      <td className="px-3 py-2 text-sm text-vault-700 dark:text-vault-300">
+      <td className="px-3 py-2 text-sm text-fg-muted">
         {children}
       </td>
     );

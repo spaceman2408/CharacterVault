@@ -31,21 +31,21 @@ function typeClasses(type: EphemeralToastType): { shell: string; icon: string } 
   if (type === 'error') {
     return {
       shell:
-        'border-red-300 bg-red-100/95 text-red-950 dark:border-red-700 dark:bg-red-950/95 dark:text-red-100',
-      icon: 'bg-red-200/90 text-red-800 dark:bg-red-900/80 dark:text-red-200',
+        'border-danger/40 bg-danger-soft text-danger-soft-fg',
+      icon: 'bg-danger-soft text-danger-soft-fg',
     };
   }
   if (type === 'info') {
     return {
       shell:
-        'border-amber-300 bg-amber-100/95 text-amber-950 dark:border-amber-700 dark:bg-amber-950/95 dark:text-amber-100',
-      icon: 'bg-amber-200/90 text-amber-800 dark:bg-amber-900/80 dark:text-amber-200',
+        'border-warning/40 bg-warning-soft text-warning-soft-fg',
+      icon: 'bg-warning-soft text-warning-soft-fg',
     };
   }
   return {
     shell:
-      'border-green-300 bg-green-100/95 text-green-950 dark:border-green-700 dark:bg-green-950/95 dark:text-green-100',
-    icon: 'bg-green-200/90 text-green-800 dark:bg-green-900/80 dark:text-green-200',
+      'border-success/40 bg-success-soft text-success-soft-fg',
+    icon: 'bg-success-soft text-success-soft-fg',
   };
 }
 
@@ -88,7 +88,7 @@ export function showEphemeralToast(options: EphemeralToastOptions): void {
 
   const close = document.createElement('button');
   close.type = 'button';
-  close.className = 'rounded p-1 hover:bg-black/5 dark:hover:bg-white/10';
+  close.className = 'rounded p-1 hover:bg-hover';
   close.setAttribute('aria-label', 'Dismiss');
   close.innerHTML =
     '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';

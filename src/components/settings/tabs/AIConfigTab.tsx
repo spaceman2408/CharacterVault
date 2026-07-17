@@ -60,16 +60,16 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
 
   return (
     <div className="space-y-5">
-      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+      <div className="bg-warning-soft rounded-xl p-4 border border-warning/30">
         <div className="flex items-start gap-3">
-          <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-800/50 text-amber-600 dark:text-amber-400 shrink-0">
+          <div className="p-1.5 rounded-md bg-warning-soft text-warning shrink-0">
             <Shield className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
+            <h4 className="text-sm font-semibold text-warning-soft-fg mb-1">
               Security Notice
             </h4>
-            <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+            <p className="text-xs text-warning-soft-fg leading-relaxed">
               Your API key is stored locally in your browser&apos;s storage. This is convenient but
               means the key could be accessed by malicious browser extensions or if someone gains
               physical access to your unlocked computer.
@@ -77,12 +77,12 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
             <div className="mt-3 flex items-center gap-2">
               <button
                 onClick={() => setShowClearConfirm(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-800/50 hover:bg-amber-200 dark:hover:bg-amber-800 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-warning-soft-fg bg-warning-soft hover:opacity-90 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Clear AI Settings
               </button>
-              <span className="text-xs text-amber-600 dark:text-amber-500">
+              <span className="text-xs text-warning">
                 (Your characters will not be affected)
               </span>
             </div>
@@ -91,16 +91,16 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
       </div>
 
       {showClearConfirm && (
-        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+        <div className="bg-danger-soft rounded-xl p-4 border border-danger/30">
           <div className="flex items-start gap-3">
-            <div className="p-1.5 rounded-md bg-red-100 dark:bg-red-800/50 text-red-600 dark:text-red-400 shrink-0">
+            <div className="p-1.5 rounded-md bg-danger-soft text-danger shrink-0">
               <AlertCircle className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">
+              <h4 className="text-sm font-semibold text-danger-soft-fg mb-1">
                 Clear AI Settings?
               </h4>
-              <p className="text-xs text-red-700 dark:text-red-400 mb-3">
+              <p className="text-xs text-danger mb-3">
                 This will remove your API key, base URL, and model selection. Your characters and
                 other data will remain untouched.
               </p>
@@ -108,7 +108,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                 <button
                   onClick={() => void handleClearAISettings()}
                   disabled={isClearing}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-danger hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/50"
                 >
                   {isClearing ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -120,7 +120,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                 <button
                   onClick={() => setShowClearConfirm(false)}
                   disabled={isClearing}
-                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/50 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-danger-soft-fg hover:bg-danger-soft rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/50"
                 >
                   Cancel
                 </button>
@@ -133,8 +133,8 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
       <SettingsCard>
         <div className="space-y-4">
           <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-vault-800 dark:text-vault-200 mb-2">
-              <span className="p-1.5 rounded-md bg-vault-100 dark:bg-vault-800 text-vault-600 dark:text-vault-400">
+            <label className="flex items-center gap-2 text-sm font-semibold text-fg mb-2">
+              <span className="p-1.5 rounded-md bg-muted text-fg-muted">
                 <Server className="w-4 h-4" />
               </span>
               API Base URL
@@ -168,7 +168,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                     });
                   }
                 }}
-                className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+                className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
               >
                 {AI_BASE_URL_PRESETS.map((preset) => (
                   <option key={preset.id} value={preset.id}>
@@ -189,10 +189,10 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                 data-lpignore="true"
                 data-1p-ignore="true"
                 data-form-type="other"
-                className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+                className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
                 placeholder="https://nano-gpt.com/api/v1"
               />
-              <p className="text-xs text-vault-500">
+              <p className="text-xs text-fg-muted">
                 {selectedBaseUrlPreset === 'custom'
                   ? 'Pick a preset above or enter a custom OpenAI-compatible endpoint.'
                   : AI_BASE_URL_PRESETS.find((preset) => preset.id === selectedBaseUrlPreset)
@@ -202,13 +202,13 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-vault-800 dark:text-vault-200 mb-2">
-              <span className="p-1.5 rounded-md bg-vault-100 dark:bg-vault-800 text-vault-600 dark:text-vault-400">
+            <label className="flex items-center gap-2 text-sm font-semibold text-fg mb-2">
+              <span className="p-1.5 rounded-md bg-muted text-fg-muted">
                 <Key className="w-4 h-4" />
               </span>
               API Key
               {selectedBaseUrlPreset === 'lmstudio' && (
-                <span className="text-xs font-normal text-vault-500">(optional for local)</span>
+                <span className="text-xs font-normal text-fg-muted">(optional for local)</span>
               )}
               {(() => {
                 const preset = AI_BASE_URL_PRESETS.find((p) => p.id === selectedBaseUrlPreset);
@@ -217,7 +217,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                     href={preset.keyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs font-normal text-blue-500 hover:text-blue-400 hover:underline ml-1"
+                    className="text-xs font-normal text-info hover:text-blue-400 hover:underline ml-1"
                   >
                     Get your key ↗
                   </a>
@@ -239,7 +239,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
               readOnly={false}
               onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
               style={{ WebkitTextSecurity: 'disc' } as React.CSSProperties}
-              className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+              className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
               placeholder={
                 selectedBaseUrlPreset === 'lmstudio'
                   ? 'Optional for local endpoints'
@@ -249,16 +249,16 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
             {selectedBaseUrlPreset === 'nano-gpt' && (
               <>
                 <div className="flex items-center gap-3 my-1">
-                  <div className="h-px flex-1 bg-vault-200 dark:bg-vault-700" />
-                  <span className="text-xs text-vault-400 dark:text-vault-500">or</span>
-                  <div className="h-px flex-1 bg-vault-200 dark:bg-vault-700" />
+                  <div className="h-px flex-1 bg-hover" />
+                  <span className="text-xs text-fg-subtle">or</span>
+                  <div className="h-px flex-1 bg-hover" />
                 </div>
                 <button
                   type="button"
                   onClick={() => startSignIn()}
                   disabled={isSigningIn}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
-                  bg-vault-900 dark:bg-vault-100 text-white dark:text-vault-900
+                  bg-inverse text-fg-inverse
                   hover:opacity-90 active:scale-[0.99] transition-all duration-200
                   disabled:opacity-60 disabled:cursor-not-allowed"
                 >
@@ -269,7 +269,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                   )}
                   {isSigningIn ? 'Signing in…' : 'Sign in with NanoGPT'}
                 </button>
-                <p className="text-xs text-vault-500 dark:text-vault-400 mt-1.5">
+                <p className="text-xs text-fg-muted mt-1.5">
                   Opens NanoGPT in a new window to approve access. The app can spend from your
                   NanoGPT balance until you revoke or limit the key.
                 </p>
@@ -310,7 +310,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
       {selectedBaseUrlPreset === 'nano-gpt' && (
         <SettingsCard
           title="NanoGPT Options"
-          icon={<CreditCard className="w-4 h-4 text-vault-600 dark:text-vault-400" />}
+          icon={<CreditCard className="w-4 h-4 text-fg-muted" />}
         >
           <div className="space-y-4">
             <SettingsToggle
@@ -359,7 +359,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
 
       <SettingsCard
         title="Advanced Options"
-        icon={<Sparkles className="w-4 h-4 text-vault-600 dark:text-vault-400" />}
+        icon={<Sparkles className="w-4 h-4 text-fg-muted" />}
       >
         <div className="flex flex-wrap items-center gap-6">
           <SettingsToggle
@@ -401,9 +401,9 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
         </div>
 
         {localAIConfig.enableReasoning && (
-          <div className="mt-4 pt-4 border-t border-vault-200 dark:border-vault-700">
-            <label className="flex items-center gap-2 text-sm font-medium text-vault-700 dark:text-vault-300 mb-2">
-              <span className="p-1.5 rounded-md bg-vault-100 dark:bg-vault-800 text-vault-600 dark:text-vault-400">
+          <div className="mt-4 pt-4 border-t border-border">
+            <label className="flex items-center gap-2 text-sm font-medium text-fg-muted mb-2">
+              <span className="p-1.5 rounded-md bg-muted text-fg-muted">
                 <Brain className="w-4 h-4" />
               </span>
               Reasoning Effort
@@ -419,7 +419,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                   },
                 }))
               }
-              className="w-full px-3 py-2.5 border border-vault-300 dark:border-vault-600 rounded-lg bg-white dark:bg-vault-800 text-vault-900 dark:text-vault-100 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-vault-500/50 transition-all duration-200"
+              className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
             >
               <option value="minimal">Minimal: fastest, almost no thinking</option>
               <option value="low">Low: light thinking</option>
@@ -428,13 +428,13 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
               <option value="xhigh">Extra high: peak on OpenAI-style models</option>
               <option value="max">Max: peak on DeepSeek, GLM, and similar</option>
             </select>
-            <p className="mt-2 text-xs text-vault-500">
+            <p className="mt-2 text-xs text-fg-muted">
               How hard the model thinks when reasoning is on.{' '}
               <a
                 href={`${import.meta.env.BASE_URL}docs/configuration/reasoning-effort`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-vault-700 dark:text-vault-300 underline underline-offset-2 hover:text-vault-900 dark:hover:text-vault-100"
+                className="font-medium text-fg-muted underline underline-offset-2 hover:text-fg"
               >
                 Read the reasoning effort guide
               </a>

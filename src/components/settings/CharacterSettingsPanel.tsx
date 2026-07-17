@@ -215,14 +215,14 @@ export function CharacterSettingsPanel({
       >
         <div
           ref={panelRef}
-          className={`bg-vault-50 dark:bg-vault-900 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl h-[min(100dvh,100%)] sm:h-[90vh] max-h-[100dvh] sm:max-h-[90vh] flex flex-col overflow-hidden ring-1 ring-vault-200 dark:ring-vault-800 transition-transform duration-300 scale-100 pb-[env(safe-area-inset-bottom)] ${
+          className={`bg-bg rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl h-[min(100dvh,100%)] sm:h-[90vh] max-h-[100dvh] sm:max-h-[90vh] flex flex-col overflow-hidden ring-1 ring-border transition-transform duration-300 scale-100 pb-[env(safe-area-inset-bottom)] ${
             isVisible ? 'scale-100' : 'scale-95'
           }`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="settings-title"
         >
-          <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900 shrink-0">
+          <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-surface shrink-0">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <div className="p-2 rounded-xl bg-linear-to-br from-vault-500 to-vault-600 shrink-0">
                 <Settings2 className="w-5 h-5 text-white" />
@@ -230,18 +230,18 @@ export function CharacterSettingsPanel({
               <div className="min-w-0">
                 <h2
                   id="settings-title"
-                  className="text-base sm:text-lg font-bold text-vault-900 dark:text-vault-100 truncate"
+                  className="text-base sm:text-lg font-bold text-fg truncate"
                 >
                   AI Settings
                 </h2>
-                <p className="text-xs text-vault-500 hidden sm:block">
+                <p className="text-xs text-fg-muted hidden sm:block">
                   Configure your AI generation preferences
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vault-500/50 shrink-0"
+              className="min-h-11 min-w-11 inline-flex items-center justify-center text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50 shrink-0"
               aria-label="Close settings panel"
             >
               <X className="w-5 h-5" />
@@ -249,7 +249,7 @@ export function CharacterSettingsPanel({
           </div>
 
           <div
-            className="flex min-h-12 sm:min-h-14 overflow-x-auto overflow-y-hidden border-b border-vault-200 dark:border-vault-800 px-2 sm:px-6 pt-1 sm:pt-2 bg-vault-50 dark:bg-vault-900/50 scrollbar-thin scrollbar-thumb-vault-300 dark:scrollbar-thumb-vault-700 shrink-0"
+            className="flex min-h-12 sm:min-h-14 overflow-x-auto overflow-y-hidden border-b border-border px-2 sm:px-6 pt-1 sm:pt-2 bg-bg/50 scrollbar-thin scrollbar-thumb-fg-subtle shrink-0"
             role="tablist"
           >
             {SETTINGS_TABS.map((tab) => {
@@ -258,10 +258,10 @@ export function CharacterSettingsPanel({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex min-h-12 items-center px-4 text-sm font-medium capitalize transition-all duration-200 rounded-t-lg focus:outline-none focus:ring-2 focus:ring-vault-500/50 focus:ring-inset whitespace-nowrap shrink-0 ${
+                  className={`relative flex min-h-12 items-center px-4 text-sm font-medium capitalize transition-all duration-200 rounded-t-lg focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-inset whitespace-nowrap shrink-0 ${
                     activeTab === tab.id
-                      ? 'text-vault-700 dark:text-vault-200'
-                      : 'text-vault-500 dark:text-vault-400 hover:text-vault-700 dark:hover:text-vault-300 hover:bg-vault-100/50 dark:hover:bg-vault-800/50'
+                      ? 'text-fg'
+                      : 'text-fg-muted hover:text-fg hover:bg-hover/50 hover:bg-hover/50'
                   }`}
                   aria-selected={activeTab === tab.id}
                   role="tab"
@@ -271,19 +271,19 @@ export function CharacterSettingsPanel({
                     {tab.label}
                   </span>
                   {activeTab === tab.id && (
-                    <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-vault-600 dark:bg-vault-400" />
+                    <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-fg-muted" />
                   )}
                 </button>
               );
             })}
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 sm:space-y-6 bg-vault-50/50 dark:bg-vault-900/50">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 sm:space-y-6 bg-muted/50 bg-muted">
             {isLoading && activeTab !== 'sampler' && (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-vault-600" />
-                  <span className="text-sm text-vault-500">Loading settings...</span>
+                  <Loader2 className="w-8 h-8 animate-spin text-fg-muted" />
+                  <span className="text-sm text-fg-muted">Loading settings...</span>
                 </div>
               </div>
             )}
@@ -293,17 +293,17 @@ export function CharacterSettingsPanel({
             )}
           </div>
 
-          <div className="flex items-center justify-stretch sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-vault-200 dark:border-vault-800 bg-white dark:bg-vault-900 shrink-0">
+          <div className="flex items-center justify-stretch sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-border bg-surface shrink-0">
             <button
               onClick={onClose}
-              className="flex-1 sm:flex-none min-h-11 px-4 py-2.5 text-sm font-medium text-vault-700 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vault-500/50"
+              className="flex-1 sm:flex-none min-h-11 px-4 py-2.5 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
             >
               Cancel
             </button>
             <button
               onClick={() => void save()}
               disabled={isSaving}
-              className="flex-1 sm:flex-none min-h-11 flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-vault-600 to-vault-700 hover:from-vault-700 hover:to-vault-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-vault-500/50"
+              className="flex-1 sm:flex-none min-h-11 flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-vault-600 to-vault-700 hover:from-vault-700 hover:to-vault-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Settings

@@ -71,18 +71,18 @@ function ToastContainer({
           key={toast.id}
           className={`pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-xl ring-1 ring-black/5 transition-all duration-300 animate-in slide-in-from-right backdrop-blur-sm ${
             toast.type === 'success'
-              ? 'border-green-300 bg-green-100/95 text-green-950 dark:border-green-700 dark:bg-green-950/95 dark:text-green-100'
+              ? 'border-success/40 bg-success-soft text-success-soft-fg'
               : toast.type === 'error'
-                ? 'border-red-300 bg-red-100/95 text-red-950 dark:border-red-700 dark:bg-red-950/95 dark:text-red-100'
-                : 'border-amber-300 bg-amber-100/95 text-amber-950 dark:border-amber-700 dark:bg-amber-950/95 dark:text-amber-100'
+                ? 'border-danger/40 bg-danger-soft text-danger-soft-fg'
+                : 'border-warning/40 bg-warning-soft text-warning-soft-fg'
           }`}
         >
           <div className={`mt-0.5 rounded-full p-1 ${
             toast.type === 'success'
-              ? 'bg-green-200/90 text-green-800 dark:bg-green-900/80 dark:text-green-200'
+              ? 'bg-success-soft text-success-soft-fg'
               : toast.type === 'error'
-                ? 'bg-red-200/90 text-red-800 dark:bg-red-900/80 dark:text-red-200'
-                : 'bg-amber-200/90 text-amber-800 dark:bg-amber-900/80 dark:text-amber-200'
+                ? 'bg-danger-soft text-danger-soft-fg'
+                : 'bg-warning-soft text-warning-soft-fg'
           }`}>
             {toast.type === 'success' ? <Check className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
           </div>
@@ -93,7 +93,7 @@ function ToastContainer({
           <button
             type="button"
             onClick={() => onRemove(toast.id)}
-            className="rounded p-1 hover:bg-black/5 dark:hover:bg-white/10"
+            className="rounded p-1 hover:bg-hover"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -182,7 +182,7 @@ function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsPr
   const ActiveIcon = activeSectionData ? iconMap[activeSectionData.icon] || FileText : FileText;
 
   return (
-    <div className="border-b border-vault-200 dark:border-vault-800 bg-white/60 dark:bg-vault-900/60 backdrop-blur-xl shrink-0">
+    <div className="border-b border-border bg-surface/60 backdrop-blur-xl shrink-0">
       {/* Desktop: Horizontal tabs */}
       <div
         ref={desktopTabsRef}
@@ -199,8 +199,8 @@ function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsPr
                 onClick={() => onSectionChange(section.id)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
                   ${isActive 
-                    ? 'bg-vault-600 text-white shadow-sm' 
-                    : 'text-vault-600 dark:text-vault-400 hover:bg-vault-100 dark:hover:bg-vault-800/50'
+                    ? 'bg-inverse text-fg-inverse shadow-sm' 
+                    : 'text-fg-muted hover:bg-hover/50'
                   }`}
               >
                 <Icon className="w-4 h-4" />
@@ -215,21 +215,21 @@ function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsPr
       <div className="md:hidden relative" ref={dropdownRef}>
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-vault-50 dark:hover:bg-vault-800/50 transition-colors"
+          className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-hover/50 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <ActiveIcon className="w-4 h-4 text-vault-600 dark:text-vault-400" />
-            <span className="font-medium text-vault-900 dark:text-vault-100">
+            <ActiveIcon className="w-4 h-4 text-fg-muted" />
+            <span className="font-medium text-fg">
               {activeSectionData?.label || 'Select Section'}
             </span>
           </div>
-          <ChevronDown className={`w-4 h-4 text-vault-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 text-fg-muted transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
         </button>
 
         {isDropdownOpen && createPortal(
           <div 
             ref={portalRef}
-            className="fixed inset-x-0 top-26.25 z-9999 bg-white dark:bg-vault-900 border-b border-vault-200 dark:border-vault-800 shadow-lg max-h-[50vh] overflow-y-auto md:hidden"
+            className="fixed inset-x-0 top-26.25 z-9999 bg-surface border-b border-border shadow-lg max-h-[50vh] overflow-y-auto md:hidden"
           >
             {sections.map((section) => {
               const Icon = iconMap[section.icon] || FileText;
@@ -247,11 +247,11 @@ function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsPr
                   }}
                   className={`flex items-center gap-2 w-full px-4 py-3 text-sm transition-colors
                     ${isActive 
-                      ? 'bg-vault-100 dark:bg-vault-800 text-vault-900 dark:text-vault-100 font-medium' 
-                      : 'text-vault-600 dark:text-vault-400 hover:bg-vault-50 dark:hover:bg-vault-800/50'
+                      ? 'bg-muted text-fg font-medium' 
+                      : 'text-fg-muted hover:bg-hover/50'
                     }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-vault-600 dark:text-vault-400' : ''}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-fg-muted' : ''}`} />
                   {section.label}
                 </button>
               );
@@ -316,7 +316,7 @@ function ImageEditor(): React.ReactElement {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-vault-900 dark:text-vault-50">Character Image</h2>
+      <h2 className="text-xl font-bold text-fg">Character Image</h2>
       
       {/* Image Preview */}
       <div className="flex justify-center">
@@ -325,11 +325,11 @@ function ImageEditor(): React.ReactElement {
             <img
               src={currentCharacter.imageData}
               alt={currentCharacter.name}
-              className="w-96 h-96 max-w-full max-h-[60vh] object-contain rounded-2xl border-2 border-vault-200 dark:border-vault-700 shadow-lg"
+              className="w-96 h-96 max-w-full max-h-[60vh] object-contain rounded-2xl border-2 border-border shadow-lg"
             />
             <button
               onClick={() => currentCharacter && void updateCharacter({ imageData: '', thumbnailData: '' })}
-              className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg
+              className="absolute top-2 right-2 p-2 bg-danger hover:opacity-90 text-white rounded-lg
                 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
             >
               <Trash2 className="w-4 h-4" />
@@ -342,13 +342,13 @@ function ImageEditor(): React.ReactElement {
             onDragLeave={handleDragLeave}
             className={`w-96 h-96 max-w-full max-h-[60vh] rounded-2xl border-2 border-dashed 
               ${isDragging 
-                ? 'border-vault-500 bg-vault-100 dark:bg-vault-800/50' 
-                : 'border-vault-300 dark:border-vault-700 bg-vault-50 dark:bg-vault-900/30'
+                ? 'border-accent bg-muted/50' 
+                : 'border-border-strong bg-bg/30'
               }
               flex flex-col items-center justify-center gap-3 transition-colors duration-200`}
           >
-            <Image className="w-16 h-16 text-vault-400 dark:text-vault-600" />
-            <p className="text-sm text-vault-500 dark:text-vault-400 text-center px-4">
+            <Image className="w-16 h-16 text-fg-subtle" />
+            <p className="text-sm text-fg-muted text-center px-4">
               Drag and drop an image here<br />or click to browse
             </p>
           </div>
@@ -364,7 +364,7 @@ function ImageEditor(): React.ReactElement {
             onChange={handleInputChange}
             className="hidden"
           />
-          <span className="inline-flex items-center gap-2 px-4 py-2 bg-vault-600 hover:bg-vault-700 
+          <span className="inline-flex items-center gap-2 px-4 py-2 bg-inverse hover:opacity-90 
             text-white rounded-xl font-medium transition-colors duration-200 cursor-pointer">
             <Upload className="w-4 h-4" />
             {currentCharacter?.imageData ? 'Change Image' : 'Upload Image'}
@@ -439,14 +439,14 @@ function CharacterHeader({
 
   return (
     <header className="h-16 flex items-center justify-between px-4 md:px-6
-      bg-white/60 dark:bg-vault-900/60 backdrop-blur-xl
-      border-b border-vault-200/60 dark:border-vault-800/50 shrink-0">
+      bg-surface/60 backdrop-blur-xl
+      border-b border-border/60 shrink-0">
       <div className="flex items-center gap-3 md:gap-4">
         <button
           onClick={closeCharacter}
-          className="p-2 text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl transition-all duration-200
-            focus:outline-none focus:ring-2 focus:ring-vault-500 active:scale-95 shrink-0"
+          className="p-2 text-fg-muted hover:text-fg
+            hover:bg-hover/50 rounded-xl transition-all duration-200
+            focus:outline-none focus:ring-2 focus:ring-accent active:scale-95 shrink-0"
           title="Back to characters"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -457,18 +457,18 @@ function CharacterHeader({
             <img
               src={currentCharacter.imageData}
               alt={currentCharacter.name}
-              className="w-8 h-8 md:w-10 md:h-10 rounded-lg object-cover border border-vault-200 dark:border-vault-700 shrink-0"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-lg object-cover border border-border shrink-0"
             />
           ) : (
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-vault-200 dark:bg-vault-800 flex items-center justify-center shrink-0">
-              <User className="w-4 h-4 md:w-5 md:h-5 text-vault-500 dark:text-vault-400" />
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-hover flex items-center justify-center shrink-0">
+              <User className="w-4 h-4 md:w-5 md:h-5 text-fg-muted" />
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="font-semibold text-vault-900 dark:text-vault-50 text-sm md:text-base truncate">
+            <h1 className="font-semibold text-fg text-sm md:text-base truncate">
               {currentCharacter.name}
             </h1>
-            <p className="text-xs text-vault-500 dark:text-vault-400 hidden sm:block">
+            <p className="text-xs text-fg-muted hidden sm:block">
               Editing character
             </p>
           </div>
@@ -483,8 +483,8 @@ function CharacterHeader({
               onClick={onToggleContext}
               className={`p-2 rounded-lg transition-colors ${
                 isContextOpen 
-                  ? 'bg-vault-600 text-white' 
-                  : 'text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800/50'
+                  ? 'bg-inverse text-fg-inverse' 
+                  : 'text-fg-muted hover:text-fg hover:bg-hover/50'
               }`}
               title="Toggle AI Context Panel"
             >
@@ -494,8 +494,8 @@ function CharacterHeader({
               onClick={onToggleChat}
               className={`p-2 rounded-lg transition-colors ${
                 isChatOpen 
-                  ? 'bg-vault-600 text-white' 
-                  : 'text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800/50'
+                  ? 'bg-inverse text-fg-inverse' 
+                  : 'text-fg-muted hover:text-fg hover:bg-hover/50'
               }`}
               title="Toggle Ask AI Panel"
             >
@@ -511,8 +511,8 @@ function CharacterHeader({
               onClick={onToggleContext}
               className={`hidden lg:flex p-2 rounded-lg transition-colors ${
                 isContextOpen 
-                  ? 'bg-vault-200 dark:bg-vault-700 text-vault-700 dark:text-vault-200' 
-                  : 'text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800/50'
+                  ? 'bg-hover text-fg' 
+                  : 'text-fg-muted hover:text-fg hover:bg-hover/50'
               }`}
               title={isContextOpen ? 'Hide AI Context Panel' : 'Show AI Context Panel'}
             >
@@ -522,8 +522,8 @@ function CharacterHeader({
               onClick={onToggleChat}
               className={`hidden lg:flex p-2 rounded-lg transition-colors ${
                 isChatOpen 
-                  ? 'bg-vault-200 dark:bg-vault-700 text-vault-700 dark:text-vault-200' 
-                  : 'text-vault-500 hover:text-vault-700 dark:text-vault-400 dark:hover:text-vault-200 hover:bg-vault-100 dark:hover:bg-vault-800/50'
+                  ? 'bg-hover text-fg' 
+                  : 'text-fg-muted hover:text-fg hover:bg-hover/50'
               }`}
               title={isChatOpen ? 'Hide Ask AI Panel' : 'Show Ask AI Panel'}
             >
@@ -532,13 +532,13 @@ function CharacterHeader({
           </>
         )}
 
-        <div className="h-6 w-px bg-vault-200 dark:bg-vault-800 mx-1 hidden sm:block" />
+        <div className="h-6 w-px bg-hover mx-1 hidden sm:block" />
 
         <button
           onClick={onOpenRevisions}
           className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
-            text-vault-700 dark:text-vault-300
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+            text-fg-muted
+            hover:bg-hover/50 rounded-xl
             transition-colors duration-200"
           title="Open revisions"
         >
@@ -549,8 +549,8 @@ function CharacterHeader({
         <button
           onClick={onOpenSettings}
           className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
-            text-vault-700 dark:text-vault-300
-            hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+            text-fg-muted
+            hover:bg-hover/50 rounded-xl
             transition-colors duration-200"
           title="AI Settings"
         >
@@ -628,8 +628,8 @@ function ExportDropdown({ onExportJSON, onExportPNG }: ExportDropdownProps): Rea
         ref={buttonRef}
         onClick={handleToggle}
         className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
-          text-vault-700 dark:text-vault-300
-          hover:bg-vault-100 dark:hover:bg-vault-800/50 rounded-xl
+          text-fg-muted
+          hover:bg-hover/50 rounded-xl
           transition-colors duration-200"
         title="Export character"
       >
@@ -641,19 +641,19 @@ function ExportDropdown({ onExportJSON, onExportPNG }: ExportDropdownProps): Rea
       {isOpen && menuPosition && createPortal(
         <div
           ref={menuRef}
-          className="fixed w-40 bg-white dark:bg-vault-900 rounded-xl border border-vault-200 dark:border-vault-800 shadow-lg py-1 z-9999"
+          className="fixed w-40 bg-surface rounded-xl border border-border shadow-lg py-1 z-9999"
           style={{ top: menuPosition.top, right: menuPosition.right }}
         >
           <button
             onClick={handleExportJSON}
-            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-vault-700 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800/50 transition-colors"
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-fg-muted hover:bg-hover/50 transition-colors"
           >
             <FileJson className="w-4 h-4" />
             <span>Export JSON</span>
           </button>
           <button
             onClick={handleExportPNG}
-            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-vault-700 dark:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-800/50 transition-colors"
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-fg-muted hover:bg-hover/50 transition-colors"
           >
             <ImageIcon className="w-4 h-4" />
             <span>Export PNG</span>
@@ -678,7 +678,7 @@ function Backdrop({ isOpen, onClick }: BackdropProps): React.ReactElement {
   
   return (
     <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 lg:hidden"
+      className="fixed inset-0 bg-overlay backdrop-blur-sm z-30 lg:hidden"
       onClick={onClick}
     />
   );
@@ -723,7 +723,7 @@ function CharacterWorkspaceContent(): React.ReactElement {
     return (
       <div className="h-dvh w-full flex items-center justify-center">
         <div className="text-center">
-          <p className="text-vault-500">No character selected</p>
+          <p className="text-fg-muted">No character selected</p>
         </div>
       </div>
     );
@@ -830,8 +830,7 @@ function CharacterWorkspaceInner({
   }, []);
 
   return (
-    <div className="h-dvh w-full flex flex-col bg-linear-to-br from-vault-50 via-vault-50 to-vault-100/50 
-      dark:from-vault-950 dark:via-vault-950 dark:to-vault-900/50 overflow-hidden">
+    <div className="h-dvh w-full flex flex-col bg-bg overflow-hidden">
       
       <CharacterHeader 
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -867,8 +866,8 @@ function CharacterWorkspaceInner({
             ${isContextOpen && !isMobile ? 'lg:w-72 xl:w-80 translate-x-0' : ''}
             ${!isContextOpen && !isMobile ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden' : ''}
             transition-all duration-300 ease-in-out
-            bg-vault-50 dark:bg-vault-900
-            border-r border-vault-200 dark:border-vault-800
+            bg-bg
+            border-r border-border
             flex flex-col
             shrink-0
           `}
@@ -882,8 +881,8 @@ function CharacterWorkspaceInner({
         {/* Center: Main Editor - Always visible, spans available space */}
         <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden">
           <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'} pb-[max(env(safe-area-inset-bottom),0px)]`}>
-            <div className={`h-full w-full bg-white/60 dark:bg-vault-900/60 backdrop-blur-xl
-              border border-vault-200/60 dark:border-vault-800/50 shadow-lg overflow-hidden relative
+            <div className={`h-full w-full bg-surface/60 backdrop-blur-xl
+              border border-border/60 shadow-lg overflow-hidden relative
               ${
                 isTightLayout
                   ? 'rounded-none p-2 md:p-3 border-l-0 border-r-0'
@@ -909,8 +908,8 @@ function CharacterWorkspaceInner({
             ${isChatOpen && !isMobile ? 'lg:w-80 xl:w-96 translate-x-0' : ''}
             ${!isChatOpen && !isMobile ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden' : ''}
             transition-all duration-300 ease-in-out
-            bg-vault-50 dark:bg-vault-900
-            border-l border-vault-200 dark:border-vault-800
+            bg-bg
+            border-l border-border
             flex flex-col
             shrink-0
           `}

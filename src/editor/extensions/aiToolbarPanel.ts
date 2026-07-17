@@ -14,12 +14,6 @@ import { createFontSizeControl } from './fontSizeControl';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings } from '../../db/characterTypes';
 
-// Check if dark mode is active
-const isDarkMode = () => {
-  if (typeof document === 'undefined') return false;
-  return document.documentElement.classList.contains('dark');
-};
-
 /**
  * Callback for AI operations
  */
@@ -160,18 +154,18 @@ function createToolbarPanel(
 
   // Primary operations - colors reference CSS variables from index.css
   const primaryOps: { id: AIOperation; label: string; icon: string; color: string }[] = [
-    { id: 'expand', label: 'Enhance', icon: '✨', color: 'var(--ai-toolbar-accent-primary, #7c3aed)' },
-    { id: 'rewrite', label: 'Rephrase', icon: '🔄', color: 'var(--ai-toolbar-accent-secondary, #2563eb)' },
-    { id: 'instruct', label: 'Custom', icon: '💬', color: 'var(--ai-toolbar-accent-success, #059669)' },
+    { id: 'expand', label: 'Enhance', icon: '✨', color: 'var(--ai-toolbar-accent-primary)' },
+    { id: 'rewrite', label: 'Rephrase', icon: '🔄', color: 'var(--ai-toolbar-accent-secondary)' },
+    { id: 'instruct', label: 'Custom', icon: '💬', color: 'var(--ai-toolbar-accent-success)' },
   ];
 
   // Polish operations (in dropdown) - colors reference CSS variables from index.css
   const polishOps: { id: AIOperation; label: string; icon: string; color: string }[] = [
-    { id: 'shorten', label: 'Shorten', icon: '✂️', color: 'var(--ai-toolbar-accent-warning, #d97706)' },
-    { id: 'lengthen', label: 'Lengthen', icon: '📄', color: 'var(--ai-toolbar-accent-info, #0891b2)' },
-    { id: 'vivid', label: 'Vivid', icon: '🎨', color: 'var(--ai-toolbar-accent-pink, #db2777)' },
-    { id: 'emotion', label: 'Emotion', icon: '❤️', color: 'var(--ai-toolbar-accent-rose, #e11d48)' },
-    { id: 'grammar', label: 'Fix', icon: '🪄', color: 'var(--ai-toolbar-accent-neutral, #475569)' },
+    { id: 'shorten', label: 'Shorten', icon: '✂️', color: 'var(--ai-toolbar-accent-warning)' },
+    { id: 'lengthen', label: 'Lengthen', icon: '📄', color: 'var(--ai-toolbar-accent-info)' },
+    { id: 'vivid', label: 'Vivid', icon: '🎨', color: 'var(--ai-toolbar-accent-pink)' },
+    { id: 'emotion', label: 'Emotion', icon: '❤️', color: 'var(--ai-toolbar-accent-rose)' },
+    { id: 'grammar', label: 'Fix', icon: '🪄', color: 'var(--ai-toolbar-accent-neutral)' },
   ];
 
   let hasSelection = false;
@@ -320,7 +314,7 @@ function createToolbarPanel(
     font-size: 13px;
     font-weight: 500;
     color: white;
-    background: var(--ai-toolbar-accent-success, #059669);
+    background: var(--ai-toolbar-accent-success);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -370,7 +364,7 @@ function createToolbarPanel(
     font-size: 13px;
     font-weight: 500;
     color: white;
-    background: var(--ai-toolbar-accent-success, #059669);
+    background: var(--ai-toolbar-accent-success);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -520,12 +514,13 @@ function createToolbarPanel(
   const updateSearchButtonState = () => {
     const isOpen = view.state.field(searchPanelOpen);
     if (isOpen) {
-      const isDark = isDarkMode();
-      searchBtn.style.background = isDark ? 'rgba(34, 211, 238, 0.1)' : 'rgba(124, 58, 237, 0.1)';
-      searchBtn.style.borderColor = isDark ? '#22d3ee' : '#7c3aed';
+      searchBtn.style.background = 'var(--ai-toolbar-active-bg)';
+      searchBtn.style.borderColor = 'var(--ai-toolbar-active)';
+      searchBtn.style.color = 'var(--ai-toolbar-active)';
     } else {
       searchBtn.style.background = 'transparent';
       searchBtn.style.borderColor = 'var(--ai-toolbar-input-border)';
+      searchBtn.style.color = 'var(--ai-toolbar-text-secondary)';
     }
   };
 
@@ -602,7 +597,7 @@ function createToolbarPanel(
     font-size: 13px;
     font-weight: 500;
     color: white;
-    background: #dc2626;
+    background: var(--danger);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -835,7 +830,7 @@ function createToolbarPanel(
     font-size: 13px;
     font-weight: 500;
     color: white;
-    background: var(--ai-toolbar-accept-bg, #16a34a);
+    background: var(--ai-toolbar-accept-bg);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -1053,7 +1048,7 @@ function createToolbarPanel(
       
       if (currentSampler.maxTokens >= currentSampler.contextLength) {
         infoText.textContent = `⚠️ Please adjust Max Tokens to be less than Context Length`;
-        infoText.style.color = 'var(--ai-toolbar-error-text, #ef4444)';
+        infoText.style.color = 'var(--ai-toolbar-error-text)';
         infoText.classList.add('warning');
         hasSelection = false;
         hasSamplerError = true;
@@ -1063,7 +1058,7 @@ function createToolbarPanel(
         } else {
           infoText.textContent = `⚠️ Selection is too long (${estimatedTokens}/${limit} tokens)`;
         }
-        infoText.style.color = 'var(--ai-toolbar-error-text, #ef4444)';
+        infoText.style.color = 'var(--ai-toolbar-error-text)';
         infoText.classList.add('warning');
         hasSelection = false; // Disable buttons
         hasSamplerError = true;

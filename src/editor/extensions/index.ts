@@ -3,7 +3,14 @@
  * @module editor/extensions
  */
 
-export { themeSync, getCurrentTheme, refreshTheme } from './themeSync';
+export { themeSync, getCurrentTheme, refreshTheme, getThemeColor } from './themeSync';
+
+export {
+  createSyntaxHighlightStyle,
+  resolveSyntaxColors,
+  syntaxHighlightExtension,
+} from './syntaxHighlight';
+
 
 export { 
   toolbarSearch, 

@@ -39,11 +39,11 @@ interface TagsFieldEditorProps extends MinimalSectionHeaderProps {
 function MinimalSectionHeader({ label, description }: MinimalSectionHeaderProps): React.ReactElement {
   return (
     <div className="mb-4 shrink-0">
-      <h2 className="text-xl font-bold text-vault-900 dark:text-vault-50">
+      <h2 className="text-xl font-bold text-fg">
         {label}
       </h2>
       {description && (
-        <p className="text-sm text-vault-500 dark:text-vault-400">
+        <p className="text-sm text-fg-muted">
           {description}
         </p>
       )}
@@ -71,7 +71,7 @@ function NameFieldEditor({ value, onChange, label, description }: NameFieldEdito
         type="text"
         value={draftName}
         onChange={handleChange}
-        className="w-full rounded-xl border border-vault-200 bg-white px-4 py-3 text-base text-vault-900 outline-none transition-all placeholder:text-vault-400 focus:border-vault-400 focus:ring-2 focus:ring-vault-500/20 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-100 dark:placeholder:text-vault-600 dark:focus:border-vault-500 dark:focus:ring-vault-400/20"
+        className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-base text-fg outline-none transition-all placeholder:text-fg-subtle focus:border-vault-400 focus:ring-2 focus:ring-accent/20 border-border bg-surface text-fg placeholder:text-fg-subtle focus:border-border-strong focus:ring-accent/20"
         placeholder="Character name"
       />
     </div>
@@ -160,17 +160,17 @@ function TagsFieldEditor({ tags, onChange, label, description }: TagsFieldEditor
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden animate-fade-in-slow">
       <MinimalSectionHeader label={label} description={description} />
-      <div className="flex min-h-28 flex-wrap content-start gap-2 rounded-xl border border-vault-200 bg-white p-3 transition-all focus-within:border-vault-400 focus-within:ring-2 focus-within:ring-vault-500/20 dark:border-vault-700 dark:bg-vault-900/60 dark:focus-within:border-vault-500 dark:focus-within:ring-vault-400/20">
+      <div className="flex min-h-28 flex-wrap content-start gap-2 rounded-xl border border-border bg-surface p-3 transition-all focus-within:border-border-strong focus-within:ring-2 focus-within:ring-accent/20">
         {currentTags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md bg-vault-100 px-2 text-xs font-medium text-vault-700 dark:bg-vault-800 dark:text-vault-200"
+            className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md bg-muted px-2 text-xs font-medium text-fg-muted bg-muted text-fg"
           >
             <span className="truncate">{tag}</span>
             <button
               type="button"
               onClick={() => removeTag(tag)}
-              className="rounded-sm text-vault-400 transition-colors hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-vault-500/30 dark:text-vault-500 dark:hover:text-red-400"
+              className="rounded-sm text-fg-subtle transition-colors hover:text-danger focus:outline-none focus:ring-2 focus:ring-accent/30 text-fg0 hover:text-danger"
               aria-label={`Remove ${tag}`}
             >
               x
@@ -183,7 +183,7 @@ function TagsFieldEditor({ tags, onChange, label, description }: TagsFieldEditor
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
-          className="min-w-36 flex-1 bg-transparent px-1 py-1 text-sm text-vault-900 outline-none placeholder:text-vault-400 dark:text-vault-100 dark:placeholder:text-vault-600"
+          className="min-w-36 flex-1 bg-transparent px-1 py-1 text-sm text-fg outline-none placeholder:text-fg-subtle text-fg placeholder:text-fg-subtle"
           placeholder={currentTags.length === 0 ? 'Type a tag and press Enter' : 'Add tag'}
         />
       </div>
@@ -370,7 +370,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
   // Handle image section specially
   if (section === 'image') {
     return (
-      <div className="h-full flex items-center justify-center text-vault-500 animate-fade-in-slow">
+      <div className="h-full flex items-center justify-center text-fg-muted animate-fade-in-slow">
         <p>Use the Image section in the left sidebar to upload a character image.</p>
       </div>
     );
@@ -381,16 +381,16 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     return (
       <div className="h-full flex flex-col min-h-0 overflow-hidden animate-fade-in-slow">
         <div className="mb-4 shrink-0">
-          <h2 className="text-xl font-bold text-vault-900 dark:text-vault-50">
+          <h2 className="text-xl font-bold text-fg">
             {sectionMeta?.label}
           </h2>
-          <p className="text-sm text-vault-500 dark:text-vault-400">
+          <p className="text-sm text-fg-muted">
             Extension data (JSON format)
           </p>
         </div>
         <div
           ref={editorRef}
-          className="flex-1 min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+          className="flex-1 min-h-0 border border-border rounded-xl overflow-hidden"
         />
       </div>
     );
@@ -464,10 +464,10 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
       <div className="mb-4 shrink-0 space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-vault-900 dark:text-vault-50">
+            <h2 className="text-xl font-bold text-fg">
               {sectionMeta?.label}
             </h2>
-            <p className="text-sm text-vault-500 dark:text-vault-400">
+            <p className="text-sm text-fg-muted">
               {sectionMeta?.description}
             </p>
           </div>
@@ -484,8 +484,8 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
               }}
               className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 isPreviewOpen || isSplitPreviewOpen
-                  ? 'border-vault-500 bg-vault-600 text-white hover:bg-vault-700 dark:border-vault-500 dark:bg-vault-600 dark:hover:bg-vault-500'
-                  : 'border-vault-200 bg-white text-vault-700 hover:bg-vault-100 dark:border-vault-700 dark:bg-vault-900/60 dark:text-vault-200 dark:hover:bg-vault-800/70'
+                  ? 'border-accent bg-accent text-accent-fg hover:opacity-90'
+                  : 'border-border bg-surface text-fg-muted hover:bg-hover border-border bg-surface text-fg hover:bg-hover/70'
               }`}
             >
               {isSplitPreviewOpen ? 'Stop Previewing CSS' : 'Preview CSS'}
@@ -498,21 +498,21 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
         <div className="flex flex-1 min-h-0 flex-col gap-4 lg:flex-row">
           <div
             ref={editorRef}
-            className="min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden lg:w-1/2"
+            className="min-h-0 border border-border rounded-xl overflow-hidden lg:w-1/2"
           />
 
-          <div className="min-h-0 overflow-hidden rounded-xl border border-vault-200 bg-vault-800 shadow-inner dark:border-vault-700 lg:w-1/2">
+          <div className="min-h-0 overflow-hidden rounded-xl border border-border bg-vault-800 shadow-inner border-border lg:w-1/2">
             <CreatorNotesPreviewPane
               content={livePreviewValue}
               frameClassName="block h-full w-full bg-vault-800"
-              emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-vault-300"
+              emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-fg-subtle"
             />
           </div>
         </div>
       ) : (
         <div
           ref={editorRef}
-          className="flex-1 min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+          className="flex-1 min-h-0 border border-border rounded-xl overflow-hidden"
         />
       )}
 

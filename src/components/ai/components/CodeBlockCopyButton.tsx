@@ -36,7 +36,7 @@ export function CodeBlockCopyButton({
       className={`${className} p-1.5 rounded-md transition-colors ${
         copied
           ? 'bg-green-600/90 text-white'
-          : 'bg-vault-800/90 text-vault-300 hover:text-vault-100 hover:bg-vault-700'
+          : 'bg-vault-800/90 text-fg-subtle hover:text-vault-100 hover:bg-vault-700'
       }`}
       title={copied ? 'Copied!' : 'Copy code block'}
       aria-label={copied ? 'Copied code block' : 'Copy code block'}

@@ -76,14 +76,14 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
       <button
         type="button"
         onClick={() => setShowStats(prev => !prev)}
-        className="ml-1 p-0.5 rounded-full text-vault-400 hover:text-vault-600 dark:text-vault-500 dark:hover:text-vault-300 hover:bg-vault-100 dark:hover:bg-vault-700 transition-colors focus:outline-none"
+        className="ml-1 p-0.5 rounded-full text-fg-subtle hover:text-fg text-fg0 hover:text-fg hover:bg-hover transition-colors focus:outline-none"
         aria-label="Response stats"
       >
         <Info className="w-3 h-3" />
       </button>
       <div
         className={
-          'absolute bottom-full left-0 mb-1 px-2 py-1.5 bg-vault-800 dark:bg-vault-900 text-vault-100 rounded-md shadow-lg border border-vault-700 dark:border-vault-600 text-left transition-opacity duration-150 z-10 ' +
+          'absolute bottom-full left-0 mb-1 px-2 py-1.5 bg-surface text-fg rounded-md shadow-lg border border-border text-left transition-opacity duration-150 z-10 ' +
           (showStats
             ? 'opacity-100 pointer-events-auto'
             : 'opacity-0 pointer-events-none group-hover/stats:opacity-100 group-hover/stats:pointer-events-auto')
@@ -116,8 +116,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(({
       <div
         className={`relative max-w-[90%] rounded-lg px-3 py-2 group ${animationClass} ${
           isUser
-            ? 'bg-vault-600 text-white rounded-br-none'
-            : 'bg-white dark:bg-vault-800 border border-vault-200 dark:border-vault-700 text-vault-900 dark:text-vault-100 rounded-bl-none'
+            ? 'bg-inverse text-fg-inverse rounded-br-none'
+            : 'bg-surface border border-border text-fg rounded-bl-none'
         }`}
       >
         {isUser ? (
@@ -149,7 +149,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(({
           className={`text-xs mt-1 block ${
             isUser
               ? 'text-vault-200'
-              : 'text-vault-500 dark:text-vault-400'
+              : 'text-fg-muted'
           }`}
         >
           {formatTime(message.timestamp)}

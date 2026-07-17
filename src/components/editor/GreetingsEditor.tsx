@@ -80,26 +80,26 @@ function GreetingListItem({
       className={`
         relative group cursor-pointer p-3 rounded-lg border transition-all duration-150
         ${isSelected
-          ? 'bg-vault-200 dark:bg-vault-700 border-vault-500 dark:border-vault-400 ring-1 ring-vault-500 dark:ring-vault-400'
-          : 'bg-white dark:bg-vault-800 border-vault-200 dark:border-vault-700 hover:border-vault-300 dark:hover:border-vault-600 hover:bg-vault-50 dark:hover:bg-vault-700'
+          ? 'bg-hover border-accent ring-1 ring-accent'
+          : 'bg-surface border-border hover:border-border-strong hover:bg-hover'
         }
       `}
     >
       <div className="flex items-start gap-2">
         <div className="mt-0.5 shrink-0">
           {hasContent ? (
-            <div className="w-2 h-2 rounded-full bg-green-500" title="Has content" />
+            <div className="w-2 h-2 rounded-full bg-success" title="Has content" />
           ) : (
-            <div className="w-2 h-2 rounded-full bg-vault-300 dark:bg-vault-600" title="Empty" />
+            <div className="w-2 h-2 rounded-full bg-fg-subtle" title="Empty" />
           )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-vault-900 dark:text-vault-100 truncate">
+          <div className="text-sm font-medium text-fg truncate">
             Greeting {index + 1}
           </div>
 
-          <div className="flex items-center gap-2 mt-1 text-xs text-vault-500 dark:text-vault-400">
+          <div className="flex items-center gap-2 mt-1 text-xs text-fg-muted">
             {tokenCount !== null ? <span>{tokenCount} tokens</span> : null}
           </div>
         </div>
@@ -108,8 +108,8 @@ function GreetingListItem({
           onClick={handleDelete}
           className="
             opacity-0 group-hover:opacity-100 focus:opacity-100
-            p-1.5 text-vault-400 hover:text-red-500 dark:text-vault-500 dark:hover:text-red-400
-            hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-all
+            p-1.5 text-fg-subtle hover:text-danger text-fg0 hover:text-danger
+            hover:bg-danger-soft rounded transition-all
           "
           title="Delete greeting"
         >
@@ -169,7 +169,7 @@ function GreetingDetail({
       {/* Editor */}
       <div
         ref={editorRef}
-        className="flex-1 min-h-0 border border-vault-200 dark:border-vault-700 rounded-xl overflow-hidden"
+        className="flex-1 min-h-0 border border-border rounded-xl overflow-hidden"
         style={{ minHeight: '200px' }}
       />
     </div>
@@ -268,15 +268,15 @@ export function GreetingsEditor({
     <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
       {/* Left Sidebar - Hidden on mobile when viewing detail */}
       <div className={`
-        w-full md:w-64 shrink-0 min-h-0 max-h-[50dvh] md:max-h-none overflow-hidden border-r border-vault-200 dark:border-vault-700 
-        bg-vault-50/30 dark:bg-vault-800/20 flex flex-col
+        w-full md:w-64 shrink-0 min-h-0 max-h-[50dvh] md:max-h-none overflow-hidden border-r border-border 
+        bg-muted/30 bg-muted/50 flex flex-col
         ${isMobileViewOpen ? 'hidden md:flex' : 'flex'}
       `}>
         {/* Header */}
-        <div className="shrink-0 px-3 py-2.5 border-b border-vault-200 dark:border-vault-700">
+        <div className="shrink-0 px-3 py-2.5 border-b border-border">
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-vault-500" />
-            <span className="text-sm font-medium text-vault-700 dark:text-vault-300">
+            <MessageSquare className="w-4 h-4 text-fg-muted" />
+            <span className="text-sm font-medium text-fg-muted">
               {greetingsList.length} greeting{greetingsList.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -285,7 +285,7 @@ export function GreetingsEditor({
         {/* Greeting List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {greetingsList.length === 0 ? (
-            <div className="text-center py-8 text-vault-400 dark:text-vault-500">
+            <div className="text-center py-8 text-fg-subtle">
               <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p className="text-xs">No greetings yet</p>
               <p className="text-[10px] mt-0.5">Click "New Greeting" to start</p>
@@ -306,12 +306,12 @@ export function GreetingsEditor({
         </div>
 
         {/* Add Button at Bottom */}
-        <div className="shrink-0 p-3 border-t border-vault-200 dark:border-vault-700">
+        <div className="shrink-0 p-3 border-t border-border">
           <button
             onClick={handleAddGreeting}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-vault-300 dark:border-vault-600
-              text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200
-              hover:border-vault-400 dark:hover:border-vault-500 hover:bg-vault-50 dark:hover:bg-vault-700/30
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-border-strong
+              text-fg-muted hover:text-fg
+              hover:border-border-strong hover:bg-hover/30
               rounded-lg text-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -322,7 +322,7 @@ export function GreetingsEditor({
 
       {/* Right Detail Panel */}
       <div className={`
-        flex-1 min-h-0 overflow-hidden bg-white dark:bg-vault-900
+        flex-1 min-h-0 overflow-hidden bg-surface
         ${!isMobileViewOpen ? 'hidden md:flex md:flex-col' : 'flex flex-col'}
       `}>
         {selectedGreeting !== undefined ? (
@@ -330,7 +330,7 @@ export function GreetingsEditor({
             {/* Mobile Back Button */}
             <button
               onClick={handleBackToList}
-              className="md:hidden mb-4 shrink-0 flex items-center gap-1 text-sm text-vault-600 dark:text-vault-400 hover:text-vault-800 dark:hover:text-vault-200"
+              className="md:hidden mb-4 shrink-0 flex items-center gap-1 text-sm text-fg-muted hover:text-fg"
             >
               <ChevronLeft className="w-4 h-4" />
               Back to greetings
@@ -351,7 +351,7 @@ export function GreetingsEditor({
             />
           </div>
         ) : (
-          <div className="h-full flex items-center justify-center text-vault-400 dark:text-vault-500">
+          <div className="h-full flex items-center justify-center text-fg-subtle">
             <div className="text-center">
               <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p className="text-sm">Select a greeting to edit</p>

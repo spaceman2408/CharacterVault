@@ -45,22 +45,22 @@ export const ReasoningSection: React.FC<ReasoningSectionProps> = memo(({
   }
   
   return (
-    <div className="mb-2 border border-vault-300 dark:border-vault-600 rounded-md overflow-hidden">
+    <div className="mb-2 border border-border-strong rounded-md overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-2 py-1.5 bg-vault-100 dark:bg-vault-700/50 hover:bg-vault-200 dark:hover:bg-vault-700 transition-colors text-left"
+        className="w-full flex items-center justify-between px-2 py-1.5 bg-muted bg-hover hover:bg-hover transition-colors text-left"
       >
-        <span className="text-xs font-medium text-vault-600 dark:text-vault-400 flex items-center gap-1">
+        <span className="text-xs font-medium text-fg-muted flex items-center gap-1">
           <Sparkles className="w-3 h-3" />
           Thinking process
         </span>
-        <span className="text-xs text-vault-500 dark:text-vault-500">
+        <span className="text-xs text-fg-muted">
           {isExpanded ? 'Hide' : 'Show'}
         </span>
       </button>
       {isExpanded && (
-        <div ref={reasoningContentRef} className="max-h-40 overflow-y-auto px-2 py-2 bg-vault-50 dark:bg-vault-800/50 border-t border-vault-200 dark:border-vault-700">
-          <pre className="text-xs font-mono text-vault-700 dark:text-vault-300 whitespace-pre-wrap wrap-break-word leading-relaxed">
+        <div ref={reasoningContentRef} className="max-h-40 overflow-y-auto px-2 py-2 bg-muted border-t border-border">
+          <pre className="text-xs font-mono text-fg-muted whitespace-pre-wrap wrap-break-word leading-relaxed">
             {reasoning}
           </pre>
         </div>
