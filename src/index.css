@@ -151,7 +151,7 @@
   --ai-toolbar-error-border: rgba(220, 38, 38, 0.35);
   --ai-toolbar-error-text: var(--danger);
   --ai-toolbar-accent-primary: #7c3aed;
-  --ai-toolbar-accent-secondary: #8b5cf6;
+  --ai-toolbar-accent-secondary: #4f46e5;
   --ai-toolbar-accent-success: #059669;
   --ai-toolbar-accent-warning: #d97706;
   --ai-toolbar-accent-info: #0891b2;
@@ -160,7 +160,8 @@
   --ai-toolbar-accent-neutral: #5b5270;
   --ai-toolbar-accept-bg: var(--success);
   --ai-toolbar-active: var(--accent);
-  --ai-toolbar-active-bg: rgba(124, 58, 237, 0.12);
+  --ai-toolbar-active-bg: var(--accent-soft);
+  --ai-toolbar-focus-shadow: var(--vault-search-focus-shadow);
 
   /* AI ghost preview */
   --ai-ghost-text: rgba(91, 33, 182, 0.55);
@@ -279,7 +280,7 @@
   --ai-toolbar-error-border: rgba(248, 113, 113, 0.35);
   --ai-toolbar-error-text: var(--danger);
   --ai-toolbar-accent-primary: #22d3ee;
-  --ai-toolbar-accent-secondary: #67e8f9;
+  --ai-toolbar-accent-secondary: #818cf8;
   --ai-toolbar-accent-success: #10b981;
   --ai-toolbar-accent-warning: #f59e0b;
   --ai-toolbar-accent-info: #2dd4bf;
@@ -288,7 +289,8 @@
   --ai-toolbar-accent-neutral: #a3a3a3;
   --ai-toolbar-accept-bg: var(--success);
   --ai-toolbar-active: var(--accent);
-  --ai-toolbar-active-bg: rgba(34, 211, 238, 0.16);
+  --ai-toolbar-active-bg: var(--accent-soft);
+  --ai-toolbar-focus-shadow: var(--vault-search-focus-shadow);
 
   --ai-ghost-text: rgba(34, 211, 238, 0.55);
   --ai-ghost-text-peak: rgba(103, 232, 249, 0.95);

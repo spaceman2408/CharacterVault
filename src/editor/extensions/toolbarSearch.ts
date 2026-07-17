@@ -629,17 +629,17 @@ export function toolbarSearchTheme() {
     '& .cm-search': { display: 'none !important' },
     '& .cm-panels.cm-panels-bottom': { display: 'none !important' },
     '& .cm-searchMatch': {
-      backgroundColor: 'var(--vault-search-match-bg))',
+      backgroundColor: 'var(--vault-search-match-bg)',
       borderRadius: '2px',
       boxShadow: 'inset 0 -1px 0 rgba(146, 64, 14, 0.2)',
     },
     '& .cm-searchMatch-selected': {
-      backgroundColor: 'var(--vault-search-match-selected))',
+      backgroundColor: 'var(--vault-search-match-selected)',
       borderRadius: '2px',
-      outline: '1px solid var(--vault-search-match-selected-ring))',
-      boxShadow: '0 0 0 1px var(--vault-search-match-selected-ring))',
+      outline: '1px solid var(--vault-search-match-selected-ring)',
+      boxShadow: '0 0 0 1px var(--vault-search-match-selected-ring)',
     },
-    // Toolbar search panel styling - matches aA button/popup theme
+    // Toolbar search panel — accent tokens follow theme (purple light / cyan dark)
     '& .cm-toolbar-search-panel': {
       backgroundColor: 'var(--ai-toolbar-bg)',
       borderBottom: '1px solid var(--ai-toolbar-border)',
@@ -666,8 +666,8 @@ export function toolbarSearchTheme() {
       outline: 'none',
     },
     '& .cm-toolbar-search-panel .search-input:focus, & .cm-toolbar-search-panel .replace-input:focus': {
-      borderColor: 'var(--ai-toolbar-accent-primary)',
-      boxShadow: '0 0 0 3px rgba(124, 58, 237, 0.1)',
+      borderColor: 'var(--ai-toolbar-active)',
+      boxShadow: '0 0 0 2px var(--ai-toolbar-focus-shadow)',
     },
     '& .cm-toolbar-search-panel .search-btn': {
       display: 'flex',
@@ -684,9 +684,9 @@ export function toolbarSearchTheme() {
       transition: 'all 0.15s ease',
     },
     '& .cm-toolbar-search-panel .search-btn:hover': {
-      backgroundColor: 'var(--ai-toolbar-hover-bg))',
-      borderColor: 'var(--ai-toolbar-accent-primary)',
-      color: 'var(--ai-toolbar-accent-primary)',
+      backgroundColor: 'var(--ai-toolbar-active-bg)',
+      borderColor: 'var(--ai-toolbar-active)',
+      color: 'var(--ai-toolbar-active)',
     },
     '& .cm-toolbar-search-panel .search-btn.close': {
       fontWeight: '600',
@@ -705,11 +705,12 @@ export function toolbarSearchTheme() {
       userSelect: 'none',
     },
     '& .cm-toolbar-search-panel .search-option:hover': {
-      backgroundColor: 'var(--ai-toolbar-hover-bg))',
-      borderColor: 'var(--ai-toolbar-accent-primary)',
+      backgroundColor: 'var(--ai-toolbar-active-bg)',
+      borderColor: 'var(--ai-toolbar-active)',
+      color: 'var(--ai-toolbar-active)',
     },
     '& .cm-toolbar-search-panel .search-option input[type="checkbox"]': {
-      accentColor: 'var(--ai-toolbar-accent-primary)',
+      accentColor: 'var(--ai-toolbar-active)',
     },
     '& .cm-toolbar-search-panel .search-match-count': {
       fontSize: '12px',
