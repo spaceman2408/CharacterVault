@@ -74,42 +74,51 @@ function GreetingListItem({
   };
 
   const hasContent = greeting.trim().length > 0;
+  const preview = greeting.replace(/\s+/g, ' ').trim();
+
   return (
     <div
       onClick={onSelect}
       className={`
-        relative group cursor-pointer p-3 rounded-lg border transition-all duration-150
+        relative cursor-pointer rounded-xl border p-3 transition-colors touch-manipulation
         ${isSelected
-          ? 'bg-accent-soft border-accent ring-1 ring-accent text-accent'
-          : 'bg-surface border-border hover:border-accent/40 hover:bg-accent-soft'
+          ? 'border-accent bg-accent-soft ring-1 ring-accent'
+          : 'border-border bg-surface hover:border-accent/40 hover:bg-accent-soft/60'
         }
       `}
     >
-      <div className="flex items-start gap-2">
-        <div className="mt-0.5 shrink-0">
+      <div className="flex items-start gap-2.5">
+        <div className="mt-1.5 shrink-0">
           {hasContent ? (
-            <div className="w-2 h-2 rounded-full bg-success" title="Has content" />
+            <div className="h-2 w-2 rounded-full bg-success" title="Has content" />
           ) : (
-            <div className="w-2 h-2 rounded-full bg-fg-subtle" title="Empty" />
+            <div className="h-2 w-2 rounded-full bg-fg-subtle" title="Empty" />
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-fg truncate">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-fg">
             Greeting {index + 1}
           </div>
-
-          <div className="flex items-center gap-2 mt-1 text-xs text-fg-muted">
-            {tokenCount !== null ? <span>{tokenCount} tokens</span> : null}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-muted">
+            {tokenCount !== null ? <span>{tokenCount.toLocaleString()} tokens</span> : null}
+            {!hasContent ? <span>Empty</span> : null}
           </div>
+          {hasContent && (
+            <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-fg-subtle">
+              {preview}
+            </p>
+          )}
         </div>
 
         <button
+          type="button"
           onClick={handleDelete}
-          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-fg0 hover:text-danger hover:bg-danger-soft rounded transition-all"
+          className="shrink-0 rounded-lg p-2 text-fg-muted transition-colors hover:bg-danger-soft hover:text-danger touch-manipulation"
           title="Delete greeting"
+          aria-label={`Delete greeting ${index + 1}`}
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -161,12 +170,11 @@ function GreetingDetail({
   });
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
-      {/* Editor */}
+    <div className="flex min-h-0 flex-1 flex-col">
       <div
         ref={editorRef}
-        className="flex-1 min-h-0 border border-border rounded-xl overflow-hidden"
-        style={{ minHeight: '200px' }}
+        className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-bg shadow-inner"
+        style={{ minHeight: '12rem' }}
       />
       {payloadPreviewModal}
     </div>
@@ -262,30 +270,35 @@ export function GreetingsEditor({
   );
 
   return (
-    <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
-      {/* Left Sidebar - Hidden on mobile when viewing detail */}
-      <div className={`
-        w-full md:w-64 shrink-0 min-h-0 max-h-[50dvh] md:max-h-none overflow-hidden border-r border-border 
-        bg-muted/30 bg-muted/50 flex flex-col
-        ${isMobileViewOpen ? 'hidden md:flex' : 'flex'}
-      `}>
-        {/* Header */}
-        <div className="shrink-0 px-3 py-2.5 border-b border-border">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-fg-muted" />
-            <span className="text-sm font-medium text-fg-muted">
-              {greetingsList.length} greeting{greetingsList.length !== 1 ? 's' : ''}
-            </span>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden md:flex-row">
+      {/* List panel: full height on mobile; fixed-width sidebar on desktop */}
+      <div
+        className={`
+          flex min-h-0 w-full flex-col overflow-hidden border-border bg-muted/40
+          md:w-72 md:shrink-0 md:border-r
+          ${isMobileViewOpen ? 'hidden md:flex' : 'flex flex-1 md:flex-none'}
+        `}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-fg-muted">
+              <MessageSquare className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-fg">Greetings</p>
+              <p className="text-xs text-fg-muted">
+                {greetingsList.length} greeting{greetingsList.length !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Greeting List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
           {greetingsList.length === 0 ? (
-            <div className="text-center py-8 text-fg-subtle">
-              <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-xs">No greetings yet</p>
-              <p className="text-[10px] mt-0.5">Click "New Greeting" to start</p>
+            <div className="flex h-full min-h-40 flex-col items-center justify-center px-4 py-10 text-center text-fg-subtle">
+              <MessageSquare className="mb-3 h-10 w-10 opacity-40" />
+              <p className="text-sm font-medium text-fg-muted">No greetings yet</p>
+              <p className="mt-1 text-xs">Add one to give your character alternate first messages.</p>
             </div>
           ) : (
             greetingsList.map((greeting, index) => (
@@ -302,33 +315,54 @@ export function GreetingsEditor({
           )}
         </div>
 
-        {/* Add Button at Bottom */}
-        <div className="shrink-0 p-3 border-t border-border">
+        <div className="shrink-0 border-t border-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
+            type="button"
             onClick={handleAddGreeting}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 border-dashed border-border-strong text-fg-muted hover:text-fg hover:border-border-strong hover:bg-hover/30 rounded-lg text-sm transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface px-3 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:border-accent/50 hover:bg-accent-soft hover:text-accent touch-manipulation"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             New Greeting
           </button>
         </div>
       </div>
 
-      {/* Right Detail Panel */}
-      <div className={`
-        flex-1 min-h-0 overflow-hidden bg-surface
-        ${!isMobileViewOpen ? 'hidden md:flex md:flex-col' : 'flex flex-col'}
-      `}>
+      {/* Detail panel */}
+      <div
+        className={`
+          min-h-0 flex-1 overflow-hidden bg-surface
+          ${!isMobileViewOpen ? 'hidden md:flex md:flex-col' : 'flex flex-col'}
+        `}
+      >
         {selectedGreeting !== undefined ? (
-          <div className="flex-1 min-h-0 flex flex-col p-4 md:p-6 pb-[max(env(safe-area-inset-bottom),0px)]">
-            {/* Mobile Back Button */}
-            <button
-              onClick={handleBackToList}
-              className="md:hidden mb-4 shrink-0 flex items-center gap-1 text-sm text-fg-muted hover:text-fg"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Back to greetings
-            </button>
+          <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 md:p-6 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-2 md:mb-4">
+              <button
+                type="button"
+                onClick={handleBackToList}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg md:hidden touch-manipulation"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+              <div className="hidden min-w-0 md:block">
+                <p className="text-sm font-semibold text-fg">Greeting {safeSelectedIndex + 1}</p>
+                {selectedGreetingTokenCount !== null && (
+                  <p className="text-xs text-fg-muted">
+                    {selectedGreetingTokenCount.toLocaleString()} tokens
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDeleteGreeting(safeSelectedIndex)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation"
+                title="Delete greeting"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="sm:inline">Delete</span>
+              </button>
+            </div>
             <GreetingDetail
               greeting={selectedGreeting}
               onPersistUpdate={(value) => handleGreetingPersistUpdate(safeSelectedIndex, value)}
@@ -345,11 +379,11 @@ export function GreetingsEditor({
             />
           </div>
         ) : (
-          <div className="h-full flex items-center justify-center text-fg-subtle">
-            <div className="text-center">
-              <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">Select a greeting to edit</p>
-              <p className="text-xs mt-1">Or create a new one to get started</p>
+          <div className="flex h-full items-center justify-center text-fg-subtle">
+            <div className="px-6 text-center">
+              <MessageSquare className="mx-auto mb-3 h-12 w-12 opacity-40" />
+              <p className="text-sm font-medium text-fg-muted">Select a greeting to edit</p>
+              <p className="mt-1 text-xs">Or create a new one to get started</p>
             </div>
           </div>
         )}

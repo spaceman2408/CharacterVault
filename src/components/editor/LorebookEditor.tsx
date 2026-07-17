@@ -120,56 +120,59 @@ function LorebookEntryListItem({
     <div
       onClick={onSelect}
       className={`
-        relative group cursor-pointer p-3 rounded-lg border transition-all duration-150
+        relative cursor-pointer rounded-xl border p-3 transition-colors touch-manipulation
         ${isSelected
-          ? 'bg-accent-soft border-accent ring-1 ring-accent'
-          : 'bg-surface border-border hover:border-accent/40 hover:bg-accent-soft'
+          ? 'border-accent bg-accent-soft ring-1 ring-accent'
+          : 'border-border bg-surface hover:border-accent/40 hover:bg-accent-soft/60'
         }
       `}
     >
       <div className="flex items-start gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-fg truncate">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-fg">
             {entry.comment || entry.name || `Entry ${index}`}
           </div>
 
-          <div className="flex items-center gap-2 mt-1 text-xs text-fg-muted">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-muted">
             <span>{entry.keys.length} key{entry.keys.length !== 1 ? 's' : ''}</span>
             {tokenCount !== null ? (
-              <>
-                <span>·</span>
-                <span>{tokenCount} tokens</span>
-              </>
+              <span>{tokenCount.toLocaleString()} tokens</span>
+            ) : null}
+            {!isContextEnabled ? (
+              <span className="text-fg-subtle">Hidden from context</span>
             ) : null}
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          {/* Context toggle button (eye icon) */}
+        <div className="flex shrink-0 items-center gap-0.5">
           <button
+            type="button"
             onClick={handleToggleContext}
             className={`
-              p-1.5 rounded transition-all
+              rounded-lg p-2 transition-colors touch-manipulation
               ${isContextEnabled
-                ? 'text-success hover:opacity-90 hover:bg-success-soft'
-                : 'text-fg0 hover:text-fg hover:bg-hover'
+                ? 'text-success hover:bg-success-soft'
+                : 'text-fg-muted hover:bg-hover hover:text-fg'
               }
             `}
             title={isContextEnabled ? 'In context (click to exclude)' : 'Not in context (click to include)'}
+            aria-label={isContextEnabled ? 'Exclude from context' : 'Include in context'}
           >
             {isContextEnabled ? (
-              <Eye className="w-3.5 h-3.5" />
+              <Eye className="h-4 w-4" />
             ) : (
-              <EyeOff className="w-3.5 h-3.5" />
+              <EyeOff className="h-4 w-4" />
             )}
           </button>
 
           <button
+            type="button"
             onClick={handleDelete}
-            className="p-1.5 text-fg0 hover:text-danger hover:bg-danger-soft rounded transition-all"
+            className="rounded-lg p-2 text-fg-muted transition-colors hover:bg-danger-soft hover:text-danger touch-manipulation"
             title="Delete entry"
+            aria-label="Delete entry"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -363,136 +366,134 @@ function LorebookEntryDetail({
     onPersistUpdate(updatedEntry);
   };
 
+  const fieldClass =
+    'w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-fg placeholder:text-fg-subtle outline-none transition-colors focus:border-border-strong focus:ring-2 focus:ring-accent/20';
+
   return (
-    <div className="flex flex-col gap-2 md:flex-1 md:min-h-0">
-      {/* Comment Field (Entry Name in SillyTavern) */}
-      <div className="shrink-0">
-        <label className="block text-sm font-medium text-fg-muted mb-2">
-          Entry Name
-        </label>
-        <input
-          type="text"
-          value={draftEntry.comment || ''}
-          onChange={(e) => handleCommentChange(e.target.value)}
-          placeholder="Entry display name (optional)"
-          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-        />
-      </div>
-
-      {/* Keys Field */}
-      <div className="shrink-0">
-        <div className="flex items-center gap-2 mb-2">
-          <label className="text-sm font-medium text-fg-muted">
-            Trigger Keys
-          </label>
-          <span className="text-xs text-fg-subtle">(comma, separated)</span>
-          <button
-            onClick={handleGenerateKeys}
-            disabled={!generatingKeys && !draftEntry.content.trim()}
-            title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
-            className={`p-1.5 rounded transition-colors ${
-              generatingKeys
-                ? 'text-red-400 animate-pulse cursor-pointer hover:text-danger hover:bg-danger-soft'
-                : 'text-fg-subtle hover:text-fg hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed'
-            }`}
-          >
-            {generatingKeys ? (
-              <Square className="w-3.5 h-3.5 fill-current" />
-            ) : (
-              <Sparkles className="w-3.5 h-3.5" />
-            )}
-          </button>
-        </div>
-        <input
-          type="text"
-          value={keysInput}
-          onChange={(e) => handleKeysChange(e.target.value)}
-          onBlur={handleKeysBlur}
-          placeholder="castle, fortress, stronghold"
-          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-        />
-      </div>
-
-      {/* Settings Grid */}
-      <div className="shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Priority */}
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto md:overflow-hidden">
+      <div className="shrink-0 space-y-3">
         <div>
-          <label className="block text-sm font-medium text-fg-muted mb-2">
-            Priority
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+            Entry Name
           </label>
           <input
-            type="number"
-            value={draftEntry.priority ?? 0}
-            onChange={(e) => handlePriorityChange(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+            type="text"
+            value={draftEntry.comment || ''}
+            onChange={(e) => handleCommentChange(e.target.value)}
+            placeholder="Entry display name (optional)"
+            className={fieldClass}
           />
         </div>
 
-        {/* Position */}
         <div>
-          <label className="block text-sm font-medium text-fg-muted mb-2">
-            Position
+          <div className="mb-1.5 flex items-center gap-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+              Trigger Keys
+            </label>
+            <span className="text-[11px] text-fg-subtle">comma separated</span>
+            <button
+              type="button"
+              onClick={handleGenerateKeys}
+              disabled={!generatingKeys && !draftEntry.content.trim()}
+              title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
+              className={`ml-auto rounded-lg p-1.5 transition-colors touch-manipulation ${
+                generatingKeys
+                  ? 'animate-pulse text-danger hover:bg-danger-soft'
+                  : 'text-fg-subtle hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40'
+              }`}
+            >
+              {generatingKeys ? (
+                <Square className="h-3.5 w-3.5 fill-current" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+            </button>
+          </div>
+          <input
+            type="text"
+            value={keysInput}
+            onChange={(e) => handleKeysChange(e.target.value)}
+            onBlur={handleKeysBlur}
+            placeholder="castle, fortress, stronghold"
+            className={fieldClass}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+              Priority
+            </label>
+            <input
+              type="number"
+              value={draftEntry.priority ?? 0}
+              onChange={(e) => handlePriorityChange(e.target.value)}
+              className={fieldClass}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+              Position
+            </label>
+            <select
+              value={entry.position || 'before_char'}
+              onChange={(e) => handlePositionChange(e.target.value as LorebookEntry['position'])}
+              className={fieldClass}
+            >
+              {POSITION_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+            <input
+              type="checkbox"
+              checked={entry.enabled}
+              onChange={(e) => handleEnabledChange(e.target.checked)}
+              className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+            />
+            Enabled
           </label>
-          <select
-            value={entry.position || 'before_char'}
-            onChange={(e) => handlePositionChange(e.target.value as LorebookEntry['position'])}
-            className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-          >
-            {POSITION_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+            <input
+              type="checkbox"
+              checked={entry.case_sensitive ?? false}
+              onChange={(e) => handleCaseSensitiveChange(e.target.checked)}
+              className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+            />
+            Case Sensitive
+          </label>
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+            <input
+              type="checkbox"
+              checked={entry.constant ?? false}
+              onChange={(e) => handleConstantChange(e.target.checked)}
+              className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+            />
+            Constant
+          </label>
         </div>
       </div>
 
-      {/* Toggles */}
-      <div className="shrink-0 flex flex-wrap gap-4">
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={entry.enabled}
-            onChange={(e) => handleEnabledChange(e.target.checked)}
-            className="w-4 h-4 rounded border-border-strong text-fg-muted focus:ring-accent"
-          />
-          <span className="text-sm text-fg-muted">Enabled</span>
-        </label>
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={entry.case_sensitive ?? false}
-            onChange={(e) => handleCaseSensitiveChange(e.target.checked)}
-            className="w-4 h-4 rounded border-border-strong text-fg-muted focus:ring-accent"
-          />
-          <span className="text-sm text-fg-muted">Case Sensitive</span>
-        </label>
-        <label className="flex items-center gap-2.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={entry.constant ?? false}
-            onChange={(e) => handleConstantChange(e.target.checked)}
-            className="w-4 h-4 rounded border-border-strong text-fg-muted focus:ring-accent"
-          />
-          <span className="text-sm text-fg-muted">Constant</span>
-        </label>
-      </div>
-
-      {/* Content Editor (with AI toolbar) */}
-      <div className="h-[50vh] min-h-[200px] md:h-auto md:flex-1 md:min-h-0 md:flex md:flex-col">
+      <div className="flex min-h-[40dvh] flex-1 flex-col md:min-h-48">
         <div
           ref={editorRef}
-          className="h-full md:flex-1 md:min-h-0 border border-border rounded-xl overflow-hidden"
-          style={{ minHeight: '200px' }}
+          className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-bg shadow-inner"
         />
       </div>
 
-      {/* Name Field (internal, moved to bottom) */}
       <div className="shrink-0">
         <input
           type="text"
           value={draftEntry.name || ''}
           onChange={(e) => handleNameChange(e.target.value)}
-          placeholder="Internal notes about this entry, not used in output (optional)"
-          className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+          placeholder="Internal notes (optional, not used in output)"
+          className={fieldClass}
         />
       </div>
 
@@ -855,34 +856,45 @@ function LorebookEditorInner({
   }, [draftLorebook, bookName, characterName, sanitizeFilename, entries.length]);
 
   return (
-    <div className="h-full flex flex-col md:flex-row overflow-hidden min-h-0">
-      {/* Left Sidebar - Hidden on mobile when viewing detail */}
-      <div className={`
-        w-full md:w-64 shrink-0 min-h-0 max-h-[50dvh] md:max-h-none overflow-hidden border-r border-border 
-        bg-muted/30 bg-muted/50 flex flex-col
-        ${isMobileViewOpen ? 'hidden md:flex' : 'flex'}
-      `}>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden md:flex-row">
+      {/* List panel: full height on mobile; fixed-width sidebar on desktop */}
+      <div
+        className={`
+          flex min-h-0 w-full flex-col overflow-hidden border-border bg-muted/40
+          md:w-72 md:shrink-0 md:border-r
+          ${isMobileViewOpen ? 'hidden md:flex' : 'flex flex-1 md:flex-none'}
+        `}
+      >
         {/* Book Settings Toggle */}
         <div className="shrink-0 border-b border-border">
           <button
+            type="button"
             onClick={() => setIsBookSettingsOpen(!isBookSettingsOpen)}
-            className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-fg-muted hover:bg-hover/50 transition-colors"
+            className="flex w-full items-center justify-between px-3 py-3 text-sm font-medium text-fg-muted transition-colors hover:bg-hover/50 touch-manipulation"
           >
             <div className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              <span>Book Settings</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface">
+                <Settings className="h-4 w-4" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-fg">Lorebook</p>
+                <p className="text-xs font-normal text-fg-muted">
+                  {entries.length} entr{entries.length === 1 ? 'y' : 'ies'}
+                  {isBookSettingsOpen ? '' : ' · Settings'}
+                </p>
+              </div>
             </div>
             {isBookSettingsOpen ? (
-              <ChevronUp className="w-4 h-4" />
+              <ChevronUp className="h-4 w-4" />
             ) : (
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="h-4 w-4" />
             )}
           </button>
 
           {isBookSettingsOpen && (
-            <div className="px-3 pb-3 space-y-3">
+            <div className="space-y-3 px-3 pb-3">
               <div>
-                <label className="block text-xs font-medium text-fg-muted mb-1">
+                <label className="mb-1 block text-xs font-medium text-fg-muted">
                   Book Name
                 </label>
                 <input
@@ -890,11 +902,11 @@ function LorebookEditorInner({
                   value={bookName}
                   onChange={(e) => handleBookNameChange(e.target.value)}
                   placeholder="Character Lorebook"
-                  className="w-full px-2.5 py-1.5 text-xs bg-surface border border-border rounded text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-1 focus:ring-accent"
+                  className="w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-fg-muted mb-1">
+                <label className="mb-1 block text-xs font-medium text-fg-muted">
                   Description
                 </label>
                 <input
@@ -902,27 +914,26 @@ function LorebookEditorInner({
                   value={bookDescription}
                   onChange={(e) => handleBookDescriptionChange(e.target.value)}
                   placeholder="Brief description"
-                  className="w-full px-2.5 py-1.5 text-xs bg-surface border border-border rounded text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-1 focus:ring-accent"
+                  className="w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
-              {/* Context Visibility Controls */}
               {entries.length > 0 && (
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <label className="text-xs font-medium text-fg-muted">
-                    Context Visibility
-                  </label>
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-xs font-medium text-fg-muted">Context</span>
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={handleEnableAllContext}
-                      className="text-xs text-fg-muted hover:text-fg transition-colors"
+                      className="text-xs text-fg-muted transition-colors hover:text-fg"
                       title="Enable all entries in context"
                     >
                       Enable All
                     </button>
                     <span className="text-fg-subtle">|</span>
                     <button
+                      type="button"
                       onClick={handleDisableAllContext}
-                      className="text-xs text-fg-muted hover:text-fg transition-colors"
+                      className="text-xs text-fg-muted transition-colors hover:text-fg"
                       title="Disable all entries in context"
                     >
                       Disable All
@@ -930,16 +941,15 @@ function LorebookEditorInner({
                   </div>
                 </div>
               )}
-
-              {/* Delete Lorebook */}
               {onDelete && (
-                <div className="pt-2 border-t border-border">
+                <div className="border-t border-border pt-2">
                   <button
+                    type="button"
                     onClick={handleDeleteLorebook}
-                    className="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 text-xs text-danger hover:text-danger hover:bg-danger-soft border border-danger/30 rounded transition-colors"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-danger/30 px-2.5 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-soft touch-manipulation"
                     title="Delete the entire lorebook"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" />
                     Delete Lorebook
                   </button>
                 </div>
@@ -948,47 +958,47 @@ function LorebookEditorInner({
           )}
         </div>
 
-        {/* Search Bar */}
         {entries.length > 0 && (
-          <div className="shrink-0 px-3 py-2 border-b border-border">
+          <div className="shrink-0 border-b border-border px-3 py-2">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-fg-subtle" />
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`Search ${entries.length} entries...`}
-                className="w-full pl-8 pr-7 py-1.5 text-xs bg-surface border border-border rounded text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-1 focus:ring-accent"
+                className="w-full rounded-lg border border-border bg-surface py-2 pl-8 pr-7 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
             {searchQuery && (
-              <div className="text-fg-muted mt-1">
+              <p className="mt-1.5 text-[11px] text-fg-muted">
                 {filteredEntries.length} of {entries.length} entries
-              </div>
+              </p>
             )}
           </div>
         )}
 
-        {/* Entry List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
           {entries.length === 0 ? (
-            <div className="text-center py-8 text-fg-subtle">
-              <Book className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-xs">No entries yet</p>
+            <div className="flex h-full min-h-40 flex-col items-center justify-center px-4 py-10 text-center text-fg-subtle">
+              <Book className="mb-3 h-10 w-10 opacity-40" />
+              <p className="text-sm font-medium text-fg-muted">No entries yet</p>
+              <p className="mt-1 text-xs">Add lore entries your character can pull into context.</p>
             </div>
           ) : filteredEntries.length === 0 ? (
-            <div className="text-center py-8 text-fg-subtle">
-              <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-xs">No entries match</p>
-              <p className="text-[10px] mt-0.5">Try a different search term</p>
+            <div className="flex h-full min-h-32 flex-col items-center justify-center px-4 py-10 text-center text-fg-subtle">
+              <Search className="mb-3 h-10 w-10 opacity-40" />
+              <p className="text-sm font-medium text-fg-muted">No entries match</p>
+              <p className="mt-1 text-xs">Try a different search term.</p>
             </div>
           ) : (
             filteredEntries.map((entry) => {
@@ -1006,7 +1016,10 @@ function LorebookEditorInner({
                   onToggleContext={() => {
                     const updatedEntry = {
                       ...entry,
-                      extensions: { ...entry.extensions, context_enabled: !isEntryContextEnabled(entry) },
+                      extensions: {
+                        ...entry.extensions,
+                        context_enabled: !isEntryContextEnabled(entry),
+                      },
                     };
                     const newEntries = [...entries];
                     newEntries[originalIndex] = updatedEntry;
@@ -1018,11 +1031,8 @@ function LorebookEditorInner({
           )}
         </div>
 
-        {/* Import/Export/Add Buttons at Bottom */}
-        <div className="shrink-0 p-3 border-t border-border space-y-2">
-          {/* Import/Export Row */}
+        <div className="shrink-0 space-y-2 border-t border-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex gap-2">
-            {/* Hidden file input for import */}
             <input
               ref={fileInputRef}
               type="file"
@@ -1031,50 +1041,75 @@ function LorebookEditorInner({
               className="hidden"
             />
             <button
+              type="button"
               onClick={handleImportClick}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-border text-fg-muted hover:text-fg hover:bg-hover/30 rounded-lg text-sm transition-colors"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
               title="Import lorebook from JSON file"
             >
-              <Upload className="w-4 h-4" />
+              <Upload className="h-4 w-4" />
               <span className="hidden sm:inline">Import</span>
             </button>
             <button
+              type="button"
               onClick={handleExport}
               disabled={entries.length === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-border text-fg-muted hover:text-fg hover:bg-hover/30 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40 touch-manipulation"
               title="Export lorebook to JSON file"
             >
-              <Download className="w-4 h-4" />
+              <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Export</span>
             </button>
           </div>
 
-          {/* New Entry Button */}
           <button
+            type="button"
             onClick={handleAddEntry}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 border-dashed border-border-strong text-fg-muted hover:text-fg hover:border-border-strong hover:bg-hover/30 rounded-lg text-sm transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface px-3 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:border-accent/50 hover:bg-accent-soft hover:text-accent touch-manipulation"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             New Entry
           </button>
         </div>
       </div>
 
-      {/* Right Detail Panel */}
-      <div className={`
-        flex-1 min-h-0 bg-surface
-        ${!isMobileViewOpen ? 'hidden md:flex md:flex-col md:overflow-hidden' : 'block overflow-y-auto md:flex md:flex-col md:overflow-hidden'}
-      `}>
+      {/* Detail panel */}
+      <div
+        className={`
+          min-h-0 flex-1 overflow-hidden bg-surface
+          ${!isMobileViewOpen ? 'hidden md:flex md:flex-col' : 'flex flex-col'}
+        `}
+      >
         {selectedEntry ? (
-          <div className="p-4 md:p-6 md:flex-1 md:min-h-0 md:flex md:flex-col pb-[max(env(safe-area-inset-bottom),0px)]">
-            {/* Mobile Back Button */}
-            <button
-              onClick={handleBackToList}
-              className="md:hidden mb-4 shrink-0 flex items-center gap-1 text-sm text-fg-muted hover:text-fg"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Back to entries
-            </button>
+          <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 md:p-6 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-2 md:mb-4">
+              <button
+                type="button"
+                onClick={handleBackToList}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg md:hidden touch-manipulation"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+              <div className="hidden min-w-0 md:block">
+                <p className="truncate text-sm font-semibold text-fg">
+                  {selectedEntry.comment || selectedEntry.name || `Entry ${safeSelectedIndex}`}
+                </p>
+                {selectedEntryTokenCount !== null && (
+                  <p className="text-xs text-fg-muted">
+                    {selectedEntryTokenCount.toLocaleString()} tokens
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDeleteEntry(safeSelectedIndex)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation"
+                title="Delete entry"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+            </div>
             <LorebookEntryDetail
               entry={selectedEntry}
               onPersistUpdate={handleEntryPersistUpdate}
@@ -1091,11 +1126,11 @@ function LorebookEditorInner({
             />
           </div>
         ) : (
-          <div className="h-full flex items-center justify-center text-fg-subtle">
-            <div className="text-center">
-              <Book className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">Select an entry to edit</p>
-              <p className="text-xs mt-1">Or create a new one to get started</p>
+          <div className="flex h-full items-center justify-center text-fg-subtle">
+            <div className="px-6 text-center">
+              <Book className="mx-auto mb-3 h-12 w-12 opacity-40" />
+              <p className="text-sm font-medium text-fg-muted">Select an entry to edit</p>
+              <p className="mt-1 text-xs">Or create a new one to get started</p>
             </div>
           </div>
         )}
