@@ -12,6 +12,7 @@ import type {
   CharacterSpec,
   CharacterBook,
   ReasoningEffort,
+  AIOperation,
 } from '../db/characterTypes';
 import { ReasoningParser } from './ReasoningParser';
 import { resolveProvider } from './providers';
@@ -282,15 +283,15 @@ export class AIError extends Error {
 /**
  * OpenAI-compatible chat message
  */
-interface ChatMessage {
+export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
 /**
- * OpenAI-compatible chat completion request
+ * OpenAI-compatible chat completion request body (first-attempt payload).
  */
-interface ChatCompletionRequest {
+export interface ChatCompletionRequestBody {
   model: string;
   messages: ChatMessage[];
   temperature?: number;
@@ -303,7 +304,22 @@ interface ChatCompletionRequest {
   include_reasoning?: boolean;
   reasoning?: boolean | { enabled: boolean; effort?: ReasoningEffort };
   reasoning_effort?: ReasoningEffort;
+  reasoning_split?: boolean;
   [key: string]: unknown;
+}
+
+/** @deprecated Use ChatCompletionRequestBody */
+type ChatCompletionRequest = ChatCompletionRequestBody;
+
+/**
+ * Preflight preview of a toolbar operation request (no network).
+ */
+export interface AIRequestPreview {
+  endpoint: string;
+  method: 'POST';
+  headers: Record<string, string>;
+  body: ChatCompletionRequestBody;
+  estimatedInputTokens: number;
 }
 
 /**
@@ -677,29 +693,24 @@ Provide only the generated text without any additional commentary.`;
   }
 
   /**
-   * Make a chat completion request
+   * Build the first-attempt chat completion body (budget + sanitize + capability cache).
+   * Shared by send path and preflight preview so they stay aligned.
    */
-  private async chatCompletion(
+  private buildChatCompletionBody(
     messages: ChatMessage[],
     customSampler?: Partial<SamplerSettings>,
-    onChunk?: (chunk: { content?: string; reasoning?: string }) => void
-  ): Promise<AIResponse> {
+    stream = false
+  ): ChatCompletionRequestBody {
     const sampler = { ...this.sampler, ...customSampler };
-    const useStreaming = this.config.enableStreaming && onChunk;
-
-    // Final clamp: pre-budget steps can under-count wrappers/tokenizer variance
     const maxInput = this.getMaxInputTokens(sampler);
     const budgetedMessages = this.enforceInputBudget(messages, maxInput);
-
-    this.abortController = new AbortController();
-    const { signal } = this.abortController;
 
     const enableReasoning = !!this.config.enableReasoning;
     const effort: ReasoningEffort = this.config.reasoningEffort ?? 'medium';
     const baseUrl = this.getBaseUrl();
     const cache = getCapabilityCache(baseUrl, this.config.modelId);
 
-    let request: ChatCompletionRequest = {
+    let request: ChatCompletionRequestBody = {
       model: this.config.modelId,
       messages: budgetedMessages,
       temperature: sampler.temperature,
@@ -707,7 +718,7 @@ Provide only the generated text without any additional commentary.`;
       min_p: sampler.minP,
       top_k: sampler.topK,
       repetition_penalty: sampler.repetitionPenalty,
-      stream: !!useStreaming,
+      stream: !!stream,
       max_tokens: sampler.maxTokens,
       include_reasoning: enableReasoning ? true : undefined,
       reasoning: enableReasoning
@@ -717,8 +728,109 @@ Provide only the generated text without any additional commentary.`;
       reasoning_split: enableReasoning && this.isMinimaxBaseUrl() ? true : undefined,
     };
 
-    request = sanitizeSamplerParams(request, baseUrl) as ChatCompletionRequest;
-    request = applyCapabilityCache(request, cache) as ChatCompletionRequest;
+    request = sanitizeSamplerParams(request, baseUrl) as ChatCompletionRequestBody;
+    request = applyCapabilityCache(request, cache) as ChatCompletionRequestBody;
+    return request;
+  }
+
+  /**
+   * Build system + user messages for a toolbar text operation (with token budget).
+   */
+  private buildOperationMessages(
+    operation: AIOperation,
+    text: string,
+    context: string[],
+    instruction?: string
+  ): ChatMessage[] {
+    const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
+    const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA);
+
+    let userPromptTemplate: string;
+    if (operation === 'instruct') {
+      if (!instruction) {
+        throw new Error('No custom prompt provided');
+      }
+      userPromptTemplate = this.interpolateInstructPrompt(this.prompts.instruct, '', instruction);
+    } else {
+      userPromptTemplate = this.interpolatePrompt(this.prompts[operation], '');
+    }
+
+    const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
+    let available = maxInput - overhead;
+
+    let truncatedText = text;
+    const textTokens = AIService.estimateTokens(text);
+    if (textTokens > available) {
+      truncatedText = this.truncateTextToLimit(text, available);
+      available = 0;
+    } else {
+      available -= textTokens;
+    }
+
+    const truncatedContext = this.fitContextToLimit(context, available);
+    const systemPrompt = this.buildSystemPrompt(truncatedContext);
+    const userPrompt =
+      operation === 'instruct'
+        ? this.interpolateInstructPrompt(this.prompts.instruct, truncatedText, instruction!)
+        : this.interpolatePrompt(this.prompts[operation], truncatedText);
+
+    return [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ];
+  }
+
+  /**
+   * Headers suitable for UI display (API key redacted).
+   */
+  private getRedactedHeaders(): Record<string, string> {
+    const headers = this.getHeaders();
+    if (headers.Authorization) {
+      headers.Authorization = 'Bearer ***';
+    }
+    return headers;
+  }
+
+  /**
+   * Preflight: build the exact first-attempt request for a toolbar operation (no network).
+   */
+  previewOperationRequest(
+    operation: AIOperation,
+    text: string,
+    context: string[],
+    options?: { instruction?: string; customSampler?: Partial<SamplerSettings> }
+  ): AIRequestPreview {
+    const messages = this.buildOperationMessages(
+      operation,
+      text,
+      context,
+      options?.instruction
+    );
+    const stream = !!this.config.enableStreaming;
+    const body = this.buildChatCompletionBody(messages, options?.customSampler, stream);
+    return {
+      endpoint: `${this.getBaseUrl()}/chat/completions`,
+      method: 'POST',
+      headers: this.getRedactedHeaders(),
+      body,
+      estimatedInputTokens: this.estimateMessagesTokens(body.messages),
+    };
+  }
+
+  /**
+   * Make a chat completion request
+   */
+  private async chatCompletion(
+    messages: ChatMessage[],
+    customSampler?: Partial<SamplerSettings>,
+    onChunk?: (chunk: { content?: string; reasoning?: string }) => void
+  ): Promise<AIResponse> {
+    const useStreaming = this.config.enableStreaming && onChunk;
+    const request = this.buildChatCompletionBody(messages, customSampler, !!useStreaming);
+    const cache = getCapabilityCache(this.getBaseUrl(), this.config.modelId);
+
+    this.abortController = new AbortController();
+    const { signal } = this.abortController;
 
     console.log('[AIService] Sending request with model:', this.config.modelId);
 
@@ -985,33 +1097,11 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
-    const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA); // Base overhead
-    const userPromptTemplate = this.interpolatePrompt(this.prompts.expand, ''); // Base overhead
-    const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
-    
-    let available = maxInput - overhead;
-    
-    // Prioritize text
-    let truncatedText = text;
-    const textTokens = AIService.estimateTokens(text);
-    if (textTokens > available) {
-      truncatedText = this.truncateTextToLimit(text, available);
-      available = 0;
-    } else {
-      available -= textTokens;
-    }
-
-    const truncatedContext = this.fitContextToLimit(context, available);
-    const systemPrompt = this.buildSystemPrompt(truncatedContext);
-    const userPrompt = this.interpolatePrompt(this.prompts.expand, truncatedText);
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
-
-    return this.chatCompletion(messages, customSampler, onChunk);
+    return this.chatCompletion(
+      this.buildOperationMessages('expand', text, context),
+      customSampler,
+      onChunk
+    );
   }
 
   /**
@@ -1023,32 +1113,11 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
-    const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA);
-    const userPromptTemplate = this.interpolatePrompt(this.prompts.rewrite, '');
-    const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
-    
-    let available = maxInput - overhead;
-    
-    let truncatedText = text;
-    const textTokens = AIService.estimateTokens(text);
-    if (textTokens > available) {
-      truncatedText = this.truncateTextToLimit(text, available);
-      available = 0;
-    } else {
-      available -= textTokens;
-    }
-
-    const truncatedContext = this.fitContextToLimit(context, available);
-    const systemPrompt = this.buildSystemPrompt(truncatedContext);
-    const userPrompt = this.interpolatePrompt(this.prompts.rewrite, truncatedText);
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
-
-    return this.chatCompletion(messages, customSampler, onChunk);
+    return this.chatCompletion(
+      this.buildOperationMessages('rewrite', text, context),
+      customSampler,
+      onChunk
+    );
   }
 
   /**
@@ -1061,32 +1130,11 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
-    const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA);
-    const userPromptTemplate = this.interpolateInstructPrompt(this.prompts.instruct, '', instruction);
-    const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
-    
-    let available = maxInput - overhead;
-    
-    let truncatedText = text;
-    const textTokens = AIService.estimateTokens(text);
-    if (textTokens > available) {
-      truncatedText = this.truncateTextToLimit(text, available);
-      available = 0;
-    } else {
-      available -= textTokens;
-    }
-
-    const truncatedContext = this.fitContextToLimit(context, available);
-    const systemPrompt = this.buildSystemPrompt(truncatedContext);
-    const userPrompt = this.interpolateInstructPrompt(this.prompts.instruct, truncatedText, instruction);
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
-
-    return this.chatCompletion(messages, customSampler, onChunk);
+    return this.chatCompletion(
+      this.buildOperationMessages('instruct', text, context, instruction),
+      customSampler,
+      onChunk
+    );
   }
 
   /**
@@ -1098,32 +1146,11 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
-    const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA);
-    const userPromptTemplate = this.interpolatePrompt(this.prompts.shorten, '');
-    const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
-    
-    let available = maxInput - overhead;
-    
-    let truncatedText = text;
-    const textTokens = AIService.estimateTokens(text);
-    if (textTokens > available) {
-      truncatedText = this.truncateTextToLimit(text, available);
-      available = 0;
-    } else {
-      available -= textTokens;
-    }
-
-    const truncatedContext = this.fitContextToLimit(context, available);
-    const systemPrompt = this.buildSystemPrompt(truncatedContext);
-    const userPrompt = this.interpolatePrompt(this.prompts.shorten, truncatedText);
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
-
-    return this.chatCompletion(messages, customSampler, onChunk);
+    return this.chatCompletion(
+      this.buildOperationMessages('shorten', text, context),
+      customSampler,
+      onChunk
+    );
   }
 
   /**
@@ -1135,32 +1162,11 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
-    const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA);
-    const userPromptTemplate = this.interpolatePrompt(this.prompts.lengthen, '');
-    const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
-    
-    let available = maxInput - overhead;
-    
-    let truncatedText = text;
-    const textTokens = AIService.estimateTokens(text);
-    if (textTokens > available) {
-      truncatedText = this.truncateTextToLimit(text, available);
-      available = 0;
-    } else {
-      available -= textTokens;
-    }
-
-    const truncatedContext = this.fitContextToLimit(context, available);
-    const systemPrompt = this.buildSystemPrompt(truncatedContext);
-    const userPrompt = this.interpolatePrompt(this.prompts.lengthen, truncatedText);
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
-
-    return this.chatCompletion(messages, customSampler, onChunk);
+    return this.chatCompletion(
+      this.buildOperationMessages('lengthen', text, context),
+      customSampler,
+      onChunk
+    );
   }
 
   /**
@@ -1172,32 +1178,11 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
-    const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA);
-    const userPromptTemplate = this.interpolatePrompt(this.prompts.vivid, '');
-    const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
-    
-    let available = maxInput - overhead;
-    
-    let truncatedText = text;
-    const textTokens = AIService.estimateTokens(text);
-    if (textTokens > available) {
-      truncatedText = this.truncateTextToLimit(text, available);
-      available = 0;
-    } else {
-      available -= textTokens;
-    }
-
-    const truncatedContext = this.fitContextToLimit(context, available);
-    const systemPrompt = this.buildSystemPrompt(truncatedContext);
-    const userPrompt = this.interpolatePrompt(this.prompts.vivid, truncatedText);
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
-
-    return this.chatCompletion(messages, customSampler, onChunk);
+    return this.chatCompletion(
+      this.buildOperationMessages('vivid', text, context),
+      customSampler,
+      onChunk
+    );
   }
 
   /**
@@ -1209,32 +1194,11 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
-    const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA);
-    const userPromptTemplate = this.interpolatePrompt(this.prompts.emotion, '');
-    const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
-    
-    let available = maxInput - overhead;
-    
-    let truncatedText = text;
-    const textTokens = AIService.estimateTokens(text);
-    if (textTokens > available) {
-      truncatedText = this.truncateTextToLimit(text, available);
-      available = 0;
-    } else {
-      available -= textTokens;
-    }
-
-    const truncatedContext = this.fitContextToLimit(context, available);
-    const systemPrompt = this.buildSystemPrompt(truncatedContext);
-    const userPrompt = this.interpolatePrompt(this.prompts.emotion, truncatedText);
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
-
-    return this.chatCompletion(messages, customSampler, onChunk);
+    return this.chatCompletion(
+      this.buildOperationMessages('emotion', text, context),
+      customSampler,
+      onChunk
+    );
   }
 
   /**
@@ -1246,32 +1210,11 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
-    const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA);
-    const userPromptTemplate = this.interpolatePrompt(this.prompts.grammar, '');
-    const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
-    
-    let available = maxInput - overhead;
-    
-    let truncatedText = text;
-    const textTokens = AIService.estimateTokens(text);
-    if (textTokens > available) {
-      truncatedText = this.truncateTextToLimit(text, available);
-      available = 0;
-    } else {
-      available -= textTokens;
-    }
-
-    const truncatedContext = this.fitContextToLimit(context, available);
-    const systemPrompt = this.buildSystemPrompt(truncatedContext);
-    const userPrompt = this.interpolatePrompt(this.prompts.grammar, truncatedText);
-
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
-
-    return this.chatCompletion(messages, customSampler, onChunk);
+    return this.chatCompletion(
+      this.buildOperationMessages('grammar', text, context),
+      customSampler,
+      onChunk
+    );
   }
 
   /**

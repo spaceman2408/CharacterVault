@@ -15,6 +15,9 @@ export {
   BYTES_PER_TOKEN,
   type AIErrorType,
   type CharacterTokenEstimate,
+  type ChatMessage,
+  type ChatCompletionRequestBody,
+  type AIRequestPreview,
 } from './AIService';
 export {
   ReasoningFormat,

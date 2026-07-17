@@ -4,7 +4,7 @@
  * @module @hooks/useAIEditor
  */
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { EditorView, drawSelection, keymap, ViewUpdate } from '@codemirror/view';
 import { Compartment, EditorState, Prec } from '@codemirror/state';
 import type { Extension } from '@codemirror/state';
@@ -35,9 +35,10 @@ import { characterMacroHelper } from '../editor/extensions/characterMacroHelper'
 import { spellcheckExtension, setSpellcheckSettings } from '../editor/extensions/spellcheck';
 import type { SpellcheckSettings } from '../db/characterTypes';
 import { DEFAULT_SPELLCHECK_SETTINGS } from '../db/characterTypes';
-import { AIService, AIError, estimateTokens } from '../services/AIService';
+import { AIService, AIError, estimateTokens, type AIRequestPreview } from '../services/AIService';
 import { getProviderSelectionId } from '../services/providers';
 import { showEphemeralToast } from '../utils/ephemeralToast';
+import { AIPayloadPreviewModal } from '../components/editor/AIPayloadPreviewModal';
 
 /** Locked editor range for the current AI op (accept replaces this, not the live caret). */
 type SelectionLock = { from: number; to: number; text: string };
@@ -201,6 +202,8 @@ export interface UseAIEditorReturn {
   reject: () => void;
   /** Manually update the editor content */
   setContent: (content: string) => void;
+  /** Portal modal for preflight AI payload inspection (mount next to editor) */
+  payloadPreviewModal: React.ReactNode;
 }
 
 /**
@@ -277,6 +280,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const errorRef = useRef<string | null>(null);
   const lastInstructPromptRef = useRef<string | null>(null);
   const [selection, setSelection] = useState<{ from: number; to: number; text: string } | null>(null);
+
+  // Preflight payload inspector
+  const [payloadPreviewOpen, setPayloadPreviewOpen] = useState(false);
+  const [payloadPreviewText, setPayloadPreviewText] = useState('');
+  const [payloadPreviewOperation, setPayloadPreviewOperation] = useState<AIOperation>('expand');
+  const [payloadPreviewInstruction, setPayloadPreviewInstruction] = useState('');
 
   // Use refs to avoid closure issues with callbacks
   const aiResultRef = useRef<string | null>(null);
@@ -514,6 +523,44 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       runPersist(latestValue);
     }, saveDebounceMsRef.current);
   }, [runPersist]);
+
+  const handlePreviewPayload = useCallback(
+    (payload: {
+      text: string;
+      selection: { from: number; to: number };
+      defaultOperation: AIOperation;
+      instructDraft?: string;
+    }) => {
+      setPayloadPreviewText(payload.text);
+      setPayloadPreviewOperation(payload.defaultOperation);
+      setPayloadPreviewInstruction(payload.instructDraft ?? '');
+      setPayloadPreviewOpen(true);
+    },
+    []
+  );
+
+  const buildPayloadPreview = useCallback(
+    (operation: AIOperation, instruction?: string): AIRequestPreview | null => {
+      if (operation === 'instruct' && !instruction?.trim()) {
+        return null;
+      }
+      const currentConfig = resolveConfigForOperation(
+        aiConfigRef.current,
+        operation,
+        promptModelsRef.current
+      );
+      const service = new AIService(
+        currentConfig,
+        samplerSettingsRef.current,
+        promptSettingsRef.current
+      );
+      const context = getContextContent(contextSectionIdsRef.current);
+      return service.previewOperationRequest(operation, payloadPreviewText, context, {
+        instruction,
+      });
+    },
+    [getContextContent, payloadPreviewText]
+  );
 
   // Handle AI operation from toolbar panel
   const handleAIOperation = useCallback(async (
@@ -1102,6 +1149,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           () => abortRef.current(),
           onFontSizeChange,
           toolbarActions,
+          handlePreviewPayload,
         ),
         // Search & Replace functionality
         toolbarSearch(),
@@ -1176,7 +1224,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       panelUpdateRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles), flushPendingPersist, schedulePersist, toolbarActions, abortInFlightRequest, setSelectedText]);
+  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles), flushPendingPersist, schedulePersist, toolbarActions, abortInFlightRequest, setSelectedText, handlePreviewPayload]);
 
   // Update editor content when value changes externally
   useEffect(() => {
@@ -1258,6 +1306,15 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     };
   }, [abortInFlightRequest]);
 
+  const payloadPreviewModal = React.createElement(AIPayloadPreviewModal, {
+    isOpen: payloadPreviewOpen,
+    onClose: () => setPayloadPreviewOpen(false),
+    selectedText: payloadPreviewText,
+    initialOperation: payloadPreviewOperation,
+    initialInstruction: payloadPreviewInstruction,
+    buildPreview: buildPayloadPreview,
+  });
+
   return {
     editorRef,
     view: viewRef.current,
@@ -1269,5 +1326,6 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     accept,
     reject,
     setContent,
+    payloadPreviewModal,
   };
 }

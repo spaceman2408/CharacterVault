@@ -197,7 +197,7 @@ function LorebookEntryDetail({
   spellcheck,
 }: LorebookEntryDetailProps): React.ReactElement {
   const [draftEntry, setDraftEntry] = useState(entry);
-  const { editorRef } = useAIEditor({
+  const { editorRef, payloadPreviewModal } = useAIEditor({
     key: String(entry.id),
     value: draftEntry.content,
     onImmediateChange: (value) => {
@@ -495,6 +495,8 @@ function LorebookEntryDetail({
           className="w-full px-3 py-2.5 text-sm bg-surface border border-border rounded-lg text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
         />
       </div>
+
+      {payloadPreviewModal}
     </div>
   );
 }

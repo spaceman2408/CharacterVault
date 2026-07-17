@@ -50,6 +50,16 @@ export type AIAbortCallback = () => void;
  */
 export type FontSizeChangeCallback = (size: number) => void;
 
+/**
+ * Callback to open a preflight AI payload preview for the current selection
+ */
+export type AIPreviewPayloadCallback = (payload: {
+  text: string;
+  selection: SelectionRange;
+  defaultOperation: AIOperation;
+  instructDraft?: string;
+}) => void;
+
 export interface ToolbarActionConfig {
   id: string;
   label: string;
@@ -96,6 +106,7 @@ function createToolbarPanel(
   onAbort: AIAbortCallback,
   onFontSizeChange?: FontSizeChangeCallback,
   toolbarActions: ToolbarActionConfig[] = [],
+  onPreviewPayload?: AIPreviewPayloadCallback,
 ): Panel & { updateState: () => void; updateAIState: AIStreamingCallback; updateSampler: (s: SamplerSettings) => void } {
   const dom = document.createElement('div');
   dom.className = 'ai-toolbar-panel';
@@ -527,6 +538,45 @@ function createToolbarPanel(
   }, 0);
 
   toolbarContainer.appendChild(searchBtn);
+
+  // Payload preflight button (view request body without sending)
+  const payloadBtn = document.createElement('button');
+  payloadBtn.className = 'ai-toolbar-btn-payload';
+  payloadBtn.innerHTML = '{ }';
+  payloadBtn.title = 'Preview AI request payload';
+  payloadBtn.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    background: transparent;
+    border: 1px solid var(--ai-toolbar-input-border);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--ai-toolbar-text-secondary);
+    transition: all 0.15s ease;
+    margin-left: 4px;
+    opacity: 0.5;
+    pointer-events: none;
+  `;
+  payloadBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+  });
+  payloadBtn.addEventListener('click', () => {
+    if (!onPreviewPayload || !hasSelection || !currentSelection) return;
+    onPreviewPayload({
+      text: selectedText,
+      selection: currentSelection,
+      defaultOperation: isInstructMode ? 'instruct' : 'expand',
+      instructDraft: isInstructMode ? instructInput.value : undefined,
+    });
+  });
+  if (onPreviewPayload) {
+    toolbarContainer.appendChild(payloadBtn);
+  }
 
   const customActionContainers: HTMLElement[] = [];
   for (const action of toolbarActions) {
@@ -1097,6 +1147,10 @@ function createToolbarPanel(
     const isCompactCustomLayout = !state.isProcessing && isInstructMode;
     toolbarContainer.classList.toggle('ai-toolbar-instruct-mode', isCompactCustomLayout);
     searchBtn.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
+    if (onPreviewPayload) {
+      // Keep available during instruct mode (useful for Custom preflight); hide while processing
+      payloadBtn.style.display = state.isProcessing ? 'none' : 'flex';
+    }
     for (const actionButton of customActionContainers) {
       actionButton.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
     }
@@ -1133,6 +1187,11 @@ function createToolbarPanel(
 
     moreBtn.style.opacity = opacity;
     moreBtn.style.pointerEvents = pointerEvents;
+
+    if (onPreviewPayload) {
+      payloadBtn.style.opacity = opacity;
+      payloadBtn.style.pointerEvents = pointerEvents;
+    }
   }
 
   // AI state update function
@@ -1278,9 +1337,22 @@ export function aiToolbarPanel(
   onAbort: AIAbortCallback,
   onFontSizeChange?: FontSizeChangeCallback,
   toolbarActions: ToolbarActionConfig[] = [],
+  onPreviewPayload?: AIPreviewPayloadCallback,
 ) {
   return [
-    showPanel.of((view) => createToolbarPanel(view, sampler, onAction, onAccept, onReject, onAbort, onFontSizeChange, toolbarActions)),
+    showPanel.of((view) =>
+      createToolbarPanel(
+        view,
+        sampler,
+        onAction,
+        onAccept,
+        onReject,
+        onAbort,
+        onFontSizeChange,
+        toolbarActions,
+        onPreviewPayload
+      )
+    ),
     toolbarPanelPlugin(onAction),
   ];
 }

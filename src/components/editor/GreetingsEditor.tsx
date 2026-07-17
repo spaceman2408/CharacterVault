@@ -139,7 +139,7 @@ function GreetingDetail({
     setDraftGreeting(greeting);
   }, [greeting]);
 
-  const { editorRef } = useAIEditor({
+  const { editorRef, payloadPreviewModal } = useAIEditor({
     value: draftGreeting,
     onImmediateChange: setDraftGreeting,
     onPersistChange: onPersistUpdate,
@@ -168,6 +168,7 @@ function GreetingDetail({
         className="flex-1 min-h-0 border border-border rounded-xl overflow-hidden"
         style={{ minHeight: '200px' }}
       />
+      {payloadPreviewModal}
     </div>
   );
 }

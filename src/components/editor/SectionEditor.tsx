@@ -304,7 +304,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
 
   // Use the shared AI editor hook
   // Key forces re-initialization when section changes to prevent value mixing
-  const { editorRef } = useAIEditor({
+  const { editorRef, payloadPreviewModal } = useAIEditor({
     key: `${section}-${isSplitPreviewOpen ? 'split' : 'single'}`,
     value: currentValue,
     onImmediateChange: section === 'creator_notes' ? setLivePreviewValue : undefined,
@@ -527,6 +527,8 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           }}
         />
       )}
+
+      {payloadPreviewModal}
     </div>
   );
 }
