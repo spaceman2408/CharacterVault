@@ -32,7 +32,7 @@ const FieldReasoning: React.FC<{ reasoning: string }> = memo(({ reasoning }) => 
         className="flex items-center gap-1 p-0.5 rounded text-fg-subtle hover:text-fg transition-colors"
         title={open ? 'Hide thinking' : 'Show thinking'}
       >
-        <Sparkles className="w-3 h-3" />
+        <Sparkles className="w-3 h-3 text-accent" />
         <span className="text-[11px]">Thinking</span>
       </button>
       {open && (

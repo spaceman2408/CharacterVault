@@ -42,7 +42,7 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
             key={field.key}
             className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
               isActive
-                ? 'bg-muted border-border-strong'
+                ? 'bg-accent-soft border-accent'
                 : isFailed
                 ? 'bg-danger-soft border-danger/30'
                 : isDone
@@ -54,7 +54,7 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
               {isDone && !isFailed ? (
                 <Check className="w-5 h-5 text-success" />
               ) : isActive && !hasError ? (
-                <Loader2 className="w-5 h-5 text-fg-muted animate-spin" />
+                <Loader2 className="w-5 h-5 text-accent animate-spin" />
               ) : isFailed ? (
                 <AlertCircle className="w-5 h-5 text-danger" />
               ) : (
@@ -66,7 +66,7 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
               <span
                 className={`text-sm font-medium ${
                   isActive
-                    ? 'text-fg'
+                    ? 'text-accent'
                     : isFailed
                     ? 'text-danger-soft-fg'
                     : isDone
@@ -77,7 +77,7 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
                 {field.label}
               </span>
               {isActive && (
-                <p className="text-xs text-fg-muted mt-0.5">
+                <p className="text-xs text-accent/80 mt-0.5">
                   Generating...
                 </p>
               )}
@@ -116,7 +116,7 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
               <button
                 onClick={() => onGenerateField(field.key)}
                 disabled={isLoading}
-                className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium text-fg-muted hover:bg-hover rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="shrink-0 flex items-center gap-1 px-2 py-1 text-xs font-medium text-accent hover:bg-accent-soft rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 title="Generate this field"
               >
                 <Sparkles className="w-3.5 h-3.5" />

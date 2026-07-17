@@ -75,8 +75,8 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
         disabled={isGenerating}
         className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
           isSelected
-            ? 'bg-muted text-fg border-border'
-            : 'border-border text-fg-muted hover:border-border-strong hover:bg-hover/50'
+            ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
+            : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
         }`}
       >
         {formatTag(tag)}
@@ -151,8 +151,8 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
           onClick={() => onInputModeChange('write')}
           className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
             inputMode === 'write'
-              ? 'bg-surface text-fg shadow-sm'
-              : 'text-fg-muted hover:text-fg'
+              ? 'bg-surface text-accent shadow-sm ring-1 ring-accent/30'
+              : 'text-fg-muted hover:text-fg hover:bg-accent-soft/50'
           }`}
         >
           <PenLine className="w-4 h-4" />
@@ -162,8 +162,8 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
           onClick={() => onInputModeChange('tags')}
           className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
             inputMode === 'tags'
-              ? 'bg-surface text-fg shadow-sm'
-              : 'text-fg-muted hover:text-fg'
+              ? 'bg-surface text-accent shadow-sm ring-1 ring-accent/30'
+              : 'text-fg-muted hover:text-fg hover:bg-accent-soft/50'
           }`}
         >
           <Tag className="w-4 h-4" />

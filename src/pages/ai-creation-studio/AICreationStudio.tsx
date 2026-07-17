@@ -284,7 +284,7 @@ export const AICreationStudio: React.FC = () => {
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-fg-muted" />
+              <Sparkles className="w-5 h-5 text-accent" />
               <h1 className="text-lg font-semibold">AI Creation Studio</h1>
             </div>
           </div>
@@ -417,7 +417,7 @@ export const AICreationStudio: React.FC = () => {
                             (tagSelections[cat.key] ?? []).map((tag) => (
                               <span
                                 key={`${cat.key}-${tag}`}
-                                className="inline-flex items-center px-2 py-0.5 font-medium rounded-md bg-muted text-fg border border-border"
+                                className="inline-flex items-center px-2 py-0.5 font-medium rounded-md bg-accent-soft text-accent border border-accent"
                               >
                                 {formatTag(tag)}
                               </span>
@@ -478,7 +478,7 @@ export const AICreationStudio: React.FC = () => {
                         {hasRemainingFields && (
                           <button
                             onClick={() => void continueGeneration()}
-                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-fg bg-muted border border-border-strong rounded-lg hover:bg-hover active:scale-[0.98] transition-all"
+                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-accent bg-accent-soft border border-accent rounded-lg hover:bg-accent hover:text-accent-fg active:scale-[0.98] transition-all"
                             title="Continue generating remaining fields"
                           >
                             <Sparkles className="w-4 h-4" />
@@ -507,7 +507,7 @@ export const AICreationStudio: React.FC = () => {
                             (tagSelections[cat.key] ?? []).map((tag) => (
                               <span
                                 key={`${cat.key}-${tag}`}
-                                className="inline-flex items-center px-2 py-0.5 font-medium rounded-md bg-muted text-fg border border-border"
+                                className="inline-flex items-center px-2 py-0.5 font-medium rounded-md bg-accent-soft text-accent border border-accent"
                               >
                                 {formatTag(tag)}
                               </span>

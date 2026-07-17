@@ -186,7 +186,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
               (selections[cat.key] ?? []).map((tag) => (
                 <span
                   key={`${cat.key}-${tag}`}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border bg-muted text-fg border-border"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border bg-accent-soft text-accent border-accent"
                 >
                   {formatTag(tag)}
                   <button
@@ -241,7 +241,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     </span>
                   )}
                   {selectedInCat.length > 0 && (
-                    <span className="font-bold px-1.5 py-0.5 rounded-full bg-hover text-fg-muted">
+                    <span className="font-bold px-1.5 py-0.5 rounded-full bg-accent-soft text-accent">
                       {selectedInCat.length}
                     </span>
                   )}
@@ -266,10 +266,10 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                         title={isExcluded ? 'This tag conflicts with your current selection' : undefined}
                         className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed ${
                           isSelected
-                            ? 'bg-muted text-fg border-border'
+                            ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
                             : isExcluded
                             ? 'opacity-30 border-border text-fg-subtle line-through'
-                            : 'border-border text-fg-muted hover:border-border-strong hover:bg-hover/50'
+                            : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
                         }`}
                       >
                         {formatTag(tag)}
@@ -335,7 +335,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         <button
           onClick={onFeelingLucky}
           disabled={isGenerating || !hasGenerationTags}
-          className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
+          className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-accent-soft text-accent border border-accent font-semibold rounded-xl hover:bg-accent hover:text-accent-fg active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
         >
           <Shuffle className="w-4 h-4" />
           I'm Feeling Lucky

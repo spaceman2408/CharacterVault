@@ -111,12 +111,16 @@ function CharacterCardSkeleton(): React.ReactElement {
   );
 }
 
-const cardActionBtnClass =
+const cardActionBtnBase =
   'inline-flex items-center justify-center min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 p-2 sm:p-1.5 ' +
-  'bg-surface/95 backdrop-blur-sm rounded-lg shadow-sm' +
-  'text-fg-muted hover:text-fg hover:bg-surface' +
-  'hover:bg-accent-soft hover:text-accent' +
+  'bg-surface/95 backdrop-blur-sm rounded-lg shadow-sm ' +
   'active:scale-95 transition-colors disabled:opacity-50 touch-manipulation';
+
+const cardActionBtnClass =
+  `${cardActionBtnBase} text-fg-muted hover:bg-accent-soft hover:text-accent`;
+
+const cardActionBtnDangerClass =
+  `${cardActionBtnBase} text-fg-muted hover:bg-danger-soft hover:text-danger`;
 
 function CharacterCard({
   character,
@@ -260,7 +264,7 @@ function CharacterCard({
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onDelete(character.id, character.name); }}
-            className={`${cardActionBtnClass} text-danger hover:text-danger`}
+            className={cardActionBtnDangerClass}
             title="Delete"
             aria-label={`Delete ${character.name}`}
           >
