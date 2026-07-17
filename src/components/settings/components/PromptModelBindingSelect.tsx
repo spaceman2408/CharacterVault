@@ -6,7 +6,15 @@
 
 import React, { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Brain, ChevronDown, Loader2, RefreshCw, Search, X } from 'lucide-react';
+import {
+  Brain,
+  Check,
+  ChevronDown,
+  Loader2,
+  RefreshCw,
+  Search,
+  X,
+} from 'lucide-react';
 import type { AIConfig, AIModelInfo, PromptModelBinding } from '../../../db/characterTypes';
 import {
   AI_BASE_URL_PRESETS,
@@ -47,7 +55,7 @@ function isLocalEndpoint(baseUrl: string): boolean {
 
 /** Prefer 16px text on mobile so iOS does not zoom on focus. */
 const fieldClass =
-  'w-full min-h-11 px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent/50';
+  'w-full min-h-11 px-3 py-2.5 border border-border-strong rounded-xl bg-surface text-fg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all';
 
 export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> = ({
   binding,
@@ -166,6 +174,11 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
       ? `${endpointLabel(globalAi.baseUrl)} · ${globalAi.modelId}`
       : 'No global model selected';
 
+  const optionClass = (selected: boolean) =>
+    selected
+      ? 'border-accent/40 bg-accent-soft text-accent shadow-sm'
+      : 'border-border bg-surface text-fg hover:border-accent/40 hover:bg-accent-soft hover:text-accent active:scale-[0.99]';
+
   const modelPicker =
     isModelOpen &&
     typeof document !== 'undefined' &&
@@ -174,41 +187,41 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
         <button
           type="button"
           aria-label="Close model picker"
-          className="absolute inset-0 bg-overlay backdrop-blur-[1px]"
+          className="absolute inset-0 bg-overlay backdrop-blur-sm animate-in fade-in"
           onClick={closeModelPicker}
         />
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="relative z-[201] w-full sm:max-w-md sm:mx-4 max-h-[min(85dvh,36rem)] flex flex-col bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl ring-1 ring-border pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          className="relative z-[201] w-full sm:max-w-md sm:mx-4 max-h-[min(85dvh,36rem)] flex flex-col bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 sm:fade-in pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         >
-          <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2 sm:px-5 sm:pt-4 border-b border-border shrink-0">
-            <div className="min-w-0">
-              <div className="mx-auto sm:hidden w-10 h-1 rounded-full bg-fg-subtle mb-3" />
-              <h3
-                id={titleId}
-                className="text-base font-semibold text-fg truncate"
-              >
+          <div className="relative flex items-center justify-between gap-3 px-4 pt-3 pb-2 sm:px-5 sm:pt-4 border-b border-border shrink-0 bg-surface/95 backdrop-blur-sm rounded-t-2xl">
+            <div className="mx-auto sm:hidden w-10 h-1 rounded-full bg-border absolute left-1/2 -translate-x-1/2 top-2" />
+            <div className="min-w-0 pt-2 sm:pt-0">
+              <h3 id={titleId} className="text-base font-semibold text-fg truncate">
                 Choose model
               </h3>
               <p className="text-xs text-fg-muted truncate mt-0.5">
                 {endpointLabel(selectedEndpoint)}
+                {models.length > 0
+                  ? ` · ${models.length} model${models.length === 1 ? '' : 's'}`
+                  : ''}
               </p>
             </div>
             <button
               type="button"
               onClick={closeModelPicker}
-              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 touch-manipulation"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="px-4 sm:px-5 py-3 border-b border-border shrink-0">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle pointer-events-none" />
+          <div className="px-3 sm:px-4 py-3 border-b border-border shrink-0">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle pointer-events-none group-focus-within:text-accent transition-colors" />
               <input
                 ref={searchInputRef}
                 type="search"
@@ -225,37 +238,70 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
                   }
                 }}
                 placeholder="Search models…"
-                className={`${fieldClass} pl-10`}
+                className={`${fieldClass} pl-10 focus:border-accent/40`}
               />
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4">
             {filteredModels.length === 0 ? (
-              <div className="px-4 py-8 text-sm text-fg-muted text-center">
-                {models.length === 0
-                  ? 'No models loaded. Use Fetch on the previous screen, or type a model ID there.'
-                  : `No match for “${searchTerm}”`}
+              <div className="px-2 py-10 text-sm text-fg-muted text-center space-y-1">
+                <p className="font-medium text-fg">
+                  {models.length === 0 ? 'No models loaded' : 'No matches'}
+                </p>
+                <p className="text-xs">
+                  {models.length === 0
+                    ? 'Use Fetch on the previous screen, or type a model ID there.'
+                    : `Nothing matched “${searchTerm}”`}
+                </p>
               </div>
             ) : (
-              <ul className="py-1">
+              <ul className="space-y-2">
                 {filteredModels.map((model) => {
                   const selected = model.id === selectedModelId;
+                  const nameDiffers = model.name !== model.id;
                   return (
                     <li key={model.id}>
                       <button
                         type="button"
                         onClick={() => handleSelectModel(model.id)}
-                        className={`w-full min-h-12 px-4 sm:px-5 py-3 text-left transition-colors active:bg-hover ${
+                        className={`w-full min-h-12 px-3.5 py-3 rounded-xl border text-left transition-all touch-manipulation ${optionClass(
                           selected
-                            ? 'bg-muted text-fg'
-                            : 'text-fg-muted'
-                        }`}
+                        )}`}
                       >
-                        <div className="font-medium text-base sm:text-sm break-words">
-                          {model.name}
+                        <div className="flex items-start gap-3">
+                          <span
+                            className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                              selected
+                                ? 'bg-accent/15 text-accent'
+                                : 'bg-muted text-fg-muted'
+                            }`}
+                          >
+                            <Brain className="w-4 h-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium text-base sm:text-sm break-words">
+                                {model.name}
+                              </span>
+                              {selected && (
+                                <Check
+                                  className="w-4 h-4 shrink-0 text-accent"
+                                  aria-hidden
+                                />
+                              )}
+                            </div>
+                            {nameDiffers && (
+                              <p
+                                className={`text-xs mt-0.5 break-all ${
+                                  selected ? 'text-accent/80' : 'text-fg-muted'
+                                }`}
+                              >
+                                {model.id}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-xs text-fg-muted mt-0.5 break-all">{model.id}</div>
                       </button>
                     </li>
                   );
@@ -308,14 +354,19 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
               <button
                 type="button"
                 onClick={() => setIsModelOpen(true)}
-                className={`${fieldClass} flex-1 text-left flex items-center justify-between gap-2 hover:border-border-strong`}
+                className={`${fieldClass} flex-1 text-left flex items-center justify-between gap-2 hover:border-accent/40 hover:bg-accent-soft/40`}
               >
-                <span
-                  className={`min-w-0 truncate ${
-                    selectedModelId ? 'font-medium' : 'text-fg-subtle'
-                  }`}
-                >
-                  {selectedModel?.name || 'Select a model…'}
+                <span className="flex items-center gap-2 min-w-0">
+                  {selectedModelId ? (
+                    <Brain className="w-4 h-4 shrink-0 text-accent" />
+                  ) : null}
+                  <span
+                    className={`min-w-0 truncate ${
+                      selectedModelId ? 'font-medium' : 'text-fg-subtle'
+                    }`}
+                  >
+                    {selectedModel?.name || 'Select a model…'}
+                  </span>
                 </span>
                 <ChevronDown className="w-4 h-4 text-fg-subtle shrink-0" />
               </button>
@@ -329,10 +380,10 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
                     ? 'Add an API key for this endpoint on the AI Config tab'
                     : 'Fetch models for this endpoint'
                 }
-                className="min-h-11 px-4 py-2.5 bg-muted hover:bg-hover disabled:opacity-50 disabled:cursor-not-allowed text-fg-muted rounded-lg transition-all flex items-center justify-center gap-2 text-base sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 shrink-0"
+                className="min-h-11 px-4 py-2.5 bg-muted hover:bg-accent-soft hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed text-fg-muted rounded-xl transition-all flex items-center justify-center gap-2 text-base sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 shrink-0 touch-manipulation"
               >
                 {isFetching ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-accent" />
                 ) : (
                   <RefreshCw className="w-4 h-4" />
                 )}
