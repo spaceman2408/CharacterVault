@@ -60,6 +60,8 @@ export interface UseTypewriterReturn {
   stopStreaming: () => void;
   drainQueues: () => Promise<void>;
   flushQueues: () => void;
+  /** Drop displayed text + queues (after handoff to chat history / new chat) */
+  clearDisplay: () => void;
 }
 
 /**
@@ -269,6 +271,35 @@ export function useTypewriter(): UseTypewriterReturn {
    */
   const stopStreaming = useCallback(() => {
     setIsStreaming(false);
+    isStreamingRef.current = false;
+  }, []);
+
+  /**
+   * Release streaming buffers after content has been committed to chat history
+   * (or when starting a new chat). Avoids retaining a full duplicate of the reply.
+   */
+  const clearDisplay = useCallback(() => {
+    contentQueueRef.current = [];
+    reasoningQueueRef.current = [];
+    streamingContentRef.current = '';
+    streamingReasoningRef.current = '';
+    isReasoningCompleteRef.current = false;
+    isTypingRef.current = false;
+    isStreamingRef.current = false;
+
+    setContentChunkQueue([]);
+    setReasoningChunkQueue([]);
+    setDisplayedContent('');
+    setDisplayedReasoning('');
+    setIsReasoningComplete(false);
+    setIsTyping(false);
+    setIsStreaming(false);
+
+    if (drainResolversRef.current.length > 0) {
+      const resolvers = drainResolversRef.current;
+      drainResolversRef.current = [];
+      resolvers.forEach(resolve => resolve());
+    }
   }, []);
 
   /**
@@ -332,6 +363,7 @@ export function useTypewriter(): UseTypewriterReturn {
     // Control
     startStreaming,
     stopStreaming,
+    clearDisplay,
     drainQueues,
     flushQueues,
   };

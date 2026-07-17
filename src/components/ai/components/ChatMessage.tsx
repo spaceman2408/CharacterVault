@@ -84,10 +84,7 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
   }, []);
 
   useLayoutEffect(() => {
-    if (!isOpen) {
-      setCoords(null);
-      return;
-    }
+    if (!isOpen) return;
     updatePosition();
     // Second pass after content lays out (long model names change size)
     const id = requestAnimationFrame(updatePosition);
@@ -98,6 +95,7 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
     if (!isOpen) return;
     const onReposition = () => updatePosition();
     window.addEventListener('resize', onReposition);
+    // Capture phase: chat list scrolls on an inner element
     window.addEventListener('scroll', onReposition, true);
     return () => {
       window.removeEventListener('resize', onReposition);

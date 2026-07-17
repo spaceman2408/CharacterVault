@@ -36,7 +36,6 @@ export function AIChatPanel({
   isMobile = false,
 }: AIChatPanelProps): React.ReactElement {
   const [askQuestion, setAskQuestion] = useState('');
-  const [resolvedContext, setResolvedContext] = useState<string[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const wasTypingRef = useRef(false);
 
@@ -56,7 +55,7 @@ export function AIChatPanel({
     aiConfig,
     samplerSettings,
     promptSettings,
-    resolvedContext,
+    // Context is resolved only at ask/regenerate time (not cached in React state)
     enableStreaming: aiConfig.enableStreaming ?? true,
     showReasoning: aiConfig.showReasoning ?? true,
     typewriter,
@@ -70,6 +69,7 @@ export function AIChatPanel({
     dependencies: [chatHistory, typewriter.displayedContent, typewriter.displayedReasoning],
   });
 
+  // Labels only — avoid holding full section text in panel state
   const contextLabels = useMemo(() => {
     return contextEntryIds
       .map(id => CHARACTER_SECTIONS.find(s => s.id === id)?.label ?? id)
@@ -77,24 +77,6 @@ export function AIChatPanel({
   }, [contextEntryIds]);
 
   const hasContext = contextEntryIds.length > 0;
-
-  useEffect(() => {
-    const resolveContext = async () => {
-      if (getContextContent && contextEntryIds.length > 0) {
-        try {
-          const content = await getContextContent(contextEntryIds);
-          setResolvedContext(content);
-        } catch (err) {
-          console.error('Failed to resolve context:', err);
-          setResolvedContext([]);
-        }
-      } else {
-        setResolvedContext([]);
-      }
-    };
-
-    void resolveContext();
-  }, [contextEntryIds, getContextContent]);
 
   useEffect(() => {
     if (typewriter.isReasoningComplete) {

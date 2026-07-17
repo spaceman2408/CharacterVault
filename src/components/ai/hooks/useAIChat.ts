@@ -21,17 +21,15 @@ export interface UseAIChatOptions {
   samplerSettings: SamplerSettings;
   /** Prompt settings */
   promptSettings: PromptSettings;
-  /** Resolved context content */
-  resolvedContext: string[];
   /** Whether streaming is enabled */
   enableStreaming: boolean;
   /** Whether to show reasoning */
   showReasoning: boolean;
   /** Typewriter hook instance for streaming display */
   typewriter: UseTypewriterReturn;
-  /** Function to resolve context entry IDs to content */
+  /** Function to resolve context entry IDs to content (at ask time only) */
   getContextContent?: (entryIds: string[]) => Promise<string[]>;
-  /** Context entry IDs (will be resolved to content at call time) */
+  /** Context entry IDs (resolved at call time; not cached in React state) */
   contextEntryIds: string[];
 }
 
@@ -61,51 +59,29 @@ export interface UseAIChatReturn {
   isAIConfigured: boolean;
 }
 
+async function resolveContextAtCallTime(
+  getContextContent: ((entryIds: string[]) => Promise<string[]>) | undefined,
+  contextEntryIds: string[]
+): Promise<string[]> {
+  if (!getContextContent || contextEntryIds.length === 0) {
+    return [];
+  }
+  try {
+    return await getContextContent(contextEntryIds);
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Hook that manages AI chat operations including conversation history,
  * streaming, and error handling.
- * 
- * This hook handles:
- * - Chat history state
- * - Processing state
- * - Error state
- * - handleAsk function
- * - handleRegenerate function
- * - Streaming callbacks integration
- * - AI service instance management
- * 
- * @param options - Configuration options for the hook
- * @returns Object containing chat state and control functions
- * 
- * @example
- * ```tsx
- * const typewriter = useTypewriter();
- * const chat = useAIChat({
- *   aiConfig,
- *   samplerSettings,
- *   promptSettings,
- *   resolvedContext: [],
- *   enableStreaming: true,
- *   showReasoning: true,
- *   typewriter,
- * });
- * 
- * // Ask a question
- * await chat.handleAsk("What is the character's name?");
- * 
- * // Regenerate last response
- * await chat.handleRegenerate();
- * 
- * // Clear history
- * chat.handleNewChat();
- * ```
  */
 export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const {
     aiConfig,
     samplerSettings,
     promptSettings,
-    resolvedContext,
     enableStreaming,
     typewriter,
     getContextContent,
@@ -119,29 +95,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   const aiServiceRef = useRef<AIService | null>(null);
 
-  // Check if AI is properly configured
   const isAIConfigured = useMemo(() => {
-    // Only require modelId, as we now support local hosting without API key
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
   }, [aiConfig.modelId]);
 
-  /**
-   * Clear the current error
-   */
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  /**
-   * Handle starting a new chat (clears chat history)
-   */
-  const handleNewChat = useCallback(() => {
-    setChatHistory([]);
-  }, []);
-
-  /**
-   * Handle aborting the current request
-   */
   const handleAbort = useCallback(() => {
     if (aiServiceRef.current) {
       aiServiceRef.current.abort();
@@ -149,8 +110,40 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   }, []);
 
   /**
-   * Handle regenerating the last response
+   * Clear history, abort in-flight work, and drop typewriter buffers.
    */
+  const handleNewChat = useCallback(() => {
+    if (aiServiceRef.current) {
+      aiServiceRef.current.abort();
+      aiServiceRef.current = null;
+    }
+    setChatHistory([]);
+    setError(null);
+    setIsProcessing(false);
+    setIsStreaming(false);
+    typewriter.stopStreaming();
+    typewriter.clearDisplay();
+  }, [typewriter]);
+
+  /**
+   * After a reply is committed to history, drop streaming display copies
+   * so we do not keep two full copies of the same text in memory.
+   */
+  const finishStreamLifecycle = useCallback(
+    (completedSuccessfully: boolean) => {
+      if (!completedSuccessfully) {
+        typewriter.flushQueues();
+      }
+      typewriter.stopStreaming();
+      // Always free display buffers once the turn ends (success or cancel/error)
+      typewriter.clearDisplay();
+      setIsProcessing(false);
+      setIsStreaming(false);
+      aiServiceRef.current = null;
+    },
+    [typewriter]
+  );
+
   const handleRegenerate = useCallback(async () => {
     if (chatHistory.length === 0) return;
 
@@ -159,7 +152,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       return;
     }
 
-    // Find the last user message and remove everything after it
     const lastUserIndex = chatHistory
       .map((m, i) => ({ ...m, originalIndex: i }))
       .reverse()
@@ -173,7 +165,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     setIsProcessing(true);
     setError(null);
 
-    // Artificial delay for consistency
     await new Promise(resolve => setTimeout(resolve, 600));
 
     setIsStreaming(enableStreaming);
@@ -182,6 +173,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     const requestStartTime = Date.now();
     let firstTokenTime: number | null = null;
     let completedSuccessfully = false;
+    let contextArray: string[] = [];
 
     try {
       const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
@@ -194,20 +186,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           content: msg.content,
         }));
 
-      // Build context array - resolve at call time for fresh context
-      let contextArray: string[] = [];
-      if (getContextContent && contextEntryIds.length > 0) {
-        try {
-          contextArray = await getContextContent(contextEntryIds);
-        } catch {
-          // Fallback to resolvedContext state on error
-          contextArray = resolvedContext.length > 0 ? [...resolvedContext] : [];
-        }
-      } else if (resolvedContext.length > 0) {
-        contextArray = [...resolvedContext];
-      }
+      // Resolve only for this request; local var is GC'd after the turn
+      contextArray = await resolveContextAtCallTime(getContextContent, contextEntryIds);
 
-      // Streaming callback
       const onChunk = enableStreaming
         ? (chunk: { content?: string; reasoning?: string }) => {
             if (firstTokenTime === null) {
@@ -219,9 +200,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
             }
 
             if (chunk.content) {
-              // Mark reasoning as complete when content starts arriving
-              // This must be called regardless of whether this chunk also has reasoning,
-              // because content signals the end of the reasoning phase
               typewriter.markReasoningComplete();
               typewriter.queueContentChunk(chunk.content);
             }
@@ -236,19 +214,20 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         onChunk
       );
 
-      // Compute stats
+      // Drop large context copies as soon as the request finishes
+      contextArray = [];
+
       const contentTokens = estimateTokens(result.content);
       const reasoningTokens = estimateTokens(result.reasoning ?? '');
       const totalTokens = contentTokens + reasoningTokens;
-      const completionTime = firstTokenTime !== null
-        ? Date.now() - firstTokenTime
-        : Date.now() - requestStartTime;
-      const ttft = firstTokenTime !== null
-        ? firstTokenTime - requestStartTime
-        : completionTime;
-      const tokensPerSecond = completionTime > 0
-        ? totalTokens / (completionTime / 1000)
-        : undefined;
+      const completionTime =
+        firstTokenTime !== null
+          ? Date.now() - firstTokenTime
+          : Date.now() - requestStartTime;
+      const ttft =
+        firstTokenTime !== null ? firstTokenTime - requestStartTime : completionTime;
+      const tokensPerSecond =
+        completionTime > 0 ? totalTokens / (completionTime / 1000) : undefined;
 
       const assistantMessage: ChatMessage = {
         id: generateMessageId(),
@@ -283,17 +262,11 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         }
       }
     } finally {
-      if (!completedSuccessfully) {
-        typewriter.flushQueues();
-      }
-      typewriter.stopStreaming();
-      setIsProcessing(false);
-      setIsStreaming(false);
-      aiServiceRef.current = null;
+      contextArray = [];
+      finishStreamLifecycle(completedSuccessfully);
     }
   }, [
     chatHistory,
-    resolvedContext,
     aiConfig,
     samplerSettings,
     promptSettings,
@@ -302,14 +275,11 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     typewriter,
     getContextContent,
     contextEntryIds,
+    finishStreamLifecycle,
   ]);
 
-  /**
-   * Handle asking a question
-   */
   const handleAsk = useCallback(
     async (question: string) => {
-      // If input is empty but last message is a user message, regenerate from it
       if (!question.trim()) {
         const lastMessage = chatHistory[chatHistory.length - 1];
         if (lastMessage?.role === 'user') {
@@ -332,12 +302,10 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         timestamp: Date.now(),
       };
 
-      // Add user message to chat
       setChatHistory(prev => [...prev, userMessage]);
       setIsProcessing(true);
       setError(null);
 
-      // Artificial delay to prevent jarring UI updates and ensure "Thinking..." state is visible
       await new Promise(resolve => setTimeout(resolve, 600));
 
       setIsStreaming(enableStreaming);
@@ -346,31 +314,19 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       const requestStartTime = Date.now();
       let firstTokenTime: number | null = null;
       let completedSuccessfully = false;
+      let contextArray: string[] = [];
 
       try {
         const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
         aiServiceRef.current = aiService;
 
-        // Build conversation context from chat history (excluding the message we just added)
         const conversationContext: ConversationMessage[] = chatHistory.map(msg => ({
           role: msg.role,
           content: msg.content,
         }));
 
-        // Build context array - resolve at call time for fresh context
-        let contextArray: string[] = [];
-        if (getContextContent && contextEntryIds.length > 0) {
-          try {
-            contextArray = await getContextContent(contextEntryIds);
-          } catch {
-            // Fallback to resolvedContext state on error
-            contextArray = resolvedContext.length > 0 ? [...resolvedContext] : [];
-          }
-        } else if (resolvedContext.length > 0) {
-          contextArray = [...resolvedContext];
-        }
+        contextArray = await resolveContextAtCallTime(getContextContent, contextEntryIds);
 
-        // Streaming callback for conversation - queues chunks for smooth display
         const onChunk = enableStreaming
           ? (chunk: { content?: string; reasoning?: string }) => {
               if (firstTokenTime === null) {
@@ -382,9 +338,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
               }
 
               if (chunk.content) {
-                // Mark reasoning as complete when content starts arriving
-                // This must be called regardless of whether this chunk also has reasoning,
-                // because content signals the end of the reasoning phase
                 typewriter.markReasoningComplete();
                 typewriter.queueContentChunk(chunk.content);
               }
@@ -399,19 +352,19 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           onChunk
         );
 
-        // Compute stats
+        contextArray = [];
+
         const contentTokens = estimateTokens(result.content);
         const reasoningTokens = estimateTokens(result.reasoning ?? '');
         const totalTokens = contentTokens + reasoningTokens;
-        const completionTime = firstTokenTime !== null
-          ? Date.now() - firstTokenTime
-          : Date.now() - requestStartTime;
-        const ttft = firstTokenTime !== null
-          ? firstTokenTime - requestStartTime
-          : completionTime;
-        const tokensPerSecond = completionTime > 0
-          ? totalTokens / (completionTime / 1000)
-          : undefined;
+        const completionTime =
+          firstTokenTime !== null
+            ? Date.now() - firstTokenTime
+            : Date.now() - requestStartTime;
+        const ttft =
+          firstTokenTime !== null ? firstTokenTime - requestStartTime : completionTime;
+        const tokensPerSecond =
+          completionTime > 0 ? totalTokens / (completionTime / 1000) : undefined;
 
         const assistantMessage: ChatMessage = {
           id: generateMessageId(),
@@ -446,18 +399,12 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           }
         }
       } finally {
-        if (!completedSuccessfully) {
-          typewriter.flushQueues();
-        }
-        typewriter.stopStreaming();
-        setIsProcessing(false);
-        setIsStreaming(false);
-        aiServiceRef.current = null;
+        contextArray = [];
+        finishStreamLifecycle(completedSuccessfully);
       }
     },
     [
       chatHistory,
-      resolvedContext,
       aiConfig,
       samplerSettings,
       promptSettings,
@@ -467,6 +414,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       typewriter,
       getContextContent,
       contextEntryIds,
+      finishStreamLifecycle,
     ]
   );
 
