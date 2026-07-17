@@ -1,33 +1,30 @@
 /**
- * @fileoverview AI Chat Panel component - Docked side panel for AI conversations.
+ * @fileoverview AI Chat Panel — docked Orion assistant.
  * @module components/ai/AIChatPanel
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   MessageSquare,
   X,
   Sparkles,
   Loader2,
   AlertCircle,
-  Plus,
   Square,
+  Send,
+  Layers,
 } from 'lucide-react';
 import { StreamingMarkdown } from './StreamingText';
 import type { AIChatPanelProps } from './types';
-import { ChatMessage as ChatMessageComponent } from './components';
+import { ChatMessage as ChatMessageComponent, ReasoningSection } from './components';
 import { useTypewriter, useAutoScroll, useAIChat } from './hooks';
+import { CHARACTER_SECTIONS } from '../../db/characterTypes';
 
 // Re-export types for backward compatibility
 export type { ChatMessage, AIChatPanelProps } from './types';
 
 /**
- * AI Chat Panel component - Docked side panel for AI conversations
- * 
- * Features:
- * - Docked to the right side of the workspace
- * - Collapsible chat history section
- * - Mobile responsive with close button
+ * AI Chat Panel — right dock for conversations with Orion.
  */
 export function AIChatPanel({
   contextEntryIds,
@@ -40,15 +37,11 @@ export function AIChatPanel({
 }: AIChatPanelProps): React.ReactElement {
   const [askQuestion, setAskQuestion] = useState('');
   const [resolvedContext, setResolvedContext] = useState<string[]>([]);
-  const [isStreamingReasoningExpanded, setIsStreamingReasoningExpanded] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const streamingReasoningRef = useRef<HTMLDivElement>(null);
   const wasTypingRef = useRef(false);
 
-  // Use typewriter hook for streaming display
   const typewriter = useTypewriter();
 
-  // Use AI chat hook for conversation management
   const {
     chatHistory,
     isProcessing,
@@ -71,23 +64,28 @@ export function AIChatPanel({
     contextEntryIds,
   });
 
-  // Use auto-scroll hook - get the container ref directly
-  // Pass isTyping to ensure auto-scroll continues until typewriter finishes displaying
   const { containerRef: chatContainerRef, scrollToBottom } = useAutoScroll({
     isStreaming,
     isTyping: typewriter.isTyping,
     dependencies: [chatHistory, typewriter.displayedContent, typewriter.displayedReasoning],
   });
 
-  // Resolve context content when panel opens
+  const contextLabels = useMemo(() => {
+    return contextEntryIds
+      .map(id => CHARACTER_SECTIONS.find(s => s.id === id)?.label ?? id)
+      .filter(Boolean);
+  }, [contextEntryIds]);
+
+  const hasContext = contextEntryIds.length > 0;
+
   useEffect(() => {
     const resolveContext = async () => {
       if (getContextContent && contextEntryIds.length > 0) {
         try {
           const content = await getContextContent(contextEntryIds);
           setResolvedContext(content);
-        } catch (error) {
-          console.error('Failed to resolve context:', error);
+        } catch (err) {
+          console.error('Failed to resolve context:', err);
           setResolvedContext([]);
         }
       } else {
@@ -98,8 +96,6 @@ export function AIChatPanel({
     void resolveContext();
   }, [contextEntryIds, getContextContent]);
 
-  // Additional scroll when reasoning completes and content starts
-  // Only scrolls if user is near the bottom (respects user scroll position)
   useEffect(() => {
     if (typewriter.isReasoningComplete) {
       const container = chatContainerRef.current;
@@ -112,42 +108,25 @@ export function AIChatPanel({
     }
   }, [typewriter.isReasoningComplete, scrollToBottom, chatContainerRef]);
 
-  // Final scroll when typewriter finishes (isTyping transitions from true to false)
-  // This ensures we scroll to the very end once all content is displayed
-  // Only scrolls if user is near the bottom (respects user scroll position)
   useEffect(() => {
-    // Detect transition from typing to not typing
     if (!typewriter.isTyping && wasTypingRef.current) {
-      // Check if user is near bottom before scrolling
       const container = chatContainerRef.current;
       if (container) {
         const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
         if (isNearBottom) {
-          // Use 'auto' for instant scroll to ensure we reach the exact bottom
           scrollToBottom('auto');
         }
       }
     }
-    // Update ref for next render
     wasTypingRef.current = typewriter.isTyping;
   }, [typewriter.isTyping, scrollToBottom, chatContainerRef]);
 
-  // Auto-scroll streaming reasoning to bottom when displayed content updates
-  // Only scrolls if user is near the bottom (respects user scroll position)
-  useEffect(() => {
-    if (streamingReasoningRef.current && typewriter.displayedReasoning) {
-      const container = streamingReasoningRef.current;
-      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
-      if (isNearBottom) {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: 'smooth',
-        });
-      }
+  const resetComposerHeight = useCallback(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
     }
-  }, [typewriter.displayedReasoning]);
+  }, []);
 
-  // Handle form submission
   const handleSubmit = async () => {
     if (!askQuestion.trim()) {
       const lastMessage = chatHistory[chatHistory.length - 1];
@@ -160,16 +139,23 @@ export function AIChatPanel({
 
     const question = askQuestion.trim();
     setAskQuestion('');
-    // Reset textarea height since React doesn't clear imperative DOM styles
-    if (inputRef.current) {
-      inputRef.current.style.height = 'auto';
-    }
+    resetComposerHeight();
     await handleAsk(question);
   };
 
+  const canSend =
+    isProcessing ||
+    !!askQuestion.trim() ||
+    (chatHistory.length > 0 && chatHistory[chatHistory.length - 1]?.role === 'user');
+
+  const onComposerInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.currentTarget;
+    target.style.height = 'auto';
+    target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+  }, []);
+
   return (
     <div className="h-full flex flex-col bg-bg border-l border-border animate-fade-in-slow">
-      {/* Animation styles for smooth message appearance */}
       <style>{`
         @keyframes message-appear {
           0% {
@@ -185,28 +171,29 @@ export function AIChatPanel({
           animation: message-appear 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
-      {/* Header */}
+
+      {/* Header — mirrors ContextPanel chrome */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50 shrink-0">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-fg-muted" />
-          <h2 className="font-semibold text-fg">
-            Ask Orion
-          </h2>
+        <div className="flex items-center gap-2 min-w-0">
+          <MessageSquare className="w-4 h-4 text-fg-muted shrink-0" />
+          <h2 className="font-semibold text-fg truncate">Ask Orion</h2>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           {chatHistory.length > 0 && (
             <button
+              type="button"
               onClick={handleNewChat}
-              className="p-1.5 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors"
-              title="New Chat"
+              className="text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors"
+              title="Start a new chat"
             >
-              <Plus className="w-4 h-4" />
+              New chat
             </button>
           )}
           {isMobile && onClose && (
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors ml-1"
+              className="p-1.5 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors"
               title="Close AI Chat Panel"
             >
               <X className="w-4 h-4" />
@@ -215,139 +202,161 @@ export function AIChatPanel({
         </div>
       </div>
 
-      {/* Error Message */}
+      {/* Context status — ties chat to left panel pins */}
+      <div className="px-4 py-2 border-b border-border shrink-0">
+        <div className="flex items-start gap-2">
+          <Layers
+            className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${hasContext ? 'text-accent' : 'text-fg-subtle'}`}
+          />
+          <div className="min-w-0 flex-1">
+            {hasContext ? (
+              <>
+                <p className="text-xs text-fg-muted">
+                  <span className="font-medium text-fg">
+                    {contextEntryIds.length} section{contextEntryIds.length === 1 ? '' : 's'}
+                  </span>
+                  {' '}in AI context
+                </p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {contextLabels.map(label => (
+                    <span
+                      key={label}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-accent-soft text-accent border border-accent/25"
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-fg-subtle">
+                No context pinned — use the AI Context panel so Orion can see card sections.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
       {error && (
-        <div className="mx-3 mt-3 p-3 bg-danger-soft border border-danger/30 rounded-lg flex items-start gap-2 text-danger text-sm shrink-0">
+        <div className="mx-3 mt-3 p-3 bg-danger-soft border border-danger/30 rounded-xl flex items-start gap-2 text-danger text-sm shrink-0">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span className="flex-1">{error}</span>
+          <span className="flex-1 min-w-0">{error}</span>
           <button
+            type="button"
             onClick={clearError}
-            className="p-0.5 text-red-400 hover:text-danger"
+            className="p-0.5 text-danger/70 hover:text-danger rounded transition-colors"
+            title="Dismiss"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-      {/* Chat Messages - flex-1 to push input to bottom */}
-      <div className="border-b border-border flex-1 flex flex-col min-h-0">
-        <div
-          ref={chatContainerRef}
-          className="px-4 pt-2 pb-4 space-y-4 overflow-y-auto flex-1 min-h-0"
-        >
-          {chatHistory.length === 0 && (
-            <div className="text-center py-8 text-fg-subtle">
-              <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">Hi, I'm Orion!</p>
-              <p className="text-xs mt-1">Ask me anything about your character card, or just chat with me! Don't forget to add your context!</p>
+      {/* Messages */}
+      <div
+        ref={chatContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3"
+      >
+        {chatHistory.length === 0 && (
+          <div className="flex flex-col items-center text-center px-4 py-10 text-fg-subtle">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+              <Sparkles className="w-6 h-6 opacity-60" />
             </div>
-          )}
+            <p className="text-sm font-medium text-fg">Hi, I&apos;m Orion</p>
+            <p className="text-xs mt-1.5 max-w-[16rem] leading-relaxed">
+              Ask about your character card, brainstorm ideas, or get writing help.
+              {!hasContext && (
+                <>
+                  {' '}
+                  Pin sections in <span className="text-fg-muted">AI Context</span> first for better answers.
+                </>
+              )}
+            </p>
+          </div>
+        )}
 
-          {chatHistory.map((message, index) => (
-            <ChatMessageComponent
-              key={message.id}
-              message={message}
-              messageIndex={index}
-              chatHistoryLength={chatHistory.length}
-              showReasoning={aiConfig.showReasoning}
-              isProcessing={isProcessing}
-              onRegenerate={handleRegenerate}
-            />
-          ))}
+        {chatHistory.map((message, index) => (
+          <ChatMessageComponent
+            key={message.id}
+            message={message}
+            messageIndex={index}
+            chatHistoryLength={chatHistory.length}
+            showReasoning={aiConfig.showReasoning}
+            isProcessing={isProcessing}
+            onRegenerate={handleRegenerate}
+          />
+        ))}
 
-          {/* Streaming indicator in chat */}
-          {isStreaming && (typewriter.displayedContent || typewriter.displayedReasoning) && (
-            <div className="flex justify-start">
-              <div className="max-w-[90%] bg-surface border border-border rounded-lg rounded-bl-none px-3 py-2 message-animate">
-                {/* Display streaming reasoning if available and showReasoning is not false - collapsed by default */}
-                {typewriter.displayedReasoning && aiConfig.showReasoning !== false && (
-                  <div className="mb-2 border border-border-strong rounded-md overflow-hidden">
-                    <button
-                      onClick={() => setIsStreamingReasoningExpanded(!isStreamingReasoningExpanded)}
-                      className="w-full flex items-center justify-between px-2 py-1.5 bg-hover hover:bg-hover transition-colors text-left"
-                    >
-                      <span className="text-xs font-medium text-fg-muted flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        Thinking process
-                      </span>
-                      <span className="text-xs text-fg-muted">
-                        {isStreamingReasoningExpanded ? 'Hide' : 'Show'}
-                      </span>
-                    </button>
-                    {isStreamingReasoningExpanded && (
-                      <div ref={streamingReasoningRef} className="max-h-40 overflow-y-auto px-2 py-2 bg-muted border-t border-border">
-                        <pre className="text-xs font-mono text-fg-muted whitespace-pre-wrap wrap-break-word leading-relaxed">
-                          {typewriter.displayedReasoning}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {typewriter.displayedContent && (
-                  <div className="text-sm prose prose-sm dark:prose-invert max-w-none text-fg">
-                    <StreamingMarkdown
-                      content={typewriter.displayedContent}
-                      isStreaming={typewriter.isTyping}
-                      showCursor={true}
-                    />
-                  </div>
-                )}
-              </div>
+        {isStreaming && (typewriter.displayedContent || typewriter.displayedReasoning) && (
+          <div className="flex justify-start">
+            <div className="max-w-[90%] bg-surface border border-border rounded-xl rounded-bl-md px-3 py-2 message-animate shadow-sm">
+              {typewriter.displayedReasoning && aiConfig.showReasoning !== false && (
+                <ReasoningSection reasoning={typewriter.displayedReasoning} />
+              )}
+              {typewriter.displayedContent && (
+                <div className="text-sm prose prose-sm dark:prose-invert max-w-none text-fg">
+                  <StreamingMarkdown
+                    content={typewriter.displayedContent}
+                    isStreaming={typewriter.isTyping}
+                    showCursor={true}
+                  />
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Loading indicator in chat */}
-          {isProcessing && (!isStreaming || (!typewriter.displayedContent && !typewriter.displayedReasoning)) && (
+        {isProcessing &&
+          (!isStreaming || (!typewriter.displayedContent && !typewriter.displayedReasoning)) && (
             <div className="flex justify-start">
-              <div className="bg-surface border border-border rounded-lg rounded-bl-none px-3 py-2 flex items-center gap-2 message-animate">
+              <div className="bg-surface border border-border rounded-xl rounded-bl-md px-3 py-2 flex items-center gap-2 message-animate shadow-sm">
                 <Loader2 className="w-4 h-4 animate-spin text-fg-muted" />
-                <span className="text-sm text-fg-muted">AI is thinking...</span>
+                <span className="text-sm text-fg-muted">Thinking…</span>
               </div>
             </div>
           )}
-        </div>
       </div>
 
-      {/* Input Area */}
-      <div className="p-3 space-y-3 bg-muted/50 shrink-0">
-        <div className="flex gap-2">
+      {/* Composer */}
+      <div className="p-3 border-t border-border bg-muted/50 shrink-0">
+        <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
             value={askQuestion}
-            onChange={(e) => setAskQuestion(e.target.value)}
-            placeholder="Ask a question..."
+            onChange={e => setAskQuestion(e.target.value)}
+            placeholder="Message Orion…"
             rows={1}
-            className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-lg bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent resize-none overflow-y-auto min-h-9.5 max-h-30"
-            onKeyDown={(e) => {
+            className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-30 transition-all"
+            onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey && !isProcessing && askQuestion.trim()) {
                 e.preventDefault();
                 void handleSubmit();
               }
             }}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = 'auto';
-              target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
-            }}
+            onInput={onComposerInput}
             disabled={isProcessing}
           />
           <button
+            type="button"
             onClick={() => void (isProcessing ? handleAbort() : handleSubmit())}
-            disabled={!isProcessing && !askQuestion.trim() && (!chatHistory.length || chatHistory[chatHistory.length - 1]?.role !== 'user')}
-            className={`px-3 py-2 h-9.5] text-white text-sm rounded-lg transition-colors flex items-center gap-1.5 self-center ${
-              isProcessing
-                ? 'bg-danger hover:opacity-90'
-                : 'bg-accent text-accent-fg hover:opacity-90 disabled:opacity-50'
-            }`}
+            disabled={!canSend}
+            className={`
+              shrink-0 h-10 w-10 flex items-center justify-center rounded-xl transition-all
+              disabled:opacity-40 disabled:pointer-events-none
+              ${
+                isProcessing
+                  ? 'bg-danger text-white hover:opacity-90'
+                  : 'bg-accent text-accent-fg hover:opacity-90 active:scale-[0.98]'
+              }
+            `}
+            title={isProcessing ? 'Stop' : 'Send'}
           >
-            {isProcessing ? (
-              <Square className="w-4 h-4" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
+            {isProcessing ? <Square className="w-4 h-4" /> : <Send className="w-4 h-4" />}
           </button>
         </div>
-
+        <p className="mt-1.5 text-[11px] text-fg-subtle px-0.5">
+          Enter to send · Shift+Enter for a new line
+        </p>
       </div>
     </div>
   );

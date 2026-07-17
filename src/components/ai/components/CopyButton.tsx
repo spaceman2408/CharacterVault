@@ -54,7 +54,7 @@ export const CopyButton: React.FC<CopyButtonProps> = memo(({ content }) => {
       title={copied ? 'Copied!' : 'Copy to clipboard'}
     >
       {copied ? (
-        <Check className="w-3.5 h-3.5 text-green-500" />
+        <Check className="w-3.5 h-3.5 text-success" />
       ) : (
         <Copy className="w-3.5 h-3.5" />
       )}
