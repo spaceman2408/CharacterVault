@@ -60,6 +60,7 @@ nav: [
           { text: "What's New", link: '/whats-new' },
           { text: 'FAQ', link: '/faq' },
           { text: 'Changelog', link: '/changelog' },
+          { text: 'Release 1.0.0', link: '/releases/v1.0.0' },
         ],
       },
     ],

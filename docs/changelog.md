@@ -1,8 +1,20 @@
 # Changelog
 
-## Recent Changes
+## 1.0.0 (2026-07-17)
 
-### Current Release Notes
+First stable release. Full notes: [v1.0.0 release notes](/releases/v1.0.0).
+
+### Highlights in this release
+
+- Full UI refresh (vault, editor, settings, studio) and VS Code Dark+ style dark theme
+- AI Context and Orion panels streamlined; context is user-pinned (not auto-bound to the open tab)
+- Editor AI ghost preview, payload preview, and per-tool model routing
+- NanoGPT sign-in, account overview, expanded reasoning effort, context up to 1M
+- Vault backup, bulk import, sort/search, card token estimates
+- Mobile full-screen greetings/lorebook and sheet-style model pickers
+- Spellcheck, section layout customization, AI Creation Studio, snapshots
+
+### Current Release Notes (detail)
 
 - **Per-prompt model routing** — Settings → Prompts can map each toolbar operation to a specific base URL + model (any configured preset). Unmapped ops use global AI Config. Lorebook AI key generation follows the Custom/instruct mapping. Orion and AI Creation Studio remain on the global model. Clear AI Settings keeps prompt text and mappings.
 - **Mobile model/provider sheets** — AI Config and Prompts model pickers use portaled bottom sheets (searchable, Escape-safe, touch-friendly) instead of clipped dropdowns.
