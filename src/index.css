@@ -14,19 +14,20 @@
   ============================================================================
 */
 
-/* Neutral ramp (reference; prefer semantic tokens in UI) */
+/* Neutral ramp (reference; prefer semantic tokens in UI).
+   Dark end of the ramp leans VS Code Dark+ (#1e1e1e / #252526). */
 @theme {
   --color-vault-50: #fafafa;
   --color-vault-100: #f5f5f5;
   --color-vault-200: #e5e5e5;
   --color-vault-300: #d4d4d4;
   --color-vault-400: #a3a3a3;
-  --color-vault-500: #737373;
-  --color-vault-600: #5a5a5a;
-  --color-vault-700: #4a4a4a;
-  --color-vault-800: #3a3a3a;
-  --color-vault-900: #323232;
-  --color-vault-950: #2c2c2c;
+  --color-vault-500: #858585;
+  --color-vault-600: #6e6e6e;
+  --color-vault-700: #3e3e42;
+  --color-vault-800: #333333;
+  --color-vault-900: #252526;
+  --color-vault-950: #1e1e1e;
 
   /* Semantic → Tailwind utilities (bg-bg, text-fg, border-border, …) */
   --color-bg: var(--bg);
@@ -211,60 +212,60 @@
 .dark {
   color-scheme: dark;
 
-  /* Soft gray shell + cyan accents (contrast for hovers / primary / focus) */
-  --bg: #2c2c2c;
-  --surface: #363636;
-  --muted: #3c3c3c;
-  --inverse: #22d3ee;
-  --hover: #2f4a50;
-  --fg: #ececec;
-  --fg-muted: #b0b0b0;
-  --fg-subtle: #8a8a8a;
-  --fg-inverse: #083344;
-  --border: #4a4a4a;
-  --border-strong: #5a5a5a;
-  --accent: #22d3ee;
-  --accent-fg: #083344;
-  --accent-soft: rgba(34, 211, 238, 0.16);
-  --success: #22c55e;
-  --success-soft: rgba(34, 197, 94, 0.18);
-  --success-soft-fg: #86efac;
-  --warning: #f59e0b;
-  --warning-soft: rgba(245, 158, 11, 0.18);
-  --warning-soft-fg: #fcd34d;
-  --danger: #f87171;
-  --danger-soft: rgba(248, 113, 113, 0.18);
-  --danger-soft-fg: #fca5a5;
-  --info: #22d3ee;
-  --info-soft: rgba(34, 211, 238, 0.14);
-  --info-soft-fg: #67e8f9;
-  --overlay: rgba(44, 44, 44, 0.72);
-  --ring: #22d3ee;
+  /* VS Code Dark+ (2019) inspired shell — deep editor grays + classic blue accent */
+  --bg: #1e1e1e;
+  --surface: #252526;
+  --muted: #2d2d2d;
+  --inverse: #007acc;
+  --hover: #2a2d2e;
+  --fg: #cccccc;
+  --fg-muted: #9d9d9d;
+  --fg-subtle: #6e6e6e;
+  --fg-inverse: #ffffff;
+  --border: #3e3e42;
+  --border-strong: #555555;
+  --accent: #007acc;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(0, 122, 204, 0.22);
+  --success: #89d185;
+  --success-soft: rgba(137, 209, 133, 0.16);
+  --success-soft-fg: #b5e8b0;
+  --warning: #cca700;
+  --warning-soft: rgba(204, 167, 0, 0.16);
+  --warning-soft-fg: #e0c060;
+  --danger: #f48771;
+  --danger-soft: rgba(244, 135, 113, 0.16);
+  --danger-soft-fg: #f7b0a0;
+  --info: #3794ff;
+  --info-soft: rgba(55, 148, 255, 0.16);
+  --info-soft-fg: #9cdcfe;
+  --overlay: rgba(0, 0, 0, 0.55);
+  --ring: #007acc;
 
   --editor-bg: transparent;
   --editor-text: var(--fg);
   --editor-text-secondary: var(--fg-muted);
-  --editor-caret: #67e8f9;
-  --editor-selection: rgba(34, 211, 238, 0.32);
-  --editor-gutter: #8a8a8a;
-  --editor-active-line-gutter: rgba(34, 211, 238, 0.08);
-  --editor-active-line: rgba(34, 211, 238, 0.06);
-  --editor-fold-bg: #2f4a50;
-  --editor-fold-text: #67e8f9;
+  --editor-caret: #aeafad;
+  --editor-selection: #264f78;
+  --editor-gutter: #858585;
+  --editor-active-line-gutter: rgba(255, 255, 255, 0.04);
+  --editor-active-line: #2a2a2a;
+  --editor-fold-bg: #333333;
+  --editor-fold-text: #c5c5c5;
 
-  /* Syntax — cyan/teal lean for accents, keep readable hues */
-  --syntax-keyword: #22d3ee;
-  --syntax-string: #98c379;
-  --syntax-comment: #7d8799;
-  --syntax-tag: #67e8f9;
-  --syntax-attribute: #5eead4;
-  --syntax-number: #d19a66;
-  --syntax-punctuation: #abb2bf;
-  --syntax-variable: #e06c75;
-  --syntax-type: #e5c07b;
-  --syntax-property: #2dd4bf;
-  --syntax-operator: #abb2bf;
-  --syntax-meta: #7d8799;
+  /* Syntax — VS Code Dark+ */
+  --syntax-keyword: #569cd6;
+  --syntax-string: #ce9178;
+  --syntax-comment: #6a9955;
+  --syntax-tag: #569cd6;
+  --syntax-attribute: #9cdcfe;
+  --syntax-number: #b5cea8;
+  --syntax-punctuation: #d4d4d4;
+  --syntax-variable: #9cdcfe;
+  --syntax-type: #4ec9b0;
+  --syntax-property: #9cdcfe;
+  --syntax-operator: #d4d4d4;
+  --syntax-meta: #d4d4d4;
 
   --ai-toolbar-bg: var(--surface);
   --ai-toolbar-border: var(--border);
@@ -277,54 +278,54 @@
   --ai-toolbar-result-bg: var(--surface);
   --ai-toolbar-reasoning-bg: var(--muted);
   --ai-toolbar-error-bg: var(--danger-soft);
-  --ai-toolbar-error-border: rgba(248, 113, 113, 0.35);
+  --ai-toolbar-error-border: rgba(244, 135, 113, 0.4);
   --ai-toolbar-error-text: var(--danger);
-  --ai-toolbar-accent-primary: #22d3ee;
-  --ai-toolbar-accent-secondary: #818cf8;
-  --ai-toolbar-accent-success: #10b981;
-  --ai-toolbar-accent-warning: #f59e0b;
-  --ai-toolbar-accent-info: #2dd4bf;
-  --ai-toolbar-accent-pink: #f472b6;
-  --ai-toolbar-accent-rose: #fb7185;
-  --ai-toolbar-accent-neutral: #a3a3a3;
+  --ai-toolbar-accent-primary: #007acc;
+  --ai-toolbar-accent-secondary: #569cd6;
+  --ai-toolbar-accent-success: #89d185;
+  --ai-toolbar-accent-warning: #cca700;
+  --ai-toolbar-accent-info: #3794ff;
+  --ai-toolbar-accent-pink: #c586c0;
+  --ai-toolbar-accent-rose: #f48771;
+  --ai-toolbar-accent-neutral: #858585;
   --ai-toolbar-accept-bg: var(--success);
   --ai-toolbar-active: var(--accent);
   --ai-toolbar-active-bg: var(--accent-soft);
   --ai-toolbar-focus-shadow: var(--vault-search-focus-shadow);
 
-  --ai-ghost-text: rgba(34, 211, 238, 0.55);
-  --ai-ghost-text-peak: rgba(103, 232, 249, 0.95);
-  --ai-ghost-bg: rgba(34, 211, 238, 0.06);
-  --ai-ghost-glow: rgba(34, 211, 238, 0.22);
-  --ai-ghost-glow-peak: rgba(103, 232, 249, 0.55);
+  --ai-ghost-text: rgba(0, 122, 204, 0.55);
+  --ai-ghost-text-peak: rgba(55, 148, 255, 0.95);
+  --ai-ghost-bg: rgba(0, 122, 204, 0.08);
+  --ai-ghost-glow: rgba(0, 122, 204, 0.28);
+  --ai-ghost-glow-peak: rgba(55, 148, 255, 0.55);
 
   --vault-search-bg: var(--surface);
   --vault-search-border: var(--border);
-  --vault-search-input-bg: var(--bg);
+  --vault-search-input-bg: #3c3c3c;
   --vault-search-input-border: var(--border-strong);
   --vault-search-text: var(--fg);
   --vault-search-text-secondary: var(--fg-muted);
   --vault-search-btn-bg: var(--muted);
   --vault-search-btn-hover: var(--hover);
   --vault-search-primary: var(--accent);
-  --vault-search-match-bg: rgba(251, 191, 36, 0.26);
-  --vault-search-match-selected: rgba(251, 191, 36, 0.5);
-  --vault-search-match-selected-ring: rgba(253, 186, 116, 0.7);
-  --vault-search-focus-shadow: rgba(34, 211, 238, 0.3);
+  --vault-search-match-bg: rgba(234, 92, 0, 0.33);
+  --vault-search-match-selected: rgba(234, 92, 0, 0.55);
+  --vault-search-match-selected-ring: rgba(234, 92, 0, 0.75);
+  --vault-search-focus-shadow: rgba(0, 122, 204, 0.45);
 
-  --tooltip-bg: var(--muted);
+  --tooltip-bg: #252526;
   --tooltip-border: var(--border);
   --tooltip-text: var(--fg);
   --tooltip-muted: var(--fg-muted);
   --tooltip-accent: var(--accent);
-  --tooltip-entry-hover: rgba(34, 211, 238, 0.12);
+  --tooltip-entry-hover: rgba(0, 122, 204, 0.18);
 
-  --category-ref-color: #67e8f9;
-  --category-ref-hover-bg: rgba(34, 211, 238, 0.12);
+  --category-ref-color: #3794ff;
+  --category-ref-hover-bg: rgba(0, 122, 204, 0.16);
 
   --focus-ring: var(--ring);
-  --scrollbar: #4a6066;
-  --scrollbar-hover: #22d3ee;
+  --scrollbar: #424242;
+  --scrollbar-hover: #4f4f4f;
 
   color: var(--fg);
   background-color: var(--bg);
