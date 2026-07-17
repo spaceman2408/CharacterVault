@@ -11,7 +11,7 @@ interface SettingsCardProps {
   /** Optional title row with icon */
   title?: React.ReactNode;
   icon?: React.ReactNode;
-  /** Use gradient background (e.g. sampler presets) */
+  /** @deprecated Kept for call-site compatibility; both variants use flat surface chrome */
   variant?: 'default' | 'gradient';
 }
 
@@ -20,17 +20,13 @@ export const SettingsCard: React.FC<SettingsCardProps> = ({
   className = '',
   title,
   icon,
-  variant = 'default',
 }) => {
-  const base =
-    variant === 'gradient'
-      ? 'bg-linear-to-br from-muted to-hover rounded-xl p-4 border border-border'
-      : 'bg-surface/50 rounded-xl p-4 sm:p-5 border border-border shadow-sm';
-
   return (
-    <div className={`${base} ${className}`}>
+    <div
+      className={`rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-sm ${className}`}
+    >
       {title != null && (
-        <h3 className="text-sm font-semibold text-fg mb-4 flex items-center gap-2">
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-fg">
           {icon}
           {title}
         </h3>

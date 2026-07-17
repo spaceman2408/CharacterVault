@@ -497,7 +497,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
         >
           {/* Hero: balance + status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-lg bg-linear-to-br from-muted to-surface border border-border min-h-[88px]">
+            <div className="p-3 rounded-lg bg-surface border border-border min-h-[88px]">
               <div className="text-xs font-medium text-fg-muted mb-1">
                 Balance
               </div>
@@ -525,7 +525,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
               )}
             </div>
 
-            <div className="p-3 rounded-lg bg-linear-to-br from-muted to-surface border border-border min-h-[88px]">
+            <div className="p-3 rounded-lg bg-surface border border-border min-h-[88px]">
               <div className="text-xs font-medium text-fg-muted mb-1">
                 Subscription
               </div>

@@ -42,6 +42,7 @@
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-success-soft-fg: var(--success-soft-fg);
@@ -78,20 +79,21 @@
 
   color-scheme: light;
 
-  /* Shell */
-  --bg: #f5f5f5;
+  /* Shell — light purple accents on neutral grays */
+  --bg: #f7f5fb;
   --surface: #ffffff;
-  --muted: #f0f0f0;
-  --inverse: #171717;
-  --hover: #e8e8e8;
-  --fg: #171717;
-  --fg-muted: #525252;
-  --fg-subtle: #a3a3a3;
-  --fg-inverse: #fafafa;
-  --border: #e5e5e5;
-  --border-strong: #d4d4d4;
-  --accent: #2563eb;
+  --muted: #f1edf7;
+  --inverse: #7c3aed;
+  --hover: #ede5fb;
+  --fg: #1e1233;
+  --fg-muted: #5b5270;
+  --fg-subtle: #9b92ad;
+  --fg-inverse: #ffffff;
+  --border: #e6e0f0;
+  --border-strong: #d4cce3;
+  --accent: #7c3aed;
   --accent-fg: #ffffff;
+  --accent-soft: rgba(124, 58, 237, 0.12);
   --success: #16a34a;
   --success-soft: #dcfce7;
   --success-soft-fg: #14532d;
@@ -101,32 +103,31 @@
   --danger: #dc2626;
   --danger-soft: #fee2e2;
   --danger-soft-fg: #7f1d1d;
-  --info: #2563eb;
-  --info-soft: #dbeafe;
-  --info-soft-fg: #1e3a8a;
-  --overlay: rgba(0, 0, 0, 0.45);
-  --ring: #525252;
+  --info: #7c3aed;
+  --info-soft: #ede9fe;
+  --info-soft-fg: #5b21b6;
+  --overlay: rgba(30, 18, 51, 0.4);
+  --ring: #7c3aed;
   --focus-ring-offset: 2px;
 
-  /* Editor chrome (matches shell neutrals) */
+  /* Editor chrome */
   --editor-bg: transparent;
   --editor-text: var(--fg);
   --editor-text-secondary: var(--fg-muted);
-  --editor-caret: #404040;
-  /* Light: soft blue selection (CM default is lavender #d7d4f0 — we override it) */
-  --editor-selection: rgba(37, 99, 235, 0.22);
-  --editor-gutter: #a3a3a3;
-  --editor-active-line-gutter: rgba(0, 0, 0, 0.04);
-  --editor-active-line: rgba(0, 0, 0, 0.03);
-  --editor-fold-bg: #e5e5e5;
-  --editor-fold-text: #525252;
+  --editor-caret: #6d28d9;
+  --editor-selection: rgba(124, 58, 237, 0.2);
+  --editor-gutter: #a89bb8;
+  --editor-active-line-gutter: rgba(124, 58, 237, 0.06);
+  --editor-active-line: rgba(124, 58, 237, 0.05);
+  --editor-fold-bg: #e6e0f0;
+  --editor-fold-text: #5b5270;
 
   /* Syntax highlighting */
   --syntax-keyword: #7c3aed;
   --syntax-string: #059669;
   --syntax-comment: #94a3b8;
   --syntax-tag: #7c3aed;
-  --syntax-attribute: #2563eb;
+  --syntax-attribute: #6d28d9;
   --syntax-number: #d97706;
   --syntax-punctuation: #6b7280;
   --syntax-variable: #db2777;
@@ -150,22 +151,22 @@
   --ai-toolbar-error-border: rgba(220, 38, 38, 0.35);
   --ai-toolbar-error-text: var(--danger);
   --ai-toolbar-accent-primary: #7c3aed;
-  --ai-toolbar-accent-secondary: #2563eb;
+  --ai-toolbar-accent-secondary: #8b5cf6;
   --ai-toolbar-accent-success: #059669;
   --ai-toolbar-accent-warning: #d97706;
   --ai-toolbar-accent-info: #0891b2;
   --ai-toolbar-accent-pink: #db2777;
   --ai-toolbar-accent-rose: #e11d48;
-  --ai-toolbar-accent-neutral: #525252;
+  --ai-toolbar-accent-neutral: #5b5270;
   --ai-toolbar-accept-bg: var(--success);
   --ai-toolbar-active: var(--accent);
-  --ai-toolbar-active-bg: rgba(37, 99, 235, 0.1);
+  --ai-toolbar-active-bg: rgba(124, 58, 237, 0.12);
 
   /* AI ghost preview */
   --ai-ghost-text: rgba(91, 33, 182, 0.55);
   --ai-ghost-text-peak: rgba(91, 33, 182, 0.95);
-  --ai-ghost-bg: rgba(124, 58, 237, 0.04);
-  --ai-ghost-glow: rgba(124, 58, 237, 0.2);
+  --ai-ghost-bg: rgba(124, 58, 237, 0.05);
+  --ai-ghost-glow: rgba(124, 58, 237, 0.22);
   --ai-ghost-glow-peak: rgba(124, 58, 237, 0.55);
 
   /* Find / replace */
@@ -181,7 +182,7 @@
   --vault-search-match-bg: rgba(250, 204, 21, 0.35);
   --vault-search-match-selected: rgba(250, 204, 21, 0.72);
   --vault-search-match-selected-ring: rgba(180, 83, 9, 0.55);
-  --vault-search-focus-shadow: rgba(37, 99, 235, 0.22);
+  --vault-search-focus-shadow: rgba(124, 58, 237, 0.25);
 
   /* Tooltips (CodeMirror / spellcheck) */
   --tooltip-bg: var(--surface);
@@ -189,14 +190,14 @@
   --tooltip-text: var(--fg);
   --tooltip-muted: var(--fg-muted);
   --tooltip-accent: var(--accent);
-  --tooltip-entry-hover: rgba(37, 99, 235, 0.06);
+  --tooltip-entry-hover: rgba(124, 58, 237, 0.08);
 
-  --category-ref-color: #8b5cf6;
-  --category-ref-hover-bg: rgba(139, 92, 246, 0.1);
+  --category-ref-color: #7c3aed;
+  --category-ref-hover-bg: rgba(124, 58, 237, 0.1);
 
   --focus-ring: var(--ring);
-  --scrollbar: #a3a3a3;
-  --scrollbar-hover: #737373;
+  --scrollbar: #c4b8d9;
+  --scrollbar-hover: #9b8ab8;
 
   color: var(--fg);
   background-color: var(--bg);
@@ -209,20 +210,21 @@
 .dark {
   color-scheme: dark;
 
-  /* Soft gray dark mode — no pure/near-black */
+  /* Soft gray shell + cyan accents (contrast for hovers / primary / focus) */
   --bg: #2c2c2c;
   --surface: #363636;
-  --muted: #404040;
-  --inverse: #f0f0f0;
-  --hover: #4a4a4a;
+  --muted: #3c3c3c;
+  --inverse: #22d3ee;
+  --hover: #2f4a50;
   --fg: #ececec;
   --fg-muted: #b0b0b0;
   --fg-subtle: #8a8a8a;
-  --fg-inverse: #2c2c2c;
+  --fg-inverse: #083344;
   --border: #4a4a4a;
   --border-strong: #5a5a5a;
-  --accent: #60a5fa;
-  --accent-fg: #1f1f1f;
+  --accent: #22d3ee;
+  --accent-fg: #083344;
+  --accent-soft: rgba(34, 211, 238, 0.16);
   --success: #22c55e;
   --success-soft: rgba(34, 197, 94, 0.18);
   --success-soft-fg: #86efac;
@@ -232,35 +234,34 @@
   --danger: #f87171;
   --danger-soft: rgba(248, 113, 113, 0.18);
   --danger-soft-fg: #fca5a5;
-  --info: #60a5fa;
-  --info-soft: rgba(96, 165, 250, 0.18);
-  --info-soft-fg: #93c5fd;
+  --info: #22d3ee;
+  --info-soft: rgba(34, 211, 238, 0.14);
+  --info-soft-fg: #67e8f9;
   --overlay: rgba(44, 44, 44, 0.72);
-  --ring: #b0b0b0;
+  --ring: #22d3ee;
 
   --editor-bg: transparent;
   --editor-text: var(--fg);
   --editor-text-secondary: var(--fg-muted);
-  --editor-caret: #d4d4d4;
-  /* Dark: soft cyan on gray — distinct from light-mode blue/lavender */
-  --editor-selection: rgba(56, 189, 248, 0.38);
+  --editor-caret: #67e8f9;
+  --editor-selection: rgba(34, 211, 238, 0.32);
   --editor-gutter: #8a8a8a;
-  --editor-active-line-gutter: rgba(255, 255, 255, 0.05);
-  --editor-active-line: rgba(255, 255, 255, 0.04);
-  --editor-fold-bg: #4a4a4a;
-  --editor-fold-text: #b0b0b0;
+  --editor-active-line-gutter: rgba(34, 211, 238, 0.08);
+  --editor-active-line: rgba(34, 211, 238, 0.06);
+  --editor-fold-bg: #2f4a50;
+  --editor-fold-text: #67e8f9;
 
-  /* Syntax — One Dark–inspired, on neutral vault surfaces */
-  --syntax-keyword: #c678dd;
+  /* Syntax — cyan/teal lean for accents, keep readable hues */
+  --syntax-keyword: #22d3ee;
   --syntax-string: #98c379;
   --syntax-comment: #7d8799;
-  --syntax-tag: #c678dd;
-  --syntax-attribute: #61afef;
+  --syntax-tag: #67e8f9;
+  --syntax-attribute: #5eead4;
   --syntax-number: #d19a66;
   --syntax-punctuation: #abb2bf;
   --syntax-variable: #e06c75;
   --syntax-type: #e5c07b;
-  --syntax-property: #56b6c2;
+  --syntax-property: #2dd4bf;
   --syntax-operator: #abb2bf;
   --syntax-meta: #7d8799;
 
@@ -278,22 +279,22 @@
   --ai-toolbar-error-border: rgba(248, 113, 113, 0.35);
   --ai-toolbar-error-text: var(--danger);
   --ai-toolbar-accent-primary: #22d3ee;
-  --ai-toolbar-accent-secondary: #60a5fa;
+  --ai-toolbar-accent-secondary: #67e8f9;
   --ai-toolbar-accent-success: #10b981;
   --ai-toolbar-accent-warning: #f59e0b;
-  --ai-toolbar-accent-info: #22d3ee;
+  --ai-toolbar-accent-info: #2dd4bf;
   --ai-toolbar-accent-pink: #f472b6;
   --ai-toolbar-accent-rose: #fb7185;
   --ai-toolbar-accent-neutral: #a3a3a3;
   --ai-toolbar-accept-bg: var(--success);
   --ai-toolbar-active: var(--accent);
-  --ai-toolbar-active-bg: rgba(96, 165, 250, 0.12);
+  --ai-toolbar-active-bg: rgba(34, 211, 238, 0.16);
 
-  --ai-ghost-text: rgba(248, 250, 252, 0.42);
-  --ai-ghost-text-peak: rgba(248, 250, 252, 0.95);
-  --ai-ghost-bg: rgba(248, 250, 252, 0.03);
-  --ai-ghost-glow: rgba(248, 250, 252, 0.15);
-  --ai-ghost-glow-peak: rgba(255, 255, 255, 0.55);
+  --ai-ghost-text: rgba(34, 211, 238, 0.55);
+  --ai-ghost-text-peak: rgba(103, 232, 249, 0.95);
+  --ai-ghost-bg: rgba(34, 211, 238, 0.06);
+  --ai-ghost-glow: rgba(34, 211, 238, 0.22);
+  --ai-ghost-glow-peak: rgba(103, 232, 249, 0.55);
 
   --vault-search-bg: var(--surface);
   --vault-search-border: var(--border);
@@ -307,21 +308,21 @@
   --vault-search-match-bg: rgba(251, 191, 36, 0.26);
   --vault-search-match-selected: rgba(251, 191, 36, 0.5);
   --vault-search-match-selected-ring: rgba(253, 186, 116, 0.7);
-  --vault-search-focus-shadow: rgba(96, 165, 250, 0.28);
+  --vault-search-focus-shadow: rgba(34, 211, 238, 0.3);
 
   --tooltip-bg: var(--muted);
   --tooltip-border: var(--border);
   --tooltip-text: var(--fg);
   --tooltip-muted: var(--fg-muted);
   --tooltip-accent: var(--accent);
-  --tooltip-entry-hover: rgba(96, 165, 250, 0.1);
+  --tooltip-entry-hover: rgba(34, 211, 238, 0.12);
 
-  --category-ref-color: #a78bfa;
-  --category-ref-hover-bg: rgba(167, 139, 250, 0.2);
+  --category-ref-color: #67e8f9;
+  --category-ref-hover-bg: rgba(34, 211, 238, 0.12);
 
   --focus-ring: var(--ring);
-  --scrollbar: #5a5a5a;
-  --scrollbar-hover: #707070;
+  --scrollbar: #4a6066;
+  --scrollbar-hover: #22d3ee;
 
   color: var(--fg);
   background-color: var(--bg);
@@ -598,9 +599,8 @@ textarea:focus:not(:focus-visible) {
   padding: 8px 16px;
   background-color: var(--vault-search-bg);
   border-bottom: 1px solid var(--vault-search-border);
-  position: sticky;
-  top: 0;
-  z-index: 9999;
+  position: relative;
+  z-index: 1;
   grid-column: 1 / -1;
 }
 
@@ -759,6 +759,32 @@ textarea:focus:not(:focus-visible) {
 
 .ai-toolbar-panel {
   background-color: var(--ai-toolbar-bg) !important;
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+}
+
+/* More-menu must paint above the search panel (sibling below this toolbar) */
+.ai-toolbar-panel .ai-toolbar-more {
+  position: relative;
+  z-index: 5;
+}
+
+.ai-toolbar-panel .ai-toolbar-more-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 30;
+  margin-top: 4px;
+  min-width: 120px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--ai-toolbar-border);
+  border-radius: 6px;
+  background: var(--ai-toolbar-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .ai-toolbar-panel .ai-result-container {
@@ -822,7 +848,7 @@ textarea:focus:not(:focus-visible) {
   position: sticky;
   top: 0;
   z-index: 20;
-  overflow: visible;
+  overflow: visible !important;
 }
 
 .dark .cm-panels.cm-panels-top,

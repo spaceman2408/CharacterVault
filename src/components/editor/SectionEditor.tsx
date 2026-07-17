@@ -485,7 +485,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
               className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 isPreviewOpen || isSplitPreviewOpen
                   ? 'border-accent bg-accent text-accent-fg hover:opacity-90'
-                  : 'border-border bg-surface text-fg-muted hover:bg-hover border-border bg-surface text-fg hover:bg-hover/70'
+                  : 'border-border bg-surface text-fg-muted hover:bg-accent-soft hover:text-accent'
               }`}
             >
               {isSplitPreviewOpen ? 'Stop Previewing CSS' : 'Preview CSS'}

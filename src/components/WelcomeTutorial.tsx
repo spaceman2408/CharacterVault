@@ -248,7 +248,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
                   key={i}
                   className={`h-1.5 rounded-full tutorial-dot
                     ${i === currentStep
-                      ? 'w-8 bg-inverse'
+                      ? 'w-8 bg-accent'
                       : i < currentStep
                         ? 'w-3 bg-fg-subtle'
                         : 'w-3 bg-hover'
@@ -295,10 +295,10 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
                       }}
                     >
                       <div className="shrink-0 p-2 sm:p-2.5 rounded-md sm:rounded-lg bg-hover
-                        group-hover:bg-inverse
+                        group-hover:bg-accent
                         transition-colors duration-200">
                         <FeatureIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-fg-muted
-                          group-hover:text-fg-inverse
+                          group-hover:text-accent-fg
                           transition-colors duration-200" />
                       </div>
                       <div className="min-w-0">
@@ -367,7 +367,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
             <button
               onClick={isLast ? handleComplete : handleNext}
               className="flex items-center gap-1.5 sm:gap-2 px-4 py-1.5 sm:px-6 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg
-                bg-inverse text-fg-inverse
+                bg-accent text-accent-fg
                 hover:opacity-90 active:scale-95
                 shadow-sm hover:shadow-md transition-all duration-200"
             >

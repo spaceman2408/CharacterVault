@@ -122,8 +122,8 @@ function LorebookEntryListItem({
       className={`
         relative group cursor-pointer p-3 rounded-lg border transition-all duration-150
         ${isSelected
-          ? 'bg-hover border-accent ring-1 ring-accent'
-          : 'bg-surface border-border'
+          ? 'bg-accent-soft border-accent ring-1 ring-accent'
+          : 'bg-surface border-border hover:border-accent/40 hover:bg-accent-soft'
         }
       `}
     >

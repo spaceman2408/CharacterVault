@@ -34,11 +34,11 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
             onChange={(e) => onChange(e.target.checked)}
             className="peer sr-only"
           />
-          <div className="w-10 h-6 bg-hover rounded-full peer-checked:bg-accent transition-colors duration-200 peer-disabled:opacity-50" />
-          <div className="absolute left-1 top-1 w-4 h-4 bg-surface rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
+          <div className="w-10 h-6 bg-muted rounded-full peer-checked:bg-accent transition-colors duration-200 peer-disabled:opacity-50" />
+          <div className="absolute left-1 top-1 w-4 h-4 bg-surface rounded-full transition-transform duration-200 peer-checked:translate-x-4 shadow-sm" />
         </div>
         <div className="flex-1">
-          <span className="group-hover:text-fg transition-colors font-medium">
+          <span className="group-hover:text-accent transition-colors font-medium">
             {label}
           </span>
           {description != null && (
@@ -61,10 +61,10 @@ export const SettingsToggle: React.FC<SettingsToggleProps> = ({
           onChange={(e) => onChange(e.target.checked)}
           className="peer sr-only"
         />
-        <div className="w-10 h-6 bg-hover rounded-full peer-checked:bg-accent transition-colors duration-200 peer-disabled:opacity-50" />
-        <div className="absolute left-1 top-1 w-4 h-4 bg-surface rounded-full transition-transform duration-200 peer-checked:translate-x-4" />
+        <div className="w-10 h-6 bg-muted rounded-full peer-checked:bg-accent transition-colors duration-200 peer-disabled:opacity-50" />
+        <div className="absolute left-1 top-1 w-4 h-4 bg-surface rounded-full transition-transform duration-200 peer-checked:translate-x-4 shadow-sm" />
       </div>
-      <span className="group-hover:text-fg transition-colors">
+      <span className="group-hover:text-accent transition-colors">
         {label}
       </span>
     </label>

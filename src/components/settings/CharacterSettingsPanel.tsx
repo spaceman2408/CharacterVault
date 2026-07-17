@@ -224,27 +224,27 @@ export function CharacterSettingsPanel({
         >
           <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-surface shrink-0">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="p-2 rounded-xl bg-linear-to-br from-vault-500 to-vault-600 shrink-0">
-                <Settings2 className="w-5 h-5 text-white" />
+              <div className="shrink-0 rounded-xl bg-muted p-2">
+                <Settings2 className="h-5 w-5 text-fg-muted" />
               </div>
               <div className="min-w-0">
                 <h2
                   id="settings-title"
-                  className="text-base sm:text-lg font-bold text-fg truncate"
+                  className="truncate text-base font-bold text-fg sm:text-lg"
                 >
                   AI Settings
                 </h2>
-                <p className="text-xs text-fg-muted hidden sm:block">
+                <p className="hidden text-xs text-fg-muted sm:block">
                   Configure your AI generation preferences
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50 shrink-0"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
               aria-label="Close settings panel"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
 
@@ -260,8 +260,8 @@ export function CharacterSettingsPanel({
                   onClick={() => setActiveTab(tab.id)}
                   className={`relative flex min-h-12 items-center px-4 text-sm font-medium capitalize transition-all duration-200 rounded-t-lg focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-inset whitespace-nowrap shrink-0 ${
                     activeTab === tab.id
-                      ? 'text-fg'
-                      : 'text-fg-muted hover:text-fg hover:bg-hover/50 hover:bg-hover/50'
+                      ? 'text-accent'
+                      : 'text-fg-muted hover:text-accent hover:bg-accent-soft'
                   }`}
                   aria-selected={activeTab === tab.id}
                   role="tab"
@@ -271,14 +271,14 @@ export function CharacterSettingsPanel({
                     {tab.label}
                   </span>
                   {activeTab === tab.id && (
-                    <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-fg-muted" />
+                    <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-accent" />
                   )}
                 </button>
               );
             })}
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 sm:space-y-6 bg-muted/50 bg-muted">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-bg p-4 sm:space-y-6 sm:p-6">
             {isLoading && activeTab !== 'sampler' && (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-3">
@@ -293,19 +293,19 @@ export function CharacterSettingsPanel({
             )}
           </div>
 
-          <div className="flex items-center justify-stretch sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-border bg-surface shrink-0">
+          <div className="flex shrink-0 items-center justify-stretch gap-2 border-t border-border bg-surface px-4 py-3 sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
             <button
               onClick={onClose}
-              className="flex-1 sm:flex-none min-h-11 px-4 py-2.5 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="min-h-11 flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong sm:flex-none"
             >
               Cancel
             </button>
             <button
               onClick={() => void save()}
               disabled={isSaving}
-              className="flex-1 sm:flex-none min-h-11 flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-vault-600 to-vault-700 hover:from-vault-700 hover:to-vault-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
             >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Save Settings
             </button>
           </div>

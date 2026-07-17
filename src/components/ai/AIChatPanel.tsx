@@ -197,7 +197,7 @@ export function AIChatPanel({
           {chatHistory.length > 0 && (
             <button
               onClick={handleNewChat}
-              className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-colors"
+              className="p-1.5 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors"
               title="New Chat"
             >
               <Plus className="w-4 h-4" />
@@ -206,7 +206,7 @@ export function AIChatPanel({
           {isMobile && onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-colors ml-1"
+              className="p-1.5 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors ml-1"
               title="Close AI Chat Panel"
             >
               <X className="w-4 h-4" />
@@ -337,7 +337,7 @@ export function AIChatPanel({
             className={`px-3 py-2 h-9.5] text-white text-sm rounded-lg transition-colors flex items-center gap-1.5 self-center ${
               isProcessing
                 ? 'bg-danger hover:opacity-90'
-                : 'bg-inverse hover:opacity-90 disabled:opacity-50'
+                : 'bg-accent text-accent-fg hover:opacity-90 disabled:opacity-50'
             }`}
           >
             {isProcessing ? (

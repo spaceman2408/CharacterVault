@@ -677,7 +677,7 @@ function CreatorNotesDiffView({
               onClick={() => setViewMode('css')}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 resolvedViewMode === 'css'
-                  ? 'bg-inverse text-fg-inverse'
+                  ? 'bg-accent text-accent-fg'
                   : 'text-fg-muted hover:bg-hover text-fg-muted hover:bg-hover'
               }`}
             >
@@ -689,7 +689,7 @@ function CreatorNotesDiffView({
             onClick={() => setViewMode('full')}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               resolvedViewMode === 'full'
-                ? 'bg-inverse text-fg-inverse'
+                ? 'bg-accent text-accent-fg'
                 : 'text-fg-muted hover:bg-hover text-fg-muted hover:bg-hover'
             }`}
           >
@@ -876,7 +876,7 @@ function ConfirmationDialog({
         title: 'Restore the full card from this revision?',
         description: `Your current draft will be replaced with the "${formatSnapshotLabel(action.metadata.source)}" revision from ${new Date(action.metadata.createdAt).toLocaleString()}. A rollback snapshot will still be created automatically.`,
         confirmLabel: 'Restore card',
-        confirmClassName: 'bg-inverse text-fg-inverse hover:opacity-90',
+        confirmClassName: 'bg-accent text-accent-fg hover:opacity-90',
       }
       : action.kind === 'restore-section'
         ? {
@@ -884,7 +884,7 @@ function ConfirmationDialog({
           title: `Restore ${action.entry.label}?`,
           description: `Only this section will be restored from the "${formatSnapshotLabel(action.metadata.source)}" revision. Other sections remain unchanged.`,
           confirmLabel: 'Restore section',
-          confirmClassName: 'bg-inverse text-fg-inverse hover:opacity-90',
+          confirmClassName: 'bg-accent text-accent-fg hover:opacity-90',
         }
         : {
           eyebrow: 'Update base card',
@@ -1069,7 +1069,7 @@ function SnapshotSummary({
             onClick={onRestore}
             disabled={isBusy || changedSectionCount === 0 || isSnapshotMissing}
             title={restoreDisabledReason}
-            className="inline-flex items-center gap-2 rounded-lg bg-inverse px-3 py-2 text-sm font-medium text-fg-inverse transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-fg transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RotateCcw className="h-4 w-4" />
             Restore card
@@ -1547,7 +1547,7 @@ export function CharacterHistoryModal({
               type="button"
               onClick={() => void handleCreateSnapshot()}
               disabled={isBusy}
-              className="inline-flex items-center gap-2 rounded-lg bg-inverse px-3 py-2 text-sm font-medium text-fg-inverse transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-fg transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
               Save snapshot

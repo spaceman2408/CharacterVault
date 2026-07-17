@@ -57,7 +57,7 @@ export const SliderControl: React.FC<SliderControlProps> = ({
           onChange={(e) => onChange(parseFloat(e.target.value))}
           className="w-full h-2 bg-hover rounded-lg appearance-none cursor-pointer accent-accent focus:outline-none focus:ring-2 focus:ring-accent/50"
           style={{
-            background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${percentage}%, var(--hover) ${percentage}%, var(--hover) 100%)`,
+            background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${percentage}%, var(--muted) ${percentage}%, var(--muted) 100%)`,
           }}
         />
         <div className="flex justify-between items-center mt-1.5">

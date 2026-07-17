@@ -452,23 +452,9 @@ function createToolbarPanel(
     pointer-events: none;
   `;
 
-  // Dropdown menu
+  // Dropdown menu — stacked above search panel via CSS (see index.css)
   const dropdown = document.createElement('div');
-  dropdown.style.cssText = `
-    position: absolute;
-    top: 100%;
-    left: 0;
-    margin-top: 4px;
-    background: var(--ai-toolbar-bg);
-    border: 1px solid var(--ai-toolbar-border);
-    border-radius: 6px;
-    padding: 4px;
-    display: none;
-    flex-direction: column;
-    gap: 2px;
-    z-index: 100;
-    min-width: 120px;
-  `;
+  dropdown.className = 'ai-toolbar-more-dropdown';
 
   const polishButtons = new Map<AIOperation, HTMLButtonElement>();
   for (const op of polishOps) {
@@ -479,7 +465,6 @@ function createToolbarPanel(
 
   const moreContainer = document.createElement('div');
   moreContainer.className = 'ai-toolbar-more';
-  moreContainer.style.cssText = 'position: relative;';
   moreContainer.appendChild(moreBtn);
   moreContainer.appendChild(dropdown);
   toolbarContainer.appendChild(moreContainer);

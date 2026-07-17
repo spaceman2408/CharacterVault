@@ -116,7 +116,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(({
       <div
         className={`relative max-w-[90%] rounded-lg px-3 py-2 group ${animationClass} ${
           isUser
-            ? 'bg-inverse text-fg-inverse rounded-br-none'
+            ? 'bg-accent text-accent-fg rounded-br-none'
             : 'bg-surface border border-border text-fg rounded-bl-none'
         }`}
       >

@@ -199,7 +199,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
             <button
               type="button"
               onClick={closeModelPicker}
-              className="shrink-0 min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-fg-muted hover:text-fg hover:bg-hover focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
               aria-label="Close"
             >
               <X className="w-5 h-5" />

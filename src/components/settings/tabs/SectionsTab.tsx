@@ -49,7 +49,7 @@ export const SectionsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => 
             setLocalSectionOrder([...DEFAULT_SECTION_ORDER]);
             setLocalHiddenSections([]);
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors mb-4 focus:outline-none focus:ring-2 focus:ring-accent/50"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors mb-4 focus:outline-none focus:ring-2 focus:ring-accent/50"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           Reset to Defaults

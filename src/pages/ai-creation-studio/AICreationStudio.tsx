@@ -278,7 +278,7 @@ export const AICreationStudio: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={handleBackToLibrary}
-              className="p-2 rounded-lg transition-all duration-200 active:scale-95 text-fg-muted hover:text-fg hover:bg-hover"
+              className="p-2 rounded-lg transition-all duration-200 active:scale-95 text-fg-muted hover:text-accent hover:bg-accent-soft"
               title="Back to Library"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -291,7 +291,7 @@ export const AICreationStudio: React.FC = () => {
 
           <button
             onClick={handleOpenSettings}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
           >
             <Settings2 className="w-4 h-4" />
             <span className="hidden sm:inline">Settings</span>
@@ -321,7 +321,7 @@ export const AICreationStudio: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
                   <button
                     onClick={handleOpenCharacter}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-inverse text-fg-inverse font-medium rounded-xl hover:opacity-90 transition-opacity"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-accent text-accent-fg font-medium rounded-xl hover:opacity-90 transition-opacity"
                   >
                     <ExternalLink className="w-4 h-4" />
                     Open Character
@@ -558,7 +558,7 @@ export const AICreationStudio: React.FC = () => {
                       <button
                         onClick={handleSaveToVault}
                         disabled={isSaving || !state.generatedData.name}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-inverse text-fg-inverse font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 px-6 py-2.5 bg-accent text-accent-fg font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSaving ? (
                           <Loader2 className="w-4 h-4 animate-spin" />

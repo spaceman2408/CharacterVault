@@ -95,10 +95,10 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
 
   return (
     <div className="space-y-6">
-      <SettingsCard variant="gradient">
-        <div className="flex items-center gap-2 mb-3">
-          <Wand2 className="w-4 h-4 text-fg-muted" />
-          <span className="text-sm font-semibold text-fg-muted">
+      <SettingsCard>
+        <div className="mb-3 flex items-center gap-2">
+          <Wand2 className="h-4 w-4 text-fg-muted" />
+          <span className="text-sm font-semibold text-fg">
             Quick Presets
           </span>
         </div>
@@ -107,7 +107,7 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             <button
               key={preset}
               onClick={() => handlePreset(preset)}
-              className="flex-1 px-3 py-2 text-sm font-medium bg-surface hover:bg-hover text-fg-muted rounded-lg transition-all duration-200 border border-border hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm font-medium text-fg-muted transition-colors hover:border-accent/40 hover:bg-accent-soft hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             >
               <span className="capitalize">{preset}</span>
             </button>

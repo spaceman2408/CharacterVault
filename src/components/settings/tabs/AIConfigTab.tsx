@@ -258,7 +258,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                   onClick={() => startSignIn()}
                   disabled={isSigningIn}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
-                  bg-inverse text-fg-inverse
+                  bg-accent text-accent-fg
                   hover:opacity-90 active:scale-[0.99] transition-all duration-200
                   disabled:opacity-60 disabled:cursor-not-allowed"
                 >

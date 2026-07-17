@@ -45,9 +45,9 @@ const IconButton: React.FC<IconButtonProps> = ({
   const baseStyle = 'p-2 rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed';
   const variants = {
     ghost:
-      'text-fg-muted hover:text-fg hover:bg-hover',
+      'text-fg-muted hover:text-accent hover:bg-accent-soft',
     primary:
-      'bg-inverse text-fg-inverse hover:opacity-90 shadow-sm',
+      'bg-accent text-accent-fg hover:opacity-90 shadow-sm',
     danger:
       'text-fg-subtle hover:text-danger hover:bg-danger-soft',
   };
@@ -242,7 +242,7 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
                 // This can happen if permission is denied
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
           >
             <ClipboardPaste className="w-4 h-4" />
             Paste from Clipboard
@@ -250,7 +250,7 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
           <button
             type="submit"
             disabled={!text.trim()}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-inverse text-fg-inverse rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-accent text-accent-fg rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             <Upload className="w-4 h-4" />
             Load Preview
@@ -350,7 +350,7 @@ export const ImportPage: React.FC = () => {
             <div className="flex gap-3">
               <button
                 onClick={importCharacter}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-inverse text-fg-inverse font-medium rounded-xl hover:opacity-90 transition-opacity"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-accent text-accent-fg font-medium rounded-xl hover:opacity-90 transition-opacity"
               >
                 <Upload className="w-4 h-4" />
                 Import Character
@@ -394,7 +394,7 @@ export const ImportPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
               <button
                 onClick={openImportedCharacter}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-inverse text-fg-inverse font-medium rounded-xl hover:opacity-90 transition-opacity"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-accent text-accent-fg font-medium rounded-xl hover:opacity-90 transition-opacity"
               >
                 <ExternalLink className="w-4 h-4" />
                 Open Character

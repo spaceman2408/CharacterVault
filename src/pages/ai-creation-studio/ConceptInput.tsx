@@ -247,7 +247,7 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
             <button
               onClick={onGenerate}
               disabled={!canGenerate}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-inverse text-fg-inverse font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-accent text-accent-fg font-semibold rounded-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 shadow-sm"
             >
               {isGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

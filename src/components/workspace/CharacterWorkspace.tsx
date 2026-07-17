@@ -199,8 +199,8 @@ function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsPr
                 onClick={() => onSectionChange(section.id)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
                   ${isActive 
-                    ? 'bg-inverse text-fg-inverse shadow-sm' 
-                    : 'text-fg-muted hover:bg-hover/50'
+                    ? 'bg-accent text-accent-fg shadow-sm' 
+                    : 'text-fg-muted hover:bg-accent-soft hover:text-accent'
                   }`}
               >
                 <Icon className="w-4 h-4" />
@@ -215,10 +215,10 @@ function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsPr
       <div className="md:hidden relative" ref={dropdownRef}>
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-hover/50 transition-colors"
+          className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-accent-soft transition-colors"
         >
           <div className="flex items-center gap-2">
-            <ActiveIcon className="w-4 h-4 text-fg-muted" />
+            <ActiveIcon className="w-4 h-4 text-accent" />
             <span className="font-medium text-fg">
               {activeSectionData?.label || 'Select Section'}
             </span>
@@ -247,11 +247,11 @@ function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsPr
                   }}
                   className={`flex items-center gap-2 w-full px-4 py-3 text-sm transition-colors
                     ${isActive 
-                      ? 'bg-muted text-fg font-medium' 
-                      : 'text-fg-muted hover:bg-hover/50'
+                      ? 'bg-accent-soft text-accent font-medium' 
+                      : 'text-fg-muted hover:bg-accent-soft hover:text-accent'
                     }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-fg-muted' : ''}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-accent' : ''}`} />
                   {section.label}
                 </button>
               );
@@ -364,7 +364,7 @@ function ImageEditor(): React.ReactElement {
             onChange={handleInputChange}
             className="hidden"
           />
-          <span className="inline-flex items-center gap-2 px-4 py-2 bg-inverse hover:opacity-90 
+          <span className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-accent-fg hover:opacity-90 
             text-white rounded-xl font-medium transition-colors duration-200 cursor-pointer">
             <Upload className="w-4 h-4" />
             {currentCharacter?.imageData ? 'Change Image' : 'Upload Image'}
@@ -444,8 +444,8 @@ function CharacterHeader({
       <div className="flex items-center gap-3 md:gap-4">
         <button
           onClick={closeCharacter}
-          className="p-2 text-fg-muted hover:text-fg
-            hover:bg-hover/50 rounded-xl transition-all duration-200
+          className="p-2 text-fg-muted hover:text-accent
+            hover:bg-accent-soft rounded-xl transition-all duration-200
             focus:outline-none focus:ring-2 focus:ring-accent active:scale-95 shrink-0"
           title="Back to characters"
         >
@@ -483,8 +483,8 @@ function CharacterHeader({
               onClick={onToggleContext}
               className={`p-2 rounded-lg transition-colors ${
                 isContextOpen 
-                  ? 'bg-inverse text-fg-inverse' 
-                  : 'text-fg-muted hover:text-fg hover:bg-hover/50'
+                  ? 'bg-accent text-accent-fg' 
+                  : 'text-fg-muted hover:text-accent hover:bg-accent-soft'
               }`}
               title="Toggle AI Context Panel"
             >
@@ -494,8 +494,8 @@ function CharacterHeader({
               onClick={onToggleChat}
               className={`p-2 rounded-lg transition-colors ${
                 isChatOpen 
-                  ? 'bg-inverse text-fg-inverse' 
-                  : 'text-fg-muted hover:text-fg hover:bg-hover/50'
+                  ? 'bg-accent text-accent-fg' 
+                  : 'text-fg-muted hover:text-accent hover:bg-accent-soft'
               }`}
               title="Toggle Ask AI Panel"
             >
@@ -511,8 +511,8 @@ function CharacterHeader({
               onClick={onToggleContext}
               className={`hidden lg:flex p-2 rounded-lg transition-colors ${
                 isContextOpen 
-                  ? 'bg-hover text-fg' 
-                  : 'text-fg-muted hover:text-fg hover:bg-hover/50'
+                  ? 'bg-accent text-accent-fg' 
+                  : 'text-fg-muted hover:text-accent hover:bg-accent-soft'
               }`}
               title={isContextOpen ? 'Hide AI Context Panel' : 'Show AI Context Panel'}
             >
@@ -522,8 +522,8 @@ function CharacterHeader({
               onClick={onToggleChat}
               className={`hidden lg:flex p-2 rounded-lg transition-colors ${
                 isChatOpen 
-                  ? 'bg-hover text-fg' 
-                  : 'text-fg-muted hover:text-fg hover:bg-hover/50'
+                  ? 'bg-accent text-accent-fg' 
+                  : 'text-fg-muted hover:text-accent hover:bg-accent-soft'
               }`}
               title={isChatOpen ? 'Hide Ask AI Panel' : 'Show Ask AI Panel'}
             >
@@ -538,7 +538,7 @@ function CharacterHeader({
           onClick={onOpenRevisions}
           className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
             text-fg-muted
-            hover:bg-hover/50 rounded-xl
+            hover:bg-accent-soft hover:text-accent rounded-xl
             transition-colors duration-200"
           title="Open revisions"
         >
@@ -550,7 +550,7 @@ function CharacterHeader({
           onClick={onOpenSettings}
           className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
             text-fg-muted
-            hover:bg-hover/50 rounded-xl
+            hover:bg-accent-soft hover:text-accent rounded-xl
             transition-colors duration-200"
           title="AI Settings"
         >
@@ -629,7 +629,7 @@ function ExportDropdown({ onExportJSON, onExportPNG }: ExportDropdownProps): Rea
         onClick={handleToggle}
         className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium
           text-fg-muted
-          hover:bg-hover/50 rounded-xl
+          hover:bg-accent-soft hover:text-accent rounded-xl
           transition-colors duration-200"
         title="Export character"
       >
@@ -646,14 +646,14 @@ function ExportDropdown({ onExportJSON, onExportPNG }: ExportDropdownProps): Rea
         >
           <button
             onClick={handleExportJSON}
-            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-fg-muted hover:bg-hover/50 transition-colors"
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-fg-muted hover:bg-accent-soft hover:text-accent transition-colors"
           >
             <FileJson className="w-4 h-4" />
             <span>Export JSON</span>
           </button>
           <button
             onClick={handleExportPNG}
-            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-fg-muted hover:bg-hover/50 transition-colors"
+            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-fg-muted hover:bg-accent-soft hover:text-accent transition-colors"
           >
             <ImageIcon className="w-4 h-4" />
             <span>Export PNG</span>

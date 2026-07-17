@@ -137,7 +137,7 @@ function createFontSizePopup(
     gap: ${isMobile ? '12px' : '8px'};
     min-width: ${isMobile ? '200px' : '180px'};
     max-width: ${isMobile ? 'calc(100vw - 24px)' : '220px'};
-    z-index: 100;
+    z-index: 30;
   `;
 
   // Header with label and value

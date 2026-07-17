@@ -208,7 +208,7 @@ export function ContextPanel({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setContextSectionIds([])}
-            className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
+            className="p-1.5 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors disabled:opacity-50"
             title="Clear all context"
             disabled={contextSectionIds.length === 0}
           >
@@ -217,7 +217,7 @@ export function ContextPanel({
           {isMobile && onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-lg transition-colors"
+              className="p-1.5 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors"
               title="Close Context Panel"
             >
               <X className="w-4 h-4" />

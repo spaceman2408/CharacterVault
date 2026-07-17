@@ -67,8 +67,8 @@ const IconButton = ({
 }) => {
   const baseStyle = "p-2 rounded-lg transition-all duration-200 active:scale-95";
   const variants = {
-    ghost: "text-fg-muted hover:text-fg hover:bg-hover",
-    primary: "bg-inverse text-fg-inverse hover:opacity-90 shadow-sm",
+    ghost: "text-fg-muted hover:text-accent hover:bg-accent-soft",
+    primary: "bg-accent text-accent-fg hover:opacity-90 shadow-sm",
     danger: "text-fg-subtle hover:text-danger hover:bg-danger-soft"
   };
 
@@ -115,7 +115,7 @@ const cardActionBtnClass =
   'inline-flex items-center justify-center min-h-9 min-w-9 sm:min-h-8 sm:min-w-8 p-2 sm:p-1.5 ' +
   'bg-surface/95 backdrop-blur-sm rounded-lg shadow-sm ' +
   'text-fg-muted hover:text-fg hover:bg-surface ' +
-  'hover:text-fg hover:bg-hover ' +
+  'hover:text-fg hover:bg-accent-soft hover:text-accent ' +
   'active:scale-95 transition-colors disabled:opacity-50 touch-manipulation';
 
 function CharacterCard({
@@ -315,7 +315,7 @@ function CharacterCard({
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-fg hover:bg-hover active:bg-hover touch-manipulation"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-fg hover:bg-accent-soft hover:text-accent active:bg-hover touch-manipulation"
             onClick={() => void handleExport('png')}
           >
             <ImageIcon className="w-4 h-4 shrink-0 text-fg-muted" />
@@ -324,7 +324,7 @@ function CharacterCard({
           <button
             type="button"
             role="menuitem"
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-fg hover:bg-hover active:bg-hover touch-manipulation"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 sm:py-2 text-sm text-fg hover:bg-accent-soft hover:text-accent active:bg-hover touch-manipulation"
             onClick={() => void handleExport('json')}
           >
             <FileJson className="w-4 h-4 shrink-0 text-fg-muted" />
@@ -818,7 +818,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button
               type="button"
               onClick={() => setStatusMessage(null)}
-              className="rounded p-0.5 text-fg-subtle hover:bg-hover hover:text-fg hover:bg-hover hover:text-fg"
+              className="rounded p-0.5 text-fg-subtle hover:bg-accent-soft hover:text-accent hover:text-fg hover:bg-accent-soft hover:text-accent hover:text-fg"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -864,7 +864,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button 
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors disabled:opacity-50"
             >
               {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               Import
@@ -873,7 +873,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="sm:hidden p-2 text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
+              className="sm:hidden p-2 text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors disabled:opacity-50"
               title="Import"
             >
               {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -882,7 +882,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button
               onClick={handleBackupClick}
               disabled={characterListItems.length === 0 || isExportingVault}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors disabled:opacity-50"
               title="Download a ZIP backup of every character"
             >
               {isExportingVault ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -892,7 +892,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <button
               onClick={handleBackupClick}
               disabled={characterListItems.length === 0 || isExportingVault}
-              className="sm:hidden p-2 text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50"
+              className="sm:hidden p-2 text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors disabled:opacity-50"
               title="Backup vault"
             >
               {isExportingVault ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -900,7 +900,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
             <button
               onClick={() => setIsCreating(true)}
-              className="sm:hidden p-2 text-fg-muted hover:bg-hover rounded-lg transition-colors"
+              className="sm:hidden p-2 text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
               title="Create New"
             >
               <Plus className="w-4 h-4" />
@@ -912,7 +912,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               href="#/ai-create"
               className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
               text-fg-muted
-              hover:bg-hover/50 rounded-xl
+              hover:bg-accent-soft hover:text-accent rounded-xl
               transition-colors duration-200"
             >
               <Sparkles className="w-4 h-4" />
@@ -921,7 +921,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
 
             <a
               href="#/ai-create"
-              className="sm:hidden p-2 text-fg-muted hover:bg-hover rounded-lg transition-colors"
+              className="sm:hidden p-2 text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
               title="AI Create"
             >
               <Sparkles className="w-4 h-4" />
@@ -931,7 +931,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               onClick={() => setIsCreating(true)}
               className="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium
             text-fg-muted
-            hover:bg-hover/50 rounded-xl
+            hover:bg-accent-soft hover:text-accent rounded-xl
             transition-colors duration-200"
             >
               <Plus className="w-4 h-4" />
@@ -954,7 +954,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
               href={`${import.meta.env.BASE_URL}docs/`}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-lg transition-all duration-200 active:scale-95 text-fg-muted hover:text-fg hover:bg-hover"
+              className="p-2 rounded-lg transition-all duration-200 active:scale-95 text-fg-muted hover:text-accent hover:bg-accent-soft"
               title="Documentation"
             >
               <BookOpen className="w-4 h-4" />
@@ -998,7 +998,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                 <button
                   type="submit"
                   disabled={!newCharacterName.trim()}
-                  className="px-4 py-2 bg-inverse text-fg-inverse rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+                  className="px-4 py-2 bg-accent text-accent-fg rounded-lg text-sm font-medium disabled:opacity-50 whitespace-nowrap"
                 >
                   Create
                 </button>
@@ -1027,7 +1027,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                   onClick={() => handleSortChange('name')}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                     sortMode === 'name'
-                      ? 'bg-inverse text-fg-inverse'
+                      ? 'bg-accent text-accent-fg'
                       : 'text-fg-muted hover:text-fg'
                   }`}
                 >
@@ -1038,7 +1038,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                   onClick={() => handleSortChange('recent')}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                     sortMode === 'recent'
-                      ? 'bg-inverse text-fg-inverse'
+                      ? 'bg-accent text-accent-fg'
                       : 'text-fg-muted hover:text-fg'
                   }`}
                 >
@@ -1055,7 +1055,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                     <p className="text-[10px] font-bold text-fg-subtle uppercase tracking-wider">Continue</p>
                     <p className="text-sm font-semibold max-w-37.5 truncate">{lastActive.name}</p>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-inverse group-hover:text-fg-inverse transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center group-hover:bg-accent group-hover:text-accent-fg transition-colors">
                     <Play className="w-4 h-4 fill-current" />
                   </div>
                 </button>
@@ -1099,7 +1099,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             {!searchQuery && (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="px-6 py-2.5 border border-border-strong rounded-xl hover:bg-hover transition-colors font-medium"
+                className="px-6 py-2.5 border border-border-strong rounded-xl hover:bg-accent-soft hover:text-accent transition-colors font-medium"
               >
                 Import Card
               </button>
@@ -1174,7 +1174,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <div className="flex gap-3 justify-end">
               <button
                 onClick={handleDeleteCancel}
-                className="px-4 py-2 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -1205,7 +1205,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
             <div className="flex gap-3 justify-end">
               <button
                 onClick={handleCopyCancel}
-                className="px-4 py-2 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -1255,7 +1255,7 @@ function CharacterSelectionView({ onReplayTutorial }: { onReplayTutorial: () => 
                 type="button"
                 onClick={handleBackupCancel}
                 disabled={isExportingVault}
-                className="px-4 py-2.5 sm:py-2 text-sm font-medium text-fg-muted hover:bg-hover rounded-lg transition-colors disabled:opacity-50 touch-manipulation"
+                className="px-4 py-2.5 sm:py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors disabled:opacity-50 touch-manipulation"
               >
                 Cancel
               </button>
