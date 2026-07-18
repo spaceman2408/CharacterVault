@@ -147,6 +147,26 @@ export function CharacterSelectionView({
           onBackupCancel={io.handleBackupCancel}
         />
 
+        <div className="mb-6 flex items-start gap-2 rounded-xl border border-border bg-surface/60 px-3 py-2.5 text-xs text-fg-muted sm:items-center">
+          <svg
+            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fg-subtle sm:mt-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+            />
+          </svg>
+          <span>
+            Thumbnails appear blurry to save memory. Your full images are preserved in the card when
+            you export.
+          </span>
+        </div>
+
         <VaultToolbar
           totalCount={characterListItems.length}
           filteredCount={library.sortedCharacters.length}
@@ -187,22 +207,6 @@ export function CharacterSelectionView({
           onImportClick={io.openFilePicker}
         />
       </main>
-
-      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="flex items-center justify-center gap-2 text-xs text-fg-subtle">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
-            />
-          </svg>
-          <span>
-            Thumbnails appear blurry to save memory. Your full images are preserved in the card when
-            you export.
-          </span>
-        </div>
-      </footer>
     </div>
   );
 }
