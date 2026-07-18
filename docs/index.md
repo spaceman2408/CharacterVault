@@ -19,3 +19,4 @@ CharacterVault is a browser-based tool for building character cards with the V2/
 - [Creating & Editing Characters](/getting-started/creating-characters)
 - [Configure the AI assistant](/configuration/ai-setup)
 - [FAQ](/faq)
+- [Privacy](/privacy)

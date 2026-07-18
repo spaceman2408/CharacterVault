@@ -261,3 +261,13 @@ Your browser is most likely blocking the popup that opens NanoGPT's authorizatio
 ::: details How do I report a bug or request a feature?
 Visit the [Character Vault GitHub repository](https://github.com/spaceman2408/CharacterVault) to open an issue.
 :::
+
+## Privacy
+
+::: details Is Character Vault private? Where is my data stored?
+Yes for core use: character cards and settings stay in **your browser** (IndexedDB and related local storage). There is no CharacterVault account and no CharacterVault cloud library.
+
+Optional AI features send the content you choose to the **AI provider you configure**. The public site is hosted on GitHub Pages, which may process normal website access logs under GitHub’s policies.
+
+See the full [Privacy](/privacy) notice for details.
+:::

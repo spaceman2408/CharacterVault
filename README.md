@@ -75,6 +75,10 @@ Topics include:
 
 ---
 
+## Privacy
+
+Character cards stay in your browser. See the [Privacy](https://spaceman2408.github.io/CharacterVault/docs/privacy) notice for hosting and optional AI details.
+
 ## License
 
 GNU General Public License v3.0 — See [LICENSE](LICENSE)

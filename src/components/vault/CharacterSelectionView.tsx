@@ -207,6 +207,55 @@ export function CharacterSelectionView({
           onImportClick={io.openFilePicker}
         />
       </main>
+
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 pt-2">
+        <nav
+          aria-label="Site"
+          className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-fg-subtle"
+        >
+          <a
+            href={`${import.meta.env.BASE_URL}docs/privacy`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-accent transition-colors"
+          >
+            Privacy
+          </a>
+          <span className="text-border" aria-hidden="true">
+            ·
+          </span>
+          <a
+            href={`${import.meta.env.BASE_URL}docs/`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-accent transition-colors"
+          >
+            Docs
+          </a>
+          <span className="text-border" aria-hidden="true">
+            ·
+          </span>
+          <a
+            href="https://github.com/spaceman2408/CharacterVault"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-accent transition-colors"
+          >
+            GitHub
+          </a>
+          <span className="text-border" aria-hidden="true">
+            ·
+          </span>
+          <a
+            href="https://github.com/spaceman2408/CharacterVault/blob/main/LICENSE"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-accent transition-colors"
+          >
+            GPL-3.0
+          </a>
+        </nav>
+      </footer>
     </div>
   );
 }
