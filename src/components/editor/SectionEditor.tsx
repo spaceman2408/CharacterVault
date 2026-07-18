@@ -164,13 +164,13 @@ function TagsFieldEditor({ tags, onChange, label, description }: TagsFieldEditor
         {currentTags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md px-2 text-xs font-medium bg-muted text-fg"
+            className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border border-accent/25 bg-accent-soft px-2 text-xs font-medium text-accent"
           >
             <span className="truncate">{tag}</span>
             <button
               type="button"
               onClick={() => removeTag(tag)}
-              className="rounded-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent/30 text-fg0 hover:text-danger"
+              className="rounded-sm text-accent/70 transition-colors hover:text-danger focus:outline-none focus:ring-2 focus:ring-accent/30"
               aria-label={`Remove ${tag}`}
             >
               x
