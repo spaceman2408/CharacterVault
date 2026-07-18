@@ -212,7 +212,7 @@ export function AIChatPanel({
               </>
             ) : (
               <p className="text-xs text-fg-subtle">
-                No context pinned — use the AI Context panel so Orion can see card sections.
+                No context pinned. Use the AI Context panel so Orion can see card sections.
               </p>
             )}
           </div>

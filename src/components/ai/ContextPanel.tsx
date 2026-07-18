@@ -305,7 +305,7 @@ export function ContextPanel({
 
         {contextSections.length === 0 && !canIncludeActive ? (
           <p className="text-xs text-fg-subtle italic">
-            Nothing selected — pick sections below for Orion and the AI toolbar.
+            Nothing selected. Pick sections below for Orion and the AI toolbar.
           </p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
