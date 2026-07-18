@@ -539,13 +539,17 @@ function HunkedHighlightedText({
 function ImagePreviewCard({
   heading,
   value,
+  showHeading = true,
 }: {
   heading: string;
   value: unknown;
+  showHeading?: boolean;
 }): React.ReactElement {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">{heading}</p>
+      {showHeading ? (
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">{heading}</p>
+      ) : null}
       <div className="flex min-h-32 items-center justify-center rounded-lg border p-2 border-border bg-surface">
         {typeof value === 'string' && value ? (
           <img src={value} alt={heading} className="max-h-40 rounded object-contain" />
@@ -555,6 +559,73 @@ function ImagePreviewCard({
       </div>
     </div>
   );
+}
+
+type DiffPaneSide = 'revision' | 'draft';
+
+/**
+ * Side-by-side on large screens; mobile-only dropdown to toggle one pane at a time.
+ */
+function DualPaneDiffLayout({
+  revisionTitle,
+  draftTitle,
+  revisionContent,
+  draftContent,
+}: {
+  revisionTitle: string;
+  draftTitle: string;
+  revisionContent: React.ReactNode;
+  draftContent: React.ReactNode;
+}): React.ReactElement {
+  const [mobilePane, setMobilePane] = useState<DiffPaneSide>('revision');
+
+  return (
+    <div className="overflow-hidden rounded border border-border bg-muted">
+      <div className="sticky top-0 z-10 border-b border-border bg-muted p-2 lg:hidden">
+        <div className="relative">
+          <select
+            value={mobilePane}
+            onChange={(event) => setMobilePane(event.target.value as DiffPaneSide)}
+            aria-label="Show revision or current draft"
+            className="w-full appearance-none rounded-lg border border-border-strong bg-surface px-3 py-2.5 pr-9 text-sm font-medium text-fg touch-manipulation focus:outline-none focus:ring-2 focus:ring-accent/40"
+          >
+            <option value="revision">{revisionTitle}</option>
+            <option value="draft">{draftTitle}</option>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
+        </div>
+      </div>
+
+      <div className="max-h-96 overflow-y-auto">
+        <div className="grid min-w-0 lg:grid-cols-2">
+          <div
+            className={`min-w-0 border-b border-border p-3 lg:border-b-0 lg:border-r ${
+              mobilePane === 'revision' ? 'block' : 'hidden'
+            } lg:block`}
+          >
+            <p className="mb-2 hidden text-xs font-semibold uppercase tracking-wide text-fg-muted lg:block">
+              {revisionTitle}
+            </p>
+            {revisionContent}
+          </div>
+          <div
+            className={`min-w-0 p-3 ${
+              mobilePane === 'draft' ? 'block' : 'hidden'
+            } lg:block`}
+          >
+            <p className="mb-2 hidden text-xs font-semibold uppercase tracking-wide text-fg-muted lg:block">
+              {draftTitle}
+            </p>
+            {draftContent}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatChangedLineCount(count: number): string {
+  return `${count} ${count === 1 ? 'line' : 'lines'} changed`;
 }
 
 function SyncedDiffView({
@@ -592,37 +663,28 @@ function SyncedDiffView({
   }
 
   return (
-    <div className="max-h-96 overflow-y-auto rounded border border-border bg-muted">
-      <div className="grid min-w-0 lg:grid-cols-2">
-        {/* Revision snapshot */}
-        <div className="min-w-0 border-b p-3 border-border lg:border-b-0 lg:border-r">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-            Revision snapshot · {changedLineCountLeft} {changedLineCountLeft === 1 ? 'line' : 'lines'} changed
-          </p>
-          <div className="space-y-1 overflow-x-auto rounded p-2 bg-bg/50">
-            <HighlightedText
-              lines={snapshotLines}
-              changedToneClassName="bg-warning-soft text-warning-soft-fg"
-              isCode={isCode}
-            />
-          </div>
+    <DualPaneDiffLayout
+      revisionTitle={`Revision snapshot · ${formatChangedLineCount(changedLineCountLeft)}`}
+      draftTitle={`Current draft · ${formatChangedLineCount(changedLineCountRight)}`}
+      revisionContent={(
+        <div className="space-y-1 overflow-x-auto rounded p-2 bg-bg/50">
+          <HighlightedText
+            lines={snapshotLines}
+            changedToneClassName="bg-warning-soft text-warning-soft-fg"
+            isCode={isCode}
+          />
         </div>
-
-        {/* Current draft */}
-        <div className="min-w-0 p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-            Current draft · {changedLineCountRight} {changedLineCountRight === 1 ? 'line' : 'lines'} changed
-          </p>
-          <div className="space-y-1 overflow-x-auto rounded p-2 bg-bg/50">
-            <HighlightedText
-              lines={currentLines}
-              changedToneClassName="bg-success-soft text-success-soft-fg"
-              isCode={isCode}
-            />
-          </div>
+      )}
+      draftContent={(
+        <div className="space-y-1 overflow-x-auto rounded p-2 bg-bg/50">
+          <HighlightedText
+            lines={currentLines}
+            changedToneClassName="bg-success-soft text-success-soft-fg"
+            isCode={isCode}
+          />
         </div>
-      </div>
-    </div>
+      )}
+    />
   );
 }
 
@@ -699,33 +761,26 @@ function CreatorNotesDiffView({
       </div>
 
       {resolvedViewMode === 'css' && hasCssDiffView ? (
-        <div className="max-h-96 overflow-y-auto rounded border border-border bg-muted">
-          <div className="grid min-w-0 lg:grid-cols-2">
-            <div className="min-w-0 border-b p-3 border-border lg:border-b-0 lg:border-r">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                Revision Snapshot · {changedCssLineCountLeft} {changedCssLineCountLeft === 1 ? 'line' : 'lines'} changed
-              </p>
-              <div className="space-y-1 overflow-x-auto rounded p-2 bg-bg/50">
-                <HunkedHighlightedText
-                  lines={snapshotCssLines}
-                  changedToneClassName="bg-warning-soft text-warning-soft-fg"
-                />
-              </div>
+        <DualPaneDiffLayout
+          revisionTitle={`Revision snapshot · ${formatChangedLineCount(changedCssLineCountLeft)}`}
+          draftTitle={`Current CSS · ${formatChangedLineCount(changedCssLineCountRight)}`}
+          revisionContent={(
+            <div className="space-y-1 overflow-x-auto rounded p-2 bg-bg/50">
+              <HunkedHighlightedText
+                lines={snapshotCssLines}
+                changedToneClassName="bg-warning-soft text-warning-soft-fg"
+              />
             </div>
-
-            <div className="min-w-0 p-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                Current CSS · {changedCssLineCountRight} {changedCssLineCountRight === 1 ? 'line' : 'lines'} changed
-              </p>
-              <div className="space-y-1 overflow-x-auto rounded p-2 bg-bg/50">
-                <HunkedHighlightedText
-                  lines={currentCssLines}
-                  changedToneClassName="bg-success-soft text-success-soft-fg"
-                />
-              </div>
+          )}
+          draftContent={(
+            <div className="space-y-1 overflow-x-auto rounded p-2 bg-bg/50">
+              <HunkedHighlightedText
+                lines={currentCssLines}
+                changedToneClassName="bg-success-soft text-success-soft-fg"
+              />
             </div>
-          </div>
-        </div>
+          )}
+        />
       ) : (
         <SyncedDiffView
           snapshotValue={snapshotValue}
@@ -754,35 +809,26 @@ function LorebookDiffView({
   const changedLineCountRight = useMemo(() => currentLines.filter(line => line.changed).length, [currentLines]);
 
   return (
-    <div className="max-h-96 overflow-y-auto rounded border border-border bg-muted">
-      <div className="grid lg:grid-cols-2">
-        {/* Revision snapshot */}
-        <div className="border-b p-3 border-border lg:border-b-0 lg:border-r">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-            Revision snapshot · {changedLineCountLeft} {changedLineCountLeft === 1 ? 'line' : 'lines'} changed
-          </p>
-          <div className="space-y-1 rounded p-2 bg-bg/50">
-            <HighlightedText
-              lines={snapshotLines}
-              changedToneClassName="bg-warning-soft text-warning-soft-fg"
-            />
-          </div>
+    <DualPaneDiffLayout
+      revisionTitle={`Revision snapshot · ${formatChangedLineCount(changedLineCountLeft)}`}
+      draftTitle={`Current draft · ${formatChangedLineCount(changedLineCountRight)}`}
+      revisionContent={(
+        <div className="space-y-1 rounded p-2 bg-bg/50">
+          <HighlightedText
+            lines={snapshotLines}
+            changedToneClassName="bg-warning-soft text-warning-soft-fg"
+          />
         </div>
-
-        {/* Current draft */}
-        <div className="p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-            Current draft · {changedLineCountRight} {changedLineCountRight === 1 ? 'line' : 'lines'} changed
-          </p>
-          <div className="space-y-1 rounded p-2 bg-bg/50">
-            <HighlightedText
-              lines={currentLines}
-              changedToneClassName="bg-success-soft text-success-soft-fg"
-            />
-          </div>
+      )}
+      draftContent={(
+        <div className="space-y-1 rounded p-2 bg-bg/50">
+          <HighlightedText
+            lines={currentLines}
+            changedToneClassName="bg-success-soft text-success-soft-fg"
+          />
         </div>
-      </div>
-    </div>
+      )}
+    />
   );
 }
 
@@ -797,10 +843,16 @@ function SectionPreview({
 }): React.ReactElement {
   if (isImageEntry(entry)) {
     return (
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ImagePreviewCard heading="Revision snapshot" value={entry.snapshotValue} />
-        <ImagePreviewCard heading="Current draft" value={entry.currentValue} />
-      </div>
+      <DualPaneDiffLayout
+        revisionTitle="Revision snapshot"
+        draftTitle="Current draft"
+        revisionContent={
+          <ImagePreviewCard heading="Revision snapshot" value={entry.snapshotValue} showHeading={false} />
+        }
+        draftContent={
+          <ImagePreviewCard heading="Current draft" value={entry.currentValue} showHeading={false} />
+        }
+      />
     );
   }
 
@@ -995,7 +1047,7 @@ function MobileRevisionScroller({
   onDelete: (metadata: SnapshotMetadata) => void;
 }): React.ReactElement {
   return (
-    <div className="overflow-x-auto px-4 pb-4 md:hidden">
+    <div className="overflow-x-auto px-4 pt-3 pb-4 md:hidden">
       <div className="flex gap-3">
         {metadata.map(meta => (
           <div key={meta.id} className="min-w-[16rem] max-w-[16rem] shrink-0">
@@ -1046,21 +1098,21 @@ function SnapshotSummary({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <h3 className="text-xl font-semibold text-fg">{formatSnapshotLabel(metadata.source)}</h3>
-            <p className="text-sm text-fg-muted">{formatSnapshotDescription(metadata.source)}</p>
+          <p className="text-sm text-fg-muted">{formatSnapshotDescription(metadata.source)}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:items-center">
           {isBaseline && (
             <button
               type="button"
               onClick={onUpdateBaseline}
               disabled={isBusy || !canUpdateBaseline}
               title={canUpdateBaseline ? undefined : 'Accept the current draft as the new base card'}
-              className="inline-flex items-center gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2 text-sm font-medium text-warning-soft-fg transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-warning/40 bg-warning-soft px-3 py-2.5 text-sm font-medium text-warning-soft-fg transition-colors touch-manipulation hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:w-auto sm:justify-start sm:py-2"
             >
-              <Check className="h-4 w-4" />
+              <Check className="h-4 w-4 shrink-0" />
               Update base card
             </button>
           )}
@@ -1069,9 +1121,9 @@ function SnapshotSummary({
             onClick={onRestore}
             disabled={isBusy || changedSectionCount === 0 || isSnapshotMissing}
             title={restoreDisabledReason}
-            className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-fg transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2.5 text-sm font-medium text-accent-fg transition-colors touch-manipulation hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:w-auto sm:justify-start sm:py-2"
           >
-            <RotateCcw className="h-4 w-4" />
+            <RotateCcw className="h-4 w-4 shrink-0" />
             Restore card
           </button>
         </div>
