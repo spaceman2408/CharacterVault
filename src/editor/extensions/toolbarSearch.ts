@@ -543,10 +543,9 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   });
   closeBtn.addEventListener('click', () => { closeToolbarSearch(view); view.focus(); });
 
-  // Replace current match and move to next
+  // replaceNext already replaces the current match and selects the next one
   replaceBtn.addEventListener('click', () => {
     replaceNext(view);
-    findNext(view);
     refreshCount();
   });
 
