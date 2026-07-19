@@ -14,6 +14,7 @@ import { markdownComponents, markdownRehypePlugins } from '../config/markdownCom
 import { ReasoningSection } from './ReasoningSection';
 import { CopyButton } from './CopyButton';
 import { RegenerateButton } from './RegenerateButton';
+import { DeleteMessageButton } from './DeleteMessageButton';
 
 /**
  * Props for the ChatMessage component
@@ -31,6 +32,8 @@ export interface ChatMessageProps {
   isProcessing: boolean;
   /** Callback to regenerate the response */
   onRegenerate: () => void;
+  /** Delete this message and everything after it */
+  onDelete: (messageId: string) => void;
 }
 
 const STATS_TOOLTIP_MAX_WIDTH = 280;
@@ -197,7 +200,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(({
   chatHistoryLength,
   showReasoning = true,
   isProcessing,
-  onRegenerate
+  onRegenerate,
+  onDelete,
 }) => {
   const isUser = message.role === 'user';
   const animationClass = message.suppressInitialAnimation ? '' : 'message-animate';
@@ -212,7 +216,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(({
         }`}
       >
         {isUser ? (
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          <>
+            <p className="text-sm whitespace-pre-wrap pr-8">{message.content}</p>
+            <div className="absolute top-1.5 right-1.5 flex gap-0.5">
+              <DeleteMessageButton
+                onDelete={() => onDelete(message.id)}
+                disabled={isProcessing}
+                variant="onAccent"
+              />
+            </div>
+          </>
         ) : (
           <div className="text-sm prose prose-sm dark:prose-invert max-w-none pb-6">
             {message.reasoning && showReasoning !== false && (
@@ -232,6 +245,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(({
                 chatHistoryLength={chatHistoryLength}
                 onRegenerate={onRegenerate}
                 isProcessing={isProcessing}
+              />
+              <DeleteMessageButton
+                onDelete={() => onDelete(message.id)}
+                disabled={isProcessing}
               />
             </div>
           </div>

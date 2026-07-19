@@ -12,6 +12,7 @@ import { generateThumbnail } from '../../utils/thumbnail';
 import { SectionEditor } from '../editor/SectionEditor';
 import { ContextPanel } from '../ai/ContextPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
+import { usePersistedPanelWidth } from '../ai/hooks';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { CharacterHistoryModal } from '../history/CharacterHistoryModal';
 import { characterExportService } from '../../services/CharacterExportService';
@@ -778,6 +779,15 @@ function CharacterWorkspaceInner({
     }
   }, [visibleSections, activeSection, setActiveSection]);
 
+  const {
+    width: chatPanelWidth,
+    isDragging: isChatResizing,
+    onResizePointerDown: onChatResizePointerDown,
+  } = usePersistedPanelWidth({
+    storageKey: 'charactervault.ui.aiChatPanelWidth',
+    enabled: !isMobile,
+  });
+
   const toggleContext = () => setIsContextOpen(!isContextOpen);
   const toggleChat = () => setIsChatOpen(!isChatOpen);
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
@@ -785,7 +795,7 @@ function CharacterWorkspaceInner({
   const isDesktop = !isMobile;
   const isTightLayout = isDesktop && isContextOpen && isChatOpen;
   const isEdgeToEdgeLayout = isDesktop && (!isContextOpen || !isChatOpen);
-  
+
   // Close panels when clicking backdrop on mobile
   const closePanels = () => {
     if (isMobile) {
@@ -885,20 +895,40 @@ function CharacterWorkspaceInner({
           </div>
         </main>
 
-        {/* Right Panel: Ask AI */}
-        <aside 
+        {/* Right Panel: Ask AI (desktop width controlled + drag resize) */}
+        <aside
           className={`
+            relative
             ${isChatOpen && isMobile ? 'fixed top-0 right-0 left-auto z-40 w-80 shadow-2xl translate-x-0 h-dvh safe-area-bottom' : ''}
             ${!isChatOpen && isMobile ? 'fixed top-0 right-0 left-auto z-40 w-80 shadow-2xl translate-x-full h-dvh safe-area-bottom' : ''}
-            ${isChatOpen && !isMobile ? 'lg:w-80 xl:w-96 translate-x-0' : ''}
-            ${!isChatOpen && !isMobile ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden' : ''}
-            transition-all duration-300 ease-in-out
+            ${isChatOpen && !isMobile ? 'translate-x-0' : ''}
+            ${!isChatOpen && !isMobile ? 'opacity-0 overflow-hidden' : ''}
+            ${isChatResizing ? '' : 'transition-all duration-300 ease-in-out'}
             bg-bg
-            border-l border-border
+            ${isChatOpen && !isMobile ? 'border-l border-border' : ''}
             flex flex-col
             shrink-0
           `}
+          style={
+            !isMobile
+              ? {
+                  width: isChatOpen ? chatPanelWidth : 0,
+                }
+              : undefined
+          }
         >
+          {isChatOpen && !isMobile && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize AI chat panel"
+              title="Drag to resize"
+              onPointerDown={onChatResizePointerDown}
+              className="absolute left-0 top-0 bottom-0 w-1.5 -ml-0.5 z-10 cursor-col-resize group touch-none"
+            >
+              <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-transparent group-hover:bg-accent/60 group-active:bg-accent transition-colors" />
+            </div>
+          )}
           <AIChatPanel
             selectedText={selectedText}
             contextEntryIds={contextSectionIds}

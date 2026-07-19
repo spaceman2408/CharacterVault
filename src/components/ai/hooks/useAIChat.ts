@@ -51,6 +51,8 @@ export interface UseAIChatReturn {
   handleRegenerate: () => Promise<void>;
   /** Handle starting a new chat (clears history) */
   handleNewChat: () => void;
+  /** Delete a message and everything after it (rewind) */
+  handleDeleteMessage: (messageId: string) => void;
   /** Handle aborting the current request */
   handleAbort: () => void;
   /** Clear the current error */
@@ -156,6 +158,24 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     typewriter.stopStreaming();
     typewriter.clearDisplay();
   }, [typewriter]);
+
+  /**
+   * Remove the message at messageId and every message after it.
+   * No-op while a request is in flight (avoids fighting the stream).
+   */
+  const handleDeleteMessage = useCallback(
+    (messageId: string) => {
+      if (isProcessing) return;
+
+      setChatHistory(prev => {
+        const index = prev.findIndex(m => m.id === messageId);
+        if (index === -1) return prev;
+        return prev.slice(0, index);
+      });
+      setError(null);
+    },
+    [isProcessing]
+  );
 
   /**
    * After a reply is committed to history, drop streaming display copies
@@ -488,6 +508,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     handleAsk,
     handleRegenerate,
     handleNewChat,
+    handleDeleteMessage,
     handleAbort,
     clearError,
     isAIConfigured,

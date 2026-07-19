@@ -38,6 +38,7 @@ export function AIChatPanel({
   const [askQuestion, setAskQuestion] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const wasTypingRef = useRef(false);
+  const [contextExpanded, setContextExpanded] = useState(true);
 
   const typewriter = useTypewriter();
 
@@ -49,13 +50,13 @@ export function AIChatPanel({
     handleAsk,
     handleRegenerate,
     handleNewChat,
+    handleDeleteMessage,
     handleAbort,
     clearError,
   } = useAIChat({
     aiConfig,
     samplerSettings,
     promptSettings,
-    // Context is resolved only at ask/regenerate time (not cached in React state)
     enableStreaming: aiConfig.enableStreaming ?? true,
     showReasoning: aiConfig.showReasoning ?? true,
     typewriter,
@@ -69,7 +70,6 @@ export function AIChatPanel({
     dependencies: [chatHistory, typewriter.displayedContent, typewriter.displayedReasoning],
   });
 
-  // Labels only — avoid holding full section text in panel state
   const contextLabels = useMemo(() => {
     return contextEntryIds
       .map(id => CHARACTER_SECTIONS.find(s => s.id === id)?.label ?? id)
@@ -82,7 +82,8 @@ export function AIChatPanel({
     if (typewriter.isReasoningComplete) {
       const container = chatContainerRef.current;
       if (container) {
-        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+        const isNearBottom =
+          container.scrollHeight - container.scrollTop - container.clientHeight < 150;
         if (isNearBottom) {
           scrollToBottom('smooth');
         }
@@ -94,7 +95,8 @@ export function AIChatPanel({
     if (!typewriter.isTyping && wasTypingRef.current) {
       const container = chatContainerRef.current;
       if (container) {
-        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+        const isNearBottom =
+          container.scrollHeight - container.scrollTop - container.clientHeight < 150;
         if (isNearBottom) {
           scrollToBottom('auto');
         }
@@ -133,7 +135,7 @@ export function AIChatPanel({
   const onComposerInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;
     target.style.height = 'auto';
-    target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+    target.style.height = `${Math.min(target.scrollHeight, 160)}px`;
   }, []);
 
   return (
@@ -154,13 +156,13 @@ export function AIChatPanel({
         }
       `}</style>
 
-      {/* Header — mirrors ContextPanel chrome */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50 shrink-0">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-muted/50 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <MessageSquare className="w-4 h-4 text-fg-muted shrink-0" />
-          <h2 className="font-semibold text-fg truncate">Ask Orion</h2>
+          <h2 className="font-semibold text-fg truncate text-sm">Ask Orion</h2>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0">
           {chatHistory.length > 0 && (
             <button
               type="button"
@@ -176,7 +178,8 @@ export function AIChatPanel({
               type="button"
               onClick={onClose}
               className="p-1.5 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors"
-              title="Close AI Chat Panel"
+              title="Close"
+              aria-label="Close AI chat"
             >
               <X className="w-4 h-4" />
             </button>
@@ -184,9 +187,14 @@ export function AIChatPanel({
         </div>
       </div>
 
-      {/* Context status — ties chat to left panel pins */}
-      <div className="px-4 py-2 border-b border-border shrink-0">
-        <div className="flex items-start gap-2">
+      {/* Context status */}
+      <div className="px-3 py-2 border-b border-border shrink-0">
+        <button
+          type="button"
+          onClick={() => setContextExpanded(v => !v)}
+          className="w-full flex items-start gap-2 text-left rounded-lg hover:bg-hover/40 -mx-1 px-1 py-0.5 transition-colors"
+          title={contextExpanded ? 'Collapse context details' : 'Expand context details'}
+        >
           <Layers
             className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${hasContext ? 'text-accent' : 'text-fg-subtle'}`}
           />
@@ -196,19 +204,21 @@ export function AIChatPanel({
                 <p className="text-xs text-fg-muted">
                   <span className="font-medium text-fg">
                     {contextEntryIds.length} section{contextEntryIds.length === 1 ? '' : 's'}
-                  </span>
-                  {' '}in AI context
+                  </span>{' '}
+                  in AI context
                 </p>
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {contextLabels.map(label => (
-                    <span
-                      key={label}
-                      className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-accent-soft text-accent border border-accent/25"
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
+                {contextExpanded && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {contextLabels.map(label => (
+                      <span
+                        key={label}
+                        className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-accent-soft text-accent border border-accent/25"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </>
             ) : (
               <p className="text-xs text-fg-subtle">
@@ -216,7 +226,7 @@ export function AIChatPanel({
               </p>
             )}
           </div>
-        </div>
+        </button>
       </div>
 
       {error && (
@@ -235,10 +245,7 @@ export function AIChatPanel({
       )}
 
       {/* Messages */}
-      <div
-        ref={chatContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3"
-      >
+      <div ref={chatContainerRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3">
         {chatHistory.length === 0 && (
           <div className="flex flex-col items-center text-center px-4 py-10 text-fg-subtle">
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
@@ -250,7 +257,8 @@ export function AIChatPanel({
               {!hasContext && (
                 <>
                   {' '}
-                  Pin sections in <span className="text-fg-muted">AI Context</span> first for better answers.
+                  Pin sections in <span className="text-fg-muted">AI Context</span> first for better
+                  answers.
                 </>
               )}
             </p>
@@ -266,6 +274,7 @@ export function AIChatPanel({
             showReasoning={aiConfig.showReasoning}
             isProcessing={isProcessing}
             onRegenerate={handleRegenerate}
+            onDelete={handleDeleteMessage}
           />
         ))}
 
@@ -308,7 +317,7 @@ export function AIChatPanel({
             onChange={e => setAskQuestion(e.target.value)}
             placeholder="Message Orion…"
             rows={1}
-            className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-30 transition-all"
+            className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-40 transition-all"
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey && !isProcessing && askQuestion.trim()) {
                 e.preventDefault();

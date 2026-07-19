@@ -14,3 +14,6 @@ export type { RegenerateButtonProps } from './RegenerateButton';
 
 export { ChatMessage } from './ChatMessage';
 export type { ChatMessageProps } from './ChatMessage';
+
+export { DeleteMessageButton } from './DeleteMessageButton';
+export type { DeleteMessageButtonProps } from './DeleteMessageButton';
