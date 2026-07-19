@@ -1,14 +1,33 @@
 /**
  * @fileoverview Shared ReactMarkdown components configuration.
  * @module components/ai/config/markdownComponents
- * 
+ *
  * This configuration provides consistent styling for markdown rendering
  * across StreamingText and AIChatPanel components.
  */
 
 import React, { type ReactNode } from 'react';
 import type { Components } from 'react-markdown';
+import type { PluggableList } from 'unified';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import type { Schema } from 'hast-util-sanitize';
 import { CodeBlockCopyButton } from '../components/CodeBlockCopyButton';
+
+/**
+ * Allow a small set of safe HTML tags that models often emit inside
+ * Markdown (especially multi-line table cells). Everything else is stripped.
+ */
+const chatSanitizeSchema: Schema = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), 'br'],
+};
+
+/** rehype plugins shared by chat markdown renderers */
+export const markdownRehypePlugins: PluggableList = [
+  rehypeRaw,
+  [rehypeSanitize, chatSanitizeSchema],
+];
 
 /**
  * Recursively extracts text from markdown AST-rendered React nodes.
@@ -125,6 +144,11 @@ export const markdownComponents: Components = {
   // Style paragraphs
   p({ children }) {
     return <p className="my-1.5">{children}</p>;
+  },
+
+  // Models often use <br> inside table cells for multi-line content
+  br() {
+    return <br />;
   },
 
   // Style tables

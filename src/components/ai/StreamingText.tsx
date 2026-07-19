@@ -9,7 +9,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Components } from 'react-markdown';
-import { markdownComponents } from './config/markdownComponents';
+import { markdownComponents, markdownRehypePlugins } from './config/markdownComponents';
 
 /**
  * Props for the StreamingText component
@@ -124,7 +124,11 @@ export function StreamingText({
   if (renderMarkdown) {
     return (
       <div className={className}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={markdownRehypePlugins}
+          components={components}
+        >
           {content}
         </ReactMarkdown>
         {cursorElement}

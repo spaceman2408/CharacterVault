@@ -73,6 +73,38 @@ async function resolveContextAtCallTime(
   }
 }
 
+function isRequestCancelled(err: unknown): boolean {
+  return err instanceof AIError && err.message === 'Request was cancelled';
+}
+
+/** Build an assistant message from whatever the model streamed before stop. */
+function buildPartialAssistantMessage(
+  content: string,
+  reasoning: string,
+  options: {
+    enableStreaming: boolean;
+    modelId: string;
+    providerId: string | undefined;
+    ttft?: number;
+  }
+): ChatMessage | null {
+  if (!content && !reasoning) return null;
+
+  return {
+    id: generateMessageId(),
+    role: 'assistant',
+    content,
+    reasoning: reasoning || undefined,
+    timestamp: Date.now(),
+    stats: {
+      ttft: options.ttft,
+      modelId: options.modelId,
+      providerId: options.providerId,
+    },
+    suppressInitialAnimation: options.enableStreaming,
+  };
+}
+
 /**
  * Hook that manages AI chat operations including conversation history,
  * streaming, and error handling.
@@ -174,6 +206,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     let firstTokenTime: number | null = null;
     let completedSuccessfully = false;
     let contextArray: string[] = [];
+    let partialContent = '';
+    let partialReasoning = '';
 
     try {
       const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
@@ -196,10 +230,12 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
             }
 
             if (chunk.reasoning) {
+              partialReasoning += chunk.reasoning;
               typewriter.queueReasoningChunk(chunk.reasoning);
             }
 
             if (chunk.content) {
+              partialContent += chunk.content;
               typewriter.markReasoningComplete();
               typewriter.queueContentChunk(chunk.content);
             }
@@ -251,8 +287,19 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       setChatHistory(prev => [...prev, assistantMessage]);
       completedSuccessfully = true;
     } catch (err) {
-      if (err instanceof AIError && err.message === 'Request was cancelled') {
+      if (isRequestCancelled(err)) {
         console.log('[useAIChat] AI request cancelled by user');
+        const partial = buildPartialAssistantMessage(partialContent, partialReasoning, {
+          enableStreaming,
+          modelId: aiConfig.modelId,
+          providerId: getProviderSelectionId(aiConfig),
+          ttft:
+            firstTokenTime !== null ? firstTokenTime - requestStartTime : undefined,
+        });
+        if (partial) {
+          setChatHistory(prev => [...prev, partial]);
+          completedSuccessfully = true;
+        }
       } else {
         console.error('AI regenerate failed:', err);
         if (err instanceof AIError) {
@@ -315,6 +362,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       let firstTokenTime: number | null = null;
       let completedSuccessfully = false;
       let contextArray: string[] = [];
+      let partialContent = '';
+      let partialReasoning = '';
 
       try {
         const aiService = new AIService(aiConfig, samplerSettings, promptSettings);
@@ -334,10 +383,12 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
               }
 
               if (chunk.reasoning) {
+                partialReasoning += chunk.reasoning;
                 typewriter.queueReasoningChunk(chunk.reasoning);
               }
 
               if (chunk.content) {
+                partialContent += chunk.content;
                 typewriter.markReasoningComplete();
                 typewriter.queueContentChunk(chunk.content);
               }
@@ -388,8 +439,19 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         setChatHistory(prev => [...prev, assistantMessage]);
         completedSuccessfully = true;
       } catch (err) {
-        if (err instanceof AIError && err.message === 'Request was cancelled') {
+        if (isRequestCancelled(err)) {
           console.log('[useAIChat] AI request cancelled by user');
+          const partial = buildPartialAssistantMessage(partialContent, partialReasoning, {
+            enableStreaming,
+            modelId: aiConfig.modelId,
+            providerId: getProviderSelectionId(aiConfig),
+            ttft:
+              firstTokenTime !== null ? firstTokenTime - requestStartTime : undefined,
+          });
+          if (partial) {
+            setChatHistory(prev => [...prev, partial]);
+            completedSuccessfully = true;
+          }
         } else {
           console.error('AI ask failed:', err);
           if (err instanceof AIError) {

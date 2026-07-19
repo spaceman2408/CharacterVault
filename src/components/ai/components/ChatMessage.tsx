@@ -10,7 +10,7 @@ import remarkGfm from 'remark-gfm';
 import { Info } from 'lucide-react';
 import type { ChatMessage as ChatMessageType } from '../types';
 import { formatTime } from '../utils';
-import { markdownComponents } from '../config/markdownComponents';
+import { markdownComponents, markdownRehypePlugins } from '../config/markdownComponents';
 import { ReasoningSection } from './ReasoningSection';
 import { CopyButton } from './CopyButton';
 import { RegenerateButton } from './RegenerateButton';
@@ -220,6 +220,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(({
             )}
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
+              rehypePlugins={markdownRehypePlugins}
               components={markdownComponents}
             >
               {message.content}
