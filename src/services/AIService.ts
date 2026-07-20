@@ -1007,26 +1007,40 @@ Provide only the generated text without any additional commentary.`;
   ): Promise<AIResponse> {
     const reader = body.getReader();
     const decoder = new TextDecoder();
-    let fullContent = '';
-    let fullReasoning = '';
+    // Track lengths only — full strings live in ReasoningParser until return.
+    let contentLen = 0;
+    let reasoningLen = 0;
     const parser = new ReasoningParser();
+
+    const emitDeltas = (content: string, reasoning: string) => {
+      if (content.length === contentLen && reasoning.length === reasoningLen) return;
+      const contentDelta = content.length > contentLen ? content.slice(contentLen) : '';
+      const reasoningDelta =
+        reasoning.length > reasoningLen ? reasoning.slice(reasoningLen) : '';
+      contentLen = content.length;
+      reasoningLen = reasoning.length;
+      if (contentDelta || reasoningDelta) {
+        onChunk({
+          content: contentDelta || undefined,
+          reasoning: reasoningDelta || undefined,
+        });
+      }
+    };
 
     try {
       while (true) {
+        if (this.abortController?.signal.aborted) {
+          console.log('[AIService] Streaming aborted');
+          throw new AIError('Request was cancelled', 'unknown');
+        }
+
         const { done, value } = await reader.read();
 
         if (done) {
           break;
         }
 
-        // Check if we were aborted during streaming
-        if (this.abortController?.signal.aborted) {
-          console.log('[AIService] Streaming aborted');
-          throw new AIError('Request was cancelled', 'unknown');
-        }
-
         const rawChunk = decoder.decode(value, { stream: true });
-
         const lines = rawChunk.split('\n').filter(line => line.trim() !== '');
 
         for (let i = 0; i < lines.length; i++) {
@@ -1041,23 +1055,8 @@ Provide only the generated text without any additional commentary.`;
 
             try {
               const parsedChunk = JSON.parse(data) as ChatCompletionChunk;
-
               const parsed = parser.parseChunk(parsedChunk, this.config.modelId);
-
-              const content = parsed.content;
-              const reasoning = parsed.reasoning;
-
-              if (content !== fullContent || reasoning !== fullReasoning) {
-                const contentDelta = content.slice(fullContent.length);
-                const reasoningDelta = reasoning.slice(fullReasoning.length);
-
-                fullContent = content;
-                fullReasoning = reasoning;
-
-                if (contentDelta || reasoningDelta) {
-                  onChunk({ content: contentDelta || undefined, reasoning: reasoningDelta || undefined });
-                }
-              }
+              emitDeltas(parsed.content, parsed.reasoning);
             } catch (e) {
               console.warn('[AIService] Failed to parse streaming chunk:', e);
               console.warn('[AIService] Problematic line:', line.slice(0, 200));
@@ -1066,25 +1065,25 @@ Provide only the generated text without any additional commentary.`;
         }
       }
 
-      // Flush any remaining buffer content from the parser
       const flushed = parser.flush();
+      emitDeltas(flushed.content, flushed.reasoning);
 
-      // Check if flush added new content
-      if (flushed.content.length > fullContent.length) {
-        const contentDelta = flushed.content.slice(fullContent.length);
-        fullContent = flushed.content;
-        onChunk({ content: contentDelta });
-      }
-
-      if (flushed.reasoning.length > fullReasoning.length) {
-        const reasoningDelta = flushed.reasoning.slice(fullReasoning.length);
-        fullReasoning = flushed.reasoning;
-        onChunk({ reasoning: reasoningDelta });
-      }
-
-      return { content: fullContent, reasoning: fullReasoning || undefined };
+      return {
+        content: flushed.content,
+        reasoning: flushed.reasoning || undefined,
+      };
     } finally {
-      reader.releaseLock();
+      // Cancel stops network buffering; releaseLock if cancel already released.
+      try {
+        await reader.cancel();
+      } catch {
+        // already closed / cancelled
+      }
+      try {
+        reader.releaseLock();
+      } catch {
+        // lock already released by cancel()
+      }
     }
   }
 
