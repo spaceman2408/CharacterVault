@@ -3,7 +3,7 @@
  * @module components/ai/AIChatPanel
  */
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import {
   MessageSquare,
   X,
@@ -14,10 +14,10 @@ import {
   Send,
   Layers,
 } from 'lucide-react';
-import { StreamingMarkdown } from './StreamingText';
+import { StreamingText } from './StreamingText';
 import type { AIChatPanelProps } from './types';
 import { ChatMessage as ChatMessageComponent, ReasoningSection } from './components';
-import { useTypewriter, useAutoScroll, useAIChat } from './hooks';
+import { useAutoScroll, useAIChat } from './hooks';
 import { CHARACTER_SECTIONS } from '../../db/characterTypes';
 
 // Re-export types for backward compatibility
@@ -37,16 +37,15 @@ export function AIChatPanel({
 }: AIChatPanelProps): React.ReactElement {
   const [askQuestion, setAskQuestion] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const wasTypingRef = useRef(false);
   const [contextExpanded, setContextExpanded] = useState(true);
-
-  const typewriter = useTypewriter();
 
   const {
     chatHistory,
     isProcessing,
     error,
     isStreaming,
+    streamingContent,
+    streamingReasoning,
     handleAsk,
     handleRegenerate,
     handleNewChat,
@@ -59,15 +58,13 @@ export function AIChatPanel({
     promptSettings,
     enableStreaming: aiConfig.enableStreaming ?? true,
     showReasoning: aiConfig.showReasoning ?? true,
-    typewriter,
     getContextContent,
     contextEntryIds,
   });
 
-  const { containerRef: chatContainerRef, scrollToBottom } = useAutoScroll({
+  const { containerRef: chatContainerRef } = useAutoScroll({
     isStreaming,
-    isTyping: typewriter.isTyping,
-    dependencies: [chatHistory, typewriter.displayedContent, typewriter.displayedReasoning],
+    dependencies: [chatHistory, streamingContent, streamingReasoning],
   });
 
   const contextLabels = useMemo(() => {
@@ -77,33 +74,7 @@ export function AIChatPanel({
   }, [contextEntryIds]);
 
   const hasContext = contextEntryIds.length > 0;
-
-  useEffect(() => {
-    if (typewriter.isReasoningComplete) {
-      const container = chatContainerRef.current;
-      if (container) {
-        const isNearBottom =
-          container.scrollHeight - container.scrollTop - container.clientHeight < 150;
-        if (isNearBottom) {
-          scrollToBottom('smooth');
-        }
-      }
-    }
-  }, [typewriter.isReasoningComplete, scrollToBottom, chatContainerRef]);
-
-  useEffect(() => {
-    if (!typewriter.isTyping && wasTypingRef.current) {
-      const container = chatContainerRef.current;
-      if (container) {
-        const isNearBottom =
-          container.scrollHeight - container.scrollTop - container.clientHeight < 150;
-        if (isNearBottom) {
-          scrollToBottom('auto');
-        }
-      }
-    }
-    wasTypingRef.current = typewriter.isTyping;
-  }, [typewriter.isTyping, scrollToBottom, chatContainerRef]);
+  const hasStreamDraft = Boolean(streamingContent || streamingReasoning);
 
   const resetComposerHeight = useCallback(() => {
     if (inputRef.current) {
@@ -244,8 +215,12 @@ export function AIChatPanel({
         </div>
       )}
 
-      {/* Messages */}
-      <div ref={chatContainerRef} className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3">
+      {/* Messages — data-chat-scroll is the IntersectionObserver root for LazyMarkdown */}
+      <div
+        ref={chatContainerRef}
+        data-chat-scroll
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3"
+      >
         {chatHistory.length === 0 && (
           <div className="flex flex-col items-center text-center px-4 py-10 text-fg-subtle">
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
@@ -278,17 +253,17 @@ export function AIChatPanel({
           />
         ))}
 
-        {isStreaming && (typewriter.displayedContent || typewriter.displayedReasoning) && (
+        {isStreaming && hasStreamDraft && (
           <div className="flex justify-start">
             <div className="max-w-[90%] bg-surface border border-border rounded-xl rounded-bl-md px-3 py-2 message-animate shadow-sm">
-              {typewriter.displayedReasoning && aiConfig.showReasoning !== false && (
-                <ReasoningSection reasoning={typewriter.displayedReasoning} />
+              {streamingReasoning && aiConfig.showReasoning !== false && (
+                <ReasoningSection reasoning={streamingReasoning} />
               )}
-              {typewriter.displayedContent && (
-                <div className="text-sm prose prose-sm dark:prose-invert max-w-none text-fg">
-                  <StreamingMarkdown
-                    content={typewriter.displayedContent}
-                    isStreaming={typewriter.isTyping}
+              {streamingContent && (
+                <div className="text-sm text-fg">
+                  <StreamingText
+                    content={streamingContent}
+                    isStreaming={isStreaming}
                     showCursor={true}
                   />
                 </div>
@@ -297,15 +272,14 @@ export function AIChatPanel({
           </div>
         )}
 
-        {isProcessing &&
-          (!isStreaming || (!typewriter.displayedContent && !typewriter.displayedReasoning)) && (
-            <div className="flex justify-start">
-              <div className="bg-surface border border-border rounded-xl rounded-bl-md px-3 py-2 flex items-center gap-2 message-animate shadow-sm">
-                <Loader2 className="w-4 h-4 animate-spin text-fg-muted" />
-                <span className="text-sm text-fg-muted">Thinking…</span>
-              </div>
+        {isProcessing && (!isStreaming || !hasStreamDraft) && (
+          <div className="flex justify-start">
+            <div className="bg-surface border border-border rounded-xl rounded-bl-md px-3 py-2 flex items-center gap-2 message-animate shadow-sm">
+              <Loader2 className="w-4 h-4 animate-spin text-fg-muted" />
+              <span className="text-sm text-fg-muted">Thinking…</span>
             </div>
-          )}
+          </div>
+        )}
       </div>
 
       {/* Composer */}

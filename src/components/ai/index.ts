@@ -27,8 +27,6 @@ export { markdownComponents } from './config/markdownComponents';
 
 // Hooks
 export {
-  useTypewriter,
-  type UseTypewriterReturn,
   useAutoScroll,
   type UseAutoScrollOptions,
   type UseAutoScrollReturn,
