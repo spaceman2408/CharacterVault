@@ -9,6 +9,7 @@
 import React, { type ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import type { PluggableList } from 'unified';
+import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import type { Schema } from 'hast-util-sanitize';
@@ -23,7 +24,14 @@ const chatSanitizeSchema: Schema = {
   tagNames: [...(defaultSchema.tagNames ?? []), 'br'],
 };
 
-/** rehype plugins shared by chat markdown renderers */
+/** remark plugins shared by all chat markdown renderers (stable identity). */
+export const markdownRemarkPlugins: PluggableList = [remarkGfm];
+
+/**
+ * rehype plugins for *committed* messages only.
+ * Do not use while streaming — rehype-raw re-parses the full tree on every
+ * chunk and is the main heap pressure source during Orion replies.
+ */
 export const markdownRehypePlugins: PluggableList = [
   rehypeRaw,
   [rehypeSanitize, chatSanitizeSchema],

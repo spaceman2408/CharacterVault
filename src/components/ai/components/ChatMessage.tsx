@@ -5,16 +5,14 @@
 
 import React, { memo, useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Info } from 'lucide-react';
 import type { ChatMessage as ChatMessageType } from '../types';
 import { formatTime } from '../utils';
-import { markdownComponents, markdownRehypePlugins } from '../config/markdownComponents';
 import { ReasoningSection } from './ReasoningSection';
 import { CopyButton } from './CopyButton';
 import { RegenerateButton } from './RegenerateButton';
 import { DeleteMessageButton } from './DeleteMessageButton';
+import { LazyMarkdown } from './LazyMarkdown';
 
 /**
  * Props for the ChatMessage component
@@ -65,7 +63,6 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
     );
     const tooltipHeight = tooltipEl?.offsetHeight || 80;
 
-    // Prefer above the icon; flip below if not enough room
     const placeAbove =
       rect.top >= tooltipHeight + STATS_TOOLTIP_GAP + STATS_TOOLTIP_VIEWPORT_PAD;
 
@@ -73,7 +70,6 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
       ? rect.top - STATS_TOOLTIP_GAP - tooltipHeight
       : rect.bottom + STATS_TOOLTIP_GAP;
 
-    // Left-align to icon, clamp so wide model IDs stay in the viewport
     let left = rect.left;
     const maxLeft = window.innerWidth - tooltipWidth - STATS_TOOLTIP_VIEWPORT_PAD;
     left = Math.max(STATS_TOOLTIP_VIEWPORT_PAD, Math.min(left, maxLeft));
@@ -89,7 +85,6 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
   useLayoutEffect(() => {
     if (!isOpen) return;
     updatePosition();
-    // Second pass after content lays out (long model names change size)
     const id = requestAnimationFrame(updatePosition);
     return () => cancelAnimationFrame(id);
   }, [isOpen, updatePosition, message.stats]);
@@ -98,7 +93,6 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
     if (!isOpen) return;
     const onReposition = () => updatePosition();
     window.addEventListener('resize', onReposition);
-    // Capture phase: chat list scrolls on an inner element
     window.addEventListener('scroll', onReposition, true);
     return () => {
       window.removeEventListener('resize', onReposition);
@@ -106,7 +100,6 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
     };
   }, [isOpen, updatePosition]);
 
-  // Close tap-to-pin when clicking outside (mobile)
   useEffect(() => {
     if (!pinnedOpen) return;
     const handlePointerDown = (e: PointerEvent) => {
@@ -190,81 +183,100 @@ const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) =>
 };
 
 /**
+ * Body of an assistant message — isolated from isProcessing / action handlers
+ * so flipping "processing" does not rebuild every markdown tree in history.
+ */
+const AssistantMessageBody = memo(function AssistantMessageBody({
+  content,
+  reasoning,
+  showReasoning,
+}: {
+  content: string;
+  reasoning?: string;
+  showReasoning: boolean;
+}) {
+  return (
+    <>
+      {reasoning && showReasoning && <ReasoningSection reasoning={reasoning} />}
+      <LazyMarkdown content={content} />
+    </>
+  );
+});
+
+/**
  * Single chat message component.
  * Renders user messages as simple text with timestamp.
  * Renders assistant messages with markdown, reasoning, copy button, and regenerate button.
  */
-export const ChatMessage: React.FC<ChatMessageProps> = memo(({
-  message,
-  messageIndex,
-  chatHistoryLength,
-  showReasoning = true,
-  isProcessing,
-  onRegenerate,
-  onDelete,
-}) => {
-  const isUser = message.role === 'user';
-  const animationClass = message.suppressInitialAnimation ? '' : 'message-animate';
+export const ChatMessage: React.FC<ChatMessageProps> = memo(
+  ({
+    message,
+    messageIndex,
+    chatHistoryLength,
+    showReasoning = true,
+    isProcessing,
+    onRegenerate,
+    onDelete,
+  }) => {
+    const isUser = message.role === 'user';
+    const animationClass = message.suppressInitialAnimation ? '' : 'message-animate';
 
-  return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`relative max-w-[90%] rounded-xl px-3 py-2 group shadow-sm ${animationClass} ${
-          isUser
-            ? 'bg-accent text-accent-fg rounded-br-md'
-            : 'bg-surface border border-border text-fg rounded-bl-md'
-        }`}
-      >
-        {isUser ? (
-          <>
-            <p className="text-sm whitespace-pre-wrap pr-8">{message.content}</p>
-            <div className="absolute top-1.5 right-1.5 flex gap-0.5">
-              <DeleteMessageButton
-                onDelete={() => onDelete(message.id)}
-                disabled={isProcessing}
-                variant="onAccent"
-              />
-            </div>
-          </>
-        ) : (
-          <div className="text-sm prose prose-sm dark:prose-invert max-w-none pb-6">
-            {message.reasoning && showReasoning !== false && (
-              <ReasoningSection reasoning={message.reasoning} />
-            )}
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={markdownRehypePlugins}
-              components={markdownComponents}
-            >
-              {message.content}
-            </ReactMarkdown>
-            <div className="absolute bottom-2 right-2 flex gap-0.5">
-              <CopyButton content={message.content} />
-              <RegenerateButton
-                messageIndex={messageIndex}
-                chatHistoryLength={chatHistoryLength}
-                onRegenerate={onRegenerate}
-                isProcessing={isProcessing}
-              />
-              <DeleteMessageButton
-                onDelete={() => onDelete(message.id)}
-                disabled={isProcessing}
-              />
-            </div>
-          </div>
-        )}
-        <span
-          className={`text-[11px] mt-1.5 block ${
-            isUser ? 'text-accent-fg/70' : 'text-fg-muted'
+    const handleDelete = useCallback(() => {
+      onDelete(message.id);
+    }, [onDelete, message.id]);
+
+    return (
+      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+        <div
+          className={`relative max-w-[90%] rounded-xl px-3 py-2 group shadow-sm ${animationClass} ${
+            isUser
+              ? 'bg-accent text-accent-fg rounded-br-md'
+              : 'bg-surface border border-border text-fg rounded-bl-md'
           }`}
         >
-          {formatTime(message.timestamp)}
-          {!isUser && <StatsInfoButton message={message} />}
-        </span>
+          {isUser ? (
+            <>
+              <p className="text-sm whitespace-pre-wrap pr-8">{message.content}</p>
+              <div className="absolute top-1.5 right-1.5 flex gap-0.5">
+                <DeleteMessageButton
+                  onDelete={handleDelete}
+                  disabled={isProcessing}
+                  variant="onAccent"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="text-sm prose prose-sm dark:prose-invert max-w-none pb-6">
+              <AssistantMessageBody
+                content={message.content}
+                reasoning={message.reasoning}
+                showReasoning={showReasoning !== false}
+              />
+              <div className="absolute bottom-2 right-2 flex gap-0.5">
+                <CopyButton content={message.content} />
+                <RegenerateButton
+                  messageIndex={messageIndex}
+                  chatHistoryLength={chatHistoryLength}
+                  onRegenerate={onRegenerate}
+                  isProcessing={isProcessing}
+                />
+                <DeleteMessageButton onDelete={handleDelete} disabled={isProcessing} />
+              </div>
+            </div>
+          )}
+          <span
+            className={`text-[11px] mt-1.5 block ${
+              isUser ? 'text-accent-fg/70' : 'text-fg-muted'
+            }`}
+          >
+            {formatTime(message.timestamp)}
+            {!isUser && <StatsInfoButton message={message} />}
+          </span>
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 ChatMessage.displayName = 'ChatMessage';
 
