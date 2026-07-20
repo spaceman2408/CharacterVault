@@ -1,7 +1,5 @@
 /**
  * @fileoverview Committed assistant markdown (GFM + sanitized HTML).
- * Always mounted while the message is in the list — viewport unmounting
- * left blank shells that never reliably remounted.
  * @module components/ai/components/LazyMarkdown
  */
 
@@ -15,16 +13,11 @@ import {
 
 export interface LazyMarkdownProps {
   content: string;
-  /** Kept for call-site compatibility; no longer gates rendering. */
+  /** @deprecated No longer gates rendering; kept for call-site compatibility. */
   forceActive?: boolean;
   className?: string;
 }
 
-/**
- * Full markdown for a committed assistant message.
- * Memory is controlled by stable ChatMessage memos + stream plain-text,
- * not by unmounting off-screen history (that hid previous replies).
- */
 export const LazyMarkdown: React.FC<LazyMarkdownProps> = memo(
   ({ content, className = '' }) => {
     return (

@@ -10,64 +10,31 @@ import type { AIConfig, SamplerSettings, PromptSettings } from '../../../db/char
 import type { ChatMessage, ConversationMessage } from '../types';
 import { generateMessageId } from '../utils';
 
-/**
- * Soft cap on messages retained in React state (sliding window).
- * Bounds permanent heap without a persistence layer. Older turns are dropped.
- */
 export const MAX_CHAT_MESSAGES = 80;
 
-/**
- * Configuration for AI chat operations
- */
 export interface UseAIChatOptions {
-  /** AI configuration */
   aiConfig: AIConfig;
-  /** Sampler settings */
   samplerSettings: SamplerSettings;
-  /** Prompt settings */
   promptSettings: PromptSettings;
-  /** Whether streaming is enabled */
   enableStreaming: boolean;
-  /** Whether to show reasoning */
   showReasoning: boolean;
-  /** Function to resolve context entry IDs to content (at ask time only) */
   getContextContent?: (entryIds: string[]) => Promise<string[]>;
-  /** Context entry IDs (resolved at call time; not cached in React state) */
   contextEntryIds: string[];
 }
 
-/**
- * Return interface for the useAIChat hook
- */
 export interface UseAIChatReturn {
-  /** Chat message history */
   chatHistory: ChatMessage[];
-  /** Whether an AI request is being processed */
   isProcessing: boolean;
-  /** Current error message, if any */
   error: string | null;
-  /** Whether streaming is active */
   isStreaming: boolean;
-  /**
-   * In-flight assistant content (single live copy). Cleared when the turn
-   * is committed to chatHistory or aborted without a partial.
-   */
   streamingContent: string;
-  /** In-flight reasoning text (single live copy). */
   streamingReasoning: string;
-  /** Handle asking a question */
   handleAsk: (question: string) => Promise<void>;
-  /** Handle regenerating the last response */
   handleRegenerate: () => Promise<void>;
-  /** Handle starting a new chat (clears history) */
   handleNewChat: () => void;
-  /** Delete a message and everything after it (rewind) */
   handleDeleteMessage: (messageId: string) => void;
-  /** Handle aborting the current request */
   handleAbort: () => void;
-  /** Clear the current error */
   clearError: () => void;
-  /** Whether AI is properly configured */
   isAIConfigured: boolean;
 }
 
@@ -148,16 +115,6 @@ function buildAssistantMessage(
   };
 }
 
-/**
- * Hook that manages AI chat operations including conversation history,
- * streaming, and error handling.
- *
- * In-flight replies use one draft buffer (refs + rAF-flushed state). On
- * success/cancel the draft is committed into chatHistory and cleared.
- *
- * Handlers read history via refs so their identities stay stable across turns
- * (avoids re-rendering every ChatMessage and rebuilding markdown trees).
- */
 export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const {
     aiConfig,
@@ -181,7 +138,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const streamRafRef = useRef<number | null>(null);
   const streamDirtyRef = useRef(false);
 
-  // Latest values for stable async handlers (do not put these in useCallback deps)
   const chatHistoryRef = useRef(chatHistory);
   const isProcessingRef = useRef(isProcessing);
   const aiConfigRef = useRef(aiConfig);
@@ -232,7 +188,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     streamRafRef.current = null;
     if (!streamDirtyRef.current) return;
     streamDirtyRef.current = false;
-    // Single setState pair per frame — not per network chunk
     setStreamingContent(streamContentRef.current);
     setStreamingReasoning(streamReasoningRef.current);
   }, []);
@@ -363,7 +318,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           onChunk
         );
 
-        // Drop request-local large arrays ASAP
         contextArray = [];
 
         const contentTokens = estimateTokens(result.content);
@@ -378,8 +332,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         const tokensPerSecond =
           completionTime > 0 ? totalTokens / (completionTime / 1000) : undefined;
 
-        // Prefer stream draft when present so we do not allocate a second full
-        // content string when it already matches what we displayed.
         const content =
           streaming && streamContentRef.current.length > 0
             ? streamContentRef.current
@@ -495,7 +447,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     [isAIConfigured, handleRegenerate, runAssistantTurn]
   );
 
-  // Drop pending rAF if the panel unmounts mid-stream
   useEffect(() => {
     return () => {
       cancelStreamRaf();
