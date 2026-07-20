@@ -1,5 +1,5 @@
 /**
- * @fileoverview Vortex animation overlay for "I'm Feeling Lucky" tag selection
+ * @fileoverview Vortex animation overlay for "I'm Feeling Lucky" tag selection.
  * @module @pages/ai-creation-studio/TagVortexOverlay
  */
 
@@ -20,16 +20,23 @@ interface VortexTag {
   isSelected: boolean;
   startAngle: number;
   orbitRadius: number;
-  spinDegrees: number;
   startDelay: number;
   fontSize: number;
   opacity: number;
   duration: number;
 }
 
-const TOTAL_VORTEX_TAGS = 36;
+const MODAL_FADE_MS = 250;
+const SWIRL_MS = 2200;
+const SETTLE_MS = 900;
+const REVEAL_MS = 2400;
+const FADE_OUT_MS = 500;
 
-/** Simple string hash for deterministic seeding */
+const DESKTOP_TAG_COUNT = 24;
+const MOBILE_TAG_COUNT = 16;
+
+type Phase = 'waiting' | 'swirl' | 'settle' | 'reveal';
+
 function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -38,7 +45,6 @@ function hashString(str: string): number {
   return hash || 1;
 }
 
-/** Seeded pseudo-random generator (LCG) — deterministic per seed */
 function seededRandom(seed: number) {
   let s = seed >>> 0;
   return () => {
@@ -53,8 +59,7 @@ function sampleTags(
   exclude: readonly string[],
   rand: () => number
 ): string[] {
-  const filtered = pool.filter((t) => !exclude.includes(t));
-  // Fisher-Yates shuffle using seeded RNG
+  const filtered = pool.filter(t => !exclude.includes(t));
   const shuffled = [...filtered];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -63,27 +68,45 @@ function sampleTags(
   return shuffled.slice(0, count);
 }
 
+function chipClass(isSelected: boolean, size: 'orbit' | 'reveal' = 'orbit'): string {
+  const base =
+    size === 'reveal'
+      ? 'whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold sm:px-4 sm:py-2 sm:text-base'
+      : 'whitespace-nowrap rounded-full px-2.5 py-1 text-sm font-medium sm:px-3 sm:py-1.5';
+
+  if (isSelected) {
+    return `${base} border border-accent bg-accent-soft text-accent shadow-sm`;
+  }
+  return `${base} border border-border bg-muted/90 text-fg-muted`;
+}
+
 export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
   selectedTags,
   isVisible,
   onComplete,
   onAnimationStart,
 }) => {
-  const [phase, setPhase] = useState<'waiting' | 'swirl' | 'converge' | 'reveal' | 'done'>('waiting');
+  const [phase, setPhase] = useState<Phase>('waiting');
   const [fadeOut, setFadeOut] = useState(false);
-  const [isSwirlExiting, setIsSwirlExiting] = useState(false);
-  const [backgroundOpacity, setBackgroundOpacity] = useState(1); // Start fully opaque
+  const [swirlExiting, setSwirlExiting] = useState(false);
+
   const reducedMotion = useMemo(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     []
   );
+
+  const maxTags = useMemo(() => {
+    if (typeof window === 'undefined') return DESKTOP_TAG_COUNT;
+    return window.innerWidth < 640 ? MOBILE_TAG_COUNT : DESKTOP_TAG_COUNT;
+  }, []);
 
   const tags = useMemo((): VortexTag[] => {
     const rand = seededRandom(hashString(selectedTags.join(',')));
     const all = getAllTags();
-    const fillerCount = Math.max(0, TOTAL_VORTEX_TAGS - selectedTags.length);
+    const fillerCount = Math.max(0, maxTags - selectedTags.length);
     const filler = sampleTags(all, fillerCount, selectedTags, rand);
-
     const items: VortexTag[] = [];
 
     selectedTags.forEach((label, i) => {
@@ -92,12 +115,11 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
         label,
         isSelected: true,
         startAngle: rand() * 360,
-        orbitRadius: 120 + rand() * 180,
-        spinDegrees: 360 + rand() * 720,
-        startDelay: rand() * 0.5,
-        fontSize: 0.9 + rand() * 0.4,
-        opacity: 0.6 + rand() * 0.4,
-        duration: 2.5 + rand() * 1,
+        orbitRadius: 100 + rand() * 140,
+        startDelay: rand() * 0.35,
+        fontSize: 0.85 + rand() * 0.3,
+        opacity: 0.75 + rand() * 0.25,
+        duration: 2 + rand() * 0.6,
       });
     });
 
@@ -107,122 +129,101 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
         label,
         isSelected: false,
         startAngle: rand() * 360,
-        orbitRadius: 100 + rand() * 220,
-        spinDegrees: 360 + rand() * 1080,
-        startDelay: rand() * 0.8,
-        fontSize: 0.75 + rand() * 0.35,
-        opacity: 0.4 + rand() * 0.4,
-        duration: 2.5 + rand() * 1,
+        orbitRadius: 90 + rand() * 160,
+        startDelay: rand() * 0.5,
+        fontSize: 0.75 + rand() * 0.25,
+        opacity: 0.45 + rand() * 0.35,
+        duration: 2 + rand() * 0.7,
       });
     });
 
     return items;
-  }, [selectedTags]);
+  }, [selectedTags, maxTags]);
 
   useEffect(() => {
     if (!isVisible) {
-      // When becoming invisible, schedule a reset for next render
-      const timer = setTimeout(() => { 
-        setPhase('waiting'); 
-        setIsSwirlExiting(false);
-        setBackgroundOpacity(1); // Reset to fully opaque for next time
+      const timer = setTimeout(() => {
+        setPhase('waiting');
+        setFadeOut(false);
+        setSwirlExiting(false);
       }, 0);
       return () => clearTimeout(timer);
     }
 
-    // Notify parent to start fading out the input modal immediately
     onAnimationStart?.();
 
-    // Start fully opaque, then fade to semi-transparent after UI has hidden
-    const MODAL_FADE_DELAY = 250; // Give modal time to fade out (reduced for faster transition)
-    const BACKGROUND_FADE_DELAY = 300; // When to start lightening the background
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-    // Use microtask to avoid synchronous setState during effect execution
     queueMicrotask(() => {
-      setPhase('waiting'); // Ensure we start from waiting state
+      setPhase('waiting');
       setFadeOut(false);
-      setBackgroundOpacity(1); // Start fully opaque
+      setSwirlExiting(false);
     });
 
-    // Fade background to semi-transparent after UI is hidden
-    const bgTimer = setTimeout(() => {
-      setBackgroundOpacity(0.85);
-    }, BACKGROUND_FADE_DELAY);
-
     if (reducedMotion) {
-      // Delay the phase change slightly to allow the reset above to settle
-      const t0 = setTimeout(() => setPhase('reveal'), MODAL_FADE_DELAY + 50);
-      const t1 = setTimeout(() => {
-        setFadeOut(true);
-      }, MODAL_FADE_DELAY + 800);
-      const t2 = setTimeout(onComplete, MODAL_FADE_DELAY + 1300);
-      return () => { 
-        clearTimeout(bgTimer);
-        clearTimeout(t0);
-        clearTimeout(t1); 
-        clearTimeout(t2); 
-      };
+      timers.push(setTimeout(() => setPhase('reveal'), MODAL_FADE_MS));
+      timers.push(setTimeout(() => setFadeOut(true), MODAL_FADE_MS + REVEAL_MS));
+      timers.push(setTimeout(onComplete, MODAL_FADE_MS + REVEAL_MS + FADE_OUT_MS));
+      return () => timers.forEach(clearTimeout);
     }
 
-    // Normal animation timing - extended for more grandiose effect
-    const timers: ReturnType<typeof setTimeout>[] = [bgTimer];
+    const tSwirl = MODAL_FADE_MS;
+    const tSettle = tSwirl + SWIRL_MS;
+    const tReveal = tSettle + SETTLE_MS;
+    const tFade = tReveal + REVEAL_MS;
+    const tDone = tFade + FADE_OUT_MS;
 
-    // Phase 1: start swirl (after modal fades)
-    timers.push(setTimeout(() => setPhase('swirl'), MODAL_FADE_DELAY));
-
-    // Phase 2: converge (after modal fade + 4s swirl)
-    timers.push(setTimeout(() => {
-      setPhase('converge');
-      setIsSwirlExiting(true);
-      // Clear swirl exit flag after fade-out completes
-      timers.push(setTimeout(() => setIsSwirlExiting(false), 700));
-    }, MODAL_FADE_DELAY + 4000));
-
-    // Phase 3: reveal (after modal fade + 5.8s)
-    timers.push(setTimeout(() => setPhase('reveal'), MODAL_FADE_DELAY + 5800));
-
-    // Phase 4: fade out (after modal fade + 8.5s)
-    timers.push(setTimeout(() => setFadeOut(true), MODAL_FADE_DELAY + 8500));
-
-    // Complete (after modal fade + 9s)
-    timers.push(setTimeout(onComplete, MODAL_FADE_DELAY + 9000));
+    timers.push(setTimeout(() => setPhase('swirl'), tSwirl));
+    timers.push(
+      setTimeout(() => {
+        setPhase('settle');
+        setSwirlExiting(true);
+      }, tSettle)
+    );
+    timers.push(
+      setTimeout(() => {
+        setPhase('reveal');
+        setSwirlExiting(false);
+      }, tReveal)
+    );
+    timers.push(setTimeout(() => setFadeOut(true), tFade));
+    timers.push(setTimeout(onComplete, tDone));
 
     return () => timers.forEach(clearTimeout);
   }, [isVisible, onComplete, onAnimationStart, reducedMotion]);
 
   if (!isVisible) return null;
 
+  const showOrbit = (phase === 'swirl' || phase === 'settle' || swirlExiting) && !reducedMotion;
+
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center"
-      style={{ 
-        zIndex: 9999,
-        backgroundColor: `rgba(0,0,0,${backgroundOpacity})`,
-        backdropFilter: 'blur(8px)',
-        opacity: fadeOut ? 0 : 1,
-        transition: 'opacity 700ms ease-in-out, background-color 500ms ease-in-out',
-      }}
+      role="dialog"
+      aria-modal="true"
+      aria-busy={phase !== 'reveal'}
+      aria-label="Choosing random tags"
+      className={`fixed inset-0 z-9999 flex items-center justify-center bg-overlay backdrop-blur-md transition-opacity duration-500 ease-out ${
+        fadeOut ? 'opacity-0' : 'opacity-100'
+      }`}
     >
-      {/* Radial gradient background pulse */}
-      <div 
-        className="absolute inset-0 animate-vortex-pulse-slow"
+      <div
+        className="pointer-events-none absolute inset-0 animate-vortex-pulse-slow"
         style={{
-          background: 'radial-gradient(circle at center, rgba(139,92,246,0.15) 0%, transparent 70%)',
+          background:
+            'radial-gradient(circle at center, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 68%)',
         }}
       />
-      
-      {/* Vortex container */}
-      <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-        {/* Swirling tags */}
-        {(phase === 'swirl' || isSwirlExiting) && !reducedMotion && (
+
+      <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+        {showOrbit && (
           <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={isSwirlExiting ? { transition: 'opacity 600ms ease-out', opacity: 0 } : undefined}
+            className="absolute inset-0 flex items-center justify-center transition-opacity duration-700 ease-out"
+            style={{ opacity: swirlExiting ? 0 : 1 }}
           >
-            {tags.map((tag) => (
+            {tags.map(tag => (
               <div
                 key={tag.id}
-                className="absolute pointer-events-none select-none"
+                className="pointer-events-none absolute select-none"
                 style={{
                   opacity: 0,
                   animation: `vortexOrbit ${tag.duration}s cubic-bezier(0.33, 0, 0.2, 1) forwards`,
@@ -230,19 +231,14 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
                 }}
               >
                 <div
-                  className="whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium"
+                  className={chipClass(tag.isSelected)}
                   style={{
-                    transform: `rotate(${tag.startAngle}deg) translateX(${tag.orbitRadius}px)`,
                     fontSize: `${tag.fontSize}rem`,
                     opacity: tag.opacity,
-                    backgroundColor: tag.isSelected
-                      ? 'rgba(139,92,246,0.35)'
-                      : 'rgba(120,113,108,0.2)',
-                    color: tag.isSelected ? '#e9d5ff' : '#a8a29e',
-                    border: `2px solid ${tag.isSelected ? 'rgba(139,92,246,0.6)' : 'rgba(120,113,108,0.3)'}`,
-                    boxShadow: tag.isSelected 
-                      ? '0 0 20px rgba(139,92,246,0.4), 0 0 40px rgba(139,92,246,0.2)' 
-                      : 'none',
+                    transform: `rotate(${tag.startAngle}deg) translateX(${tag.orbitRadius}px)`,
+                    boxShadow: tag.isSelected
+                      ? '0 0 18px color-mix(in srgb, var(--accent) 30%, transparent)'
+                      : undefined,
                   }}
                 >
                   {formatTag(tag.label)}
@@ -252,107 +248,46 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
           </div>
         )}
 
-        {/* Converge phase: selected tags drift to center */}
-        {phase === 'converge' && !reducedMotion && (
-          <>
-            {tags
-              .filter((t) => !t.isSelected)
-              .map((tag) => (
-                <div
-                  key={tag.id}
-                  className="absolute pointer-events-none select-none"
-                  style={{
-                    animation: `vortexReject 1s ease-in forwards`,
-                    transform: `rotate(${tag.startAngle}deg) translateX(${tag.orbitRadius}px)`,
-                  }}
-                >
-                  <div
-                    className="whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium"
-                    style={{
-                      fontSize: `${tag.fontSize}rem`,
-                      opacity: tag.opacity,
-                      backgroundColor: 'rgba(120,113,108,0.15)',
-                      color: '#a8a29e',
-                      border: '1px solid rgba(120,113,108,0.3)',
-                    }}
-                  >
-                    {formatTag(tag.label)}
-                  </div>
-                </div>
-              ))}
-            {tags
-              .filter((t) => t.isSelected)
-              .map((tag, idx) => (
-                <div
-                  key={tag.id}
-                  className="absolute pointer-events-none select-none"
-                  style={{
-                    animation: `vortexConverge 1.2s ease-out ${idx * 0.08}s forwards`,
-                    transform: `rotate(${tag.startAngle}deg) translateX(${tag.orbitRadius}px)`,
-                  }}
-                >
-                  <div
-                    className="whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-semibold"
-                    style={{
-                      fontSize: `${tag.fontSize}rem`,
-                      backgroundColor: 'rgba(139,92,246,0.4)',
-                      color: '#e9d5ff',
-                      border: '2px solid rgba(139,92,246,0.7)',
-                      boxShadow: '0 0 25px rgba(139,92,246,0.5), 0 0 50px rgba(139,92,246,0.3)',
-                    }}
-                  >
-                    {formatTag(tag.label)}
-                  </div>
-                </div>
-              ))}
-          </>
-        )}
-
-        {/* Reveal phase: selected tags settled + Good luck text */}
-        {(phase === 'reveal' || phase === 'done') && (
-          <div className="z-10 flex flex-col items-center justify-center text-center px-6">
-            {/* Glowing orb behind tags */}
-            <div 
-              className="absolute w-96 h-96 rounded-full animate-vortex-pulse-glow"
+        {phase === 'reveal' && (
+          <div className="z-10 flex max-w-2xl flex-col items-center justify-center px-5 text-center sm:px-6">
+            <div
+              className="pointer-events-none absolute h-72 w-72 rounded-full animate-vortex-pulse-glow sm:h-96 sm:w-96"
               style={{
-                background: 'radial-gradient(circle, rgba(139,92,246,0.3) 0%, rgba(139,92,246,0.1) 40%, transparent 70%)',
-                filter: 'blur(40px)',
+                background:
+                  'radial-gradient(circle, color-mix(in srgb, var(--accent) 32%, transparent) 0%, color-mix(in srgb, var(--accent) 10%, transparent) 42%, transparent 70%)',
+                filter: 'blur(36px)',
               }}
             />
-            
-            <div className="relative flex flex-wrap justify-center gap-2.5 mb-8 max-w-2xl">
+
+            <div className="relative mb-6 flex max-w-xl flex-wrap justify-center gap-2 sm:mb-8 sm:gap-2.5">
               {selectedTags.map((tag, i) => (
                 <div
                   key={`reveal-${i}-${tag}`}
-                  className="px-4 py-2 rounded-full text-base font-bold animate-revealScale"
+                  className={`${chipClass(true, 'reveal')} animate-revealScale`}
                   style={{
-                    animationDelay: `${i * 0.06}s`,
-                    backgroundColor: 'rgba(139,92,246,0.45)',
-                    color: '#f3e8ff',
-                    border: '2px solid rgba(139,92,246,0.7)',
-                    boxShadow: '0 0 30px rgba(139,92,246,0.6), 0 0 60px rgba(139,92,246,0.3), inset 0 0 20px rgba(139,92,246,0.2)',
+                    animationDelay: `${i * 0.05}s`,
+                    boxShadow: '0 0 22px color-mix(in srgb, var(--accent) 35%, transparent)',
                   }}
                 >
                   {formatTag(tag)}
                 </div>
               ))}
             </div>
-            
-            <div className="relative flex flex-col items-center gap-3 animate-revealText">
+
+            <div className="relative flex flex-col items-center gap-2.5 animate-revealText">
               <div className="relative">
-                <Dices className="w-8 h-8 text-violet-200 animate-vortex-dice-spin" />
-                <div 
+                <Dices className="h-7 w-7 text-accent animate-vortex-dice-spin sm:h-8 sm:w-8" />
+                <div
                   className="absolute inset-0 animate-vortex-ping-slow"
                   style={{
-                    background: 'radial-gradient(circle, rgba(139,92,246,0.6) 0%, transparent 70%)',
-                    filter: 'blur(10px)',
+                    background:
+                      'radial-gradient(circle, color-mix(in srgb, var(--accent) 55%, transparent) 0%, transparent 70%)',
+                    filter: 'blur(8px)',
                   }}
                 />
               </div>
-              <span className="text-2xl font-bold text-violet-100 tracking-wide" style={{
-                textShadow: '0 0 20px rgba(139,92,246,0.8), 0 0 40px rgba(139,92,246,0.4)',
-              }}>
-                Good luck...
+              <span className="text-xl font-semibold tracking-wide text-fg sm:text-2xl">
+                Good luck…
               </span>
             </div>
           </div>
@@ -361,3 +296,5 @@ export const TagVortexOverlay: React.FC<TagVortexOverlayProps> = ({
     </div>
   );
 };
+
+export default TagVortexOverlay;
