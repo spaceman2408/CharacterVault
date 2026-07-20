@@ -14,23 +14,13 @@ import { RegenerateButton } from './RegenerateButton';
 import { DeleteMessageButton } from './DeleteMessageButton';
 import { LazyMarkdown } from './LazyMarkdown';
 
-/**
- * Props for the ChatMessage component
- */
 export interface ChatMessageProps {
-  /** The chat message to render */
   message: ChatMessageType;
-  /** Index of the message in the chat history */
   messageIndex: number;
-  /** Total length of the chat history */
   chatHistoryLength: number;
-  /** Whether to show reasoning sections */
   showReasoning?: boolean;
-  /** Whether an AI request is currently processing */
   isProcessing: boolean;
-  /** Callback to regenerate the response */
   onRegenerate: () => void;
-  /** Delete this message and everything after it */
   onDelete: (messageId: string) => void;
 }
 
@@ -38,10 +28,6 @@ const STATS_TOOLTIP_MAX_WIDTH = 280;
 const STATS_TOOLTIP_GAP = 8;
 const STATS_TOOLTIP_VIEWPORT_PAD = 8;
 
-/**
- * Stats info control — hover (desktop) or tap (mobile).
- * Portaled + fixed so long model names are not clipped by the chat scroller / editor.
- */
 const StatsInfoButton: React.FC<{ message: ChatMessageType }> = ({ message }) => {
   const [hovered, setHovered] = useState(false);
   const [pinnedOpen, setPinnedOpen] = useState(false);
@@ -203,11 +189,6 @@ const AssistantMessageBody = memo(function AssistantMessageBody({
   );
 });
 
-/**
- * Single chat message component.
- * Renders user messages as simple text with timestamp.
- * Renders assistant messages with markdown, reasoning, copy button, and regenerate button.
- */
 export const ChatMessage: React.FC<ChatMessageProps> = memo(
   ({
     message,

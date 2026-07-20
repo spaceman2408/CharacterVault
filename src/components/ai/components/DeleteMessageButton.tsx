@@ -9,7 +9,6 @@ import { Check, Trash2 } from 'lucide-react';
 export interface DeleteMessageButtonProps {
   onDelete: () => void;
   disabled?: boolean;
-  /** Lighter chrome on accent (user) bubbles */
   variant?: 'default' | 'onAccent';
 }
 
@@ -46,7 +45,6 @@ export const DeleteMessageButton: React.FC<DeleteMessageButtonProps> = memo(
       return () => clearConfirmTimer();
     }, [clearConfirmTimer]);
 
-    // Click outside cancels the armed state
     useEffect(() => {
       if (!confirming) return;
       const onPointerDown = (e: PointerEvent) => {
@@ -69,7 +67,6 @@ export const DeleteMessageButton: React.FC<DeleteMessageButtonProps> = memo(
       armConfirm();
     };
 
-    // Hide armed UI while disabled (e.g. mid-stream); timeout/outside-click still clear state
     const showConfirm = confirming && !disabled;
 
     const idleColor =
