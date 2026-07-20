@@ -670,39 +670,43 @@ function Backdrop({ isOpen, onClick }: BackdropProps): React.ReactElement {
   );
 }
 
-/**
- * Main CharacterWorkspaceContent component
- */
+const DESKTOP_MIN_WIDTH_PX = 1024;
+
+function getIsMobileViewport(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth < DESKTOP_MIN_WIDTH_PX;
+}
+
 function CharacterWorkspaceContent(): React.ReactElement {
   const { currentCharacter } = useCharacterContext();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  
-  // Panel visibility states
-  const [isContextOpen, setIsContextOpen] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(true);
-  
-  // Mobile detection
-  const [isMobile, setIsMobile] = useState(false);
-  
+
+  const [isMobile, setIsMobile] = useState(getIsMobileViewport);
+  const [isContextOpen, setIsContextOpen] = useState(() => !getIsMobileViewport());
+  const [isChatOpen, setIsChatOpen] = useState(() => !getIsMobileViewport());
+
   useEffect(() => {
-    const checkMobile = () => {
-      const isMobileView = window.innerWidth < 1024;
-      setIsMobile(isMobileView);
-      
-      // On mobile, panels are closed by default
-      if (isMobileView) {
+    const mql = window.matchMedia(`(max-width: ${DESKTOP_MIN_WIDTH_PX - 1}px)`);
+    let lastMobile: boolean | null = null;
+
+    const apply = (mobile: boolean) => {
+      if (lastMobile === mobile) return;
+      lastMobile = mobile;
+
+      setIsMobile(mobile);
+      if (mobile) {
         setIsContextOpen(false);
         setIsChatOpen(false);
       } else {
-        // On desktop, panels are open by default
         setIsContextOpen(true);
         setIsChatOpen(true);
       }
     };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+
+    apply(mql.matches);
+    const onChange = (event: MediaQueryListEvent) => apply(event.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
   }, []);
 
   if (!currentCharacter) {
@@ -853,11 +857,12 @@ function CharacterWorkspaceInner({
       {/* Main 3-column layout */}
       <div className="flex-1 flex overflow-hidden relative">
         
-        {/* Left Panel: AI Context */}
-        <aside 
+        {/* Left: AI Context */}
+        <aside
           className={`
-            ${isContextOpen && isMobile ? 'fixed top-0 left-0 right-auto z-40 w-80 shadow-2xl translate-x-0 h-dvh safe-area-bottom' : ''}
-            ${!isContextOpen && isMobile ? 'fixed top-0 left-0 right-auto z-40 w-80 shadow-2xl -translate-x-full h-dvh safe-area-bottom' : ''}
+            max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:right-auto max-lg:z-40
+            max-lg:h-dvh max-lg:w-80 max-lg:shadow-2xl max-lg:safe-area-bottom
+            ${isContextOpen ? 'max-lg:translate-x-0' : 'max-lg:-translate-x-full'}
             ${isContextOpen && !isMobile ? 'lg:w-72 xl:w-80 translate-x-0' : ''}
             ${!isContextOpen && !isMobile ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden' : ''}
             transition-all duration-300 ease-in-out
@@ -867,13 +872,13 @@ function CharacterWorkspaceInner({
             shrink-0
           `}
         >
-          <ContextPanel 
+          <ContextPanel
             onClose={() => setIsContextOpen(false)}
             isMobile={isMobile}
           />
         </aside>
 
-        {/* Center: Main Editor - Always visible, spans available space */}
+        {/* Center: editor */}
         <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden">
           <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'} pb-[max(env(safe-area-inset-bottom),0px)]`}>
             <div className={`h-full w-full bg-surface/60 backdrop-blur-xl
@@ -895,17 +900,17 @@ function CharacterWorkspaceInner({
           </div>
         </main>
 
-        {/* Right Panel: Ask AI (desktop width controlled + drag resize) */}
+        {/* Right: Ask AI */}
         <aside
           className={`
             relative
-            ${isChatOpen && isMobile ? 'fixed top-0 right-0 left-auto z-40 w-80 shadow-2xl translate-x-0 h-dvh safe-area-bottom' : ''}
-            ${!isChatOpen && isMobile ? 'fixed top-0 right-0 left-auto z-40 w-80 shadow-2xl translate-x-full h-dvh safe-area-bottom' : ''}
-            ${isChatOpen && !isMobile ? 'translate-x-0' : ''}
+            max-lg:fixed max-lg:top-0 max-lg:right-0 max-lg:left-auto max-lg:z-40
+            max-lg:h-dvh max-lg:w-80! max-lg:max-w-[85vw] max-lg:shadow-2xl max-lg:safe-area-bottom
+            ${isChatOpen ? 'max-lg:translate-x-0' : 'max-lg:translate-x-full'}
+            ${isChatOpen && !isMobile ? 'translate-x-0 border-l border-border' : ''}
             ${!isChatOpen && !isMobile ? 'opacity-0 overflow-hidden' : ''}
             ${isChatResizing ? '' : 'transition-all duration-300 ease-in-out'}
             bg-bg
-            ${isChatOpen && !isMobile ? 'border-l border-border' : ''}
             flex flex-col
             shrink-0
           `}
@@ -924,7 +929,7 @@ function CharacterWorkspaceInner({
               aria-label="Resize AI chat panel"
               title="Drag to resize"
               onPointerDown={onChatResizePointerDown}
-              className="absolute left-0 top-0 bottom-0 w-1.5 -ml-0.5 z-10 cursor-col-resize group touch-none"
+              className="absolute left-0 top-0 bottom-0 w-1.5 -ml-0.5 z-10 cursor-col-resize group touch-none max-lg:hidden"
             >
               <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-transparent group-hover:bg-accent/60 group-active:bg-accent transition-colors" />
             </div>

@@ -11,8 +11,13 @@ const MAX_WIDTH_CAP = 720;
 const MAX_VIEWPORT_FRACTION = 0.45;
 
 function clampWidth(width: number, viewportWidth = window.innerWidth): number {
-  const max = Math.min(MAX_WIDTH_CAP, Math.floor(viewportWidth * MAX_VIEWPORT_FRACTION));
-  return Math.max(MIN_WIDTH, Math.min(max, Math.round(width)));
+  const max = Math.max(
+    0,
+    Math.min(MAX_WIDTH_CAP, Math.floor(viewportWidth * MAX_VIEWPORT_FRACTION))
+  );
+  const min = Math.min(MIN_WIDTH, max);
+  if (max === 0) return 0;
+  return Math.max(min, Math.min(max, Math.round(width)));
 }
 
 function readStoredWidth(storageKey: string): number {
@@ -29,23 +34,18 @@ function readStoredWidth(storageKey: string): number {
 
 export interface UsePersistedPanelWidthOptions {
   storageKey: string;
-  /** When false, pointer handlers no-op (e.g. mobile). */
   enabled?: boolean;
 }
 
 export interface UsePersistedPanelWidthReturn {
   width: number;
   isDragging: boolean;
-  /** Attach to the drag handle (left edge of a right dock). */
   onResizePointerDown: (e: ReactPointerEvent<HTMLElement>) => void;
   minWidth: number;
   maxWidthCap: number;
 }
 
-/**
- * Desktop panel width with localStorage persistence and left-edge drag resize.
- * Dragging left increases width (right dock grows into the editor).
- */
+/** Desktop panel width with localStorage persistence and left-edge drag resize. */
 export function usePersistedPanelWidth(
   options: UsePersistedPanelWidthOptions
 ): UsePersistedPanelWidthReturn {
@@ -55,8 +55,8 @@ export function usePersistedPanelWidth(
 
   const widthRef = useRef(width);
   const storageKeyRef = useRef(storageKey);
-
-  /** Active drag teardown (listeners + body styles). */
+  const mountedRef = useRef(true);
+  const enabledRef = useRef(enabled);
   const endDragRef = useRef<(() => void) | null>(null);
 
   const teardownDrag = useCallback(() => {
@@ -73,41 +73,46 @@ export function usePersistedPanelWidth(
   }, [storageKey]);
 
   useEffect(() => {
-    if (!enabled) return;
+    enabledRef.current = enabled;
+  }, [enabled]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      teardownDrag();
+    };
+  }, [teardownDrag]);
+
+  useEffect(() => {
+    if (!enabled) {
+      teardownDrag();
+      return;
+    }
+
     const onResize = () => {
+      if (!mountedRef.current) return;
       setWidth(w => clampWidth(w));
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [enabled]);
+  }, [enabled, teardownDrag]);
 
-  // Persist when not mid-drag
   useEffect(() => {
-    if (!enabled || isDragging) return;
+    if (!enabled || isDragging || !mountedRef.current) return;
     try {
       localStorage.setItem(storageKey, String(width));
     } catch {
-      // ignore quota / private mode
+      // ignore
     }
   }, [width, storageKey, enabled, isDragging]);
 
-  // Abort drag if disabled (e.g. mobile breakpoint) or on unmount — avoids stuck body styles / listeners
-  useEffect(() => {
-    if (!enabled) {
-      teardownDrag();
-    }
-    return () => {
-      teardownDrag();
-    };
-  }, [enabled, teardownDrag]);
-
   const onResizePointerDown = useCallback(
     (e: ReactPointerEvent<HTMLElement>) => {
-      if (!enabled) return;
+      if (!enabledRef.current || !mountedRef.current) return;
       e.preventDefault();
       e.stopPropagation();
 
-      // Replace any prior incomplete drag
       teardownDrag();
 
       const handle = e.currentTarget;
@@ -119,17 +124,34 @@ export function usePersistedPanelWidth(
       try {
         handle.setPointerCapture(pointerId);
       } catch {
-        // Some browsers throw if capture fails; document listeners still work
+        // capture optional
       }
 
-      setIsDragging(true);
+      if (mountedRef.current) {
+        setIsDragging(true);
+      }
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
 
       const onMove = (ev: PointerEvent) => {
-        // Right dock: drag handle leftward (negative delta) → wider panel
+        if (!mountedRef.current || !enabledRef.current) {
+          endDragRef.current?.();
+          return;
+        }
         const next = clampWidth(startWidth + (startX - ev.clientX));
         setWidth(next);
+      };
+
+      const onUp = () => {
+        finish(true);
+      };
+
+      const onAbort = () => {
+        finish(false);
+      };
+
+      const onLostCapture = () => {
+        finish(false);
       };
 
       const finish = (persist: boolean) => {
@@ -139,6 +161,9 @@ export function usePersistedPanelWidth(
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         document.removeEventListener('pointercancel', onUp);
+        window.removeEventListener('blur', onAbort);
+        window.removeEventListener('pagehide', onAbort);
+        handle.removeEventListener('lostpointercapture', onLostCapture);
         endDragRef.current = null;
 
         try {
@@ -146,14 +171,17 @@ export function usePersistedPanelWidth(
             handle.releasePointerCapture(pointerId);
           }
         } catch {
-          // element may already be gone
+          // ignore
         }
 
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
+
+        if (!mountedRef.current) return;
+
         setIsDragging(false);
 
-        if (persist) {
+        if (persist && enabledRef.current) {
           setWidth(w => {
             const clamped = clampWidth(w);
             try {
@@ -166,18 +194,16 @@ export function usePersistedPanelWidth(
         }
       };
 
-      const onUp = () => {
-        finish(true);
-      };
-
       endDragRef.current = () => finish(false);
 
-      // Listen on document so teardown still works if the handle unmounts mid-drag
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onUp);
       document.addEventListener('pointercancel', onUp);
+      window.addEventListener('blur', onAbort);
+      window.addEventListener('pagehide', onAbort);
+      handle.addEventListener('lostpointercapture', onLostCapture);
     },
-    [enabled, teardownDrag]
+    [teardownDrag]
   );
 
   return {
