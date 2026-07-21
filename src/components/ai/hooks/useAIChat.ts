@@ -12,6 +12,8 @@ import { generateMessageId } from '../utils';
 
 export const MAX_CHAT_MESSAGES = 80;
 
+export const ASSISTANT_TURN_START_DELAY_MS = 600;
+
 export interface UseAIChatOptions {
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
@@ -59,6 +61,15 @@ async function resolveContextAtCallTime(
 
 function isRequestCancelled(err: unknown): boolean {
   return err instanceof AIError && err.message === 'Request was cancelled';
+}
+
+/** Stop keeps generation current (true); New chat / unmount bump it (false). */
+export function shouldCommitCancelledPartial(
+  isMounted: boolean,
+  requestId: number,
+  currentGeneration: number
+): boolean {
+  return isMounted && requestId === currentGeneration;
 }
 
 function buildPartialAssistantMessage(
@@ -138,6 +149,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const streamRafRef = useRef<number | null>(null);
   const streamDirtyRef = useRef(false);
 
+  const requestGenerationRef = useRef(0);
+  const isMountedRef = useRef(true);
+
   const chatHistoryRef = useRef(chatHistory);
   const isProcessingRef = useRef(isProcessing);
   const aiConfigRef = useRef(aiConfig);
@@ -188,6 +202,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     streamRafRef.current = null;
     if (!streamDirtyRef.current) return;
     streamDirtyRef.current = false;
+    if (!isMountedRef.current) return;
     setStreamingContent(streamContentRef.current);
     setStreamingReasoning(streamReasoningRef.current);
   }, []);
@@ -196,8 +211,10 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     cancelStreamRaf();
     streamContentRef.current = '';
     streamReasoningRef.current = '';
-    setStreamingContent('');
-    setStreamingReasoning('');
+    if (isMountedRef.current) {
+      setStreamingContent('');
+      setStreamingReasoning('');
+    }
   }, [cancelStreamRaf]);
 
   const appendStreamChunk = useCallback(
@@ -221,6 +238,21 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     [flushStreamToState]
   );
 
+  // New chat / unmount only — not Stop (Stop must keep generation so partial can commit).
+  const invalidateInFlight = useCallback(
+    (reason: 'new-chat' | 'unmount') => {
+      requestGenerationRef.current += 1;
+      cancelStreamRaf();
+      const service = aiServiceRef.current;
+      if (service) {
+        console.log(`[useAIChat] Aborting in-flight AI request (${reason})`);
+        service.abort();
+        aiServiceRef.current = null;
+      }
+    },
+    [cancelStreamRaf]
+  );
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -232,16 +264,17 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   }, []);
 
   const handleNewChat = useCallback(() => {
-    if (aiServiceRef.current) {
-      aiServiceRef.current.abort();
-      aiServiceRef.current = null;
-    }
+    invalidateInFlight('new-chat');
+    streamContentRef.current = '';
+    streamReasoningRef.current = '';
     setChatHistory([]);
     setError(null);
     setIsProcessing(false);
+    isProcessingRef.current = false;
     setIsStreaming(false);
-    clearStreamDraft();
-  }, [clearStreamDraft]);
+    setStreamingContent('');
+    setStreamingReasoning('');
+  }, [invalidateInFlight]);
 
   const handleDeleteMessage = useCallback((messageId: string) => {
     if (isProcessingRef.current) return;
@@ -256,7 +289,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   const finishTurn = useCallback(() => {
     clearStreamDraft();
+    if (!isMountedRef.current) return;
     setIsProcessing(false);
+    isProcessingRef.current = false;
     setIsStreaming(false);
     aiServiceRef.current = null;
   }, [clearStreamDraft]);
@@ -271,11 +306,22 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       const config = aiConfigRef.current;
       const streaming = enableStreamingRef.current;
 
+      const requestId = ++requestGenerationRef.current;
+      const isCurrent = () =>
+        isMountedRef.current && requestId === requestGenerationRef.current;
+
       setIsProcessing(true);
+      isProcessingRef.current = true;
       setError(null);
       clearStreamDraft();
 
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise<void>(resolve => {
+        window.setTimeout(resolve, ASSISTANT_TURN_START_DELAY_MS);
+      });
+
+      if (!isCurrent()) {
+        return;
+      }
 
       setIsStreaming(streaming);
 
@@ -289,6 +335,10 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           samplerSettingsRef.current,
           promptSettingsRef.current
         );
+        if (!isCurrent()) {
+          aiService.dispose();
+          return;
+        }
         aiServiceRef.current = aiService;
 
         const conversationContext: ConversationMessage[] = historyForContext.map(msg => ({
@@ -301,8 +351,13 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           contextEntryIdsRef.current
         );
 
+        if (!isCurrent()) {
+          return;
+        }
+
         const onChunk = streaming
           ? (chunk: { content?: string; reasoning?: string }) => {
+              if (!isCurrent()) return;
               if (firstTokenTime === null) {
                 firstTokenTime = Date.now();
               }
@@ -319,6 +374,10 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         );
 
         contextArray = [];
+
+        if (!isCurrent()) {
+          return;
+        }
 
         const contentTokens = estimateTokens(result.content);
         const reasoningTokens = estimateTokens(result.reasoning ?? '');
@@ -351,6 +410,19 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
         setChatHistory(trimHistory([...historyToKeep, assistantMessage]));
       } catch (err) {
+        if (
+          !shouldCommitCancelledPartial(
+            isMountedRef.current,
+            requestId,
+            requestGenerationRef.current
+          )
+        ) {
+          if (isRequestCancelled(err)) {
+            console.log('[useAIChat] AI request cancelled (stale or unmounted)');
+          }
+          return;
+        }
+
         if (isRequestCancelled(err)) {
           console.log('[useAIChat] AI request cancelled by user');
           const partial = buildPartialAssistantMessage(
@@ -377,13 +449,27 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         }
       } finally {
         contextArray = [];
-        finishTurn();
+        if (requestId === requestGenerationRef.current) {
+          aiServiceRef.current = null;
+        }
+        if (
+          isMountedRef.current &&
+          requestId === requestGenerationRef.current
+        ) {
+          finishTurn();
+        } else {
+          cancelStreamRaf();
+          streamContentRef.current = '';
+          streamReasoningRef.current = '';
+        }
       }
     },
-    [appendStreamChunk, clearStreamDraft, finishTurn]
+    [appendStreamChunk, cancelStreamRaf, clearStreamDraft, finishTurn]
   );
 
   const handleRegenerate = useCallback(async () => {
+    if (isProcessingRef.current) return;
+
     const history = chatHistoryRef.current;
     if (history.length === 0) return;
 
@@ -412,6 +498,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   const handleAsk = useCallback(
     async (question: string) => {
+      if (isProcessingRef.current) return;
+
       if (!question.trim()) {
         const lastMessage = chatHistoryRef.current[chatHistoryRef.current.length - 1];
         if (lastMessage?.role === 'user') {
@@ -448,14 +536,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   );
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      cancelStreamRaf();
-      if (aiServiceRef.current) {
-        aiServiceRef.current.abort();
-        aiServiceRef.current = null;
-      }
+      isMountedRef.current = false;
+      invalidateInFlight('unmount');
+      streamContentRef.current = '';
+      streamReasoningRef.current = '';
     };
-  }, [cancelStreamRaf]);
+  }, [invalidateInFlight]);
 
   return {
     chatHistory,

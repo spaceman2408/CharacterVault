@@ -387,6 +387,8 @@ export class AIService {
   private sampler: SamplerSettings;
   private prompts: PromptSettings;
   private abortController: AbortController | null = null;
+  // Survives abort() nulling the controller so stream loops still observe cancel.
+  private aborted = false;
   /**
    * Safety margin reserved for tokenizer variance, message framing, and
    * prompt wrappers not fully accounted for in the pre-budget step.
@@ -490,11 +492,20 @@ export class AIService {
    * Abort the current request if one is in progress
    */
   abort(): void {
+    this.aborted = true;
     if (this.abortController) {
       this.abortController.abort();
       console.log('[AIService] Request aborted by user');
       this.abortController = null;
     }
+  }
+
+  dispose(): void {
+    this.abort();
+  }
+
+  private isAborted(): boolean {
+    return this.aborted || !!this.abortController?.signal.aborted;
   }
 
   /**
@@ -829,6 +840,7 @@ Provide only the generated text without any additional commentary.`;
     const request = this.buildChatCompletionBody(messages, customSampler, !!useStreaming);
     const cache = getCapabilityCache(this.getBaseUrl(), this.config.modelId);
 
+    this.aborted = false;
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
@@ -880,6 +892,9 @@ Provide only the generated text without any additional commentary.`;
             );
           }
 
+          if (this.isAborted()) {
+            throw new AIError('Request was cancelled', 'unknown');
+          }
           this.abortController = new AbortController();
           currentRequest = repaired.request as ChatCompletionRequest;
           response = await this.sendRequest(currentRequest, this.abortController.signal);
@@ -893,6 +908,9 @@ Provide only the generated text without any additional commentary.`;
             `[AIService] Generic 400 error. Proactively stripping non-standard params: ${fallback.removed.join(', ')}. ` +
               `Retrying without them...`
           );
+          if (this.isAborted()) {
+            throw new AIError('Request was cancelled', 'unknown');
+          }
           this.abortController = new AbortController();
           currentRequest = fallback.request as ChatCompletionRequest;
           response = await this.sendRequest(currentRequest, this.abortController.signal);
@@ -1029,7 +1047,7 @@ Provide only the generated text without any additional commentary.`;
 
     try {
       while (true) {
-        if (this.abortController?.signal.aborted) {
+        if (this.isAborted()) {
           console.log('[AIService] Streaming aborted');
           throw new AIError('Request was cancelled', 'unknown');
         }
@@ -1073,7 +1091,6 @@ Provide only the generated text without any additional commentary.`;
         reasoning: flushed.reasoning || undefined,
       };
     } finally {
-      // Cancel stops network buffering; releaseLock if cancel already released.
       try {
         await reader.cancel();
       } catch {
@@ -1084,6 +1101,7 @@ Provide only the generated text without any additional commentary.`;
       } catch {
         // lock already released by cancel()
       }
+      parser.reset();
     }
   }
 
