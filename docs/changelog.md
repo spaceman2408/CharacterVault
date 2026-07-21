@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.0 (2026-07-21)
+
+Orion chat improvements and small polish. Full notes: [v1.1.0 release notes](/releases/v1.1.0).
+
+### Highlights
+
+- Smoother Orion streaming; stop mid-reply keeps partial answers
+- Resizable desktop Orion panel; scroll that follows the stream until you scroll up
+- Delete a message and trim the rest of the thread
+- Snapshot history easier on phones; theme-aware tags and Feeling Lucky vortex
+- Privacy notice linked from the app and docs
+
+---
+
 ## 1.0.0 (2026-07-17)
 
 First stable release. Full notes: [v1.0.0 release notes](/releases/v1.0.0).

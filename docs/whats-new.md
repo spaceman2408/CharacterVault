@@ -6,6 +6,16 @@ Quick overview of recent updates to CharacterVault.
 
 ## July 2026
 
+### Orion (1.1.0)
+
+- Smoother streaming on long replies; stop mid-reply keeps what Orion already wrote
+- Resizable desktop chat panel; scroll follows the stream until you scroll up
+- Delete a message (with confirm) and trim everything after it
+
+[AI Assistant →](/features/ai-assistant) · [Release 1.1.0 →](/releases/v1.1.0)
+
+---
+
 ### Per-Prompt Model Routing
 
 Each AI toolbar prompt can use its **own endpoint and model**, not only the global AI Config choice.
