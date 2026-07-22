@@ -306,18 +306,54 @@ class CharacterSnapshotService {
    * @returns {Promise<void>}
    */
   async deleteSnapshotById(snapshotId: string): Promise<void> {
-    await characterDb.deleteSnapshotById(snapshotId);
+    await characterDb.deleteSnapshot(snapshotId);
   }
 
   async diffSnapshotAgainstCharacter(snapshot: CharacterSnapshot, character: Character): Promise<SnapshotDiffEntry[]> {
-    // Resolve the effective image data from content-addressed storage
-    const effectiveSnapshot = { ...snapshot, payload: { ...snapshot.payload } };
-    const resolvedImage = await characterDb.resolveSnapshotImage(snapshot.imageHash);
-    effectiveSnapshot.payload.imageData = resolvedImage?.imageData ?? '';
-    effectiveSnapshot.payload.thumbnailData = resolvedImage?.thumbnailData ?? '';
+    const effectivePayload: CharacterSnapshotPayload = {
+      ...snapshot.payload,
+      imageData: snapshot.payload.imageData,
+      thumbnailData: snapshot.payload.thumbnailData,
+    };
+
+    let imageResolved = Boolean(snapshot.payload.imageData);
+    let imageChanged: boolean | null = null;
+
+    if (snapshot.imageHash && character.imageData) {
+      const currentImageHash = await this.computeImageHash(character.imageData, character.thumbnailData);
+      imageChanged = snapshot.imageHash !== currentImageHash;
+    }
+
+    if (!imageResolved && imageChanged !== false) {
+      const resolvedImage = await characterDb.resolveSnapshotImage(snapshot.imageHash);
+      effectivePayload.imageData = resolvedImage?.imageData ?? '';
+      effectivePayload.thumbnailData = resolvedImage?.thumbnailData ?? '';
+      imageResolved = true;
+      if (imageChanged === null) {
+        imageChanged = stableSerialize(effectivePayload.imageData) !== stableSerialize(character.imageData);
+      }
+    } else if (!imageResolved && imageChanged === false) {
+      effectivePayload.imageData = '';
+      effectivePayload.thumbnailData = '';
+    }
 
     return DIFFABLE_SECTIONS.map(section => {
-      const snapshotValue = getSectionValue(effectiveSnapshot.payload, section);
+      if (section === 'image') {
+        const snapshotValue = imageResolved
+          ? effectivePayload.imageData
+          : '';
+        const currentValue = character.imageData;
+        const changed = imageChanged ?? (stableSerialize(snapshotValue) !== stableSerialize(currentValue));
+        return {
+          section,
+          label: getSectionLabel(section),
+          changed,
+          snapshotValue,
+          currentValue,
+        };
+      }
+
+      const snapshotValue = getSectionValue(effectivePayload, section);
       const currentValue = getCharacterSectionValue(character, section);
       return {
         section,

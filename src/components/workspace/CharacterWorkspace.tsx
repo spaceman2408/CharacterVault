@@ -380,6 +380,7 @@ function ImageEditor(): React.ReactElement {
 interface CharacterHeaderProps {
   onOpenSettings: () => void;
   onOpenRevisions: () => void;
+  isOpeningRevisions?: boolean;
   isContextOpen: boolean;
   isChatOpen: boolean;
   onToggleContext: () => void;
@@ -390,6 +391,7 @@ interface CharacterHeaderProps {
 function CharacterHeader({ 
   onOpenSettings, 
   onOpenRevisions,
+  isOpeningRevisions = false,
   isContextOpen, 
   isChatOpen, 
   onToggleContext, 
@@ -531,7 +533,8 @@ function CharacterHeader({
 
         <button
           onClick={onOpenRevisions}
-          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
+          disabled={isOpeningRevisions}
+          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50"
           title="Open revisions"
         >
           <History className="w-4 h-4" />
@@ -766,6 +769,8 @@ function CharacterWorkspaceInner({
     promptSettings,
     isHistoryOpen,
     setIsHistoryOpen,
+    openHistory,
+    isOpeningHistory,
     handleAIOperation,
     getContextContent,
     visibleSections,
@@ -833,7 +838,8 @@ function CharacterWorkspaceInner({
       
       <CharacterHeader 
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenRevisions={() => setIsHistoryOpen(true)}
+        onOpenRevisions={() => { void openHistory(); }}
+        isOpeningRevisions={isOpeningHistory}
         isContextOpen={isContextOpen}
         isChatOpen={isChatOpen}
         onToggleContext={toggleContext}

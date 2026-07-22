@@ -43,6 +43,13 @@ export { CharacterSettingsService, characterSettingsService } from './CharacterS
 export { CharacterImportService, characterImportService } from './CharacterImportService';
 export { CharacterExportService, characterExportService } from './CharacterExportService';
 export { CharacterSnapshotService, characterSnapshotService, type SnapshotRestoreAction } from './CharacterSnapshotService';
+export {
+  openHistoryAfterFlush,
+  shouldComputePayloadHash,
+  loadSnapshotDiff,
+  type OpenHistoryAfterFlushOptions,
+  type SnapshotDiffLoader,
+} from './historyLifecycle';
 
 // Lorebook format converter
 export {

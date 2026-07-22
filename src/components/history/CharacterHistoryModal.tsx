@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
-import { characterSnapshotService } from '../../services';
+import { characterSnapshotService, shouldComputePayloadHash } from '../../services';
 import type { CharacterBook, CharacterSnapshot, SnapshotMetadata, SnapshotDiffEntry } from '../../db/characterTypes';
 
 interface CharacterHistoryModalProps {
@@ -1251,10 +1251,19 @@ export function CharacterHistoryModal({
   const [currentPayloadHash, setCurrentPayloadHash] = useState<string | null>(null);
   const previousSnapshotIdsRef = useRef<string[]>([]);
   const snapshotHighlightTimeoutsRef = useRef<number[]>([]);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const confirmReloadGenerationRef = useRef(0);
 
   const clearSnapshotHighlightTimeouts = useCallback(() => {
     snapshotHighlightTimeoutsRef.current.forEach(timeoutId => window.clearTimeout(timeoutId));
     snapshotHighlightTimeoutsRef.current = [];
+  }, []);
+
+  const clearCloseTimeout = useCallback(() => {
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
   }, []);
 
   const resetModalState = useCallback(() => {
@@ -1266,15 +1275,16 @@ export function CharacterHistoryModal({
     setHighlightedSnapshotIds([]);
     setHasAttemptedLoad(false);
     setIsContentReady(false);
+    setCurrentPayloadHash(null);
     previousSnapshotIdsRef.current = [];
     clearSnapshotHighlightTimeouts();
+    confirmReloadGenerationRef.current += 1;
   }, [clearSnapshotHighlightTimeouts]);
 
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
       setIsClosing(false);
-      // Delay showing content to prevent flash during modal entrance animation
       const readyTimeoutId = window.setTimeout(() => {
         setIsContentReady(true);
       }, 100);
@@ -1288,14 +1298,16 @@ export function CharacterHistoryModal({
 
     setIsClosing(true);
     setIsContentReady(false);
-    const timeoutId = window.setTimeout(() => {
+    clearCloseTimeout();
+    closeTimeoutRef.current = window.setTimeout(() => {
+      closeTimeoutRef.current = null;
       setIsVisible(false);
       setIsClosing(false);
       resetModalState();
     }, MODAL_CLOSE_MS);
 
-    return () => window.clearTimeout(timeoutId);
-  }, [isOpen, isVisible, resetModalState]);
+    return () => clearCloseTimeout();
+  }, [isOpen, isVisible, resetModalState, clearCloseTimeout]);
 
   useEffect(() => {
     if (!isVisible) {
@@ -1305,17 +1317,25 @@ export function CharacterHistoryModal({
     void refreshSnapshots();
   }, [isVisible, refreshSnapshots]);
 
-  // Compute current character payload hash once for comparison
   useEffect(() => {
-    if (!currentCharacter) {
-      setCurrentPayloadHash(null);
+    if (!shouldComputePayloadHash(isVisible) || !currentCharacter) {
+      if (!isVisible) {
+        setCurrentPayloadHash(null);
+      }
       return;
     }
 
+    let cancelled = false;
     void characterSnapshotService.computeCharacterPayloadHash(currentCharacter).then(hash => {
-      setCurrentPayloadHash(hash);
+      if (!cancelled) {
+        setCurrentPayloadHash(hash);
+      }
     });
-  }, [currentCharacter]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCharacter, isVisible]);
 
   // Select the first snapshot when list loads
   useEffect(() => {
@@ -1370,7 +1390,8 @@ export function CharacterHistoryModal({
 
   useEffect(() => () => {
     clearSnapshotHighlightTimeouts();
-  }, [clearSnapshotHighlightTimeouts]);
+    clearCloseTimeout();
+  }, [clearSnapshotHighlightTimeouts, clearCloseTimeout]);
 
   const closeModal = useCallback(() => {
     if (isClosing) {
@@ -1378,13 +1399,15 @@ export function CharacterHistoryModal({
     }
 
     setIsClosing(true);
-    window.setTimeout(() => {
+    clearCloseTimeout();
+    closeTimeoutRef.current = window.setTimeout(() => {
+      closeTimeoutRef.current = null;
       setIsVisible(false);
       setIsClosing(false);
       resetModalState();
       onClose();
     }, MODAL_CLOSE_MS);
-  }, [isClosing, onClose, resetModalState]);
+  }, [isClosing, onClose, resetModalState, clearCloseTimeout]);
 
   const requestClose = useCallback(() => {
     if (isBusy || confirmAction) {
@@ -1421,7 +1444,6 @@ export function CharacterHistoryModal({
     return hasChangesById;
   }, [snapshotMetadata, currentPayloadHash]);
 
-  // Load diff for selected snapshot (stale-safe via captured ID)
   useEffect(() => {
     if (!selectedSnapshotId) {
       setSelectedSnapshot(null);
@@ -1435,21 +1457,18 @@ export function CharacterHistoryModal({
     setHasAttemptedLoad(false);
     let cancelled = false;
     const startTime = performance.now();
-    const MIN_LOADING_MS = 300; // Minimum time to show loading for smooth transition
+    const MIN_LOADING_MS = 300;
+    let loadingTimeoutId: number | null = null;
 
     void (async () => {
       try {
-        const entries = await getSnapshotDiff(capturedId);
+        const { snapshot, entries } = await getSnapshotDiff(capturedId);
         const filtered = entries.filter(entry => entry.changed);
 
         if (cancelled) return;
 
         setDiffEntries(filtered);
-
-        const snapshot = await characterSnapshotService.loadSnapshotPayload(capturedId);
-        if (cancelled) return;
-
-        setSelectedSnapshot(snapshot ?? null);
+        setSelectedSnapshot(snapshot);
       } catch (error) {
         if (cancelled) return;
         console.error('Failed to load diff:', error);
@@ -1459,8 +1478,7 @@ export function CharacterHistoryModal({
         if (!cancelled) {
           const elapsed = performance.now() - startTime;
           const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
-          // Ensure minimum loading time for smooth fade transition
-          setTimeout(() => {
+          loadingTimeoutId = window.setTimeout(() => {
             if (!cancelled) {
               setIsLoadingDiff(false);
               setHasAttemptedLoad(true);
@@ -1470,7 +1488,12 @@ export function CharacterHistoryModal({
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (loadingTimeoutId !== null) {
+        window.clearTimeout(loadingTimeoutId);
+      }
+    };
   }, [selectedSnapshotId, getSnapshotDiff]);
 
   const changedSectionCount = diffEntries.length;
@@ -1513,31 +1536,41 @@ export function CharacterHistoryModal({
       } else if (confirmAction.kind === 'update-baseline') {
         await updateBaselineSnapshot(confirmAction.metadata.id);
         onToast('success', 'Base card updated', 'The "Opened card" baseline was overwritten with the current draft.');
-        // Reload diff for the (still-selected) baseline snapshot so the UI clears.
         if (selectedSnapshotId) {
+          const reloadGeneration = ++confirmReloadGenerationRef.current;
           setIsLoadingDiff(true);
           setHasAttemptedLoad(false);
           try {
-            const entries = await getSnapshotDiff(selectedSnapshotId);
+            const { snapshot, entries } = await getSnapshotDiff(selectedSnapshotId);
+            if (reloadGeneration !== confirmReloadGenerationRef.current) {
+              return;
+            }
             setDiffEntries(entries.filter(entry => entry.changed));
-            const snapshot = await characterSnapshotService.loadSnapshotPayload(selectedSnapshotId);
-            setSelectedSnapshot(snapshot ?? null);
+            setSelectedSnapshot(snapshot);
             setHasAttemptedLoad(true);
           } finally {
-            setIsLoadingDiff(false);
+            if (reloadGeneration === confirmReloadGenerationRef.current) {
+              setIsLoadingDiff(false);
+            }
           }
         }
       } else {
         await restoreSnapshot(confirmAction.metadata.id, 'section', confirmAction.entry.section);
         onToast('success', 'Section restored', `${confirmAction.entry.label} was restored from the selected revision.`);
-        // After restoring a section, refresh the diff for this snapshot
         if (selectedSnapshotId) {
+          const reloadGeneration = ++confirmReloadGenerationRef.current;
           setIsLoadingDiff(true);
           try {
-            const entries = await getSnapshotDiff(selectedSnapshotId);
+            const { snapshot, entries } = await getSnapshotDiff(selectedSnapshotId);
+            if (reloadGeneration !== confirmReloadGenerationRef.current) {
+              return;
+            }
             setDiffEntries(entries.filter(entry => entry.changed));
+            setSelectedSnapshot(snapshot);
           } finally {
-            setIsLoadingDiff(false);
+            if (reloadGeneration === confirmReloadGenerationRef.current) {
+              setIsLoadingDiff(false);
+            }
           }
         }
       }

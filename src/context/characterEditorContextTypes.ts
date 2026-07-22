@@ -4,7 +4,13 @@
  */
 
 import { createContext } from 'react';
-import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
+import type {
+  Character,
+  CharacterSection,
+  CharacterSnapshot,
+  SnapshotMetadata,
+  SnapshotDiffEntry,
+} from '../db/characterTypes';
 import type {
   SamplerSettings,
   AIConfig,
@@ -122,6 +128,10 @@ export interface CharacterEditorContextValue {
   updatePromptModels: (promptModels: PromptModelMap) => void;
   /** Toggle history modal */
   setIsHistoryOpen: (open: boolean) => void;
+  /** Flush pending saves then open the history modal */
+  openHistory: () => Promise<boolean>;
+  /** True while openHistory is flushing */
+  isOpeningHistory: boolean;
   /** Create a manual snapshot */
   createManualSnapshot: () => Promise<ManualSnapshotResult>;
   /** Refresh snapshots for current character */
@@ -132,8 +142,14 @@ export interface CharacterEditorContextValue {
   restoreSnapshot: (snapshotId: string, scope: 'whole' | 'section', targetSection?: CharacterSection) => Promise<void>;
   /** Overwrite the baseline ('open') snapshot in place with the current draft */
   updateBaselineSnapshot: (snapshotId: string) => Promise<void>;
-  /** Get diff entries for a snapshot (async - loads payload lazily) */
-  getSnapshotDiff: (snapshotId: string) => Promise<SnapshotDiffEntry[]>;
+  /**
+   * Load snapshot payload once and compute diff entries (lazy payload load).
+   * Prefer this over separate load + diff calls to avoid double fetch.
+   */
+  getSnapshotDiff: (snapshotId: string) => Promise<{
+    snapshot: CharacterSnapshot | null;
+    entries: SnapshotDiffEntry[];
+  }>;
   /** Handle AI operation result */
   handleAIOperation: (result: string, operation: AIOperation, originalSelectedText?: string) => void;
   /** Get context content for AI */

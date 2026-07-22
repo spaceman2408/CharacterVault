@@ -20,6 +20,7 @@ import { useCharacterContext } from './useCharacterContext';
 import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation, type ManualSnapshotResult } from './characterEditorContextTypes';
 import { characterSettingsService } from '../services/CharacterSettingsService';
 import { characterSnapshotService } from '../services/CharacterSnapshotService';
+import { loadSnapshotDiff, openHistoryAfterFlush } from '../services/historyLifecycle';
 import { generateThumbnail } from '../utils/thumbnail';
 
 const CENTRAL_SAVE_DEBOUNCE_MS = 500;
@@ -64,6 +65,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [promptSettings, setPromptSettings] = useState<PromptSettings>(DEFAULT_SETTINGS.prompts);
   const [promptModels, setPromptModels] = useState<PromptModelMap>({});
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isOpeningHistory, setIsOpeningHistory] = useState(false);
+  const isOpeningHistoryRef = useRef(false);
   const [snapshotMetadata, setSnapshotMetadata] = useState<SnapshotMetadata[]>([]);
   const [isSnapshotsLoading, setIsSnapshotsLoading] = useState(false);
   const specFieldRequestVersionRef = useRef<Map<string, number>>(new Map());
@@ -622,20 +625,25 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     return snapshot ? 'created' : 'skipped';
   }, [createSnapshotFromCharacter, flushPendingSaves]);
 
-  const getSnapshotDiff = useCallback(async (snapshotId: string): Promise<SnapshotDiffEntry[]> => {
+  const openHistory = useCallback(async (): Promise<boolean> => {
+    return openHistoryAfterFlush({
+      flush: flushPendingSaves,
+      setOpen: setIsHistoryOpen,
+      isOpening: isOpeningHistoryRef.current,
+      setIsOpening: (busy) => {
+        isOpeningHistoryRef.current = busy;
+        setIsOpeningHistory(busy);
+      },
+    });
+  }, [flushPendingSaves]);
+
+  const getSnapshotDiff = useCallback(async (snapshotId: string) => {
     const character = currentCharacterRef.current;
     if (!character) {
-      return [];
+      return { snapshot: null, entries: [] as SnapshotDiffEntry[] };
     }
 
-    // Load the full snapshot payload lazily from DB
-    const snapshot = await characterSnapshotService.loadSnapshotPayload(snapshotId);
-    if (!snapshot) {
-      return [];
-    }
-
-    // Store the selected snapshot for potential restore operations
-    return characterSnapshotService.diffSnapshotAgainstCharacter(snapshot, character);
+    return loadSnapshotDiff(snapshotId, character, characterSnapshotService);
   }, []);
 
   const deleteSnapshot = useCallback(async (snapshotId: string) => {
@@ -982,6 +990,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     promptSettings,
     promptModels,
     isHistoryOpen,
+    isOpeningHistory,
     snapshotMetadata,
     isSnapshotsLoading,
     sectionOrder,
@@ -1004,6 +1013,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     addIgnoredWord,
     addCustomWord,
     setIsHistoryOpen,
+    openHistory,
     createManualSnapshot,
     refreshSnapshots,
     deleteSnapshot,
