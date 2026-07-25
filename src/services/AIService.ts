@@ -14,7 +14,7 @@ import type {
   ReasoningEffort,
   AIOperation,
 } from '../db/characterTypes';
-import { ReasoningParser } from './ReasoningParser';
+import { ReasoningParser, extractMessageReasoning } from './ReasoningParser';
 import { resolveProvider } from './providers';
 import type { ModelProviderInfo, FetchModelsOptions } from './providers';
 import { EDITOR_PERSONA, buildSystemPrompt as buildSystemPromptParts, getStablePrefix as getStablePrefixParts } from './PromptBuilder';
@@ -1002,17 +1002,16 @@ Provide only the generated text without any additional commentary.`;
     const choice = data.choices[0];
     const message = choice.message;
 
-    const reasoningContent = (message as unknown as { reasoning_content?: string }).reasoning_content;
-    const reasoning = (message as unknown as { reasoning?: string }).reasoning;
-    const reasoningDetails = (message as unknown as { reasoning_details?: Array<{ type?: string; text?: string }> }).reasoning_details;
-    const reasoningDetailsText = reasoningDetails
-      ?.map(d => d.text ?? '')
-      .filter(t => t.length > 0)
-      .join('') ?? undefined;
-
     return {
       content: message.content,
-      reasoning: reasoningContent ?? reasoning ?? reasoningDetailsText ?? undefined,
+      reasoning: extractMessageReasoning(
+        message as {
+          content?: string;
+          reasoning_content?: string;
+          reasoning?: string;
+          reasoning_details?: Array<{ type?: string; text?: string }>;
+        }
+      ),
     };
   }
 

@@ -23,6 +23,10 @@ export {
   ReasoningFormat,
   ReasoningParser,
   detectReasoningFormat,
+  extractMessageReasoning,
+  STRUCTURED_FIELD_EXTRACTORS,
+  THINK_TAG_PAIRS,
+  FORMAT_HINT_RULES,
   type ReasoningParseResult,
 } from './ReasoningParser';
 
