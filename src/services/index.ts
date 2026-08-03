@@ -48,6 +48,13 @@ export { CharacterImportService, characterImportService } from './CharacterImpor
 export { CharacterExportService, characterExportService } from './CharacterExportService';
 export { CharacterSnapshotService, characterSnapshotService, type SnapshotRestoreAction } from './CharacterSnapshotService';
 export {
+  CustomContextService,
+  customContextService,
+  CUSTOM_CONTEXT_HEADER,
+  formatCustomContextChunk,
+  estimateCustomContextTokensFromCharLength,
+} from './CustomContextService';
+export {
   openHistoryAfterFlush,
   shouldComputePayloadHash,
   loadSnapshotDiff,

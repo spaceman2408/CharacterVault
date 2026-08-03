@@ -17,6 +17,7 @@ import type {
   CharacterListItem,
   SpellDictionaryCacheEntry,
   StoredImage,
+  CharacterCustomContext,
 } from './characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
 import { estimateCharacterCardTokens } from '../services/AIService';
@@ -112,6 +113,9 @@ export class CharacterDatabase extends Dexie {
    */
   characterListIndex!: Table<CharacterListItem, string>;
 
+  /** Per-character vault-local custom AI context (1:1 with character) */
+  characterCustomContext!: Table<CharacterCustomContext, string>;
+
   constructor() {
     super('character-vault-db');
 
@@ -184,6 +188,17 @@ export class CharacterDatabase extends Dexie {
             await indexTable.put(toCharacterListItem(character));
           });
       });
+
+    // Version 7: Per-character custom AI context (vault-local, not card export)
+    this.version(7).stores({
+      characters: 'id, name, updatedAt, createdAt',
+      settings: 'id',
+      snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+      storedImages: 'id',
+      spellDictionaryCache: 'id',
+      characterListIndex: 'id, name, updatedAt, lastOpenedAt',
+      characterCustomContext: 'characterId',
+    });
   }
 
   /** Upsert the vault list row for a character (call after any write). */
@@ -421,10 +436,12 @@ export class CharacterDatabase extends Dexie {
       this.characters,
       this.snapshots,
       this.characterListIndex,
+      this.characterCustomContext,
       async () => {
         await this.characters.delete(id);
         await this.characterListIndex.delete(id);
         await this.snapshots.where('characterId').equals(id).delete();
+        await this.characterCustomContext.delete(id);
       }
     );
   }
@@ -460,10 +477,25 @@ export class CharacterDatabase extends Dexie {
       lastOpenedAt: timestamp,
     };
 
-    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
-      await this.characters.add(duplicatedCharacter);
-      await this.syncCharacterListIndex(duplicatedCharacter);
-    });
+    await this.transaction(
+      'rw',
+      this.characters,
+      this.characterListIndex,
+      this.characterCustomContext,
+      async () => {
+        await this.characters.add(duplicatedCharacter);
+        await this.syncCharacterListIndex(duplicatedCharacter);
+
+        const customContext = await this.characterCustomContext.get(id);
+        if (customContext) {
+          await this.characterCustomContext.put({
+            ...customContext,
+            characterId: newId,
+            updatedAt: timestamp,
+          });
+        }
+      }
+    );
     return duplicatedCharacter;
   }
 

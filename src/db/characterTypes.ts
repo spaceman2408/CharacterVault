@@ -154,6 +154,36 @@ export interface SpellDictionaryCacheEntry {
   cachedAt: number;
 }
 
+/**
+ * Vault-local custom AI context for a single character (1:1).
+ * Not part of card export/import or SillyTavern fields.
+ */
+export interface CharacterCustomContext {
+  /** Character ID (primary key) */
+  characterId: UUID;
+  /** Free-text body pasted/edited by the user */
+  content: string;
+  /** When true, body is included in Orion + AI toolbar context */
+  enabled: boolean;
+  /** Last save time (ISO 8601) */
+  updatedAt: Timestamp;
+  /** Character length of content — for usage UI without loading body */
+  charLength: number;
+}
+
+/** Lightweight custom-context fields safe to keep in React state */
+export interface CustomContextMeta {
+  enabled: boolean;
+  charLength: number;
+  updatedAt: Timestamp | null;
+}
+
+export const EMPTY_CUSTOM_CONTEXT_META: CustomContextMeta = {
+  enabled: false,
+  charLength: 0,
+  updatedAt: null,
+};
+
 export interface CharacterSnapshotPayload {
   name: string;
   imageData: string;
