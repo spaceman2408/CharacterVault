@@ -530,7 +530,7 @@ export interface SamplerSettings {
   /** Nucleus sampling threshold (0.0 - 1.0) */
   minP: number;
 
-  /** Top-k sampling (1 - 100) */
+  /** Top-k sampling (0 = disabled, 1 - 100) */
   topK: number;
 
   /** Repetition penalty (1.0 - 2.0) */
@@ -719,9 +719,9 @@ export const DEFAULT_SETTINGS = {
     modelId: '',
     modelIdsByBaseUrl: {},
     availableModels: [],
-    enableStreaming: false,
-    enableReasoning: false,
-    showReasoning: false,
+    enableStreaming: true,
+    enableReasoning: true,
+    showReasoning: true,
     reasoningEffort: 'medium',
     selectedProvider: undefined,
     providerByModelId: {},
@@ -729,12 +729,12 @@ export const DEFAULT_SETTINGS = {
     billingMode: 'sub',
   } satisfies AIConfig,
   sampler: {
-    temperature: 0.7,
-    minP: 0.05,
-    topK: 40,
-    repetitionPenalty: 1.1,
+    temperature: 1.0,
+    minP: 0,
+    topK: 0,
+    repetitionPenalty: 1.0,
     topP: 1.0,
-    contextLength: 4096,
+    contextLength: 8192,
     maxTokens: 2048,
   } satisfies SamplerSettings,
   samplerPresets: [
