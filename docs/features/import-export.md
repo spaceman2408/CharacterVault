@@ -26,6 +26,10 @@ The **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2
 
 ## Vault backup
 
+::: tip Custom AI context is not exported
+Notes you paste under **AI Context → Custom** stay in this browser only. They are not written into PNG/JSON cards and are not included in vault Backup ZIPs. See [Custom Context](/features/ai-context#custom-context).
+:::
+
 From the library header, click **Backup** to download a ZIP of every character:
 
 - Cards **with** an image → PNG with embedded data
@@ -55,6 +59,7 @@ Exports a JSON file using the V3 specification. Includes name, description, pers
 | Creator name, version, tags | ✓ | ✓ |
 | Creator notes | ✓ | ✓ |
 | Character image | ✓ | — |
+| Custom AI context (AI Context panel) | — | — |
 
 ## Lorebook Import & Export
 

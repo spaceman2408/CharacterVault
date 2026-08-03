@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Custom context (AI Context panel)
+
+- Per-character free-text **Custom context** in the AI Context panel (modal paste/edit, enable toggle, remove)
+- Included in **Orion** chat and the **AI toolbar** (and lorebook key generation) when enabled
+- Vault-local IndexedDB storage only — not exported with the card, not in snapshots, copied on character duplicate
+- Token usage meter and soft size warnings; body loaded for edit/AI requests only
+
+Details: [AI Context → Custom Context](/features/ai-context#custom-context)
+
+---
+
 ## 1.1.0 (2026-07-21)
 
 Orion chat improvements and small polish. Full notes: [v1.1.0 release notes](/releases/v1.1.0).

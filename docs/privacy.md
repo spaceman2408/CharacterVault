@@ -13,9 +13,9 @@ CharacterVault is open source under the [GNU General Public License v3.0](https:
 
 ## Local data
 
-When you create or edit characters, data such as card fields, images, snapshots, and app settings is kept locally in your browser. It is not uploaded to a CharacterVault server, because the core app has no such server.
+When you create or edit characters, data such as card fields, images, snapshots, app settings, and optional **custom AI context** notes is kept locally in your browser. It is not uploaded to a CharacterVault server, because the core app has no such server.
 
-Clearing site data, using a different browser or device, or uninstalling browser storage for this origin can remove that data. Export cards or vault backups if you want portable copies.
+Custom context is vault-local only: it is **not** embedded in PNG/JSON character exports. Clearing site data, using a different browser or device, or uninstalling browser storage for this origin can remove that data. Export cards or vault backups for portable **card** copies; keep a separate copy of custom notes if you need them elsewhere.
 
 ## Hosted site (GitHub Pages)
 
@@ -29,7 +29,7 @@ If you run CharacterVault yourself (local build or your own host), only that hos
 
 AI tools (Orion chat, the AI toolbar, AI Creation Studio, and similar) only work after you configure a provider (API base URL, key, and model, or a sign-in flow such as NanoGPT where offered).
 
-When you use those features, text and context you send (for example selected sections of a card, chat messages, or generation prompts) are transmitted to **that provider** so a model can respond. CharacterVault does not intermediate those requests through a CharacterVault-owned AI backend for the standard open-source app.
+When you use those features, text and context you send (for example selected sections of a card, enabled custom context notes, chat messages, or generation prompts) are transmitted to **that provider** so a model can respond. CharacterVault does not intermediate those requests through a CharacterVault-owned AI backend for the standard open-source app.
 
 - Your provider’s privacy policy and terms apply to that traffic.
 - API keys and related credentials are stored **locally** in your browser settings, not on CharacterVault servers.

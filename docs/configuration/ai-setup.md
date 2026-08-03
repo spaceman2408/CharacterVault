@@ -220,11 +220,14 @@ If Max Tokens is too close to Context Length, you'll see a warning. The AI needs
 
 When the total input exceeds the context window:
 
-- **In Chat (Orion)**: The system prompt (Orion persona) and current question are kept. Context entries are included next. Older conversation history is dropped first.
+- **In Chat (Orion)**: The system prompt (Orion persona) and current question are kept. Context entries from the AI Context panel (pinned sections, then custom context) are included next. Older conversation history is dropped first.
 - **In Editor (AI Toolbar)**: The selected text is kept. Context entries are dropped first if space is tight.
+
+Pin fewer sections, trim custom context, or raise **Context Length** on the Sampler tab if you hit limits often. See [AI Context Panel](/features/ai-context).
 
 ## Next Steps
 
+- [AI Context Panel](/features/ai-context) — sections, custom context, tokens
 - [Use the AI assistant](/features/ai-assistant)
 - [Adjust sampler settings](/configuration/sampler-settings)
 - [Customize AI operation prompts & model routing](/features/editor#customizing-ai-operation-prompts)

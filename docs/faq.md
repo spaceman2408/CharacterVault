@@ -78,15 +78,25 @@ See [Text Editor → AI Toolbar](/features/editor#ai-toolbar) for details.
 :::
 
 ::: details What is Orion?
-Orion is a built-in AI assistant that helps you brainstorm, write, and refine character content. You select which character sections Orion can see as context, then chat with it directly.
+Orion is a built-in AI assistant that helps you brainstorm, write, and refine character content. You choose what Orion can see as context (pinned card sections and optional custom notes), then chat with it directly.
 
 To use Orion:
 
-1. Open the **AI Context** panel and select which sections the AI can see
+1. Open the **AI Context** panel and select which sections the AI can see (and optionally add [custom context](/features/ai-context#custom-context))
 2. Open the **Ask AI** panel and type your question
 3. Orion responds using the selected context
 
 Orion uses your configured AI provider and understands Character Vault's features and the V2/V3 specification. See [AI Assistant — Orion](/features/ai-assistant).
+:::
+
+::: details What is custom context?
+**Custom context** is free-text notes you paste for one character in the **AI Context** panel. When enabled, those notes are sent to Orion and the AI toolbar along with any pinned card sections.
+
+- Stored only in this browser, per character (IndexedDB)
+- Not part of PNG/JSON export or SillyTavern card data
+- Soft token warnings if the block is large; requests still respect your context window
+
+See [AI Context → Custom Context](/features/ai-context#custom-context).
 :::
 
 ::: details Is my API key secure?

@@ -4,6 +4,21 @@ Quick overview of recent updates to CharacterVault.
 
 ---
 
+## August 2026
+
+### Custom Context (AI Context panel)
+
+Paste free-text notes for the **current character** and include them in AI work without putting them on the card.
+
+- **AI Context → Custom** — Add / edit in a modal, toggle include, or remove
+- **Orion + AI toolbar** — Same block feeds chat and editor ops (when enabled)
+- **Vault-local only** — Stored per character in the browser; not in PNG/JSON export or SillyTavern fields
+- **Usage meter** — Custom tokens count toward the panel estimate; soft warnings for large pastes
+
+[AI Context → Custom Context](/features/ai-context#custom-context) · [Orion](/features/ai-assistant)
+
+---
+
 ## July 2026
 
 ### Orion (1.1.0)
