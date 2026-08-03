@@ -1,25 +1,8 @@
-/**
- * @fileoverview TypeScript interfaces and types for CharacterVault database schema.
- * @module @db/characterTypes
- */
-
-// ============================================================================
-// Core Types
-// ============================================================================
-
-/** Unique identifier type for type safety */
 export type UUID = string;
 
-/** Timestamp type (ISO 8601) */
+/** ISO 8601 */
 export type Timestamp = string;
 
-// ============================================================================
-// Character V2 Spec Types
-// ============================================================================
-
-/**
- * Character Book Entry for lorebook
- */
 export interface LorebookEntry {
   id: number;
   keys: string[];
@@ -37,9 +20,6 @@ export interface LorebookEntry {
   position?: 'before_char' | 'after_char' | 'before_example' | 'after_example';
 }
 
-/**
- * Character Book containing lore entries
- */
 export interface CharacterBook {
   name?: string;
   description?: string;
@@ -50,10 +30,7 @@ export interface CharacterBook {
   entries: LorebookEntry[];
 }
 
-/**
- * Character V2/V3 Spec data structure
- * Supports both v2 and v3 spec fields
- */
+/** Character card V2/V3 fields */
 export interface CharacterSpec {
   name: string;
   description: string;
@@ -65,7 +42,7 @@ export interface CharacterSpec {
   post_history_instructions: string;
   alternate_greetings: string[];
   physical_description: string;
-  // V3 spec fields
+  // V3
   avatar?: string;
   creator_notes?: string;
   creator?: string;
@@ -73,101 +50,57 @@ export interface CharacterSpec {
   tags?: string[];
 }
 
-/**
- * Character extensions for V2 spec
- */
 export interface CharacterExtensions {
   [key: string]: unknown;
 }
 
-// ============================================================================
-// Character Entity
-// ============================================================================
-
-/**
- * Single entity: Character
- * Stores all character card v2 data including image and spec
- */
 export interface Character {
-  /** Unique character identifier */
   id: UUID;
-
-  /** Character display name */
   name: string;
-
-  /** Base64 encoded PNG image data (full resolution) */
+  /** Full-resolution PNG (base64) */
   imageData: string;
-
-  /** Base64 encoded JPEG thumbnail (128x192 max) for vault view */
+  /** JPEG thumbnail, max 128×192 (base64) */
   thumbnailData: string;
-
-  /** Character V2 spec data */
   data: {
-    /** All V2 spec fields */
     spec: CharacterSpec;
-    /** Optional lorebook */
     characterBook?: CharacterBook;
-    /** Extensions data */
     extensions?: CharacterExtensions;
   };
-
-  /** Database version for migrations */
   version: number;
-
-  /** Creation timestamp */
   createdAt: Timestamp;
-
-  /** Last modification timestamp */
   updatedAt: Timestamp;
-
-  /** Last opened timestamp */
   lastOpenedAt?: Timestamp;
 }
 
 export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback';
 
-/**
- * Stored image entry - content-addressed storage for character images
- * Images are keyed by hash so identical images are stored only once
- */
+/** Content-addressed image store; identical images share one row */
 export interface StoredImage {
-  /** Content hash of imageData (used as primary key) */
+  /** Content hash of imageData (primary key) */
   id: string;
-  /** Base64 encoded PNG image data */
   imageData: string;
-  /** Base64 encoded JPEG thumbnail */
   thumbnailData: string;
 }
 
-/**
- * Cached spellcheck dictionary entry, keyed by language code.
- * Stores the raw Hunspell `.aff` and `.dic` text as loaded.
- */
+/** Cached Hunspell dictionary (raw .aff / .dic text) */
 export interface SpellDictionaryCacheEntry {
-  /** Language code (e.g. "en") */
   id: string;
-  /** Raw Hunspell .aff file contents */
   aff: string;
-  /** Raw Hunspell .dic file contents */
   dic: string;
-  /** When the entry was cached (ms since epoch) */
   cachedAt: number;
 }
 
 /**
- * Vault-local custom AI context for a single character (1:1).
+ * Vault-local custom AI context for a character (1:1).
  * Not part of card export/import or SillyTavern fields.
  */
 export interface CharacterCustomContext {
-  /** Character ID (primary key) */
   characterId: UUID;
-  /** Free-text body pasted/edited by the user */
   content: string;
   /** When true, body is included in Orion + AI toolbar context */
   enabled: boolean;
-  /** Last save time (ISO 8601) */
   updatedAt: Timestamp;
-  /** Character length of content — for usage UI without loading body */
+  /** For usage UI without loading the full body */
   charLength: number;
 }
 
@@ -198,21 +131,17 @@ export interface CharacterSnapshot {
   createdAt: Timestamp;
   payload: CharacterSnapshotPayload;
   payloadHash: string;
-  /** Hash referencing the stored image in storedImages table */
+  /** FK into storedImages; null when no image */
   imageHash: string | null;
 }
 
-/**
- * Lightweight snapshot metadata - excludes the heavy payload
- * Use this for timeline lists; load full payload only when needed
- */
+/** Timeline list shape — excludes heavy payload */
 export interface SnapshotMetadata {
   id: UUID;
   characterId: UUID;
   source: SnapshotSource;
   createdAt: Timestamp;
   payloadHash: string;
-  /** Hash referencing the stored image in storedImages table */
   imageHash: string | null;
 }
 
@@ -221,7 +150,6 @@ export interface CreateSnapshotInput {
   source: SnapshotSource;
   payload: CharacterSnapshotPayload;
   payloadHash: string;
-  /** Hash referencing the stored image in storedImages table */
   imageHash: string | null;
 }
 
@@ -233,9 +161,6 @@ export interface SnapshotDiffEntry {
   currentValue: unknown;
 }
 
-/**
- * Input for creating a new character
- */
 export interface CreateCharacterInput {
   name: string;
   imageData?: string;
@@ -243,9 +168,6 @@ export interface CreateCharacterInput {
   data?: Partial<Character['data']>;
 }
 
-/**
- * Input for updating a character
- */
 export interface UpdateCharacterInput {
   name?: string;
   imageData?: string;
@@ -253,36 +175,21 @@ export interface UpdateCharacterInput {
   data?: Partial<Character['data']>;
 }
 
-/**
- * Lightweight list item for vault view
- * Contains only the fields needed for card display
- */
+/** Vault card list row */
 export interface CharacterListItem {
   id: UUID;
   name: string;
   thumbnailData: string;
   lastOpenedAt?: Timestamp;
   updatedAt: Timestamp;
-  /**
-   * Estimated tokens always present in a typical RP prompt
-   * (name, description, appearance, personality, scenario, system, post-history, examples).
-   */
+  /** Tokens typically always in an RP prompt (core fields, not greetings/lore) */
   activeTokens: number;
-  /**
-   * Estimated tokens for the full card (active fields + greetings + lorebook + metadata).
-   */
+  /** Full-card estimate including greetings, lorebook, and metadata */
   totalTokens: number;
-  /** Tags used for search only — not rendered as a tag UI in the vault */
+  /** Search only — not rendered as tag chips on the card */
   tags: string[];
 }
 
-// ============================================================================
-// Section Types for Editor
-// ============================================================================
-
-/**
- * Available section tabs in the editor
- */
 export type CharacterSection =
   | 'image'
   | 'name'
@@ -297,16 +204,13 @@ export type CharacterSection =
   | 'physical_description'
   | 'extensions'
   | 'lorebook'
-  // V3 spec sections
+  // V3
   | 'avatar'
   | 'creator_notes'
   | 'creator'
   | 'character_version'
   | 'tags';
 
-/**
- * Section metadata for UI display
- */
 export interface SectionMeta {
   id: CharacterSection;
   label: string;
@@ -314,9 +218,6 @@ export interface SectionMeta {
   description: string;
 }
 
-/**
- * All available sections with metadata
- */
 export const CHARACTER_SECTIONS: SectionMeta[] = [
   { id: 'image', label: 'Image', icon: 'Image', description: 'Character avatar image' },
   { id: 'name', label: 'Name', icon: 'Type', description: 'Character name' },
@@ -338,19 +239,9 @@ export const CHARACTER_SECTIONS: SectionMeta[] = [
   { id: 'avatar', label: 'Avatar URL', icon: 'Link', description: 'Character avatar URL (CharHub, etc.)' },
 ];
 
-/**
- * Default section tab order (matches CHARACTER_SECTIONS order).
- * Used when no custom sectionOrder is saved in settings.
- */
+/** Fallback tab order when settings.sectionOrder is unset */
 export const DEFAULT_SECTION_ORDER: CharacterSection[] = CHARACTER_SECTIONS.map(s => s.id);
 
-// ============================================================================
-// Import/Export Types
-// ============================================================================
-
-/**
- * Character card V2/V3 JSON structure for export/import
- */
 export interface CharacterCardV2 {
   name: string;
   description: string;
@@ -363,7 +254,7 @@ export interface CharacterCardV2 {
   alternate_greetings: string[];
   character_book?: CharacterBook;
   extensions: CharacterExtensions;
-  // V3 spec fields
+  // V3
   creator?: string;
   character_version?: string;
   tags?: string[];
@@ -371,26 +262,18 @@ export interface CharacterCardV2 {
   avatar?: string;
 }
 
-/**
- * PNG metadata chunk for character data
- */
 export interface PNGMetadata {
-  chara?: string; // Base64 encoded character JSON
+  /** Base64-encoded character JSON (tEXt `chara` chunk) */
+  chara?: string;
   [key: string]: string | undefined;
 }
 
-/**
- * Import result
- */
 export interface ImportCharacterResult {
   success: boolean;
   character?: Character;
   error?: string;
 }
 
-/**
- * Export result
- */
 export interface ExportCharacterResult {
   success: boolean;
   blob?: Blob;
@@ -398,22 +281,12 @@ export interface ExportCharacterResult {
   error?: string;
 }
 
-// ============================================================================
-// Clipboard Import Types
-// ============================================================================
-
-/**
- * SillyTavern clipboard payload structure
- */
 export interface SillyTavernClipboardPayload {
   source: 'st';
   character: CharacterCardV2;
   avatar: string | null;
 }
 
-/**
- * Result of validating clipboard data
- */
 export interface ClipboardValidationResult {
   success: boolean;
   characterData?: CharacterCardV2;
@@ -421,76 +294,36 @@ export interface ClipboardValidationResult {
   error?: string;
 }
 
-// ============================================================================
-// Settings Types
-// ============================================================================
-
-/**
- * Application settings for CharacterVault
- */
-/**
- * Spellcheck settings, stored under `ui.spellcheck`.
- */
 export interface SpellcheckSettings {
-  /** Whether in-editor spellcheck is enabled */
   enabled: boolean;
-  /** Language code; currently only `en` is bundled */
+  /** Currently only `en` is bundled */
   language: string;
-  /** Words ignored for the current user (lowercased) */
   ignoredWords: string[];
-  /** Words added to the personal dictionary (lowercased) */
   customWords: string[];
 }
 
 export interface CharacterVaultSettings {
-  /** Single settings record ID */
   id: 'app-settings';
-
-  /** UI preferences */
   ui: {
-    /** Theme mode */
     theme: 'light' | 'dark' | 'system';
-    /** Editor font size in pixels */
     editorFontSize: number;
-    /** Sidebar width in pixels */
     sidebarWidth: number;
-    /** Show the "I'm Feeling Lucky" vortex animation in AI Creation Studio */
     showLuckyVortex?: boolean;
-    /** Spellcheck preferences */
     spellcheck?: SpellcheckSettings;
   };
-
-  /** AI configuration */
   ai?: AIConfig;
-
-  /** Sampler settings */
   sampler?: SamplerSettings;
-
-  /** Prompt settings */
   prompts?: PromptSettings;
-
-  /** Per-operation model routing for toolbar AI prompts */
   promptModels?: PromptModelMap;
-
-  /** Context section IDs for AI context */
   contextSectionIds?: CharacterSection[];
-
-  /** Custom section tab order (CharacterSection IDs in display order). Undefined = default order. */
+  /** Undefined = default order */
   sectionOrder?: CharacterSection[];
-
-  /** Sections hidden from the tab strip. Undefined = all visible. */
+  /** Undefined = all visible */
   hiddenSections?: CharacterSection[];
-
-  /** Last active character ID */
   lastActiveCharacterId?: UUID;
-
-  /** Settings version for migrations */
   version: number;
 }
 
-/**
- * Default settings
- */
 export const DEFAULT_CHARACTER_VAULT_SETTINGS: Omit<CharacterVaultSettings, 'id'> = {
   ui: {
     theme: 'system',
@@ -506,9 +339,7 @@ export const DEFAULT_CHARACTER_VAULT_SETTINGS: Omit<CharacterVaultSettings, 'id'
   version: 1,
 };
 
-/**
- * Default spellcheck settings (used to backfill old settings records).
- */
+/** Used to backfill old settings records missing `ui.spellcheck` */
 export const DEFAULT_SPELLCHECK_SETTINGS: SpellcheckSettings = {
   enabled: true,
   language: 'en',
@@ -516,46 +347,25 @@ export const DEFAULT_SPELLCHECK_SETTINGS: SpellcheckSettings = {
   customWords: [],
 };
 
-// ============================================================================
-// AI Settings Types
-// ============================================================================
-
-/**
- * AI generation parameters (samplers)
- */
 export interface SamplerSettings {
-  /** Randomness (0.0 - 2.0) */
   temperature: number;
-
-  /** Nucleus sampling threshold (0.0 - 1.0) */
   minP: number;
-
-  /** Top-k sampling (0 = disabled, 1 - 100) */
+  /** 0 = disabled */
   topK: number;
-
-  /** Repetition penalty (1.0 - 2.0) */
   repetitionPenalty: number;
-
-  /** Top P nucleus sampling (0.0 - 1.0) */
   topP: number;
-
-  /** Context window size (2048 – 1_000_000) */
   contextLength: number;
-
-  /** Max generation tokens (min 100) */
   maxTokens: number;
 }
 
-/** Absolute minimum context window (2K preset only). */
+/** Absolute minimum (2K preset only) */
 export const CONTEXT_LENGTH_MIN = 2048;
 
-/** Minimum allowed for free-form custom context length. */
+/** Minimum for free-form custom context length */
 export const CONTEXT_LENGTH_CUSTOM_MIN = 4096;
 
-/** Maximum context window (1M tokens). */
 export const CONTEXT_LENGTH_MAX = 1_000_000;
 
-/** Named context-length presets for the Sampler settings UI. */
 export const CONTEXT_LENGTH_PRESETS = [
   { label: '2K tokens', value: 2048 },
   { label: '4K tokens', value: 4096 },
@@ -569,9 +379,6 @@ export const CONTEXT_LENGTH_PRESETS = [
   { label: '1M tokens', value: 1000000 },
 ] as const;
 
-/**
- * AI model information
- */
 export interface AIModelInfo {
   id: string;
   name: string;
@@ -580,81 +387,42 @@ export interface AIModelInfo {
     prompt: number;
     completion: number;
   };
-  /** Whether this model supports provider selection (NanoGPT) */
+  /** NanoGPT provider-selection support */
   supportsProviderSelection?: boolean;
 }
 
 /**
- * Reasoning effort ladder used by OpenAI-compatible gateways and thinking models.
- * Not every model accepts every value; unsupported values are remapped at request time.
+ * Reasoning effort for thinking models.
+ * Gateways accept different subsets; AIService remaps unsupported values at request time.
  */
 export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
-/**
- * AI provider configuration
- */
 export interface AIConfig {
-  /** API base URL */
   baseUrl: string;
-
-  /** API key (encrypted at rest in production) */
   apiKey: string;
-
-  /** Saved API keys per base URL */
   apiKeysByBaseUrl?: Record<string, string>;
-
-  /** Selected model ID */
   modelId: string;
-
-  /** Saved model selections per base URL */
   modelIdsByBaseUrl?: Record<string, string>;
-
-  /** Available models (cached from API) */
   availableModels?: AIModelInfo[];
-
-  /** Enable streaming responses */
   enableStreaming: boolean;
-
-  /** Whether to enable reasoning/thinking mode for supported models */
   enableReasoning?: boolean;
-
-  /** Whether to show reasoning content in the UI (when enabled by the model) */
   showReasoning?: boolean;
-
-  /**
-   * Reasoning effort level for thinking models.
-   * Gateways accept different subsets; AIService remaps when the API reports supported values.
-   */
   reasoningEffort?: ReasoningEffort;
-
-  /** Last custom base URL entered by the user (preserved when switching to/from presets) */
+  /** Preserved when switching between preset and custom base URLs */
   lastCustomBaseUrl?: string;
-
-  /** Selected provider ID for models that support provider selection (NanoGPT) */
   selectedProvider?: string;
-
-  /** Per-model provider overrides: modelId -> providerId */
   providerByModelId?: Record<string, string>;
-
-  /** Whether to use subscription-only models endpoint (NanoGPT) */
   subscriptionModelsOnly?: boolean;
-
-  /** Billing mode: 'sub' uses subscription (default), 'paygo' forces pay-as-you-go for provider selection */
+  /** `sub` = subscription (default); `paygo` forces pay-as-you-go for provider selection */
   billingMode?: 'sub' | 'paygo';
 }
 
-/**
- * Sampler preset for quick switching
- */
 export interface SamplerPreset {
   id: UUID;
   name: string;
   settings: SamplerSettings;
 }
 
-/**
- * AI Operation types for toolbar actions
- */
 export type AIOperation =
   | 'expand'
   | 'rewrite'
@@ -665,52 +433,30 @@ export type AIOperation =
   | 'emotion'
   | 'grammar';
 
-/**
- * AI prompt settings for customizable operation prompts
- */
+/** Toolbar operation prompts; each template must include `${text}` (instruct also needs `${instruction}`) */
 export interface PromptSettings {
-  /** Text expansion prompt - must include ${text} placeholder */
   expand: string;
-
-  /** Text rewrite prompt - must include ${text} placeholder */
   rewrite: string;
-
-  /** Custom instruction prompt - must include ${text} placeholder */
   instruct: string;
-
-  /** Shorten text prompt - must include ${text} placeholder */
   shorten: string;
-
-  /** Lengthen text prompt - must include ${text} placeholder */
   lengthen: string;
-
-  /** Make vivid prompt - must include ${text} placeholder */
   vivid: string;
-
-  /** Add emotion prompt - must include ${text} placeholder */
   emotion: string;
-
-  /** Fix grammar prompt - must include ${text} placeholder */
   grammar: string;
 }
 
 /**
- * Routes one toolbar AI operation to a specific endpoint + model.
- * baseUrl should be normalized (trim, no trailing slash) to match apiKeysByBaseUrl keys.
+ * Per-operation endpoint + model override.
+ * `baseUrl` should be normalized (trim, no trailing slash) to match apiKeysByBaseUrl keys.
  */
 export interface PromptModelBinding {
-  /** API base URL (preset or custom), e.g. https://nano-gpt.com/api/v1 */
   baseUrl: string;
-  /** Model ID on that endpoint */
   modelId: string;
 }
 
-/** Sparse map: missing key = use global AIConfig as-is. */
+/** Missing key = use global AIConfig */
 export type PromptModelMap = Partial<Record<keyof PromptSettings, PromptModelBinding>>;
 
-/**
- * Default AI-related settings for CharacterVault.
- */
 export const DEFAULT_SETTINGS = {
   ai: {
     baseUrl: 'https://nano-gpt.com/api/v1',
@@ -791,7 +537,6 @@ export const DEFAULT_SETTINGS = {
   promptModels: {} as PromptModelMap,
 };
 
-/** Clamp a context length into the allowed absolute range (2048 – 1_000_000). */
 export function clampContextLength(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_SETTINGS.sampler.contextLength;
   return Math.min(CONTEXT_LENGTH_MAX, Math.max(CONTEXT_LENGTH_MIN, Math.round(value)));
