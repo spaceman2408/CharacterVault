@@ -155,15 +155,6 @@ export function CharacterCard({
 
         <div className="absolute inset-0 bg-linear-to-t from-vault-950/60 via-transparent to-vault-950/15 sm:from-vault-950/70 sm:to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
 
-        {!hasImage && (
-          <div className="absolute top-2 left-2">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wide bg-surface/90 backdrop-blur-sm border border-border text-fg-muted shadow-sm">
-              <ImageOff className="w-3 h-3" />
-              No art
-            </span>
-          </div>
-        )}
-
         <div
           className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex flex-row gap-1 transition-all duration-200 opacity-100 translate-y-0 sm:opacity-0 sm:-translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 sm:group-focus-within:opacity-100 sm:group-focus-within:translate-y-0"
           onClick={(e) => e.stopPropagation()}
