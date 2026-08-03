@@ -38,7 +38,17 @@ function applyNamedPreset(
     p.id.endsWith(presetName) || p.name.toLowerCase() === presetName
   );
   if (!preset) return settings;
-  return { ...settings, ...preset.settings };
+  // Apply sampling knobs only — keep the user's context window.
+  const { temperature, minP, topK, repetitionPenalty, topP, maxTokens } = preset.settings;
+  return {
+    ...settings,
+    temperature,
+    minP,
+    topK,
+    repetitionPenalty,
+    topP,
+    maxTokens,
+  };
 }
 
 export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {

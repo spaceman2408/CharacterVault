@@ -738,9 +738,45 @@ export const DEFAULT_SETTINGS = {
     maxTokens: 2048,
   } satisfies SamplerSettings,
   samplerPresets: [
-    { id: 'preset-creative', name: 'Creative', settings: { temperature: 0.9, minP: 0.05, topK: 50, repetitionPenalty: 1.05, topP: 0.95, contextLength: 4096, maxTokens: 2048 } },
-    { id: 'preset-balanced', name: 'Balanced', settings: { temperature: 0.7, minP: 0.05, topK: 40, repetitionPenalty: 1.1, topP: 1.0, contextLength: 4096, maxTokens: 2048 } },
-    { id: 'preset-factual', name: 'Factual', settings: { temperature: 0.3, minP: 0.1, topK: 20, repetitionPenalty: 1.2, topP: 0.5, contextLength: 4096, maxTokens: 1024 } },
+    {
+      id: 'preset-creative',
+      name: 'Creative',
+      settings: {
+        temperature: 1.1,
+        minP: 0.05,
+        topK: 0,
+        repetitionPenalty: 1.05,
+        topP: 0.95,
+        contextLength: 8192,
+        maxTokens: 2048,
+      },
+    },
+    {
+      id: 'preset-balanced',
+      name: 'Balanced',
+      settings: {
+        temperature: 0.8,
+        minP: 0.05,
+        topK: 0,
+        repetitionPenalty: 1.05,
+        topP: 1.0,
+        contextLength: 8192,
+        maxTokens: 2048,
+      },
+    },
+    {
+      id: 'preset-factual',
+      name: 'Factual',
+      settings: {
+        temperature: 0.5,
+        minP: 0.1,
+        topK: 0,
+        repetitionPenalty: 1.05,
+        topP: 0.9,
+        contextLength: 8192,
+        maxTokens: 1024,
+      },
+    },
   ] satisfies SamplerPreset[],
   prompts: {
     expand: 'Please expand and elaborate on the following text, adding more detail and depth while maintaining the same style and tone:\n\n"""\n${text}\n"""\n\nProvide only the expanded text without any additional commentary.',
