@@ -1,15 +1,20 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 (2026-08-03)
 
-### Custom context (AI Context panel)
+Custom context, lorebook context controls, and modern sampler defaults. Full notes: [v1.2.0 release notes](/releases/v1.2.0).
 
-- Per-character free-text **Custom context** in the AI Context panel (modal paste/edit, enable toggle, remove)
-- Included in **Orion** chat and the **AI toolbar** (and lorebook key generation) when enabled
-- Vault-local IndexedDB storage only — not exported with the card, not in snapshots, copied on character duplicate
-- Token usage meter and soft size warnings; body loaded for edit/AI requests only
+### Highlights
 
-Details: [AI Context → Custom Context](/features/ai-context#custom-context)
+- Per-character **Custom context** in the AI Context panel (paste/edit, enable toggle, remove)
+- Included in **Orion** and the **AI toolbar** (and lorebook key generation) when enabled
+- Vault-local only — not on the card, not in PNG/JSON export or snapshots; copied on duplicate
+- Lorebook **Enable All / Disable All** for context moved out of book settings into the entry list toolbar
+- New-install defaults: streaming + reasoning on, neutral samplers, 8K context
+- Quick presets Creative / Balanced / Factual updated (min-p first, top-k off); presets keep your context length
+- Vault cards without art show a single **No image** label
+
+Details: [AI Context → Custom Context](/features/ai-context#custom-context) · [Sampler Settings](/configuration/sampler-settings)
 
 ---
 

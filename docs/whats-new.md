@@ -6,6 +6,14 @@ Quick overview of recent updates to CharacterVault.
 
 ## August 2026
 
+### CharacterVault 1.2.0
+
+- **Custom Context** — free-text notes for the open character (AI Context panel), optional for Orion and the AI toolbar, vault-local only
+- **Lorebook** — Enable All / Disable All for context sits next to the entry list
+- **Sampler** — modern Creative / Balanced / Factual presets; calmer new-install defaults (streaming & reasoning on, 8K context)
+
+[Release 1.2.0 →](/releases/v1.2.0) · [AI Context → Custom Context](/features/ai-context#custom-context) · [Sampler Settings](/configuration/sampler-settings)
+
 ### Custom Context (AI Context panel)
 
 Paste free-text notes for the **current character** and include them in AI work without putting them on the card.
