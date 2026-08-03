@@ -923,30 +923,6 @@ function LorebookEditorInner({
                   className="w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
-              {entries.length > 0 && (
-                <div className="flex items-center justify-between border-t border-border pt-2">
-                  <span className="text-xs font-medium text-fg-muted">Context</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleEnableAllContext}
-                      className="text-xs text-fg-muted transition-colors hover:text-fg"
-                      title="Enable all entries in context"
-                    >
-                      Enable All
-                    </button>
-                    <span className="text-fg-subtle">|</span>
-                    <button
-                      type="button"
-                      onClick={handleDisableAllContext}
-                      className="text-xs text-fg-muted transition-colors hover:text-fg"
-                      title="Disable all entries in context"
-                    >
-                      Disable All
-                    </button>
-                  </div>
-                </div>
-              )}
               {onDelete && (
                 <div className="border-t border-border pt-2">
                   <button
@@ -965,7 +941,7 @@ function LorebookEditorInner({
         </div>
 
         {entries.length > 0 && (
-          <div className="shrink-0 border-b border-border px-3 py-2">
+          <div className="shrink-0 space-y-2 border-b border-border px-3 py-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
               <input
@@ -986,10 +962,33 @@ function LorebookEditorInner({
               )}
             </div>
             {searchQuery && (
-              <p className="mt-1.5 text-[11px] text-fg-muted">
+              <p className="text-[11px] text-fg-muted">
                 {filteredEntries.length} of {entries.length} entries
               </p>
             )}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-fg-muted">Context</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleEnableAllContext}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+                  title="Enable all entries in context"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  Enable All
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDisableAllContext}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+                  title="Disable all entries in context"
+                >
+                  <EyeOff className="h-3.5 w-3.5" />
+                  Disable All
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
