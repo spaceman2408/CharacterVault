@@ -28,6 +28,7 @@ export type { ChatMessage, AIChatPanelProps } from './types';
  */
 export function AIChatPanel({
   contextEntryIds,
+  customContextIncluded = false,
   aiConfig,
   samplerSettings,
   promptSettings,
@@ -68,12 +69,15 @@ export function AIChatPanel({
   });
 
   const contextLabels = useMemo(() => {
-    return contextEntryIds
+    const labels = contextEntryIds
       .map(id => CHARACTER_SECTIONS.find(s => s.id === id)?.label ?? id)
       .filter(Boolean);
-  }, [contextEntryIds]);
+    if (customContextIncluded) labels.push('Custom context');
+    return labels;
+  }, [contextEntryIds, customContextIncluded]);
 
-  const hasContext = contextEntryIds.length > 0;
+  const hasContext = contextEntryIds.length > 0 || customContextIncluded;
+  const contextSourceCount = contextEntryIds.length + (customContextIncluded ? 1 : 0);
   const hasStreamDraft = Boolean(streamingContent || streamingReasoning);
 
   const resetComposerHeight = useCallback(() => {
@@ -174,7 +178,7 @@ export function AIChatPanel({
               <>
                 <p className="text-xs text-fg-muted">
                   <span className="font-medium text-fg">
-                    {contextEntryIds.length} section{contextEntryIds.length === 1 ? '' : 's'}
+                    {contextSourceCount} source{contextSourceCount === 1 ? '' : 's'}
                   </span>{' '}
                   in AI context
                 </p>
@@ -193,7 +197,7 @@ export function AIChatPanel({
               </>
             ) : (
               <p className="text-xs text-fg-subtle">
-                No context pinned. Use the AI Context panel so Orion can see card sections.
+                No context pinned. Use the AI Context panel so Orion can see card sections or custom notes.
               </p>
             )}
           </div>

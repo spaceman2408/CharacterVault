@@ -31,6 +31,8 @@ export interface SelectionInfo {
 export interface AIChatPanelProps {
   selectedText: string;
   contextEntryIds: string[];
+  /** When true, vault-local custom context is enabled for this character */
+  customContextIncluded?: boolean;
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;

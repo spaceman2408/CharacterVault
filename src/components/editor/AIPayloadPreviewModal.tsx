@@ -38,11 +38,12 @@ export interface AIPayloadPreviewModalProps {
   /**
    * Build a preflight preview for the given op / instruction.
    * Return null when the request cannot be built (e.g. empty Custom instruction).
+   * May be async when custom context is loaded from IndexedDB.
    */
   buildPreview: (
     operation: AIOperation,
     instruction?: string
-  ) => AIRequestPreview | null;
+  ) => AIRequestPreview | null | Promise<AIRequestPreview | null>;
 }
 
 /**
@@ -63,28 +64,47 @@ function AIPayloadPreviewModalBody({
   buildPreview: (
     operation: AIOperation,
     instruction?: string
-  ) => AIRequestPreview | null;
+  ) => AIRequestPreview | null | Promise<AIRequestPreview | null>;
 }): React.ReactElement {
   const [operation, setOperation] = useState<AIOperation>(initialOperation);
   const [instruction, setInstruction] = useState(initialInstruction);
   const [copied, setCopied] = useState(false);
+  const [preview, setPreview] = useState<AIRequestPreview | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
 
   const previewError =
     operation === 'instruct' && !instruction.trim()
       ? 'Enter a custom instruction to preview this request.'
       : null;
 
-  const preview = useMemo(() => {
-    if (previewError) return null;
-    try {
-      return buildPreview(
-        operation,
-        operation === 'instruct' ? instruction.trim() : undefined
-      );
-    } catch (err) {
-      console.error('[AIPayloadPreviewModal] Failed to build preview:', err);
-      return null;
+  useEffect(() => {
+    let cancelled = false;
+
+    if (previewError) {
+      setPreview(null);
+      setPreviewBusy(false);
+      return;
     }
+
+    setPreviewBusy(true);
+    void (async () => {
+      try {
+        const result = await buildPreview(
+          operation,
+          operation === 'instruct' ? instruction.trim() : undefined
+        );
+        if (!cancelled) setPreview(result);
+      } catch (err) {
+        console.error('[AIPayloadPreviewModal] Failed to build preview:', err);
+        if (!cancelled) setPreview(null);
+      } finally {
+        if (!cancelled) setPreviewBusy(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [previewError, buildPreview, operation, instruction]);
 
   const jsonText = useMemo(() => {
@@ -261,6 +281,10 @@ function AIPayloadPreviewModalBody({
                 Custom ops need an instruction before a request body can be built.
               </p>
             </div>
+          </div>
+        ) : previewBusy ? (
+          <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border bg-surface px-6 py-10 text-center text-sm text-fg-muted">
+            Building request preview…
           </div>
         ) : preview ? (
           <pre className="min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-bg p-4 font-mono text-[12px] leading-relaxed text-fg shadow-inner whitespace-pre-wrap wrap-break-word sm:p-5 sm:text-[13px]">

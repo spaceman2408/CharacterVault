@@ -764,6 +764,7 @@ function CharacterWorkspaceInner({
     setActiveSection,
     selectedText,
     contextSectionIds,
+    customContextMeta,
     aiConfig,
     samplerSettings,
     promptSettings,
@@ -772,13 +773,13 @@ function CharacterWorkspaceInner({
     openHistory,
     isOpeningHistory,
     handleAIOperation,
-    getContextContent,
+    resolveContextForAI,
     visibleSections,
   } = useCharacterEditorContext();
 
   const stableGetContextContent = useCallback(
-    async (ids: string[]) => getContextContent(ids as CharacterSection[]),
-    [getContextContent]
+    async (ids: string[]) => resolveContextForAI(ids as CharacterSection[]),
+    [resolveContextForAI]
   );
 
   // If the active section is hidden, switch to the first visible section
@@ -943,6 +944,9 @@ function CharacterWorkspaceInner({
           <AIChatPanel
             selectedText={selectedText}
             contextEntryIds={contextSectionIds}
+            customContextIncluded={
+              customContextMeta.enabled && customContextMeta.charLength > 0
+            }
             aiConfig={aiConfig}
             samplerSettings={samplerSettings}
             promptSettings={promptSettings}

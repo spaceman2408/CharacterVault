@@ -145,8 +145,11 @@ export interface UseAIEditorOptions {
   promptSettings: PromptSettings;
   /** Per-operation model routing for toolbar AI prompts */
   promptModels?: PromptModelMap;
-  /** Function to get context content for AI operations */
-  getContextContent: (sectionIds: CharacterSection[]) => string[];
+  /**
+   * Resolve context chunks for AI operations (may load custom context from IDB).
+   * Prefer the async form so vault-local custom context is included.
+   */
+  getContextContent: (sectionIds: CharacterSection[]) => string[] | Promise<string[]>;
   /** IDs of sections to include in context */
   contextSectionIds: CharacterSection[];
   /** Minimum height for the editor content area */
@@ -540,7 +543,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   );
 
   const buildPayloadPreview = useCallback(
-    (operation: AIOperation, instruction?: string): AIRequestPreview | null => {
+    async (operation: AIOperation, instruction?: string): Promise<AIRequestPreview | null> => {
       if (operation === 'instruct' && !instruction?.trim()) {
         return null;
       }
@@ -554,10 +557,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         samplerSettingsRef.current,
         promptSettingsRef.current
       );
-      const context = getContextContent(contextSectionIdsRef.current);
-      return service.previewOperationRequest(operation, payloadPreviewText, context, {
-        instruction,
-      });
+      let context = await Promise.resolve(getContextContent(contextSectionIdsRef.current));
+      try {
+        return service.previewOperationRequest(operation, payloadPreviewText, context, {
+          instruction,
+        });
+      } finally {
+        context = [];
+      }
     },
     [getContextContent, payloadPreviewText]
   );
@@ -656,7 +663,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         return;
       }
       aiServiceRef.current = aiService;
-      const context = getContextContent(contextSectionIdsRef.current);
+      let context = await Promise.resolve(getContextContent(contextSectionIdsRef.current));
 
       const onChunk = currentConfig.enableStreaming ? (chunk: { content?: string; reasoning?: string }) => {
         if (!isCurrentRequest()) return;
@@ -675,34 +682,39 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       } : undefined;
 
       let response;
-      switch (operation) {
-        case 'expand':
-          response = await aiService.expandText(text, context, undefined, onChunk);
-          break;
-        case 'rewrite':
-          response = await aiService.rewriteText(text, context, undefined, onChunk);
-          break;
-        case 'instruct':
-          if (!customPrompt) throw new Error('No custom prompt provided');
-          response = await aiService.instructText(text, customPrompt, context, undefined, onChunk);
-          break;
-        case 'shorten':
-          response = await aiService.shortenText(text, context, undefined, onChunk);
-          break;
-        case 'lengthen':
-          response = await aiService.lengthenText(text, context, undefined, onChunk);
-          break;
-        case 'vivid':
-          response = await aiService.makeVivid(text, context, undefined, onChunk);
-          break;
-        case 'emotion':
-          response = await aiService.addEmotion(text, context, undefined, onChunk);
-          break;
-        case 'grammar':
-          response = await aiService.fixGrammar(text, context, undefined, onChunk);
-          break;
-        default:
-          throw new Error('Unknown operation');
+      try {
+        switch (operation) {
+          case 'expand':
+            response = await aiService.expandText(text, context, undefined, onChunk);
+            break;
+          case 'rewrite':
+            response = await aiService.rewriteText(text, context, undefined, onChunk);
+            break;
+          case 'instruct':
+            if (!customPrompt) throw new Error('No custom prompt provided');
+            response = await aiService.instructText(text, customPrompt, context, undefined, onChunk);
+            break;
+          case 'shorten':
+            response = await aiService.shortenText(text, context, undefined, onChunk);
+            break;
+          case 'lengthen':
+            response = await aiService.lengthenText(text, context, undefined, onChunk);
+            break;
+          case 'vivid':
+            response = await aiService.makeVivid(text, context, undefined, onChunk);
+            break;
+          case 'emotion':
+            response = await aiService.addEmotion(text, context, undefined, onChunk);
+            break;
+          case 'grammar':
+            response = await aiService.fixGrammar(text, context, undefined, onChunk);
+            break;
+          default:
+            throw new Error('Unknown operation');
+        }
+      } finally {
+        // Drop custom-context body (and other chunks) as soon as the request is built/sent
+        context = [];
       }
 
       // Drop late completions after unmount, section switch, or a newer request

@@ -54,7 +54,7 @@ interface LorebookEditorProps {
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
   promptModels?: PromptModelMap;
-  getContextContent: (sectionIds: CharacterSection[]) => string[];
+  getContextContent: (sectionIds: CharacterSection[]) => string[] | Promise<string[]>;
   activeSection: string;
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
@@ -80,7 +80,7 @@ interface LorebookEntryDetailProps {
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
   promptModels?: PromptModelMap;
-  getContextContent: (sectionIds: CharacterSection[]) => string[];
+  getContextContent: (sectionIds: CharacterSection[]) => string[] | Promise<string[]>;
   contextSectionIds: CharacterSection[];
   setSelectedText: (text: string) => void;
   fontSize?: number;
@@ -284,11 +284,17 @@ function LorebookEntryDetail({
     }, 15000);
 
     try {
-      const result = await aiServiceRef.current.instructText(
-        draftEntry.content,
-        'Generate 2-5 comma-separated trigger keywords/keys that would cause this lorebook entry to activate. Output ONLY the comma-separated keywords, nothing else.',
-        getContextContent(contextSectionIds)
-      );
+      let context = await Promise.resolve(getContextContent(contextSectionIds));
+      let result;
+      try {
+        result = await aiServiceRef.current.instructText(
+          draftEntry.content,
+          'Generate 2-5 comma-separated trigger keywords/keys that would cause this lorebook entry to activate. Output ONLY the comma-separated keywords, nothing else.',
+          context
+        );
+      } finally {
+        context = [];
+      }
 
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);

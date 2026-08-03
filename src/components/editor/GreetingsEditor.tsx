@@ -26,7 +26,7 @@ interface GreetingsEditorProps {
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
   promptModels?: PromptModelMap;
-  getContextContent: (sectionIds: CharacterSection[]) => string[];
+  getContextContent: (sectionIds: CharacterSection[]) => string[] | Promise<string[]>;
   activeSection: string;
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
@@ -49,7 +49,7 @@ interface GreetingDetailProps {
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
   promptModels?: PromptModelMap;
-  getContextContent: (sectionIds: CharacterSection[]) => string[];
+  getContextContent: (sectionIds: CharacterSection[]) => string[] | Promise<string[]>;
   contextSectionIds: CharacterSection[];
   setSelectedText: (text: string) => void;
   fontSize?: number;

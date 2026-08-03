@@ -10,6 +10,7 @@ import type {
   CharacterSnapshot,
   SnapshotMetadata,
   SnapshotDiffEntry,
+  CustomContextMeta,
 } from '../db/characterTypes';
 import type {
   SamplerSettings,
@@ -69,6 +70,11 @@ export interface CharacterEditorContextValue {
   selectedText: string;
   /** User-selected section IDs included in AI context (persisted, not tied to active tab) */
   contextSectionIds: CharacterSection[];
+  /**
+   * Lightweight custom-context metadata for the open character (no body text).
+   * Full content is loaded from IndexedDB only when editing or building AI requests.
+   */
+  customContextMeta: CustomContextMeta;
   /** AI configuration */
   aiConfig: AIConfig;
   /** Sampler settings */
@@ -118,6 +124,12 @@ export interface CharacterEditorContextValue {
   addContextSection: (sectionId: CharacterSection) => void;
   /** Remove a context section */
   removeContextSection: (sectionId: CharacterSection) => void;
+  /** Enable/disable custom context for the open character (persists meta only) */
+  setCustomContextEnabled: (enabled: boolean) => Promise<void>;
+  /** Save custom context body + enabled flag; updates meta and drops body from memory */
+  saveCustomContext: (input: { content: string; enabled: boolean }) => Promise<void>;
+  /** Clear custom context for the open character */
+  clearCustomContext: () => Promise<void>;
   /** Update AI configuration */
   updateAIConfig: (config: Partial<AIConfig>) => void;
   /** Update sampler settings */
@@ -152,8 +164,13 @@ export interface CharacterEditorContextValue {
   }>;
   /** Handle AI operation result */
   handleAIOperation: (result: string, operation: AIOperation, originalSelectedText?: string) => void;
-  /** Get context content for AI */
+  /** Get section context content for AI (sync; no custom context body) */
   getContextContent: (sectionIds: CharacterSection[]) => string[];
+  /**
+   * Resolve full AI context: section chunks + enabled custom context (loaded from IDB).
+   * Custom body is not retained after the promise resolves.
+   */
+  resolveContextForAI: (sectionIds: CharacterSection[]) => Promise<string[]>;
   /** Reload settings from database */
   reloadSettings: () => Promise<void>;
   /** Update section layout (order + hidden) in local state */

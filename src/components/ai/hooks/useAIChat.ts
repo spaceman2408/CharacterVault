@@ -352,6 +352,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         );
 
         if (!isCurrent()) {
+          contextArray = [];
           return;
         }
 
@@ -365,15 +366,19 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
             }
           : undefined;
 
-        const result = await aiService.askAIWithConversation(
-          question,
-          contextArray,
-          conversationContext,
-          undefined,
-          onChunk
-        );
-
-        contextArray = [];
+        let result;
+        try {
+          result = await aiService.askAIWithConversation(
+            question,
+            contextArray,
+            conversationContext,
+            undefined,
+            onChunk
+          );
+        } finally {
+          // Drop custom-context body (and other chunks) once the request is in flight/done
+          contextArray = [];
+        }
 
         if (!isCurrent()) {
           return;

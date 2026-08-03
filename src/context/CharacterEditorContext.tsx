@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry } from '../db/characterTypes';
+import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry, CustomContextMeta } from '../db/characterTypes';
 import type {
   SamplerSettings,
   AIConfig,
@@ -12,7 +12,13 @@ import type {
   PromptModelMap,
   SpellcheckSettings,
 } from '../db/characterTypes';
-import { DEFAULT_SETTINGS, DEFAULT_SECTION_ORDER, CHARACTER_SECTIONS, DEFAULT_SPELLCHECK_SETTINGS } from '../db/characterTypes';
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_SECTION_ORDER,
+  CHARACTER_SECTIONS,
+  DEFAULT_SPELLCHECK_SETTINGS,
+  EMPTY_CUSTOM_CONTEXT_META,
+} from '../db/characterTypes';
 import { normalizePromptModelMap } from '../services/resolveOperationConfig';
 import type { SectionMeta } from '../db/characterTypes';
 import { bindSpellcheckCallbacks } from '../editor/extensions/spellcheck';
@@ -20,6 +26,10 @@ import { useCharacterContext } from './useCharacterContext';
 import { CharacterEditorContext, type CharacterEditorContextValue, type SaveStatus, type AIOperation, type ManualSnapshotResult } from './characterEditorContextTypes';
 import { characterSettingsService } from '../services/CharacterSettingsService';
 import { characterSnapshotService } from '../services/CharacterSnapshotService';
+import {
+  customContextService,
+  formatCustomContextChunk,
+} from '../services/CustomContextService';
 import { loadSnapshotDiff, openHistoryAfterFlush } from '../services/historyLifecycle';
 import { generateThumbnail } from '../utils/thumbnail';
 
@@ -60,6 +70,10 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [selectedText, setSelectedText] = useState('');
   /** User-selected AI context pins (global settings; not auto-tied to active section) */
   const [contextSectionIds, setContextSectionIdsState] = useState<CharacterSection[]>([]);
+  /** Lightweight custom-context meta only (no body text in memory) */
+  const [customContextMeta, setCustomContextMeta] = useState<CustomContextMeta>({
+    ...EMPTY_CUSTOM_CONTEXT_META,
+  });
   const [aiConfig, setAIConfig] = useState<AIConfig>(DEFAULT_SETTINGS.ai);
   const [samplerSettings, setSamplerSettings] = useState<SamplerSettings>(DEFAULT_SETTINGS.sampler);
   const [promptSettings, setPromptSettings] = useState<PromptSettings>(DEFAULT_SETTINGS.prompts);
@@ -302,6 +316,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       openedCharacterIdRef.current = null;
       setSnapshotMetadata([]);
       setIsHistoryOpen(false);
+      setCustomContextMeta({ ...EMPTY_CUSTOM_CONTEXT_META });
       // Clear all editor state to free memory
       setActiveSection('name');
       setIsDirty(false);
@@ -327,6 +342,13 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
 
     openedCharacterIdRef.current = currentCharacterId;
+    // Load custom-context meta only (no body) for the newly opened character
+    setCustomContextMeta({ ...EMPTY_CUSTOM_CONTEXT_META });
+    void customContextService.getMeta(currentCharacterId).then((meta) => {
+      if (openedCharacterIdRef.current === currentCharacterId) {
+        setCustomContextMeta(meta);
+      }
+    });
     // Note: 'open' snapshots are created by openCharacter() in useCharacter.ts
     // We don't create them here to avoid creating snapshots for newly created blank characters
     if (isHistoryOpenRef.current) {
@@ -854,6 +876,88 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   }, []);
 
   /**
+   * Section chunks + enabled custom context (body loaded from IDB ephemerally).
+   */
+  const resolveContextForAI = useCallback(async (sectionIds: CharacterSection[]): Promise<string[]> => {
+    const chunks = getContextContent(sectionIds);
+    const characterId = currentCharacterRef.current?.id;
+    if (!characterId) return chunks;
+
+    try {
+      // Body is loaded only for this request; callers should drop the array after use
+      const customBody = await customContextService.getEnabledContent(characterId);
+      if (customBody) {
+        chunks.push(formatCustomContextChunk(customBody));
+      }
+    } catch (error) {
+      console.error('Failed to load custom context for AI:', error);
+    }
+    return chunks;
+  }, [getContextContent]);
+
+  const setCustomContextEnabled = useCallback(async (enabled: boolean): Promise<void> => {
+    const characterId = currentCharacterRef.current?.id;
+    if (!characterId) return;
+
+    // Optimistic meta update avoids loading the body just to flip a flag
+    setCustomContextMeta((prev) => {
+      if (prev.charLength === 0) return prev;
+      return {
+        ...prev,
+        enabled,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    try {
+      const updated = await customContextService.setEnabled(characterId, enabled);
+      if (!updated && openedCharacterIdRef.current === characterId) {
+        setCustomContextMeta({ ...EMPTY_CUSTOM_CONTEXT_META });
+      }
+    } catch (error) {
+      console.error('Failed to update custom context enabled flag:', error);
+      if (openedCharacterIdRef.current === characterId) {
+        setCustomContextMeta((prev) => {
+          if (prev.charLength === 0) return prev;
+          return { ...prev, enabled: !enabled };
+        });
+      }
+      throw error;
+    }
+  }, []);
+
+  const saveCustomContext = useCallback(async (input: {
+    content: string;
+    enabled: boolean;
+  }): Promise<void> => {
+    const characterId = currentCharacterRef.current?.id;
+    if (!characterId) return;
+    try {
+      const meta = await customContextService.save(characterId, input);
+      if (openedCharacterIdRef.current === characterId) {
+        setCustomContextMeta(meta);
+      }
+    } catch (error) {
+      console.error('Failed to save custom context:', error);
+      throw error;
+    }
+  }, []);
+
+  const clearCustomContext = useCallback(async (): Promise<void> => {
+    const characterId = currentCharacterRef.current?.id;
+    if (!characterId) return;
+    try {
+      await customContextService.clear(characterId);
+      if (openedCharacterIdRef.current === characterId) {
+        setCustomContextMeta({ ...EMPTY_CUSTOM_CONTEXT_META });
+      }
+    } catch (error) {
+      console.error('Failed to clear custom context:', error);
+      throw error;
+    }
+  }, []);
+
+  /**
    * Handle AI operation result
    */
   const handleAIOperation = useCallback((result: string, operation: AIOperation, originalSelectedText?: string) => {
@@ -985,6 +1089,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     fontSize,
     selectedText,
     contextSectionIds,
+    customContextMeta,
     aiConfig,
     samplerSettings,
     promptSettings,
@@ -1005,6 +1110,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     setContextSectionIds: setContextSectionIdsCallback,
     addContextSection,
     removeContextSection,
+    setCustomContextEnabled,
+    saveCustomContext,
+    clearCustomContext,
     updateAIConfig,
     updateSamplerSettings,
     updatePromptSettings,
@@ -1022,6 +1130,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     getSnapshotDiff,
     handleAIOperation,
     getContextContent,
+    resolveContextForAI,
     reloadSettings,
     updateSectionLayout,
     resetSectionLayoutLocal,
