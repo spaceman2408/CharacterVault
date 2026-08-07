@@ -60,6 +60,13 @@ export {
 } from './characterMacroHelper';
 
 export {
+  markdownImageLinks,
+  setMarkdownImageOpenLinks,
+} from './markdownImageLinks';
+
+export type { MarkdownImageLinksOptions } from './markdownImageLinks';
+
+export {
   spellcheckExtension,
   setSpellcheckSettings,
   bindSpellcheckCallbacks,
