@@ -99,6 +99,8 @@ export interface CharacterEditorContextValue {
 
   /** Spellcheck settings */
   spellcheck: SpellcheckSettings;
+  /** When true, clicking Markdown image syntax can open the URL (with a warning). */
+  markdownImageOpenLinks: boolean;
   /** Update a spellcheck field (e.g. enabled, language) */
   updateSpellcheck: (updates: Partial<SpellcheckSettings>) => void;
   /** Add a word to the user's ignore list */

@@ -17,6 +17,7 @@ import {
   DEFAULT_SECTION_ORDER,
   CHARACTER_SECTIONS,
   DEFAULT_SPELLCHECK_SETTINGS,
+  DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   EMPTY_CUSTOM_CONTEXT_META,
 } from '../db/characterTypes';
 import { normalizePromptModelMap } from '../services/resolveOperationConfig';
@@ -65,6 +66,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [sectionOrder, setSectionOrder] = useState<CharacterSection[]>([...DEFAULT_SECTION_ORDER]);
   const [hiddenSections, setHiddenSections] = useState<CharacterSection[]>([]);
   const [spellcheck, setSpellcheckState] = useState<SpellcheckSettings>({ ...DEFAULT_SPELLCHECK_SETTINGS });
+  const [markdownImageOpenLinks, setMarkdownImageOpenLinks] = useState(DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS);
   
   // AI-related state
   const [selectedText, setSelectedText] = useState('');
@@ -292,6 +294,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setSectionOrder(secOrder);
       setHiddenSections(secHidden);
       setSpellcheckState(spell);
+      setMarkdownImageOpenLinks(
+        settings.ui.markdownImageOpenLinks ?? DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
+      );
       setContextSectionIdsState(contextIds);
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -1102,6 +1107,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     hiddenSections,
     visibleSections,
     spellcheck,
+    markdownImageOpenLinks,
     setActiveSection,
     updateCharacter,
     updateSpecField,

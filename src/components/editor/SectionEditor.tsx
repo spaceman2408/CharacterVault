@@ -255,6 +255,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     fontSize,
     setFontSize,
     spellcheck,
+    markdownImageOpenLinks,
   } = useCharacterEditorContext();
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
@@ -324,6 +325,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
     additionalExtensions: sectionExtensions,
     spellcheck,
     spellcheckMode: sectionSpellcheckMode,
+    markdownImageOpenLinks,
   });
 
   // Early return for no character
@@ -415,6 +417,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           fontSize={fontSize}
           onFontSizeChange={setFontSize}
           spellcheck={spellcheck}
+          markdownImageOpenLinks={markdownImageOpenLinks}
         />
       </div>
     );
@@ -454,6 +457,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           onFontSizeChange={setFontSize}
           characterName={currentCharacter?.name}
           spellcheck={spellcheck}
+          markdownImageOpenLinks={markdownImageOpenLinks}
         />
       </div>
     );

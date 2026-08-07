@@ -60,6 +60,7 @@ interface LorebookEditorProps {
   onFontSizeChange?: (size: number) => void;
   characterName?: string;
   spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
+  markdownImageOpenLinks?: boolean;
 }
 
 interface LorebookEntryListItemProps {
@@ -86,6 +87,7 @@ interface LorebookEntryDetailProps {
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
   spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
+  markdownImageOpenLinks?: boolean;
 }
 
 const POSITION_OPTIONS: { value: LorebookEntry['position']; label: string }[] = [
@@ -198,6 +200,7 @@ function LorebookEntryDetail({
   fontSize,
   onFontSizeChange,
   spellcheck,
+  markdownImageOpenLinks,
 }: LorebookEntryDetailProps): React.ReactElement {
   const [draftEntry, setDraftEntry] = useState(entry);
   const { editorRef, payloadPreviewModal } = useAIEditor({
@@ -226,6 +229,7 @@ function LorebookEntryDetail({
     fontSize,
     onFontSizeChange,
     spellcheck,
+    markdownImageOpenLinks,
   });
 
   // Local state for keys input to allow typing commas/spaces without immediate parsing
@@ -528,6 +532,7 @@ export function LorebookEditor({
   onFontSizeChange,
   characterName,
   spellcheck,
+  markdownImageOpenLinks,
 }: LorebookEditorProps): React.ReactElement {
   return (
     <LorebookEditorInner
@@ -546,6 +551,7 @@ export function LorebookEditor({
       onFontSizeChange={onFontSizeChange}
       characterName={characterName}
       spellcheck={spellcheck}
+      markdownImageOpenLinks={markdownImageOpenLinks}
     />
   );
 }
@@ -570,6 +576,7 @@ function LorebookEditorInner({
   onFontSizeChange,
   characterName,
   spellcheck,
+  markdownImageOpenLinks,
 }: LorebookEditorInnerProps): React.ReactElement {
   const normalizedPropLorebook = useMemo<CharacterBook>(() => ({
     name: lorebook?.name || '',
@@ -1128,6 +1135,7 @@ function LorebookEditorInner({
               fontSize={fontSize}
               onFontSizeChange={onFontSizeChange}
               spellcheck={spellcheck}
+              markdownImageOpenLinks={markdownImageOpenLinks}
             />
           </div>
         ) : (

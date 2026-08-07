@@ -32,9 +32,16 @@ import { searchPanelOpen, toolbarSearch, toolbarSearchTheme } from '../editor/ex
 import { themeSync } from '../editor/extensions/themeSync';
 import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
 import { characterMacroHelper } from '../editor/extensions/characterMacroHelper';
+import {
+  markdownImageLinks,
+  setMarkdownImageOpenLinks,
+} from '../editor/extensions/markdownImageLinks';
 import { spellcheckExtension, setSpellcheckSettings } from '../editor/extensions/spellcheck';
 import type { SpellcheckSettings } from '../db/characterTypes';
-import { DEFAULT_SPELLCHECK_SETTINGS } from '../db/characterTypes';
+import {
+  DEFAULT_SPELLCHECK_SETTINGS,
+  DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
+} from '../db/characterTypes';
 import { AIService, AIError, estimateTokens, type AIRequestPreview } from '../services/AIService';
 import { getProviderSelectionId } from '../services/providers';
 import { showEphemeralToast } from '../utils/ephemeralToast';
@@ -182,6 +189,11 @@ export interface UseAIEditorOptions {
    *   `@codemirror/lang-json`)
    */
   spellcheckMode?: 'prose' | 'html' | 'json';
+  /**
+   * When true, clicking Markdown image syntax opens the URL after a leave-app
+   * warning. Highlighting is always on. Defaults to true.
+   */
+  markdownImageOpenLinks?: boolean;
 }
 
 export interface UseAIEditorReturn {
@@ -244,6 +256,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     additionalExtensions,
     spellcheck = DEFAULT_SPELLCHECK_SETTINGS,
     spellcheckMode = 'prose',
+    markdownImageOpenLinks = DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   } = options;
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -1170,6 +1183,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         fontSizeExtension(fontSize),
         // Character card macro typing helper
         characterMacroHelper(),
+        markdownImageLinks({ openLinksEnabled: markdownImageOpenLinks }),
         ...(additionalExtensions ?? []),
       ],
     });
@@ -1307,6 +1321,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     if (!view) return;
     setSpellcheckSettings(view, spellcheck, spellcheckMode);
   }, [spellcheck, spellcheckMode]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    setMarkdownImageOpenLinks(view, markdownImageOpenLinks);
+  }, [markdownImageOpenLinks]);
 
   // Declared last so its cleanup runs first on unmount: flip isMountedRef before
   // the editor effect cleanup (which may call setState only while still mounted).

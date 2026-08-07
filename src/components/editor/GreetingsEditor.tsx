@@ -31,6 +31,7 @@ interface GreetingsEditorProps {
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
   spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
+  markdownImageOpenLinks?: boolean;
 }
 
 interface GreetingListItemProps {
@@ -55,6 +56,7 @@ interface GreetingDetailProps {
   fontSize?: number;
   onFontSizeChange?: (size: number) => void;
   spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
+  markdownImageOpenLinks?: boolean;
 }
 
 /**
@@ -141,6 +143,7 @@ function GreetingDetail({
   fontSize,
   onFontSizeChange,
   spellcheck,
+  markdownImageOpenLinks,
 }: GreetingDetailProps): React.ReactElement {
   const [draftGreeting, setDraftGreeting] = useState(greeting);
 
@@ -167,6 +170,7 @@ function GreetingDetail({
     fontSize,
     onFontSizeChange,
     spellcheck,
+    markdownImageOpenLinks,
   });
 
   return (
@@ -198,6 +202,7 @@ export function GreetingsEditor({
   fontSize,
   onFontSizeChange,
   spellcheck,
+  markdownImageOpenLinks,
 }: GreetingsEditorProps): React.ReactElement {
   const [greetingsList, setGreetingsList] = useState<string[]>(greetings);
   const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(0);
@@ -376,6 +381,7 @@ export function GreetingsEditor({
               fontSize={fontSize}
               onFontSizeChange={onFontSizeChange}
               spellcheck={spellcheck}
+              markdownImageOpenLinks={markdownImageOpenLinks}
             />
           </div>
         ) : (
