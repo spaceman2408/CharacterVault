@@ -20,6 +20,7 @@ const NO_IGNORE: TokenizerOptions = {
   ignoreCodeFences: false,
   ignoreInlineCode: false,
   ignoreMacros: false,
+  ignoreMarkdownImages: false,
   ignoreNumbers: false,
   ignoreAllCaps: false,
 };
@@ -83,6 +84,19 @@ describe('tokenizer — ignore rules', () => {
     expect(tokens.find((t) => t.wordLower === 'char')?.skipped).toBe('macroPlaceholder');
     expect(tokens.find((t) => t.wordLower === 'user')?.skipped).toBe('macroPlaceholder');
     expect(tokens.find((t) => t.wordLower === 'colour')?.skipped).toBeUndefined();
+  });
+
+  it('skips Markdown image constructs (including URL path segments)', () => {
+    const text =
+      'Hello ![](https://file.garden/akviCfKE-zqjKa2t/Shu/shu_cheeky.webp) world missspelled';
+    const tokens = tokenize(text);
+    const skippedInImage = tokens.filter((t) => t.skipped === 'markdownImage');
+    expect(skippedInImage.length).toBeGreaterThan(0);
+    expect(tokens.find((t) => t.wordLower === 'file')?.skipped).toBe('markdownImage');
+    expect(tokens.find((t) => t.wordLower === 'shu')?.skipped).toBe('markdownImage');
+    expect(tokens.find((t) => t.wordLower === 'hello')?.skipped).toBeUndefined();
+    expect(tokens.find((t) => t.wordLower === 'world')?.skipped).toBeUndefined();
+    expect(tokens.find((t) => t.wordLower === 'missspelled')?.skipped).toBeUndefined();
   });
 
   it('skips pure numbers', () => {

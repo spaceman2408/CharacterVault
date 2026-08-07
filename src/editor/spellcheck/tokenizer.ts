@@ -5,15 +5,18 @@
  * Tokenization is conservative: a "word" run is a sequence of Unicode letters
  * or digits optionally including apostrophes (straight or curly) and hyphens.
  *
- * Tokens that fall inside a code fence, an inline code span, or a `{{macro}}`
- * placeholder are flagged with a `skipped` reason and the spellchecker should
- * ignore them. Pure numeric and ALL-CAPS tokens are also flagged.
+ * Tokens that fall inside a code fence, an inline code span, a `{{macro}}`
+ * placeholder, or a Markdown image construct (`![alt](url)`) are flagged with
+ * a `skipped` reason and the spellchecker should ignore them. Pure numeric and
+ * ALL-CAPS tokens are also flagged.
  *
  * Note: URL/email skipping is implicit — these rarely appear in tokenized form
  * without punctuation, and we don't try to detect URL-shaped ranges here. The
  * user can still "Ignore word" via the tooltip for the rare false positive.
  * @module editor/spellcheck/tokenizer
  */
+
+import { findMarkdownImageRanges } from '../markdownImage/findMarkdownImages';
 
 export interface SpellcheckToken {
   /** Absolute document offset (inclusive) */
@@ -40,6 +43,7 @@ export type SkipReason =
   | 'inCodeFence'
   | 'inInlineCode'
   | 'macroPlaceholder'
+  | 'markdownImage'
   | 'number'
   | 'allCaps';
 
@@ -50,6 +54,8 @@ export interface TokenizerOptions {
   ignoreInlineCode: boolean;
   /** Whether `{{...}}` macro placeholders should be ignored */
   ignoreMacros: boolean;
+  /** Whether Markdown image constructs `![alt](url)` should be ignored */
+  ignoreMarkdownImages: boolean;
   /** Whether pure numeric tokens should be ignored */
   ignoreNumbers: boolean;
   /** Whether all-uppercase acronyms/proper nouns should be ignored */
@@ -60,6 +66,7 @@ export const DEFAULT_TOKENIZER_OPTIONS: TokenizerOptions = {
   ignoreCodeFences: true,
   ignoreInlineCode: true,
   ignoreMacros: true,
+  ignoreMarkdownImages: true,
   ignoreNumbers: true,
   ignoreAllCaps: true,
 };
@@ -137,6 +144,9 @@ export function findMacroRanges(text: string): Array<{ from: number; to: number 
   return ranges;
 }
 
+/** Re-export for callers that already import range helpers from the tokenizer. */
+export { findMarkdownImageRanges };
+
 interface RangeSet {
   contains(offset: number): boolean;
 }
@@ -191,6 +201,9 @@ export function tokenize(
   const fenceRanges = options.ignoreCodeFences ? makeRangeSet(findCodeFenceRanges(text)) : null;
   const inlineRanges = options.ignoreInlineCode ? makeRangeSet(findInlineCodeRanges(text)) : null;
   const macroRanges = options.ignoreMacros ? makeRangeSet(findMacroRanges(text)) : null;
+  const imageRanges = options.ignoreMarkdownImages
+    ? makeRangeSet(findMarkdownImageRanges(text))
+    : null;
 
   const tokens: SpellcheckToken[] = [];
   WORD_RE.lastIndex = 0;
@@ -203,6 +216,7 @@ export function tokenize(
       fenceRanges,
       inlineRanges,
       macroRanges,
+      imageRanges,
       options,
     });
     tokens.push({ from, to, word, wordLower: word.toLowerCase(), skipped: skip });
@@ -214,6 +228,7 @@ interface SkipContext {
   fenceRanges: RangeSet | null;
   inlineRanges: RangeSet | null;
   macroRanges: RangeSet | null;
+  imageRanges: RangeSet | null;
   options: TokenizerOptions;
 }
 
@@ -227,6 +242,7 @@ function shouldSkip(
   if (ctx.fenceRanges?.contains(mid)) return 'inCodeFence';
   if (ctx.inlineRanges?.contains(mid)) return 'inInlineCode';
   if (ctx.macroRanges?.contains(mid)) return 'macroPlaceholder';
+  if (ctx.imageRanges?.contains(mid)) return 'markdownImage';
 
   if (ctx.options.ignoreNumbers && STRICT_NUMBER_RE.test(word)) return 'number';
   if (
@@ -245,5 +261,6 @@ export const __testing__ = {
   findCodeFenceRanges,
   findInlineCodeRanges,
   findMacroRanges,
+  findMarkdownImageRanges,
   shouldSkip,
 };
