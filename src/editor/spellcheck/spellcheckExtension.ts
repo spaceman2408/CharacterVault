@@ -39,6 +39,7 @@ import {
 import { syntaxTree } from '@codemirror/language';
 import { tokenize, DEFAULT_TOKENIZER_OPTIONS } from './tokenizer';
 import { loadSpellchecker, type LoadedSpellchecker } from './dictionary';
+import { isWordCorrect } from './wordCheck';
 import type { SpellcheckSettings } from '../../db/characterTypes';
 
 const MISSPELLING_DECORATION_CLASS = 'cm-spellerror';
@@ -450,20 +451,12 @@ function buildEnabledExtensions(
               if (inSkipRange(absoluteFrom)) continue;
               if (this.ignored.has(t.wordLower)) continue;
               if (mistakes.length >= DECORATION_CAP) break outer;
-              try {
-                // Pass the *original-case* surface form to nspell; the bundled
-                // English dictionary stores proper nouns with sentence-case
-                // affixes (e.g. `Richard/MS`), so lowercasing first would
-                // erroneously reject valid capitalized words.
-                if (!loaded.spell.correct(t.word)) {
-                  mistakes.push({
-                    from: absoluteFrom,
-                    to: lineBase + t.to,
-                    word: t.word,
-                  });
-                }
-              } catch {
-                // nspell may throw on weird tokens; skip quietly
+              if (!isWordCorrect(loaded.spell, t.word)) {
+                mistakes.push({
+                  from: absoluteFrom,
+                  to: lineBase + t.to,
+                  word: t.word,
+                });
               }
             }
           }
