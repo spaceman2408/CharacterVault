@@ -14,6 +14,7 @@ import type {
 import { DEFAULT_SETTINGS } from '../db/characterTypes';
 import {
   DEFAULT_CHARACTER_VAULT_SETTINGS,
+  DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_SECTION_ORDER,
   DEFAULT_SPELLCHECK_SETTINGS,
 } from '../db/characterTypes';
@@ -50,7 +51,31 @@ export class CharacterSettingsService {
       await characterDb.settings.put(settings);
     }
 
+    // Backfill Markdown image open-link control default
+    if (settings.ui?.markdownImageOpenLinks === undefined) {
+      settings.ui.markdownImageOpenLinks = DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS;
+      await characterDb.settings.put(settings);
+    }
+
     return settings;
+  }
+
+  /** Whether Markdown image links open on click in editors. */
+  async getMarkdownImageOpenLinks(): Promise<boolean> {
+    const settings = await this.getSettings();
+    return settings.ui.markdownImageOpenLinks ?? DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS;
+  }
+
+  /** Persist the Markdown image click-to-open Studio preference. */
+  async saveMarkdownImageOpenLinks(enabled: boolean): Promise<void> {
+    const settings = await this.getSettings();
+    await characterDb.settings.put({
+      ...settings,
+      ui: {
+        ...settings.ui,
+        markdownImageOpenLinks: enabled,
+      },
+    });
   }
 
   /**

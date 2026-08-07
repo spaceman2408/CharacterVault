@@ -29,6 +29,7 @@ export interface SettingsDraft {
   prompts: PromptSettings;
   promptModels: PromptModelMap;
   showLuckyVortex: boolean;
+  markdownImageOpenLinks: boolean;
   spellcheckEnabled: boolean;
   spellcheckLanguage: string;
   sectionOrder: CharacterSection[];

@@ -309,6 +309,11 @@ export interface CharacterVaultSettings {
     editorFontSize: number;
     sidebarWidth: number;
     showLuckyVortex?: boolean;
+    /**
+     * When true, clicking Markdown image syntax opens the URL after a safety
+     * warning. Highlighting is always on. Default true when undefined.
+     */
+    markdownImageOpenLinks?: boolean;
     spellcheck?: SpellcheckSettings;
   };
   ai?: AIConfig;
@@ -329,6 +334,7 @@ export const DEFAULT_CHARACTER_VAULT_SETTINGS: Omit<CharacterVaultSettings, 'id'
     theme: 'system',
     editorFontSize: 16,
     sidebarWidth: 280,
+    markdownImageOpenLinks: true,
     spellcheck: {
       enabled: true,
       language: 'en',
@@ -338,6 +344,9 @@ export const DEFAULT_CHARACTER_VAULT_SETTINGS: Omit<CharacterVaultSettings, 'id'
   },
   version: 1,
 };
+
+/** Default for Studio → open control on Markdown image links */
+export const DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS = true;
 
 /** Used to backfill old settings records missing `ui.spellcheck` */
 export const DEFAULT_SPELLCHECK_SETTINGS: SpellcheckSettings = {

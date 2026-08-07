@@ -1,10 +1,10 @@
 /**
- * @fileoverview Studio preferences tab (vortex animation + spellcheck).
+ * @fileoverview Studio preferences tab (vortex, editor links, spellcheck).
  * @module components/settings/tabs/StudioTab
  */
 
 import React from 'react';
-import { Languages, Wand2 } from 'lucide-react';
+import { ExternalLink, Languages, Wand2 } from 'lucide-react';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
 import type { SettingsTabProps } from '../types';
@@ -27,6 +27,28 @@ export const StudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
               When enabled, pressing the &quot;I&apos;m Feeling Lucky&quot; button plays a swirling
               tag vortex animation before generating. When disabled, random tags are chosen
               instantly without any visual effect.
+            </>
+          }
+        />
+      </SettingsCard>
+
+      <SettingsCard>
+        <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+          <ExternalLink className="w-4 h-4" />
+          Editor links
+        </h3>
+        <SettingsToggle
+          stacked
+          checked={draft.markdownImageOpenLinks}
+          onChange={(checked) =>
+            setDraft((prev) => ({ ...prev, markdownImageOpenLinks: checked }))
+          }
+          label="Open Markdown image links on click"
+          description={
+            <>
+              When enabled, clicking image syntax like{' '}
+              <code className="text-xs">![](https://…)</code> opens the URL after a safety warning.
+              Highlighting stays on either way. Drag to select text without opening.
             </>
           }
         />

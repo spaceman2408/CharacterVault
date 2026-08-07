@@ -14,6 +14,7 @@ import {
   DEFAULT_SETTINGS,
   DEFAULT_SECTION_ORDER,
   DEFAULT_SPELLCHECK_SETTINGS,
+  DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   clampContextLength,
 } from '../../../db/characterTypes';
 import { characterSettingsService } from '../../../services/CharacterSettingsService';
@@ -31,6 +32,7 @@ export function createDefaultDraft(): SettingsDraft {
     prompts: { ...DEFAULT_SETTINGS.prompts },
     promptModels: {},
     showLuckyVortex: true,
+    markdownImageOpenLinks: DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
     spellcheckEnabled: DEFAULT_SPELLCHECK_SETTINGS.enabled,
     spellcheckLanguage: DEFAULT_SPELLCHECK_SETTINGS.language,
     sectionOrder: [...DEFAULT_SECTION_ORDER],
@@ -155,6 +157,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           prompts,
           promptModels,
           showLuckyVortex: fullSettings.ui?.showLuckyVortex ?? true,
+          markdownImageOpenLinks:
+            fullSettings.ui?.markdownImageOpenLinks ?? DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
           spellcheckEnabled: spell.enabled,
           spellcheckLanguage: spell.language,
           sectionOrder: secOrder,
@@ -225,6 +229,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         ui: {
           ...currentSettings.ui,
           showLuckyVortex: draft.showLuckyVortex,
+          markdownImageOpenLinks: draft.markdownImageOpenLinks,
         },
         sectionOrder: draft.sectionOrder,
         hiddenSections: draft.hiddenSections,

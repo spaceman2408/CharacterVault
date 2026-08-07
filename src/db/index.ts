@@ -37,6 +37,7 @@ export {
   CHARACTER_SECTIONS,
   DEFAULT_CHARACTER_VAULT_SETTINGS,
   DEFAULT_SPELLCHECK_SETTINGS,
+  DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   EMPTY_CUSTOM_CONTEXT_META,
 } from './characterTypes';
 export { CharacterDatabase, characterDb, toCharacterListItem } from './CharacterDatabase';
