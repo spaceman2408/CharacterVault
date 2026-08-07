@@ -32,6 +32,7 @@ import { searchPanelOpen, toolbarSearch, toolbarSearchTheme } from '../editor/ex
 import { themeSync } from '../editor/extensions/themeSync';
 import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
 import { characterMacroHelper } from '../editor/extensions/characterMacroHelper';
+import { macroHighlight } from '../editor/extensions/macroHighlight';
 import {
   markdownImageLinks,
   setMarkdownImageOpenLinks,
@@ -1181,8 +1182,9 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         toolbarSearchTheme(),
         // Font size extension
         fontSizeExtension(fontSize),
-        // Character card macro typing helper
+        // Character card macro typing helper + {{char}}/{{user}} coloring
         characterMacroHelper(),
+        macroHighlight(),
         markdownImageLinks({ openLinksEnabled: markdownImageOpenLinks }),
         ...(additionalExtensions ?? []),
       ],

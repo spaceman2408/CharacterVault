@@ -60,6 +60,16 @@ export {
 } from './characterMacroHelper';
 
 export {
+  macroHighlight,
+  findNameMacroRanges,
+} from './macroHighlight';
+
+export type {
+  NameMacroKind,
+  NameMacroRange,
+} from './macroHighlight';
+
+export {
   markdownImageLinks,
   setMarkdownImageOpenLinks,
 } from './markdownImageLinks';

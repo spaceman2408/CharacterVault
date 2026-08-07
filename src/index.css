@@ -137,6 +137,10 @@
   --syntax-operator: #6b7280;
   --syntax-meta: #94a3b8;
 
+  /* Character card name macros ({{char}} / {{user}}) */
+  --macro-char: #7c3aed;
+  --macro-user: #db2777;
+
   /* AI toolbar */
   --ai-toolbar-bg: var(--surface);
   --ai-toolbar-border: var(--border);
@@ -266,6 +270,10 @@
   --syntax-property: #9cdcfe;
   --syntax-operator: #d4d4d4;
   --syntax-meta: #d4d4d4;
+
+  /* Character card name macros ({{char}} / {{user}}) */
+  --macro-char: #c586c0;
+  --macro-user: #4ec9b0;
 
   --ai-toolbar-bg: var(--surface);
   --ai-toolbar-border: var(--border);
