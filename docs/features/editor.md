@@ -114,6 +114,30 @@ This is available in every text editor that uses the shared CodeMirror toolbar, 
   fetched from `/dictionary/en.{aff,dic}` on first use and cached in IndexedDB
   for offline access. Hover or focus over a flagged word to see suggestions
   plus "Ignore word" and "Add to dictionary".
+- **Name macros** — `{{char}}` and `{{user}}` are syntax-colored so they stand
+  out while you write (case-insensitive; optional spaces inside the braces).
+- **Markdown image links** — Image syntax is highlighted; optional click-to-open
+  is controlled under **Settings → Studio → Editor links**.
+
+### Markdown image links
+
+Markdown image syntax such as `![alt](https://example.com/art.png)` is
+highlighted in every shared text editor.
+
+- **Highlight** — Always on so image marks and URLs are easy to spot.
+- **Click to open** — When **Settings → Studio → Editor links → Open Markdown
+  image links on click** is enabled, clicking an openable `http`/`https` URL
+  shows a leave-app safety warning, then opens the link in a new tab.
+- **Select without opening** — Drag to select text; a small movement cancels
+  the click-open action.
+- **Spellcheck-friendly** — Image constructs are skipped by spellcheck so
+  URLs and alt text don’t pile up wavy underlines.
+
+### Name macros
+
+`{{char}}` and `{{user}}` (and spaced forms like `{{ char }}`) get distinct
+colors in the editor. Matching is case-insensitive so `{{Char}}` and
+`{{USER}}` highlight the same way.
 
 ### Spellcheck
 
@@ -134,11 +158,13 @@ How it works:
   the JSON string _values_ are still checked.
 - **Affix-aware** — `running`, `ran`, and `runs` all pass without you needing to
   whitelist anything.
+- **Hyphenated compounds** — Words like `well-known` pass when each segment is
+  a valid dictionary word.
 - **Smart ignores** — The checker automatically skips ` ``` ` code fences, inline
-  `` `code` `` spans, `{{macro}}` placeholders, HTML tags, URLs/emails, numeric
-  tokens, and ALL-CAPS acronyms. Add more words to your **ignored** or
-  **personal dictionary** lists from the tooltip; they persist in your settings
-  and apply across all cards.
+  `` `code` `` spans, `{{macro}}` placeholders, Markdown image constructs,
+  HTML tags, URLs/emails, numeric tokens, and ALL-CAPS acronyms. Add more words
+  to your **ignored** or **personal dictionary** lists from the tooltip; they
+  persist in your settings and apply across all cards.
 - **Debounced + viewport-only** — Only the visible portion of large lorebooks
   is checked, so editing stays fast.
 - **Offline** — The English Hunspell dictionary is fetched once on first use

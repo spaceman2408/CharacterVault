@@ -15,11 +15,17 @@ If you prefer to run locally or develop on the codebase, see the [Installation g
 ::: details Does the editor have spellcheck?
 Yes. The shared editor runs a Hunspell-backed spellchecker (the same engine LibreOffice uses) with an English dictionary bundled. Misspelled words get a wavy-red underline; hover one to see up to eight suggested corrections, click **Ignore word** to skip it for yourself, or click **Add to dictionary** to never have it flagged again. Both the ignore list and your personal dictionary persist in your settings and apply across all your cards.
 
-The checker automatically skips code fences (`` ``` ``), inline `` `code` `` spans, `{{macro}}` placeholders, URLs/emails, HTML tags, numeric tokens, and ALL-CAPS acronyms — so JSON in Extensions and macros in Greetings won't be wrongly flagged.
+The checker automatically skips code fences (`` ``` ``), inline `` `code` `` spans, `{{macro}}` placeholders, Markdown image constructs, URLs/emails, HTML tags, numeric tokens, and ALL-CAPS acronyms — so JSON in Extensions and macros in Greetings won't be wrongly flagged. Hyphenated compounds pass when each segment is a valid word.
 
 Toggle it on or off in **Settings → Studio → Spellcheck**. The English dictionary is fetched once on first use and cached locally, so it works offline. Additional languages can be added by bundling new `.aff`/`.dic` pairs.
 
 [Learn more →](/features/editor#spellcheck)
+:::
+
+::: details Can I open Markdown image links from the editor?
+Yes. Syntax like `![alt](https://…)` is always highlighted. To open the URL on click, enable **Settings → Studio → Editor links → Open Markdown image links on click**. You’ll get a leave-app safety warning first. Drag to select text without opening.
+
+[Learn more →](/features/editor#markdown-image-links)
 :::
 
 ::: details What can I do with Character Vault?

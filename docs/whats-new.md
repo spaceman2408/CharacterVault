@@ -6,6 +6,14 @@ Quick overview of recent updates to CharacterVault.
 
 ## August 2026
 
+### CharacterVault 1.2.1
+
+- **Markdown image links** — `![](https://…)` highlighted in the editor; optional click-to-open with a safety warning (**Settings → Studio → Editor links**)
+- **Name macros** — `{{char}}` and `{{user}}` get distinct syntax colors
+- **Spellcheck** — skips Markdown image constructs; hyphenated compounds pass when each segment is valid
+
+[Release 1.2.1 →](/releases/v1.2.1) · [Editor → Markdown image links](/features/editor#markdown-image-links) · [Spellcheck](/features/editor#spellcheck)
+
 ### CharacterVault 1.2.0
 
 - **Custom Context** — free-text notes for the open character (AI Context panel), optional for Orion and the AI toolbar, vault-local only

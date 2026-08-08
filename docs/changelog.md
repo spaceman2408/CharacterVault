@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2.1 (2026-08-07)
+
+Editor polish: Markdown image links, name macro colors, and smarter spellcheck. Full notes: [v1.2.1 release notes](/releases/v1.2.1).
+
+### Highlights
+
+- Markdown `![](url)` image syntax is highlighted; optional click-to-open with a leave-app warning
+- Toggle under **Settings → Studio → Editor links** (highlight stays on either way)
+- `{{char}}` / `{{user}}` name macros get distinct syntax colors
+- Spellcheck skips Markdown image constructs and accepts hyphenated compounds when segments are valid
+
+Details: [Editor → Markdown image links](/features/editor#markdown-image-links) · [Spellcheck](/features/editor#spellcheck)
+
+---
+
 ## 1.2.0 (2026-08-03)
 
 Custom context, lorebook context controls, and modern sampler defaults. Full notes: [v1.2.0 release notes](/releases/v1.2.0).
