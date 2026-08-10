@@ -18,9 +18,18 @@ import type {
   SpellDictionaryCacheEntry,
   StoredImage,
   CharacterCustomContext,
+  VaultLorebook,
+  LorebookListItem,
+  LorebookSnapshot,
+  CreateLorebookSnapshotInput,
+  LorebookSnapshotMetadata,
+  CreateVaultLorebookInput,
+  UpdateVaultLorebookInput,
+  CharacterLorebookAttachments,
+  CharacterBook,
 } from './characterTypes';
-import { DEFAULT_CHARACTER_VAULT_SETTINGS } from './characterTypes';
-import { estimateCharacterCardTokens } from '../services/AIService';
+import { DEFAULT_CHARACTER_VAULT_SETTINGS, createEmptyCharacterBook } from './characterTypes';
+import { estimateCharacterCardTokens, estimateTokens } from '../services/AIService';
 import { v4 as uuidv4 } from 'uuid';
 
 function stableSerialize(value: unknown): string {
@@ -87,6 +96,27 @@ export function toCharacterListItem(character: Character): CharacterListItem {
   };
 }
 
+/** Estimate total tokens for a character book body (entry contents only). */
+export function estimateLorebookTokens(book: CharacterBook): number {
+  return book.entries.reduce((sum, entry) => sum + estimateTokens(entry.content || ''), 0);
+}
+
+/**
+ * Build a lightweight vault-list row from a full standalone lorebook.
+ */
+export function toLorebookListItem(lorebook: VaultLorebook): LorebookListItem {
+  return {
+    id: lorebook.id,
+    name: lorebook.name,
+    description: lorebook.description,
+    tags: lorebook.tags ?? [],
+    entryCount: lorebook.book?.entries?.length ?? 0,
+    totalTokens: estimateLorebookTokens(lorebook.book ?? createEmptyCharacterBook()),
+    updatedAt: lorebook.updatedAt,
+    lastOpenedAt: lorebook.lastOpenedAt,
+  };
+}
+
 /**
  * Database class for CharacterVault.
  * Single database storing all characters and settings.
@@ -115,6 +145,18 @@ export class CharacterDatabase extends Dexie {
 
   /** Per-character vault-local custom AI context (1:1 with character) */
   characterCustomContext!: Table<CharacterCustomContext, string>;
+
+  /** Standalone lorebooks (world info library) */
+  lorebooks!: Table<VaultLorebook, string>;
+
+  /** Lightweight lorebook vault index */
+  lorebookListIndex!: Table<LorebookListItem, string>;
+
+  /** Snapshots for standalone lorebooks */
+  lorebookSnapshots!: Table<LorebookSnapshot, string>;
+
+  /** Character → standalone lorebook attach list (vault-local) */
+  characterLorebookAttachments!: Table<CharacterLorebookAttachments, string>;
 
   constructor() {
     super('character-vault-db');
@@ -199,6 +241,25 @@ export class CharacterDatabase extends Dexie {
       characterListIndex: 'id, name, updatedAt, lastOpenedAt',
       characterCustomContext: 'characterId',
     });
+
+    // Version 8: Standalone lorebook vault + snapshots + character attach links
+    this.version(8).stores({
+      characters: 'id, name, updatedAt, createdAt',
+      settings: 'id',
+      snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+      storedImages: 'id',
+      spellDictionaryCache: 'id',
+      characterListIndex: 'id, name, updatedAt, lastOpenedAt',
+      characterCustomContext: 'characterId',
+      lorebooks: 'id, name, updatedAt, createdAt',
+      lorebookListIndex: 'id, name, updatedAt, lastOpenedAt',
+      lorebookSnapshots: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+      characterLorebookAttachments: 'characterId',
+    });
+  }
+
+  private async syncLorebookListIndex(lorebook: VaultLorebook): Promise<void> {
+    await this.lorebookListIndex.put(toLorebookListItem(lorebook));
   }
 
   /** Upsert the vault list row for a character (call after any write). */
@@ -433,15 +494,19 @@ export class CharacterDatabase extends Dexie {
   async deleteCharacter(id: string): Promise<void> {
     await this.transaction(
       'rw',
-      this.characters,
-      this.snapshots,
-      this.characterListIndex,
-      this.characterCustomContext,
+      [
+        this.characters,
+        this.snapshots,
+        this.characterListIndex,
+        this.characterCustomContext,
+        this.characterLorebookAttachments,
+      ],
       async () => {
         await this.characters.delete(id);
         await this.characterListIndex.delete(id);
         await this.snapshots.where('characterId').equals(id).delete();
         await this.characterCustomContext.delete(id);
+        await this.characterLorebookAttachments.delete(id);
       }
     );
   }
@@ -850,6 +915,292 @@ export class CharacterDatabase extends Dexie {
 
       await this.cleanOrphanedImages(characterId);
     });
+  }
+
+  // ============================================================================
+  // Standalone lorebook operations
+  // ============================================================================
+
+  async getAllLorebookListItems(): Promise<LorebookListItem[]> {
+    const indexCount = await this.lorebookListIndex.count();
+    if (indexCount === 0) {
+      const bookCount = await this.lorebooks.count();
+      if (bookCount > 0) {
+        await this.rebuildLorebookListIndex();
+      }
+    }
+    return this.lorebookListIndex.orderBy('updatedAt').reverse().toArray();
+  }
+
+  async rebuildLorebookListIndex(): Promise<void> {
+    await this.transaction('rw', this.lorebooks, this.lorebookListIndex, async () => {
+      await this.lorebookListIndex.clear();
+      await this.lorebooks.toCollection().each(async (lorebook) => {
+        await this.lorebookListIndex.put(toLorebookListItem(lorebook));
+      });
+    });
+  }
+
+  async getLorebook(id: string): Promise<VaultLorebook | undefined> {
+    return this.lorebooks.get(id);
+  }
+
+  async createLorebook(input: CreateVaultLorebookInput): Promise<VaultLorebook> {
+    const timestamp = new Date().toISOString();
+    const id = uuidv4();
+    const book = input.book
+      ? { ...input.book, name: input.book.name || input.name, extensions: input.book.extensions || {} }
+      : createEmptyCharacterBook(input.name);
+
+    const lorebook: VaultLorebook = {
+      id,
+      name: input.name,
+      description: input.description ?? book.description ?? '',
+      tags: input.tags ?? [],
+      book: {
+        ...book,
+        name: book.name || input.name,
+        description: book.description ?? input.description ?? '',
+      },
+      version: 1,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      lastOpenedAt: timestamp,
+    };
+
+    await this.transaction('rw', this.lorebooks, this.lorebookListIndex, async () => {
+      await this.lorebooks.add(lorebook);
+      await this.syncLorebookListIndex(lorebook);
+    });
+    return lorebook;
+  }
+
+  async updateLorebook(id: string, input: UpdateVaultLorebookInput): Promise<VaultLorebook> {
+    const existing = await this.lorebooks.get(id);
+    if (!existing) {
+      throw new Error(`Lorebook with ID "${id}" not found`);
+    }
+
+    const timestamp = new Date().toISOString();
+    const nextBook = input.book
+      ? {
+          ...input.book,
+          extensions: input.book.extensions || {},
+          entries: input.book.entries || [],
+        }
+      : existing.book;
+
+    const updated: VaultLorebook = {
+      ...existing,
+      name: input.name ?? existing.name,
+      description: input.description !== undefined ? input.description : existing.description,
+      tags: input.tags ?? existing.tags,
+      book: nextBook,
+      updatedAt: timestamp,
+    };
+
+    // Keep book.name in sync with vault display name when name is updated
+    if (input.name !== undefined) {
+      updated.book = { ...updated.book, name: input.name };
+    }
+    if (input.description !== undefined) {
+      updated.book = { ...updated.book, description: input.description };
+    }
+
+    await this.transaction('rw', this.lorebooks, this.lorebookListIndex, async () => {
+      await this.lorebooks.put(updated);
+      await this.syncLorebookListIndex(updated);
+    });
+    return updated;
+  }
+
+  async deleteLorebook(id: string): Promise<void> {
+    await this.transaction(
+      'rw',
+      [
+        this.lorebooks,
+        this.lorebookListIndex,
+        this.lorebookSnapshots,
+        this.characterLorebookAttachments,
+      ],
+      async () => {
+        await this.lorebooks.delete(id);
+        await this.lorebookListIndex.delete(id);
+        await this.lorebookSnapshots.where('lorebookId').equals(id).delete();
+
+        // Drop attach references to this book
+        const attachments = await this.characterLorebookAttachments.toArray();
+        await Promise.all(
+          attachments.map(async (row) => {
+            if (!row.lorebookIds.includes(id)) return;
+            const nextIds = row.lorebookIds.filter((bookId) => bookId !== id);
+            if (nextIds.length === 0) {
+              await this.characterLorebookAttachments.delete(row.characterId);
+            } else {
+              await this.characterLorebookAttachments.put({
+                ...row,
+                lorebookIds: nextIds,
+                updatedAt: new Date().toISOString(),
+              });
+            }
+          }),
+        );
+      },
+    );
+  }
+
+  async duplicateLorebook(id: string, newName: string): Promise<VaultLorebook> {
+    const existing = await this.lorebooks.get(id);
+    if (!existing) {
+      throw new Error(`Lorebook with ID "${id}" not found`);
+    }
+
+    const timestamp = new Date().toISOString();
+    const newId = uuidv4();
+    const duplicated: VaultLorebook = {
+      ...existing,
+      id: newId,
+      name: newName,
+      book: {
+        ...existing.book,
+        name: newName,
+        entries: existing.book.entries.map((entry) => ({
+          ...entry,
+          extensions: { ...entry.extensions },
+          keys: [...entry.keys],
+          secondary_keys: entry.secondary_keys ? [...entry.secondary_keys] : undefined,
+        })),
+        extensions: { ...existing.book.extensions },
+      },
+      tags: [...(existing.tags ?? [])],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      lastOpenedAt: timestamp,
+    };
+
+    await this.transaction('rw', this.lorebooks, this.lorebookListIndex, async () => {
+      await this.lorebooks.add(duplicated);
+      await this.syncLorebookListIndex(duplicated);
+    });
+    return duplicated;
+  }
+
+  async updateLorebookLastOpened(id: string): Promise<string> {
+    const timestamp = new Date().toISOString();
+    await this.transaction('rw', this.lorebooks, this.lorebookListIndex, async () => {
+      await this.lorebooks.update(id, { lastOpenedAt: timestamp });
+      const existing = await this.lorebookListIndex.get(id);
+      if (existing) {
+        await this.lorebookListIndex.put({ ...existing, lastOpenedAt: timestamp });
+      }
+    });
+    return timestamp;
+  }
+
+  // ============================================================================
+  // Lorebook snapshot operations
+  // ============================================================================
+
+  async createLorebookSnapshot(input: CreateLorebookSnapshotInput): Promise<LorebookSnapshot | null> {
+    const latest = await this.getLatestLorebookSnapshot(input.lorebookId);
+    if (latest?.payloadHash === input.payloadHash) {
+      return null;
+    }
+
+    const snapshot: LorebookSnapshot = {
+      id: uuidv4(),
+      lorebookId: input.lorebookId,
+      source: input.source,
+      createdAt: new Date().toISOString(),
+      payload: input.payload,
+      payloadHash: input.payloadHash,
+    };
+
+    await this.transaction('rw', this.lorebookSnapshots, async () => {
+      await this.lorebookSnapshots.add(snapshot);
+      await this.pruneLorebookSnapshots(input.lorebookId, 10);
+    });
+
+    return snapshot;
+  }
+
+  async getLorebookSnapshots(lorebookId: string): Promise<LorebookSnapshot[]> {
+    const snapshots = await this.lorebookSnapshots
+      .where('lorebookId')
+      .equals(lorebookId)
+      .sortBy('createdAt');
+    return snapshots.reverse();
+  }
+
+  async getLatestLorebookSnapshot(lorebookId: string): Promise<LorebookSnapshot | undefined> {
+    const snapshots = await this.lorebookSnapshots
+      .where('lorebookId')
+      .equals(lorebookId)
+      .sortBy('createdAt');
+    return snapshots.at(-1);
+  }
+
+  async getLorebookSnapshotMetadata(lorebookId: string): Promise<LorebookSnapshotMetadata[]> {
+    const snapshots = await this.lorebookSnapshots
+      .where('lorebookId')
+      .equals(lorebookId)
+      .sortBy('createdAt');
+    return snapshots.reverse().map(({ id, lorebookId: bookId, source, createdAt, payloadHash }) => ({
+      id,
+      lorebookId: bookId,
+      source,
+      createdAt,
+      payloadHash,
+    }));
+  }
+
+  async getLorebookSnapshotById(snapshotId: string): Promise<LorebookSnapshot | undefined> {
+    return this.lorebookSnapshots.get(snapshotId);
+  }
+
+  async deleteLorebookSnapshot(snapshotId: string): Promise<void> {
+    await this.lorebookSnapshots.delete(snapshotId);
+  }
+
+  async pruneLorebookSnapshots(lorebookId: string, limit: number): Promise<void> {
+    const snapshots = await this.lorebookSnapshots
+      .where('lorebookId')
+      .equals(lorebookId)
+      .sortBy('createdAt');
+
+    if (snapshots.length <= limit) {
+      return;
+    }
+
+    const toDelete = snapshots.slice(0, snapshots.length - limit);
+    await Promise.all(toDelete.map((snapshot) => this.lorebookSnapshots.delete(snapshot.id)));
+  }
+
+  // ============================================================================
+  // Character ↔ lorebook attachments (vault-local)
+  // ============================================================================
+
+  async getCharacterLorebookAttachments(
+    characterId: string,
+  ): Promise<CharacterLorebookAttachments | undefined> {
+    return this.characterLorebookAttachments.get(characterId);
+  }
+
+  async setCharacterLorebookAttachments(
+    characterId: string,
+    lorebookIds: string[],
+  ): Promise<CharacterLorebookAttachments> {
+    const row: CharacterLorebookAttachments = {
+      characterId,
+      lorebookIds: [...new Set(lorebookIds)],
+      updatedAt: new Date().toISOString(),
+    };
+    if (row.lorebookIds.length === 0) {
+      await this.characterLorebookAttachments.delete(characterId);
+      return row;
+    }
+    await this.characterLorebookAttachments.put(row);
+    return row;
   }
 }
 

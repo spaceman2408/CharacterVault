@@ -72,3 +72,16 @@ export {
   type STLorebookEntry,
   type STLorebookExport,
 } from './LorebookConverter';
+
+export { LorebookService, lorebookService } from './LorebookService';
+export {
+  LorebookSnapshotService,
+  lorebookSnapshotService,
+  buildLorebookSnapshotPayload,
+  computeLorebookPayloadHash,
+} from './LorebookSnapshotService';
+export {
+  LorebookAttachmentService,
+  lorebookAttachmentService,
+  type ResolvedLorebookAttachment,
+} from './LorebookAttachmentService';

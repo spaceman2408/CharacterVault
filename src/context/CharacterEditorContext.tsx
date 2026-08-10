@@ -31,6 +31,7 @@ import {
   customContextService,
   formatCustomContextChunk,
 } from '../services/CustomContextService';
+import { lorebookAttachmentService } from '../services/LorebookAttachmentService';
 import { loadSnapshotDiff, openHistoryAfterFlush } from '../services/historyLifecycle';
 import { generateThumbnail } from '../utils/thumbnail';
 
@@ -897,6 +898,34 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     } catch (error) {
       console.error('Failed to load custom context for AI:', error);
     }
+
+    // Include vault-local attached standalone lorebooks when lorebook context is selected
+    if (sectionIds.includes('lorebook')) {
+      try {
+        const attached = await lorebookAttachmentService.loadAttachedBooks(characterId);
+        for (const vaultBook of attached) {
+          const book = vaultBook.book;
+          const enabledEntries = (book.entries || []).filter(
+            (e) => e.enabled && e.extensions?.context_enabled !== false,
+          );
+          if (enabledEntries.length === 0) continue;
+          let header = `Attached Lorebook: ${book.name || vaultBook.name || 'World Info'}`;
+          if (book.description) header += `\n${book.description}`;
+          chunks.push(header);
+          for (const entry of enabledEntries) {
+            let block = `[Entry ${entry.id}]`;
+            if (entry.comment || entry.name) block += ` ${entry.comment || entry.name}`;
+            block += '\n';
+            block += `Keys: ${(entry.keys || []).join(', ')}\n`;
+            block += entry.content || '';
+            chunks.push(block);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load attached lorebooks for AI:', error);
+      }
+    }
+
     return chunks;
   }, [getContextContent]);
 

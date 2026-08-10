@@ -4,7 +4,13 @@
  * @module services/LorebookConverter
  */
 
-import type { CharacterBook, LorebookEntry } from '../db/characterTypes';
+import type {
+  CharacterBook,
+  LorebookDepthRole,
+  LorebookEntry,
+  LorebookPosition,
+  LorebookSelectiveLogic,
+} from '../db/characterTypes';
 
 /**
  * SillyTavern lorebook entry format
@@ -20,7 +26,12 @@ export interface STLorebookEntry {
   constant: boolean;
   selective: boolean;
   order: number;
-  position: number; // 0=before_char, 1=after_char, 2=before_example, 3=after_example
+  /**
+   * ST world_info_position:
+   * 0 before, 1 after, 2 AN top, 3 AN bottom, 4 at depth, 5 EM top, 6 EM bottom, 7 outlet
+   * (CharacterVault maps a curated subset; unknown values preserved via extensions._st_position.)
+   */
+  position: number;
   disable: boolean;
   caseSensitive: boolean | null;
   extensions?: Record<string, unknown>;
@@ -89,24 +100,42 @@ export interface STLorebookExport {
 }
 
 /**
- * Mapping from ST numeric position to CharacterVault string position
+ * Mapping from ST numeric position to CharacterVault string position.
+ * Modern ST: 0 before, 1 after, 2 AN top, 3 AN bottom, 4 atDepth, 5 EM top, 6 EM bottom, 7 outlet.
+ * Legacy CV exports used 2/3 for example-message slots; both map into our curated set.
  */
-const POSITION_MAP: Record<number, LorebookEntry['position']> = {
+const POSITION_MAP: Record<number, LorebookPosition> = {
   0: 'before_char',
   1: 'after_char',
-  2: 'before_example',
-  3: 'after_example',
+  2: 'before_char', // AN top → closest curated slot (raw kept in _st_position)
+  3: 'after_char', // AN bottom
+  4: 'at_depth',
+  5: 'before_example',
+  6: 'after_example',
+  7: 'after_char', // outlet → fallback display
 };
 
 /**
  * Reverse mapping from CharacterVault string position to ST numeric position
  */
-const REVERSE_POSITION_MAP: Record<NonNullable<LorebookEntry['position']>, number> = {
+const REVERSE_POSITION_MAP: Record<LorebookPosition, number> = {
   before_char: 0,
   after_char: 1,
-  before_example: 2,
-  after_example: 3,
+  before_example: 5,
+  after_example: 6,
+  at_depth: 4,
 };
+
+function asSelectiveLogic(value: unknown): LorebookSelectiveLogic | undefined {
+  if (value === 0 || value === 1 || value === 2 || value === 3) return value;
+  return undefined;
+}
+
+function asDepthRole(value: unknown): LorebookDepthRole | null | undefined {
+  if (value === null) return null;
+  if (value === 0 || value === 1 || value === 2) return value;
+  return undefined;
+}
 
 /**
  * Detect the format of a lorebook export/import data
@@ -156,33 +185,24 @@ export function detectLorebookFormat(data: unknown): 'sillytavern' | 'characterv
  * @returns The converted CharacterVault entry
  */
 export function convertSTEntry(entry: STLorebookEntry): LorebookEntry {
-  // Extract ST-specific fields to store in extensions
+  // ST-specific fields not first-class in CV UI — keep in extensions for round-trip
   const stSpecificFields: Record<string, unknown> = {
     vectorized: entry.vectorized,
-    selectiveLogic: entry.selectiveLogic,
     addMemo: entry.addMemo,
     ignoreBudget: entry.ignoreBudget,
-    excludeRecursion: entry.excludeRecursion,
-    preventRecursion: entry.preventRecursion,
     matchPersonaDescription: entry.matchPersonaDescription,
     matchCharacterDescription: entry.matchCharacterDescription,
     matchCharacterPersonality: entry.matchCharacterPersonality,
     matchCharacterDepthPrompt: entry.matchCharacterDepthPrompt,
     matchScenario: entry.matchScenario,
     matchCreatorNotes: entry.matchCreatorNotes,
-    delayUntilRecursion: entry.delayUntilRecursion,
-    probability: entry.probability,
-    useProbability: entry.useProbability,
-    depth: entry.depth,
     outletName: entry.outletName,
     group: entry.group,
     groupOverride: entry.groupOverride,
     groupWeight: entry.groupWeight,
     scanDepth: entry.scanDepth,
-    matchWholeWords: entry.matchWholeWords,
     useGroupScoring: entry.useGroupScoring,
     automationId: entry.automationId,
-    role: entry.role,
     sticky: entry.sticky,
     cooldown: entry.cooldown,
     delay: entry.delay,
@@ -191,10 +211,12 @@ export function convertSTEntry(entry: STLorebookEntry): LorebookEntry {
     characterFilter: entry.characterFilter,
   };
 
-  // Filter out undefined values
   const filteredStFields = Object.fromEntries(
     Object.entries(stSpecificFields).filter(([, v]) => v !== undefined)
   );
+
+  const selectiveLogic = asSelectiveLogic(entry.selectiveLogic);
+  const role = asDepthRole(entry.role);
 
   return {
     id: entry.uid,
@@ -208,11 +230,19 @@ export function convertSTEntry(entry: STLorebookEntry): LorebookEntry {
     position: POSITION_MAP[entry.position] ?? 'before_char',
     enabled: !entry.disable,
     case_sensitive: entry.caseSensitive ?? false,
-    name: '', // ST doesn't have a separate name field, use comment
+    name: '',
+    selectiveLogic,
+    matchWholeWords: entry.matchWholeWords ?? null,
+    probability: entry.probability,
+    useProbability: entry.useProbability,
+    depth: entry.depth,
+    role: role === undefined ? null : role,
+    excludeRecursion: entry.excludeRecursion,
+    preventRecursion: entry.preventRecursion,
+    delayUntilRecursion: entry.delayUntilRecursion,
     extensions: {
       ...entry.extensions,
       ...filteredStFields,
-      // Store the original ST position for round-trip fidelity
       _st_position: entry.position,
     },
   };
@@ -256,8 +286,111 @@ export function convertSTLorebook(data: STLorebookExport): CharacterBook {
  * @returns The converted ST entry
  */
 export function convertToSTEntry(entry: LorebookEntry, displayIndex: number): STLorebookEntry {
-  // Get ST-specific fields from extensions if they exist
   const ext = entry.extensions || {};
+
+  // Prefer original ST position only when it still maps to the entry's current position
+  // (preserves AN/outlet round-trip; uses curated reverse map after user edits)
+  const storedPosition = ext._st_position;
+  const currentPosition = entry.position ?? 'before_char';
+  const position =
+    typeof storedPosition === 'number' && POSITION_MAP[storedPosition] === currentPosition
+      ? storedPosition
+      : REVERSE_POSITION_MAP[currentPosition] ?? 0;
+
+  const selectiveLogic =
+    entry.selectiveLogic ?? (ext.selectiveLogic as number | undefined);
+  const matchWholeWords =
+    entry.matchWholeWords !== undefined
+      ? entry.matchWholeWords
+      : (ext.matchWholeWords as boolean | null | undefined);
+  const probability =
+    entry.probability !== undefined
+      ? entry.probability
+      : (ext.probability as number | undefined);
+  const useProbability =
+    entry.useProbability !== undefined
+      ? entry.useProbability
+      : (ext.useProbability as boolean | undefined);
+  const depth =
+    entry.depth !== undefined ? entry.depth : (ext.depth as number | undefined);
+  const role =
+    entry.role !== undefined ? entry.role : (ext.role as number | null | undefined);
+  const excludeRecursion =
+    entry.excludeRecursion !== undefined
+      ? entry.excludeRecursion
+      : (ext.excludeRecursion as boolean | undefined);
+  const preventRecursion =
+    entry.preventRecursion !== undefined
+      ? entry.preventRecursion
+      : (ext.preventRecursion as boolean | undefined);
+  const delayUntilRecursion =
+    entry.delayUntilRecursion !== undefined
+      ? entry.delayUntilRecursion
+      : (ext.delayUntilRecursion as boolean | undefined);
+
+  // Strip fields we re-emit as first-class ST properties
+  const restExtensions = { ...ext };
+  const stripKeys = [
+    '_st_position',
+    'vectorized',
+    'selectiveLogic',
+    'addMemo',
+    'ignoreBudget',
+    'excludeRecursion',
+    'preventRecursion',
+    'matchPersonaDescription',
+    'matchCharacterDescription',
+    'matchCharacterPersonality',
+    'matchCharacterDepthPrompt',
+    'matchScenario',
+    'matchCreatorNotes',
+    'delayUntilRecursion',
+    'probability',
+    'useProbability',
+    'depth',
+    'outletName',
+    'group',
+    'groupOverride',
+    'groupWeight',
+    'scanDepth',
+    'matchWholeWords',
+    'useGroupScoring',
+    'automationId',
+    'role',
+    'sticky',
+    'cooldown',
+    'delay',
+    'triggers',
+    'displayIndex',
+    'characterFilter',
+  ] as const;
+  for (const key of stripKeys) {
+    delete restExtensions[key];
+  }
+
+  const vectorized = ext.vectorized as boolean | undefined;
+  const addMemo = ext.addMemo as boolean | undefined;
+  const ignoreBudget = ext.ignoreBudget as boolean | undefined;
+  const matchPersonaDescription = ext.matchPersonaDescription as boolean | undefined;
+  const matchCharacterDescription = ext.matchCharacterDescription as boolean | undefined;
+  const matchCharacterPersonality = ext.matchCharacterPersonality as boolean | undefined;
+  const matchCharacterDepthPrompt = ext.matchCharacterDepthPrompt as boolean | undefined;
+  const matchScenario = ext.matchScenario as boolean | undefined;
+  const matchCreatorNotes = ext.matchCreatorNotes as boolean | undefined;
+  const outletName = ext.outletName as string | undefined;
+  const group = ext.group as string | undefined;
+  const groupOverride = ext.groupOverride as boolean | undefined;
+  const groupWeight = ext.groupWeight as number | undefined;
+  const scanDepth = ext.scanDepth as number | null | undefined;
+  const useGroupScoring = ext.useGroupScoring as boolean | null | undefined;
+  const automationId = ext.automationId as string | undefined;
+  const sticky = ext.sticky as number | null | undefined;
+  const cooldown = ext.cooldown as number | null | undefined;
+  const delay = ext.delay as number | null | undefined;
+  const triggers = ext.triggers as string[] | undefined;
+  const characterFilter = ext.characterFilter as
+    | { isExclude: boolean; names: string[]; tags: string[] }
+    | undefined;
 
   return {
     uid: entry.id,
@@ -268,77 +401,41 @@ export function convertToSTEntry(entry: LorebookEntry, displayIndex: number): ST
     constant: entry.constant ?? false,
     selective: entry.selective ?? false,
     order: entry.priority ?? 0,
-    position: REVERSE_POSITION_MAP[entry.position ?? 'before_char'] ?? 0,
+    position,
     disable: !entry.enabled,
     caseSensitive: entry.case_sensitive ?? false,
-    extensions: {
-      ...ext,
-      // Remove ST-specific fields we restored
-      _st_position: undefined,
-      vectorized: undefined,
-      selectiveLogic: undefined,
-      addMemo: undefined,
-      ignoreBudget: undefined,
-      excludeRecursion: undefined,
-      preventRecursion: undefined,
-      matchPersonaDescription: undefined,
-      matchCharacterDescription: undefined,
-      matchCharacterPersonality: undefined,
-      matchCharacterDepthPrompt: undefined,
-      matchScenario: undefined,
-      matchCreatorNotes: undefined,
-      delayUntilRecursion: undefined,
-      probability: undefined,
-      useProbability: undefined,
-      depth: undefined,
-      outletName: undefined,
-      group: undefined,
-      groupOverride: undefined,
-      groupWeight: undefined,
-      scanDepth: undefined,
-      matchWholeWords: undefined,
-      useGroupScoring: undefined,
-      automationId: undefined,
-      role: undefined,
-      sticky: undefined,
-      cooldown: undefined,
-      delay: undefined,
-      triggers: undefined,
-      displayIndex: undefined,
-      characterFilter: undefined,
-    },
-    // Restore ST-specific fields from extensions if present
-    vectorized: ext.vectorized as boolean | undefined,
-    selectiveLogic: ext.selectiveLogic as number | undefined,
-    addMemo: ext.addMemo as boolean | undefined,
-    ignoreBudget: ext.ignoreBudget as boolean | undefined,
-    excludeRecursion: ext.excludeRecursion as boolean | undefined,
-    preventRecursion: ext.preventRecursion as boolean | undefined,
-    matchPersonaDescription: ext.matchPersonaDescription as boolean | undefined,
-    matchCharacterDescription: ext.matchCharacterDescription as boolean | undefined,
-    matchCharacterPersonality: ext.matchCharacterPersonality as boolean | undefined,
-    matchCharacterDepthPrompt: ext.matchCharacterDepthPrompt as boolean | undefined,
-    matchScenario: ext.matchScenario as boolean | undefined,
-    matchCreatorNotes: ext.matchCreatorNotes as boolean | undefined,
-    delayUntilRecursion: ext.delayUntilRecursion as boolean | undefined,
-    probability: ext.probability as number | undefined,
-    useProbability: ext.useProbability as boolean | undefined,
-    depth: ext.depth as number | undefined,
-    outletName: ext.outletName as string | undefined,
-    group: ext.group as string | undefined,
-    groupOverride: ext.groupOverride as boolean | undefined,
-    groupWeight: ext.groupWeight as number | undefined,
-    scanDepth: ext.scanDepth as number | null | undefined,
-    matchWholeWords: ext.matchWholeWords as boolean | null | undefined,
-    useGroupScoring: ext.useGroupScoring as boolean | null | undefined,
-    automationId: ext.automationId as string | undefined,
-    role: ext.role as number | null | undefined,
-    sticky: ext.sticky as number | null | undefined,
-    cooldown: ext.cooldown as number | null | undefined,
-    delay: ext.delay as number | null | undefined,
-    triggers: ext.triggers as string[] | undefined,
+    extensions: restExtensions,
+    vectorized,
+    selectiveLogic,
+    addMemo,
+    ignoreBudget,
+    excludeRecursion,
+    preventRecursion,
+    matchPersonaDescription,
+    matchCharacterDescription,
+    matchCharacterPersonality,
+    matchCharacterDepthPrompt,
+    matchScenario,
+    matchCreatorNotes,
+    delayUntilRecursion,
+    probability,
+    useProbability,
+    depth,
+    outletName,
+    group,
+    groupOverride,
+    groupWeight,
+    scanDepth,
+    matchWholeWords,
+    useGroupScoring,
+    automationId,
+    role: role ?? null,
+    sticky,
+    cooldown,
+    delay,
+    triggers,
     displayIndex,
-    characterFilter: ext.characterFilter as { isExclude: boolean; names: string[]; tags: string[] } | undefined,
+    characterFilter,
   };
 }
 

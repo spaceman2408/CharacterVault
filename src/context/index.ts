@@ -12,3 +12,5 @@ export { CharacterEditorProvider } from './CharacterEditorContext';
 export { useCharacterEditorContext } from './useCharacterEditorContext';
 export { CharacterEditorContext } from './characterEditorContextTypes';
 export type { CharacterEditorContextValue } from './characterEditorContextTypes';
+export { LorebookProvider, LorebookContext } from './LorebookContext';
+export { useLorebookContext } from './useLorebookContext';

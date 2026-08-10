@@ -30,7 +30,14 @@ import type {
   PromptSettings,
   PromptModelMap,
 } from '../../db/characterTypes';
-import type { CharacterSection, LorebookEntry, CharacterBook } from '../../db/characterTypes';
+import type {
+  CharacterSection,
+  LorebookEntry,
+  CharacterBook,
+  LorebookPosition,
+  LorebookSelectiveLogic,
+  LorebookDepthRole,
+} from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
 import { estimateTokens } from '../../services/AIService';
 import { resolveConfigForOperation } from '../../services/resolveOperationConfig';
@@ -42,6 +49,29 @@ import { resolveConfigForOperation } from '../../services/resolveOperationConfig
  */
 function isEntryContextEnabled(entry: LorebookEntry): boolean {
   return entry.extensions?.context_enabled !== false;
+}
+
+const SELECTIVE_LOGIC_OPTIONS: { value: LorebookSelectiveLogic; label: string }[] = [
+  { value: 0, label: 'AND ANY' },
+  { value: 1, label: 'NOT ALL' },
+  { value: 2, label: 'NOT ANY' },
+  { value: 3, label: 'AND ALL' },
+];
+
+const DEPTH_ROLE_OPTIONS: { value: LorebookDepthRole; label: string }[] = [
+  { value: 0, label: 'System' },
+  { value: 1, label: 'User' },
+  { value: 2, label: 'Assistant' },
+];
+
+function hasNonDefaultActivation(entry: LorebookEntry): boolean {
+  return (
+    (entry.probability !== undefined && entry.probability !== 100) ||
+    entry.useProbability === true ||
+    entry.excludeRecursion === true ||
+    entry.preventRecursion === true ||
+    entry.delayUntilRecursion === true
+  );
 }
 
 interface LorebookEditorProps {
@@ -90,11 +120,12 @@ interface LorebookEntryDetailProps {
   markdownImageOpenLinks?: boolean;
 }
 
-const POSITION_OPTIONS: { value: LorebookEntry['position']; label: string }[] = [
+const POSITION_OPTIONS: { value: LorebookPosition; label: string }[] = [
   { value: 'before_char', label: 'Before Character' },
   { value: 'after_char', label: 'After Character' },
-  { value: 'before_example', label: 'Before Example' },
-  { value: 'after_example', label: 'After Example' },
+  { value: 'before_example', label: 'Before Example Messages' },
+  { value: 'after_example', label: 'After Example Messages' },
+  { value: 'at_depth', label: 'At Depth' },
 ];
 
 /**
@@ -223,8 +254,8 @@ function LorebookEntryDetail({
     promptModels,
     getContextContent,
     contextSectionIds,
-    minHeight: '200px',
-    maxHeight: 'none',
+    minHeight: '100%',
+    maxHeight: '100%',
     isActive: true,
     fontSize,
     onFontSizeChange,
@@ -234,13 +265,21 @@ function LorebookEntryDetail({
 
   // Local state for keys input to allow typing commas/spaces without immediate parsing
   const [keysInput, setKeysInput] = React.useState(entry.keys.join(', '));
+  const [secondaryKeysInput, setSecondaryKeysInput] = React.useState(
+    (entry.secondary_keys || []).join(', '),
+  );
   const [generatingKeys, setGeneratingKeys] = useState(false);
+  const [isActivationOpen, setIsActivationOpen] = useState(() => hasNonDefaultActivation(entry));
   const aiServiceRef = useRef<AIService | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     setDraftEntry(entry);
     setKeysInput(entry.keys.join(', '));
+    setSecondaryKeysInput((entry.secondary_keys || []).join(', '));
+    if (hasNonDefaultActivation(entry)) {
+      setIsActivationOpen(true);
+    }
   }, [entry]);
 
   // Sync keysInput when entry.keys changes from outside
@@ -248,6 +287,11 @@ function LorebookEntryDetail({
     const newKeysString = draftEntry.keys.join(', ');
     setKeysInput(prev => prev !== newKeysString ? newKeysString : prev);
   }, [draftEntry.keys]);
+
+  React.useEffect(() => {
+    const next = (draftEntry.secondary_keys || []).join(', ');
+    setSecondaryKeysInput((prev) => (prev !== next ? next : prev));
+  }, [draftEntry.secondary_keys]);
 
   // Cleanup timeout and abort on unmount
   React.useEffect(() => {
@@ -344,6 +388,12 @@ function LorebookEntryDetail({
     setDraftEntry(updatedEntry);
     onPersistUpdate(updatedEntry);
   };
+  const handleSecondaryKeysBlur = () => {
+    const parsedKeys = secondaryKeysInput.split(',').map((k) => k.trim()).filter((k) => k);
+    const updatedEntry = { ...draftEntry, secondary_keys: parsedKeys };
+    setDraftEntry(updatedEntry);
+    onPersistUpdate(updatedEntry);
+  };
   const handleCommentChange = (value: string) => {
     const updatedEntry = { ...draftEntry, comment: value };
     setDraftEntry(updatedEntry);
@@ -355,23 +405,21 @@ function LorebookEntryDetail({
     setDraftEntry(updatedEntry);
     onPersistUpdate(updatedEntry);
   };
-  const handlePositionChange = (value: LorebookEntry['position']) => {
-    const updatedEntry = { ...draftEntry, position: value };
+  const handlePositionChange = (value: LorebookPosition) => {
+    const restExt = { ...(draftEntry.extensions || {}) };
+    delete restExt._st_position;
+    const updatedEntry: LorebookEntry = {
+      ...draftEntry,
+      position: value,
+      extensions: restExt,
+      depth: value === 'at_depth' ? (draftEntry.depth ?? 4) : draftEntry.depth,
+      role: value === 'at_depth' ? (draftEntry.role ?? 0) : draftEntry.role,
+    };
     setDraftEntry(updatedEntry);
     onPersistUpdate(updatedEntry);
   };
-  const handleEnabledChange = (checked: boolean) => {
-    const updatedEntry = { ...draftEntry, enabled: checked };
-    setDraftEntry(updatedEntry);
-    onPersistUpdate(updatedEntry);
-  };
-  const handleCaseSensitiveChange = (checked: boolean) => {
-    const updatedEntry = { ...draftEntry, case_sensitive: checked };
-    setDraftEntry(updatedEntry);
-    onPersistUpdate(updatedEntry);
-  };
-  const handleConstantChange = (checked: boolean) => {
-    const updatedEntry = { ...draftEntry, constant: checked };
+  const persistPatch = (patch: Partial<LorebookEntry>) => {
+    const updatedEntry = { ...draftEntry, ...patch };
     setDraftEntry(updatedEntry);
     onPersistUpdate(updatedEntry);
   };
@@ -380,25 +428,47 @@ function LorebookEntryDetail({
     'w-full rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-fg placeholder:text-fg-subtle outline-none transition-colors focus:border-border-strong focus:ring-2 focus:ring-accent/20';
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto md:overflow-hidden">
-      <div className="shrink-0 space-y-3">
+    <div className="h-full min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+      <div className="flex flex-col gap-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="space-y-3">
         <div>
           <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-            Entry Name
+            Entry Title
           </label>
           <input
             type="text"
             value={draftEntry.comment || ''}
             onChange={(e) => handleCommentChange(e.target.value)}
-            placeholder="Entry display name (optional)"
+            placeholder="Memo / display name (optional)"
             className={fieldClass}
           />
+        </div>
+
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+            <input
+              type="checkbox"
+              checked={draftEntry.enabled}
+              onChange={(e) => persistPatch({ enabled: e.target.checked })}
+              className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+            />
+            Enabled
+          </label>
+          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+            <input
+              type="checkbox"
+              checked={draftEntry.constant ?? false}
+              onChange={(e) => persistPatch({ constant: e.target.checked })}
+              className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+            />
+            Constant
+          </label>
         </div>
 
         <div>
           <div className="mb-1.5 flex items-center gap-2">
             <label className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-              Trigger Keys
+              Primary Keys
             </label>
             <span className="text-[11px] text-fg-subtle">comma separated</span>
             <button
@@ -429,10 +499,51 @@ function LorebookEntryDetail({
           />
         </div>
 
+        <div>
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+              Secondary Keys
+            </label>
+            <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-fg-muted">
+              <input
+                type="checkbox"
+                checked={draftEntry.selective ?? false}
+                onChange={(e) => persistPatch({ selective: e.target.checked })}
+                className="h-3.5 w-3.5 rounded border-border-strong text-accent focus:ring-accent"
+              />
+              Selective
+            </label>
+            {(draftEntry.selective ?? false) && (
+              <select
+                value={draftEntry.selectiveLogic ?? 0}
+                onChange={(e) =>
+                  persistPatch({ selectiveLogic: Number(e.target.value) as LorebookSelectiveLogic })
+                }
+                className="rounded-lg border border-border bg-bg px-2 py-1 text-xs text-fg outline-none focus:ring-2 focus:ring-accent/20"
+              >
+                {SELECTIVE_LOGIC_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <input
+            type="text"
+            value={secondaryKeysInput}
+            onChange={(e) => setSecondaryKeysInput(e.target.value)}
+            onBlur={handleSecondaryKeysBlur}
+            placeholder="optional filter keys"
+            disabled={!(draftEntry.selective ?? false)}
+            className={`${fieldClass} disabled:cursor-not-allowed disabled:opacity-50`}
+          />
+        </div>
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-              Priority
+              Insertion Order
             </label>
             <input
               type="number"
@@ -446,8 +557,8 @@ function LorebookEntryDetail({
               Position
             </label>
             <select
-              value={entry.position || 'before_char'}
-              onChange={(e) => handlePositionChange(e.target.value as LorebookEntry['position'])}
+              value={draftEntry.position || 'before_char'}
+              onChange={(e) => handlePositionChange(e.target.value as LorebookPosition)}
               className={fieldClass}
             >
               {POSITION_OPTIONS.map((opt) => (
@@ -459,21 +570,50 @@ function LorebookEntryDetail({
           </div>
         </div>
 
+        {(draftEntry.position || 'before_char') === 'at_depth' && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+                Depth
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={draftEntry.depth ?? 4}
+                onChange={(e) => {
+                  const num = parseInt(e.target.value, 10);
+                  persistPatch({ depth: Number.isNaN(num) ? 0 : num });
+                }}
+                className={fieldClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+                Role
+              </label>
+              <select
+                value={draftEntry.role ?? 0}
+                onChange={(e) =>
+                  persistPatch({ role: Number(e.target.value) as LorebookDepthRole })
+                }
+                className={fieldClass}
+              >
+                {DEPTH_ROLE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-x-4 gap-y-2">
           <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
             <input
               type="checkbox"
-              checked={entry.enabled}
-              onChange={(e) => handleEnabledChange(e.target.checked)}
-              className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-            />
-            Enabled
-          </label>
-          <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
-            <input
-              type="checkbox"
-              checked={entry.case_sensitive ?? false}
-              onChange={(e) => handleCaseSensitiveChange(e.target.checked)}
+              checked={draftEntry.case_sensitive ?? false}
+              onChange={(e) => persistPatch({ case_sensitive: e.target.checked })}
               className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
             />
             Case Sensitive
@@ -481,33 +621,120 @@ function LorebookEntryDetail({
           <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
             <input
               type="checkbox"
-              checked={entry.constant ?? false}
-              onChange={(e) => handleConstantChange(e.target.checked)}
+              checked={draftEntry.matchWholeWords ?? false}
+              onChange={(e) => persistPatch({ matchWholeWords: e.target.checked })}
               className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
             />
-            Constant
+            Match Whole Words
           </label>
+        </div>
+
+        <div className="rounded-xl border border-border bg-muted/30">
+          <button
+            type="button"
+            onClick={() => setIsActivationOpen((open) => !open)}
+            className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-medium text-fg-muted transition-colors hover:bg-hover/40 touch-manipulation"
+          >
+            <span>Activation</span>
+            {isActivationOpen ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
+          {isActivationOpen && (
+            <div className="space-y-3 border-t border-border px-3 py-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+                  Probability %
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={draftEntry.probability ?? 100}
+                    onChange={(e) => {
+                      const num = parseInt(e.target.value, 10);
+                      const probability = Number.isNaN(num) ? 100 : Math.min(100, Math.max(0, num));
+                      persistPatch({
+                        probability,
+                        useProbability: probability < 100 ? true : (draftEntry.useProbability ?? false),
+                      });
+                    }}
+                    className={fieldClass}
+                  />
+                  <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-sm text-fg-muted">
+                    <input
+                      type="checkbox"
+                      checked={draftEntry.useProbability ?? ((draftEntry.probability ?? 100) < 100)}
+                      onChange={(e) => persistPatch({ useProbability: e.target.checked })}
+                      className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+                    />
+                    Use %
+                  </label>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+                  <input
+                    type="checkbox"
+                    checked={draftEntry.excludeRecursion ?? false}
+                    onChange={(e) => persistPatch({ excludeRecursion: e.target.checked })}
+                    className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+                  />
+                  Non-recursable
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+                  <input
+                    type="checkbox"
+                    checked={draftEntry.preventRecursion ?? false}
+                    onChange={(e) => persistPatch({ preventRecursion: e.target.checked })}
+                    className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+                  />
+                  Prevent further recursion
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-fg-muted">
+                  <input
+                    type="checkbox"
+                    checked={draftEntry.delayUntilRecursion ?? false}
+                    onChange={(e) => persistPatch({ delayUntilRecursion: e.target.checked })}
+                    className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+                  />
+                  Delay until recursion
+                </label>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex min-h-[40dvh] flex-1 flex-col md:min-h-48">
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+          Content
+        </label>
+        {/* Fixed height host so CodeMirror gets a real box; parent scrolls to bring it into view */}
         <div
           ref={editorRef}
-          className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-bg shadow-inner"
+          className="h-[min(50dvh,22rem)] min-h-64 w-full overflow-hidden rounded-xl border border-border bg-bg shadow-inner"
         />
       </div>
 
-      <div className="shrink-0">
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+          Internal notes
+        </label>
         <input
           type="text"
           value={draftEntry.name || ''}
           onChange={(e) => handleNameChange(e.target.value)}
-          placeholder="Internal notes (optional, not used in output)"
+          placeholder="Optional notes (not used in output)"
           className={fieldClass}
         />
       </div>
 
       {payloadPreviewModal}
+      </div>
     </div>
   );
 }
@@ -581,6 +808,9 @@ function LorebookEditorInner({
   const normalizedPropLorebook = useMemo<CharacterBook>(() => ({
     name: lorebook?.name || '',
     description: lorebook?.description || '',
+    scan_depth: lorebook?.scan_depth,
+    token_budget: lorebook?.token_budget,
+    recursive_scanning: lorebook?.recursive_scanning,
     entries: lorebook?.entries || [],
     extensions: lorebook?.extensions || {},
   }), [lorebook]);
@@ -614,13 +844,20 @@ function LorebookEditorInner({
   const buildUpdatedLorebook = useCallback((
     newEntries: LorebookEntry[],
     newName: string,
-    newDesc: string
+    newDesc: string,
+    extras?: Partial<Pick<CharacterBook, 'scan_depth' | 'token_budget' | 'recursive_scanning'>>,
   ): CharacterBook => ({
       name: newName,
       description: newDesc,
+      scan_depth: extras?.scan_depth !== undefined ? extras.scan_depth : draftLorebook.scan_depth,
+      token_budget: extras?.token_budget !== undefined ? extras.token_budget : draftLorebook.token_budget,
+      recursive_scanning:
+        extras?.recursive_scanning !== undefined
+          ? extras.recursive_scanning
+          : draftLorebook.recursive_scanning,
       entries: newEntries,
       extensions: draftLorebook.extensions || {},
-    }), [draftLorebook.extensions]);
+    }), [draftLorebook.extensions, draftLorebook.scan_depth, draftLorebook.token_budget, draftLorebook.recursive_scanning]);
 
   const persistLorebook = useCallback((updatedLorebook: CharacterBook) => {
     setDraftLorebook(updatedLorebook);
@@ -706,6 +943,18 @@ function LorebookEditorInner({
     [selectedEntry],
   );
 
+  const contextSummary = useMemo(() => {
+    let included = 0;
+    let tokens = 0;
+    for (const entry of entries) {
+      if (!entry.enabled) continue;
+      if (!isEntryContextEnabled(entry)) continue;
+      included += 1;
+      tokens += estimateTokens(entry.content || '');
+    }
+    return { included, tokens };
+  }, [entries]);
+
   // Handle select entry with mobile view
   const handleSelectEntry = useCallback((index: number) => {
     setSelectedEntryIndex(index);
@@ -724,6 +973,32 @@ function LorebookEditorInner({
 
   const handleBookDescriptionChange = (value: string) => {
     persistLorebook(buildUpdatedLorebook(entries, bookName, value));
+  };
+
+  const handleBookScanDepthChange = (value: string) => {
+    const num = parseInt(value, 10);
+    persistLorebook(
+      buildUpdatedLorebook(entries, bookName, bookDescription, {
+        scan_depth: Number.isNaN(num) ? undefined : num,
+      }),
+    );
+  };
+
+  const handleBookTokenBudgetChange = (value: string) => {
+    const num = parseInt(value, 10);
+    persistLorebook(
+      buildUpdatedLorebook(entries, bookName, bookDescription, {
+        token_budget: Number.isNaN(num) ? undefined : num,
+      }),
+    );
+  };
+
+  const handleBookRecursiveChange = (checked: boolean) => {
+    persistLorebook(
+      buildUpdatedLorebook(entries, bookName, bookDescription, {
+        recursive_scanning: checked,
+      }),
+    );
   };
 
   // Handle enable all entries in context
@@ -930,6 +1205,43 @@ function LorebookEditorInner({
                   className="w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
+                    Scan Depth
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={draftLorebook.scan_depth ?? ''}
+                    onChange={(e) => handleBookScanDepthChange(e.target.value)}
+                    placeholder="—"
+                    className="w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-fg-muted">
+                    Token Budget
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={draftLorebook.token_budget ?? ''}
+                    onChange={(e) => handleBookTokenBudgetChange(e.target.value)}
+                    placeholder="—"
+                    className="w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
+                  />
+                </div>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-fg-muted">
+                <input
+                  type="checkbox"
+                  checked={draftLorebook.recursive_scanning ?? false}
+                  onChange={(e) => handleBookRecursiveChange(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-border-strong text-accent focus:ring-accent"
+                />
+                Recursive scanning
+              </label>
               {onDelete && (
                 <div className="border-t border-border pt-2">
                   <button
@@ -973,28 +1285,42 @@ function LorebookEditorInner({
                 {filteredEntries.length} of {entries.length} entries
               </p>
             )}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-fg-muted">Context</span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleEnableAllContext}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
-                  title="Enable all entries in context"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  Enable All
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDisableAllContext}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
-                  title="Disable all entries in context"
-                >
-                  <EyeOff className="h-3.5 w-3.5" />
-                  Disable All
-                </button>
+            <div className="rounded-lg border border-border/80 bg-surface/80 px-2.5 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                    AI context
+                  </p>
+                  <p className="truncate text-xs text-fg-muted">
+                    <span className="font-medium text-fg">{contextSummary.included}</span>
+                    {' of '}
+                    {entries.length} · {contextSummary.tokens.toLocaleString()} tok
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={handleEnableAllContext}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+                    title="Include all entries in AI context"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDisableAllContext}
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+                    title="Exclude all entries from AI context"
+                  >
+                    <EyeOff className="h-3.5 w-3.5" />
+                    None
+                  </button>
+                </div>
               </div>
+              <p className="mt-1 text-[10px] leading-snug text-fg-subtle">
+                Use the eye on each entry for Orion / toolbar context.
+              </p>
             </div>
           </div>
         )}
@@ -1087,13 +1413,13 @@ function LorebookEditorInner({
       {/* Detail panel */}
       <div
         className={`
-          min-h-0 flex-1 overflow-hidden bg-surface
+          min-h-0 min-w-0 flex-1 overflow-hidden bg-surface
           ${!isMobileViewOpen ? 'hidden md:flex md:flex-col' : 'flex flex-col'}
         `}
       >
         {selectedEntry ? (
-          <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 md:p-6 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <div className="mb-3 flex shrink-0 items-center justify-between gap-2 md:mb-4">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="mb-0 flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2.5 sm:px-4 md:px-6">
               <button
                 type="button"
                 onClick={handleBackToList}
@@ -1102,7 +1428,7 @@ function LorebookEditorInner({
                 <ChevronLeft className="h-4 w-4" />
                 Back
               </button>
-              <div className="hidden min-w-0 md:block">
+              <div className="min-w-0 flex-1 md:block">
                 <p className="truncate text-sm font-semibold text-fg">
                   {selectedEntry.comment || selectedEntry.name || `Entry ${safeSelectedIndex}`}
                 </p>
@@ -1115,28 +1441,30 @@ function LorebookEditorInner({
               <button
                 type="button"
                 onClick={() => handleDeleteEntry(safeSelectedIndex)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation"
                 title="Delete entry"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Delete
+                <span className="hidden sm:inline">Delete</span>
               </button>
             </div>
-            <LorebookEntryDetail
-              entry={selectedEntry}
-              onPersistUpdate={handleEntryPersistUpdate}
-              aiConfig={aiConfig}
-              samplerSettings={samplerSettings}
-              promptSettings={promptSettings}
-              promptModels={promptModels}
-              getContextContent={getContextContent}
-              contextSectionIds={contextSectionIds}
-              setSelectedText={setSelectedText}
-              fontSize={fontSize}
-              onFontSizeChange={onFontSizeChange}
-              spellcheck={spellcheck}
-              markdownImageOpenLinks={markdownImageOpenLinks}
-            />
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 md:px-6 md:py-4">
+              <LorebookEntryDetail
+                entry={selectedEntry}
+                onPersistUpdate={handleEntryPersistUpdate}
+                aiConfig={aiConfig}
+                samplerSettings={samplerSettings}
+                promptSettings={promptSettings}
+                promptModels={promptModels}
+                getContextContent={getContextContent}
+                contextSectionIds={contextSectionIds}
+                setSelectedText={setSelectedText}
+                fontSize={fontSize}
+                onFontSizeChange={onFontSizeChange}
+                spellcheck={spellcheck}
+                markdownImageOpenLinks={markdownImageOpenLinks}
+              />
+            </div>
           </div>
         ) : (
           <div className="flex h-full items-center justify-center text-fg-subtle">

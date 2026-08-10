@@ -5,15 +5,16 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { CharacterProvider, useCharacterContext } from './context';
-import { CharacterWorkspace } from './components/workspace';
+import { CharacterProvider, useCharacterContext, LorebookProvider, useLorebookContext } from './context';
+import { CharacterWorkspace, LorebookWorkspace } from './components/workspace';
 import { WelcomeTutorial } from './components/WelcomeTutorial';
 import { CharacterSelectionView } from './components/vault';
 import { ImportPage } from './pages/ImportPage';
 import { AICreationStudio } from './pages/ai-creation-studio/AICreationStudio';
 
 function AppContent(): React.ReactNode {
-  const { isCharacterOpen, openCharacter } = useCharacterContext();
+  const { isCharacterOpen, openCharacter, closeCharacter } = useCharacterContext();
+  const { isLorebookOpen, openLorebook, closeLorebook } = useLorebookContext();
   const [isReady, setIsReady] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [isInitialTutorial, setIsInitialTutorial] = useState(false);
@@ -36,12 +37,19 @@ function AppContent(): React.ReactNode {
     const queryString = hash.slice(queryIndex + 1);
     const params = new URLSearchParams(queryString);
     const charId = params.get('char');
+    const lorebookId = params.get('lorebook');
     if (charId) {
-      openCharacter(charId);
+      closeLorebook();
+      void openCharacter(charId);
+      const newHash = hash.slice(0, queryIndex);
+      window.history.replaceState({}, document.title, window.location.pathname + newHash);
+    } else if (lorebookId) {
+      closeCharacter();
+      void openLorebook(lorebookId);
       const newHash = hash.slice(0, queryIndex);
       window.history.replaceState({}, document.title, window.location.pathname + newHash);
     }
-  }, [openCharacter]);
+  }, [openCharacter, openLorebook, closeCharacter, closeLorebook]);
 
   const handleTutorialComplete = useCallback(() => {
     setShowTutorial(false);
@@ -65,7 +73,9 @@ function AppContent(): React.ReactNode {
           skipEntranceAnimation={isInitialTutorial}
         />
       )}
-      {isCharacterOpen ? (
+      {isLorebookOpen ? (
+        <LorebookWorkspace />
+      ) : isCharacterOpen ? (
         <CharacterWorkspace />
       ) : (
         <CharacterSelectionView onReplayTutorial={handleReplayTutorial} />
@@ -77,11 +87,13 @@ function AppContent(): React.ReactNode {
 function App(): React.ReactElement {
   return (
     <CharacterProvider>
-      <Routes>
-        <Route path="/" element={<AppContent />} />
-        <Route path="/import" element={<ImportPage />} />
-        <Route path="/ai-create" element={<AICreationStudio />} />
-      </Routes>
+      <LorebookProvider>
+        <Routes>
+          <Route path="/" element={<AppContent />} />
+          <Route path="/import" element={<ImportPage />} />
+          <Route path="/ai-create" element={<AICreationStudio />} />
+        </Routes>
+      </LorebookProvider>
     </CharacterProvider>
   );
 }

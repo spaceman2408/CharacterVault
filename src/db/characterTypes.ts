@@ -3,6 +3,20 @@ export type UUID = string;
 /** ISO 8601 */
 export type Timestamp = string;
 
+/** Insertion position for a lorebook entry (SillyTavern-compatible strings + at-depth). */
+export type LorebookPosition =
+  | 'before_char'
+  | 'after_char'
+  | 'before_example'
+  | 'after_example'
+  | 'at_depth';
+
+/** ST selectiveLogic: 0=AND ANY, 1=NOT ALL, 2=NOT ANY, 3=AND ALL */
+export type LorebookSelectiveLogic = 0 | 1 | 2 | 3;
+
+/** ST role when position is at_depth: 0=system, 1=user, 2=assistant */
+export type LorebookDepthRole = 0 | 1 | 2;
+
 export interface LorebookEntry {
   id: number;
   keys: string[];
@@ -17,7 +31,25 @@ export interface LorebookEntry {
   selective?: boolean;
   secondary_keys?: string[];
   constant?: boolean;
-  position?: 'before_char' | 'after_char' | 'before_example' | 'after_example';
+  position?: LorebookPosition;
+  /** Selective logic when selective is true (ST selectiveLogic). */
+  selectiveLogic?: LorebookSelectiveLogic;
+  /** Match whole words (ST matchWholeWords). Null/undefined = inherit default. */
+  matchWholeWords?: boolean | null;
+  /** Trigger probability 0–100 (ST probability). */
+  probability?: number;
+  /** When false, probability is ignored (ST useProbability). */
+  useProbability?: boolean;
+  /** Chat depth for at_depth position (ST depth). */
+  depth?: number;
+  /** Message role for at_depth (ST role). */
+  role?: LorebookDepthRole | null;
+  /** Non-recursable (ST excludeRecursion). */
+  excludeRecursion?: boolean;
+  /** Prevent further recursion (ST preventRecursion). */
+  preventRecursion?: boolean;
+  /** Delay until recursion (ST delayUntilRecursion). */
+  delayUntilRecursion?: boolean;
 }
 
 export interface CharacterBook {
@@ -28,6 +60,95 @@ export interface CharacterBook {
   recursive_scanning?: boolean;
   extensions: Record<string, unknown>;
   entries: LorebookEntry[];
+}
+
+/** Standalone vault lorebook (not embedded in a character card). */
+export interface VaultLorebook {
+  id: UUID;
+  name: string;
+  description?: string;
+  tags: string[];
+  book: CharacterBook;
+  version: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  lastOpenedAt?: Timestamp;
+}
+
+/** Lightweight row for the lorebook vault grid. */
+export interface LorebookListItem {
+  id: UUID;
+  name: string;
+  description?: string;
+  tags: string[];
+  entryCount: number;
+  totalTokens: number;
+  updatedAt: Timestamp;
+  lastOpenedAt?: Timestamp;
+}
+
+export interface LorebookSnapshotPayload {
+  name: string;
+  description?: string;
+  tags: string[];
+  book: CharacterBook;
+}
+
+export interface LorebookSnapshot {
+  id: UUID;
+  lorebookId: UUID;
+  source: SnapshotSource;
+  createdAt: Timestamp;
+  payload: LorebookSnapshotPayload;
+  payloadHash: string;
+}
+
+export interface LorebookSnapshotMetadata {
+  id: UUID;
+  lorebookId: UUID;
+  source: SnapshotSource;
+  createdAt: Timestamp;
+  payloadHash: string;
+}
+
+export interface CreateLorebookSnapshotInput {
+  lorebookId: UUID;
+  source: SnapshotSource;
+  payload: LorebookSnapshotPayload;
+  payloadHash: string;
+}
+
+export interface CreateVaultLorebookInput {
+  name: string;
+  description?: string;
+  tags?: string[];
+  book?: CharacterBook;
+}
+
+export interface UpdateVaultLorebookInput {
+  name?: string;
+  description?: string;
+  tags?: string[];
+  book?: CharacterBook;
+}
+
+/**
+ * Vault-local attachment of standalone lorebooks to a character.
+ * Not part of SillyTavern card export.
+ */
+export interface CharacterLorebookAttachments {
+  characterId: UUID;
+  lorebookIds: UUID[];
+  updatedAt: Timestamp;
+}
+
+export function createEmptyCharacterBook(name = ''): CharacterBook {
+  return {
+    name,
+    description: '',
+    entries: [],
+    extensions: {},
+  };
 }
 
 /** Character card V2/V3 fields */

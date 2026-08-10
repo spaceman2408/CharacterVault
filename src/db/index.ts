@@ -9,6 +9,18 @@ export type {
   CharacterSpec,
   CharacterBook,
   LorebookEntry,
+  LorebookPosition,
+  LorebookSelectiveLogic,
+  LorebookDepthRole,
+  VaultLorebook,
+  LorebookListItem,
+  LorebookSnapshot,
+  LorebookSnapshotPayload,
+  LorebookSnapshotMetadata,
+  CreateLorebookSnapshotInput,
+  CreateVaultLorebookInput,
+  UpdateVaultLorebookInput,
+  CharacterLorebookAttachments,
   CharacterSnapshot,
   CharacterSnapshotPayload,
   CharacterSection,
@@ -39,5 +51,11 @@ export {
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   EMPTY_CUSTOM_CONTEXT_META,
+  createEmptyCharacterBook,
 } from './characterTypes';
-export { CharacterDatabase, characterDb, toCharacterListItem } from './CharacterDatabase';
+export {
+  CharacterDatabase,
+  characterDb,
+  toCharacterListItem,
+  toLorebookListItem,
+} from './CharacterDatabase';

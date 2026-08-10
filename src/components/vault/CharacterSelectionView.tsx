@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Upload, X } from 'lucide-react';
-import { useCharacterContext } from '../../context';
+import { Book, Upload, User, X } from 'lucide-react';
+import { useCharacterContext, useLorebookContext } from '../../context';
 import { PromoBanner } from '../PromoBanner';
 import type { ConfirmTarget } from './types';
 import { useVaultLibrary } from './useVaultLibrary';
@@ -9,6 +9,11 @@ import { VaultHeader } from './VaultHeader';
 import { VaultToolbar } from './VaultToolbar';
 import { VaultGrid } from './VaultGrid';
 import { VaultModals } from './VaultModals';
+import { LorebookVaultView } from './LorebookVaultView';
+
+type VaultTab = 'characters' | 'lorebooks';
+
+const VAULT_TAB_KEY = 'characterVaultActiveTab';
 
 export function CharacterSelectionView({
   onReplayTutorial,
@@ -24,11 +29,35 @@ export function CharacterSelectionView({
     duplicateCharacter,
     refreshCharacters,
   } = useCharacterContext();
+  const { lorebookListItems, closeLorebook } = useLorebookContext();
+
+  const handleOpenCharacter = async (id: string) => {
+    closeLorebook();
+    await openCharacter(id);
+  };
+
+  const [vaultTab, setVaultTab] = useState<VaultTab>(() => {
+    try {
+      const stored = localStorage.getItem(VAULT_TAB_KEY);
+      return stored === 'lorebooks' ? 'lorebooks' : 'characters';
+    } catch {
+      return 'characters';
+    }
+  });
 
   const [isCreating, setIsCreating] = useState(false);
   const [newCharacterName, setNewCharacterName] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<ConfirmTarget | null>(null);
   const [copyConfirm, setCopyConfirm] = useState<ConfirmTarget | null>(null);
+
+  const selectTab = (tab: VaultTab) => {
+    setVaultTab(tab);
+    try {
+      localStorage.setItem(VAULT_TAB_KEY, tab);
+    } catch {
+      // ignore
+    }
+  };
 
   const [isPromoDismissed, setIsPromoDismissed] = useState(() => {
     return localStorage.getItem('characterVaultPromoDismissed') === 'true';
@@ -119,93 +148,130 @@ export function CharacterSelectionView({
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <VaultModals
-          isCreating={isCreating}
-          newCharacterName={newCharacterName}
-          onNewCharacterNameChange={setNewCharacterName}
-          onCreateSubmit={handleCreate}
-          onCreateCancel={() => setIsCreating(false)}
-          deleteConfirm={deleteConfirm}
-          onDeleteConfirm={async () => {
-            if (deleteConfirm) {
-              await deleteCharacter(deleteConfirm.id);
-              setDeleteConfirm(null);
-            }
-          }}
-          onDeleteCancel={() => setDeleteConfirm(null)}
-          copyConfirm={copyConfirm}
-          onCopyConfirm={async () => {
-            if (copyConfirm) {
-              await duplicateCharacter(copyConfirm.id, `${copyConfirm.name} (Copy)`);
-              setCopyConfirm(null);
-            }
-          }}
-          onCopyCancel={() => setCopyConfirm(null)}
-          backupConfirmOpen={io.backupConfirmOpen}
-          isExportingVault={io.isExportingVault}
-          onBackupConfirm={() => void io.handleExportVault()}
-          onBackupCancel={io.handleBackupCancel}
-        />
-
-        <div className="mb-6 flex items-start gap-2 rounded-xl border border-border bg-surface/60 px-3 py-2.5 text-xs text-fg-muted sm:items-center">
-          <svg
-            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fg-subtle sm:mt-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
-            />
-          </svg>
-          <span>
-            Thumbnails appear blurry to save memory. Your full images are preserved in the card when
-            you export.
-          </span>
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-xl border border-border bg-surface p-1">
+            <button
+              type="button"
+              onClick={() => selectTab('characters')}
+              className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                vaultTab === 'characters'
+                  ? 'bg-accent-soft text-accent'
+                  : 'text-fg-muted hover:text-fg'
+              }`}
+            >
+              <User className="h-4 w-4" />
+              Characters
+              <span className="text-xs opacity-70">{characterListItems.length}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => selectTab('lorebooks')}
+              className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                vaultTab === 'lorebooks'
+                  ? 'bg-accent-soft text-accent'
+                  : 'text-fg-muted hover:text-fg'
+              }`}
+            >
+              <Book className="h-4 w-4" />
+              Lorebooks
+              <span className="text-xs opacity-70">{lorebookListItems.length}</span>
+            </button>
+          </div>
         </div>
 
-        <VaultToolbar
-          totalCount={characterListItems.length}
-          filteredCount={library.sortedCharacters.length}
-          searchQuery={library.searchQuery}
-          sortMode={library.sortMode}
-          onSortChange={library.handleSortChange}
-          lastActive={library.lastActive}
-          onContinue={openCharacter}
-        />
-
-        {!isPromoDismissed && !isLoading && (
+        {vaultTab === 'characters' ? (
           <>
-            <div className="hidden lg:block fixed left-4 xl:left-6 top-24 z-40 w-56 xl:w-64">
-              <div className="sticky top-24">
-                <PromoBanner onDismiss={handlePromoDismiss} />
-              </div>
-            </div>
-            <div className="lg:hidden mb-6">
-              <PromoBanner onDismiss={handlePromoDismiss} />
-            </div>
-          </>
-        )}
+            <VaultModals
+              isCreating={isCreating}
+              newCharacterName={newCharacterName}
+              onNewCharacterNameChange={setNewCharacterName}
+              onCreateSubmit={handleCreate}
+              onCreateCancel={() => setIsCreating(false)}
+              deleteConfirm={deleteConfirm}
+              onDeleteConfirm={async () => {
+                if (deleteConfirm) {
+                  await deleteCharacter(deleteConfirm.id);
+                  setDeleteConfirm(null);
+                }
+              }}
+              onDeleteCancel={() => setDeleteConfirm(null)}
+              copyConfirm={copyConfirm}
+              onCopyConfirm={async () => {
+                if (copyConfirm) {
+                  await duplicateCharacter(copyConfirm.id, `${copyConfirm.name} (Copy)`);
+                  setCopyConfirm(null);
+                }
+              }}
+              onCopyCancel={() => setCopyConfirm(null)}
+              backupConfirmOpen={io.backupConfirmOpen}
+              isExportingVault={io.isExportingVault}
+              onBackupConfirm={() => void io.handleExportVault()}
+              onBackupCancel={io.handleBackupCancel}
+            />
 
-        <VaultGrid
-          isLoading={isLoading}
-          pageSize={library.pageSize}
-          sortedCharacters={library.sortedCharacters}
-          visibleCharacters={library.visibleCharacters}
-          searchQuery={library.searchQuery}
-          safeCurrentPage={library.safeCurrentPage}
-          totalPages={library.totalPages}
-          onPageChange={library.setCurrentPage}
-          onOpen={openCharacter}
-          onDuplicate={(id, name) => setCopyConfirm({ id, name })}
-          onDelete={(id, name) => setDeleteConfirm({ id, name })}
-          onExport={io.handleCardExport}
-          exportingCardId={io.exportingCardId}
-          onImportClick={io.openFilePicker}
-        />
+            <div className="mb-6 flex items-start gap-2 rounded-xl border border-border bg-surface/60 px-3 py-2.5 text-xs text-fg-muted sm:items-center">
+              <svg
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fg-subtle sm:mt-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+                />
+              </svg>
+              <span>
+                Thumbnails appear blurry to save memory. Your full images are preserved in the card when
+                you export.
+              </span>
+            </div>
+
+            <VaultToolbar
+              totalCount={characterListItems.length}
+              filteredCount={library.sortedCharacters.length}
+              searchQuery={library.searchQuery}
+              sortMode={library.sortMode}
+              onSortChange={library.handleSortChange}
+              lastActive={library.lastActive}
+              onContinue={(id) => void handleOpenCharacter(id)}
+            />
+
+            {!isPromoDismissed && !isLoading && (
+              <>
+                <div className="hidden lg:block fixed left-4 xl:left-6 top-24 z-40 w-56 xl:w-64">
+                  <div className="sticky top-24">
+                    <PromoBanner onDismiss={handlePromoDismiss} />
+                  </div>
+                </div>
+                <div className="lg:hidden mb-6">
+                  <PromoBanner onDismiss={handlePromoDismiss} />
+                </div>
+              </>
+            )}
+
+            <VaultGrid
+              isLoading={isLoading}
+              pageSize={library.pageSize}
+              sortedCharacters={library.sortedCharacters}
+              visibleCharacters={library.visibleCharacters}
+              searchQuery={library.searchQuery}
+              safeCurrentPage={library.safeCurrentPage}
+              totalPages={library.totalPages}
+              onPageChange={library.setCurrentPage}
+              onOpen={(id) => void handleOpenCharacter(id)}
+              onDuplicate={(id, name) => setCopyConfirm({ id, name })}
+              onDelete={(id, name) => setDeleteConfirm({ id, name })}
+              onExport={io.handleCardExport}
+              exportingCardId={io.exportingCardId}
+              onImportClick={io.openFilePicker}
+            />
+          </>
+        ) : (
+          <LorebookVaultView />
+        )}
       </main>
 
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 pt-2">

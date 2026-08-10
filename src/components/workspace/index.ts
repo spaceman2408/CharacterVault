@@ -4,3 +4,4 @@
  */
 
 export { CharacterWorkspace } from './CharacterWorkspace';
+export { LorebookWorkspace } from './LorebookWorkspace';

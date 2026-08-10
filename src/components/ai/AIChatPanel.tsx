@@ -34,8 +34,9 @@ export function AIChatPanel({
   promptSettings,
   getContextContent,
   onClose,
-  isMobile = false,
+  isMobile: _isMobile = false,
 }: AIChatPanelProps): React.ReactElement {
+  void _isMobile;
   const [askQuestion, setAskQuestion] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [contextExpanded, setContextExpanded] = useState(true);
@@ -148,7 +149,7 @@ export function AIChatPanel({
               New chat
             </button>
           )}
-          {isMobile && onClose && (
+          {onClose && (
             <button
               type="button"
               onClick={onClose}
