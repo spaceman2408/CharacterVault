@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.0 (unreleased)
+
+Standalone lorebook vault, richer World Info editing, and recursion map. Full notes: [v1.3.0 release notes](/releases/v1.3.0).
+
+### Highlights
+
+- Home vault **Lorebooks** tab: CRUD, import/export, duplicate, open full workspace
+- Shared lorebook editor for character-embedded and vault books (common ST fields + CodeMirror/AI content)
+- One-way **attach** to characters (vault-local); optional **copy into embedded** for card export
+- **Recursion map** (ego + whole book) with bulk Non-recursable / Prevent further / Delay until recursion
+- Lorebook snapshots (open / auto / manual / rollback)
+- Field help tips from SillyTavern World Info docs
+
+Details: [Lorebook Vault](/features/lorebook-vault) · [Lorebook Editor](/features/lorebook-editor) · [Recursion map](/features/lorebook-editor#recursion-map)
+
+---
+
 ## 1.2.1 (2026-08-07)
 
 Editor polish: Markdown image links, name macro colors, and smarter spellcheck. Full notes: [v1.2.1 release notes](/releases/v1.2.1).

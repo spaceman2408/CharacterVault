@@ -1,8 +1,17 @@
 # Vault Organization
 
-The character library is your home base — a grid view of all your characters with tools for finding, duplicating, and managing your collection.
+The home vault is your library for **characters** and **standalone lorebooks**. Both stay in local IndexedDB; no account is required.
 
-## Library Grid View
+## Characters and Lorebooks tabs
+
+| Tab | Contents |
+| :--- | :--- |
+| **Characters** | Portrait grid of character cards (this page’s focus) |
+| **Lorebooks** | Standalone World Info library ([Lorebook Vault](/features/lorebook-vault)) |
+
+The last selected tab is remembered in the browser.
+
+## Character library grid
 
 All characters are displayed as portrait-style cards in a responsive grid that adapts to your screen width:
 
@@ -76,7 +85,11 @@ Click **Backup** in the header to download a ZIP of every character in your vaul
 
 ## Pagination
 
-The library paginates automatically — 12 cards per page on mobile, 18 on desktop. Use the **Previous** and **Next** buttons at the bottom to navigate.
+The character library paginates automatically (12 cards per page on mobile, 18 on desktop). Use the **Previous** and **Next** buttons at the bottom to navigate.
+
+## Lorebook library
+
+For create / import / open / export / delete of standalone books, see [Lorebook Vault](/features/lorebook-vault).
 
 ## Loading
 

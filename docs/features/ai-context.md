@@ -112,6 +112,8 @@ If you don't see "Lorebook" in the Add Context list, it means your character doe
 
 This two-layer system means you can include the entire lorebook but hide specific entries by closing their eye icons. Or keep the lorebook out of AI context entirely while leaving all entries enabled for roleplay in SillyTavern.
 
+The lorebook editor also shows an **AI context** usage bar (included entry count and estimated tokens vs book budget or sampler context length), with **All** / **None** shortcuts.
+
 ### How the Toggles Work Together
 
 Each lorebook entry has two independent settings:
@@ -123,9 +125,14 @@ Each lorebook entry has two independent settings:
 
 You might disable certain entries for Orion and the AI toolbar because they're too long, irrelevant to editing, or you'd rather the AI not see them. Meanwhile, those same entries stay enabled for actual roleplay. The settings don't affect each other.
 
+### Attached vault lorebooks
+
+Standalone books from the [Lorebook Vault](/features/lorebook-vault) can be **attached** to a character for vault-local use (including AI work). Attachment does not export with the card unless you copy entries into the embedded lorebook. Entry-level context eyes still apply to embedded entries as above.
+
 ## Next Steps
 
 - [Lorebook Editor](/features/lorebook-editor)
-- [Editor & AI Toolkit](/features/editor) — AI toolbar operations
-- [AI Assistant — Orion](/features/ai-assistant)
+- [Lorebook Vault](/features/lorebook-vault)
+- [Editor & AI Toolkit](/features/editor) (AI toolbar operations)
+- [AI Assistant (Orion)](/features/ai-assistant)
 - [Configure AI provider](/configuration/ai-setup)

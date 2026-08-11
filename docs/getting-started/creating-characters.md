@@ -78,19 +78,28 @@ Character Vault generates a 128×192 JPEG thumbnail for the library grid view au
 
 ## Lorebook / World Info
 
-The Lorebook tab lets you add entries that activate based on keywords during AI conversations. Each entry has:
+The **Lorebook** tab edits the character’s **embedded** world info (`character_book`), which exports with the card. Each entry can include:
 
 | Field | Description |
 | :--- | :--- |
-| **Keys** | Comma-separated keywords that trigger the entry |
-| **Content** | The information injected when the entry is triggered |
-| **Priority** | Determines insertion order when multiple entries fire |
-| **Position** | Where the entry is inserted in the prompt |
-| **Enabled** | Toggle the entry on or off |
-| **Case Sensitive** | Require exact case match on keywords |
-| **Constant** | Always include this entry regardless of keywords |
+| **Entry title** | Display memo (not injected as content) |
+| **Primary keys** | Keywords or `/regex/` that can activate the entry |
+| **Secondary keys / selective** | Optional filters and ST selective logic |
+| **Content** | Text injected when the entry activates |
+| **Insertion order** | Order among activated entries |
+| **Position** | Before/after char or examples, or at chat depth |
+| **Enabled / Constant** | Off entirely, or always-on without keys |
+| **Case sensitive / whole words** | Key matching options |
+| **Probability** | Optional chance after a match |
+| **Recursion flags** | Non-recursable, prevent further, delay until recursion |
 
-For the full two-panel editor, search, AI key generation, and context visibility controls, see [Lorebook Editor](/features/lorebook-editor).
+Also available: AI context eye toggles, AI key generation, book-level scan depth / token budget / recursive scanning, and a **recursion map** for who unlocks whom.
+
+For the full two-panel editor, see [Lorebook Editor](/features/lorebook-editor).
+
+### Standalone books and attachments
+
+A separate **Lorebooks** library on the home vault holds books that are **not** on the card by default. You can attach them to a character for vault-local AI context, or copy entries into the embedded book for SillyTavern export. See [Lorebook Vault](/features/lorebook-vault).
 
 ## Creator Notes
 
@@ -99,6 +108,7 @@ The Creator Notes tab supports **HTML and CSS** with a sandboxed live preview �
 ## Next Steps
 
 - [Lorebook editor deep dive](/features/lorebook-editor)
+- [Lorebook Vault](/features/lorebook-vault)
 - [Creator Notes preview](/features/creator-notes)
 - [Use the AI assistant to brainstorm content](/features/ai-assistant)
 - [Import existing character cards](/features/import-export)

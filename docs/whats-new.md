@@ -6,6 +6,17 @@ Quick overview of recent updates to CharacterVault.
 
 ## August 2026
 
+### Lorebook Vault & recursion map (1.3.0)
+
+- **Lorebook library** on the home vault: create, search, import, export, duplicate, delete standalone World Info books
+- **Full book workspace** with shared lorebook editor, Orion chat, and snapshot history
+- **Attach** vault books to characters (vault-local AI context) or **copy into embedded** lorebook for card export
+- **ST field coverage** for common world-info options (selective logic, recursion flags, depth/role, probability, book scan depth / token budget)
+- **Recursion map**: This entry + Whole book views, select all / linked / visible, bulk recursion flags
+- Field **?** help aligned with SillyTavern World Info docs
+
+[Release 1.3.0 →](/releases/v1.3.0) · [Lorebook Vault](/features/lorebook-vault) · [Lorebook Editor](/features/lorebook-editor) · [Recursion map](/features/lorebook-editor#recursion-map)
+
 ### CharacterVault 1.2.1
 
 - **Markdown image links** — `![](https://…)` highlighted in the editor; optional click-to-open with a safety warning (**Settings → Studio → Editor links**)

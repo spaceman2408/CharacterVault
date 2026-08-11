@@ -93,11 +93,25 @@ If nothing has changed between the snapshot and your current draft, the **Restor
 
 ## Best Practices
 
-- **Save a snapshot before big changes** — Click **Save snapshot** before overhauling a description or rewriting a greeting.
-- **Use section restore for surgical fixes** — If only one field was accidentally changed, restore just that section instead of rolling back the entire card.
-- **Export as backup** — For important characters, [export a PNG copy](/features/import-export) as an external backup in addition to relying on local snapshots.
+- **Save a snapshot before big changes** – Click **Save snapshot** before overhauling a description or rewriting a greeting.
+- **Use section restore for surgical fixes** – If only one field was accidentally changed, restore just that section instead of rolling back the entire card.
+- **Export as backup** – For important characters, [export a PNG copy](/features/import-export) as an external backup in addition to relying on local snapshots.
+
+## Standalone lorebook snapshots
+
+Books in the [Lorebook Vault](/features/lorebook-vault) have a separate history modal (workspace **History** button), not the character Snapshots panel.
+
+| Source | Meaning |
+| :--- | :--- |
+| **Open** | Baseline-style snapshot when applicable |
+| **Auto** | Periodic snapshot while the book stays open |
+| **Manual** | **Snapshot now** in the History modal |
+| **Rollback** | Created after a restore |
+
+You can list snapshots, preview book metadata and a sample of entries, restore a snapshot over the current book, or delete individual snapshots. Restore asks for confirmation. History is stored locally with the rest of the vault.
 
 ## Next Steps
 
 - [Import and export characters](/features/import-export)
+- [Lorebook Vault](/features/lorebook-vault)
 - [Organize your vault](/features/vault-organization)

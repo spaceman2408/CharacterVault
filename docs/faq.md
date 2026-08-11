@@ -31,11 +31,24 @@ Yes. Syntax like `![alt](https://…)` is always highlighted. To open the URL on
 ::: details What can I do with Character Vault?
 You can:
 
-- **Edit every field** of a V2/V3 character card — description, personality, greetings, lorebook, creator notes, and extensions
+- **Edit every field** of a V2/V3 character card: description, personality, greetings, lorebook, creator notes, and extensions
+- **Keep standalone lorebooks** in a second vault library (World Info), with import/export, snapshots, and optional attach to characters
 - **Use AI to help you write** through Orion (a built-in chat assistant) and an AI toolbar with enhance, rephrase, shorten, fix, and other operations
 - **Save snapshots** at any point and roll back to previous versions, either the entire card or individual sections
 - **Import and export** PNG cards with embedded data and JSON files, compatible with SillyTavern, TavernAI, and other tools
 - **Stay in control** with local IndexedDB storage, dark and light themes
+:::
+
+::: details What is the Lorebook Vault?
+The home screen has a **Lorebooks** tab for standalone SillyTavern-compatible world-info books that are not tied to a single character. You can create, import, export, duplicate, snapshot, and edit them in a full workspace (including Orion). Optionally **attach** a book to a character for vault-local AI context, or **copy** it into the character’s embedded lorebook so it exports with the card.
+
+[Lorebook Vault →](/features/lorebook-vault) · [Lorebook Editor →](/features/lorebook-editor)
+:::
+
+::: details What is the recursion map?
+In the lorebook editor, **Activation → Map** (or book settings **Map**) shows which entries can unlock others via recursive scanning: if one entry’s content mentions another’s primary keys. Use the **Whole book** tab to browse all unlock paths and bulk-set Non-recursable / Prevent further / Delay until recursion. It is an authoring aid, not a full SillyTavern runtime simulator.
+
+[Lorebook Editor → Recursion map](/features/lorebook-editor#recursion-map)
 :::
 
 ## AI Features

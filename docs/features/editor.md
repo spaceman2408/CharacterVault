@@ -191,7 +191,7 @@ Each section tab shows a title, description, and the editor. Some sections have 
 | **Description**, **Personality**, **Scenario**, etc. | Standard single editor |
 | **Creator Notes** | Editor with a **Preview CSS** button — opens a sandboxed preview modal, or click again for a side-by-side split view. See [Creator Notes Preview](/features/creator-notes). |
 | **Greetings** | Special multi-greeting editor. See [Creating & Editing Characters](/getting-started/creating-characters). |
-| **Lorebook** | Two-panel editor with search and AI key generation. See [Lorebook Editor](/features/lorebook-editor). |
+| **Lorebook** | Two-panel editor with ST fields, recursion map, search, and AI key generation. Same UI for embedded books and the [Lorebook Vault](/features/lorebook-vault). See [Lorebook Editor](/features/lorebook-editor). |
 | **Image** | Image upload panel (not a text editor) |
 | **Extensions** | Raw JSON editor |
 
@@ -291,6 +291,7 @@ Full setup notes: [AI Setup → Prompts Tab](/configuration/ai-setup#prompts-tab
 ## Next Steps
 
 - [Lorebook editor](/features/lorebook-editor)
+- [Lorebook Vault](/features/lorebook-vault)
 - [Creator Notes preview](/features/creator-notes)
 - [AI Assistant — Orion](/features/ai-assistant)
 - [Configure AI provider](/configuration/ai-setup)
