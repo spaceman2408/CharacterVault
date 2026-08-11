@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { LorebookEntry } from '../../../src/db/characterTypes';
 import {
+  applyEntryFlagPatch,
   buildRecursionGraph,
   contentMatchesKey,
+  getBookRecursionStats,
+  getConnectedComponents,
   getEgoStats,
+  layerComponent,
   mergeEntryDraft,
+  shouldPreferListLayout,
 } from '../../../src/components/editor/lorebook/recursionGraph';
 
 function entry(partial: Partial<LorebookEntry> & Pick<LorebookEntry, 'id'>): LorebookEntry {
@@ -128,5 +133,87 @@ describe('buildRecursionGraph', () => {
     const merged = mergeEntryDraft([a, b], draft);
     expect(merged[0].content).toBe('new draft');
     expect(merged[1].content).toBe('keep');
+  });
+
+  it('applyEntryFlagPatch updates only selected ids', () => {
+    const a = entry({ id: 1 });
+    const b = entry({ id: 2 });
+    const next = applyEntryFlagPatch([a, b], [2], { preventRecursion: true });
+    expect(next[0].preventRecursion).toBeUndefined();
+    expect(next[1].preventRecursion).toBe(true);
+  });
+});
+
+describe('book stats, components, layers', () => {
+  it('computes book stats', () => {
+    const a = entry({
+      id: 1,
+      content: 'mentions TargetKey',
+      keys: ['AlphaKey'],
+    });
+    const b = entry({
+      id: 2,
+      keys: ['TargetKey'],
+      content: 'no links here',
+      excludeRecursion: true,
+    });
+    const c = entry({
+      id: 3,
+      keys: ['CharlieKey'],
+      content: 'isolated text',
+      delayUntilRecursion: true,
+    });
+    // B is non-recursable so no edge A→B; no other key hits → all isolated
+    const graph = buildRecursionGraph([a, b, c]);
+    const stats = getBookRecursionStats([a, b, c], graph);
+    expect(stats.entryCount).toBe(3);
+    expect(stats.edgeCount).toBe(0);
+    expect(stats.linkedCount).toBe(0);
+    expect(stats.isolatedCount).toBe(3);
+    expect(stats.excludeRecursionCount).toBe(1);
+    expect(stats.delayUntilRecursionCount).toBe(1);
+  });
+
+  it('finds connected components across two islands', () => {
+    const a = entry({ id: 1, content: 'B key here', keys: ['A'] });
+    const b = entry({ id: 2, keys: ['B'], content: 'x' });
+    const c = entry({ id: 3, content: 'D key here', keys: ['C'] });
+    const d = entry({ id: 4, keys: ['D'], content: 'y' });
+    const alone = entry({ id: 5, keys: ['Alone'], content: 'z' });
+    const graph = buildRecursionGraph([a, b, c, d, alone]);
+    const comps = getConnectedComponents([a, b, c, d, alone], graph);
+    const linked = comps.filter((c) => c.edges.length > 0);
+    const isolated = comps.filter((c) => c.edges.length === 0);
+    expect(linked).toHaveLength(2);
+    expect(isolated).toHaveLength(1);
+    expect(isolated[0].entryIds).toEqual([5]);
+  });
+
+  it('layers sources before targets', () => {
+    const a = entry({ id: 1, content: 'B and C', keys: ['A'] });
+    const b = entry({ id: 2, keys: ['B'], content: 'C only' });
+    const c = entry({ id: 3, keys: ['C'], content: 'leaf' });
+    const graph = buildRecursionGraph([a, b, c]);
+    const layers = layerComponent([1, 2, 3], graph);
+    expect(layers[0]).toContain(1);
+    expect(layers.flat()).toEqual(expect.arrayContaining([1, 2, 3]));
+    expect(layers.flat()).toHaveLength(3);
+  });
+
+  it('flag patch drops edges on rebuild', () => {
+    const a = entry({ id: 1, content: 'Target word', keys: ['A'] });
+    const b = entry({ id: 2, keys: ['Target'], content: 'x' });
+    let entries = [a, b];
+    let graph = buildRecursionGraph(entries);
+    expect(getBookRecursionStats(entries, graph).edgeCount).toBe(1);
+    entries = applyEntryFlagPatch(entries, [1], { preventRecursion: true });
+    graph = buildRecursionGraph(entries);
+    expect(getBookRecursionStats(entries, graph).edgeCount).toBe(0);
+  });
+
+  it('prefers list layout for large books', () => {
+    expect(shouldPreferListLayout(10, 10)).toBe(false);
+    expect(shouldPreferListLayout(151, 0)).toBe(true);
+    expect(shouldPreferListLayout(10, 401)).toBe(true);
   });
 });

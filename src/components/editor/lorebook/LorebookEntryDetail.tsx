@@ -122,7 +122,7 @@ export function LorebookEntryDetail({
   }, []);
 
   React.useEffect(() => {
-    // Only cancel AI when switching entries — prop identity changes on every
+    // Only cancel AI when switching entries: prop identity changes on every
     // parent persist (including content debounce) and must not abort mid-gen.
     tearDownKeyGeneration();
     if (isMountedRef.current) {

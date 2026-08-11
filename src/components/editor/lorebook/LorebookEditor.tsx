@@ -13,6 +13,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  GitFork,
   Plus,
   Search,
   Settings,
@@ -25,8 +26,8 @@ import { importLorebook, convertToSTLorebook } from '../../../services/LorebookC
 import { estimateTokens, BYTES_PER_TOKEN } from '../../../services/AIService';
 import { LorebookEntryDetail } from './LorebookEntryDetail';
 import { MemoizedLorebookEntryListItem } from './LorebookEntryListItem';
-import { RecursionMapModal } from './RecursionMapModal';
-import { buildRecursionGraph } from './recursionGraph';
+import { RecursionMapModal, type RecursionMapTab } from './RecursionMapModal';
+import { applyEntryFlagPatch, buildRecursionGraph } from './recursionGraph';
 import type { LorebookEditorProps } from './types';
 import { FIELD_HELP } from './fieldHelp';
 import { FieldInfoTip, FieldLabel } from './FieldInfoTip';
@@ -72,6 +73,7 @@ function LorebookEditorInner({
   const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
   const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
   const [isRecursionMapOpen, setIsRecursionMapOpen] = useState(false);
+  const [recursionMapTab, setRecursionMapTab] = useState<RecursionMapTab>('ego');
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -91,20 +93,25 @@ function LorebookEditorInner({
   const safeSelectedIndex = selectedEntryIndex < entries.length ? selectedEntryIndex : 0;
   const selectedEntry = entries[safeSelectedIndex];
 
-  // Drop map state when there is no focus entry (delete-all / empty book).
-  useEffect(() => {
-    if (!selectedEntry && isRecursionMapOpen) {
-      setIsRecursionMapOpen(false);
-    }
-  }, [selectedEntry, isRecursionMapOpen]);
-
-  const handleOpenRecursionMap = useCallback(() => {
+  const handleOpenRecursionMap = useCallback((tab: RecursionMapTab = 'ego') => {
+    if (entries.length === 0) return;
+    setRecursionMapTab(tab);
     setIsRecursionMapOpen(true);
-  }, []);
+  }, [entries.length]);
 
   const handleCloseRecursionMap = useCallback(() => {
     setIsRecursionMapOpen(false);
   }, []);
+
+  // If the book is emptied while the map is open, drop the open flag so it
+  // does not reappear when the next entry is added.
+  useEffect(() => {
+    if (entries.length === 0) {
+      setIsRecursionMapOpen(false);
+    }
+  }, [entries.length]);
+
+  const showRecursionMap = isRecursionMapOpen && entries.length > 0;
 
   const buildUpdatedLorebook = useCallback(
     (
@@ -208,6 +215,17 @@ function LorebookEditorInner({
     [entryIndexById],
   );
 
+  const handleUpdateRecursionFlags = useCallback(
+    (
+      ids: number[],
+      patch: Parameters<typeof applyEntryFlagPatch>[2],
+    ) => {
+      const newEntries = applyEntryFlagPatch(entries, ids, patch);
+      persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
+    },
+    [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook],
+  );
+
   const selectedEntryTokenCount = useMemo(
     () => (selectedEntry ? estimateTokens(selectedEntry.content) : null),
     [selectedEntry],
@@ -225,8 +243,8 @@ function LorebookEditorInner({
 
   // Only build the full graph while the map is open; glance stats rebuild in detail.
   const recursionGraph = useMemo(
-    () => (isRecursionMapOpen ? buildRecursionGraph(entries) : null),
-    [entries, isRecursionMapOpen],
+    () => (showRecursionMap ? buildRecursionGraph(entries) : null),
+    [entries, showRecursionMap],
   );
 
   const handleEnableAllContext = useCallback(() => {
@@ -416,7 +434,7 @@ function LorebookEditorInner({
                         }),
                       );
                     }}
-                    placeholder="—"
+                    placeholder="-"
                     className="w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
                   />
                 </div>
@@ -439,27 +457,43 @@ function LorebookEditorInner({
                         }),
                       );
                     }}
-                    placeholder="—"
+                    placeholder="-"
                     className="w-full rounded-lg border border-border bg-surface px-2.5 py-2 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
                   />
                 </div>
               </div>
-              <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-fg-muted">
-                <input
-                  type="checkbox"
-                  checked={draftLorebook.recursive_scanning ?? false}
-                  onChange={(e) =>
-                    persistLorebook(
-                      buildUpdatedLorebook(entries, bookName, bookDescription, {
-                        recursive_scanning: e.target.checked,
-                      }),
-                    )
-                  }
-                  className="h-3.5 w-3.5 rounded border-border-strong text-accent focus:ring-accent"
-                />
-                Recursive scanning
-                <FieldInfoTip text={FIELD_HELP.recursiveScanning} label="About Recursive scanning" />
-              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-fg-muted">
+                  <input
+                    type="checkbox"
+                    checked={draftLorebook.recursive_scanning ?? false}
+                    onChange={(e) =>
+                      persistLorebook(
+                        buildUpdatedLorebook(entries, bookName, bookDescription, {
+                          recursive_scanning: e.target.checked,
+                        }),
+                      )
+                    }
+                    className="h-3.5 w-3.5 rounded border-border-strong text-accent focus:ring-accent"
+                  />
+                  Recursive scanning
+                  <FieldInfoTip
+                    text={FIELD_HELP.recursiveScanning}
+                    label="About Recursive scanning"
+                  />
+                </label>
+                {entries.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRecursionMap('book')}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-[11px] font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+                    title="Open whole-book recursion map"
+                  >
+                    <GitFork className="h-3.5 w-3.5" />
+                    Map
+                  </button>
+                )}
+              </div>
               {onDelete && (
                 <div className="border-t border-border pt-2">
                   <button
@@ -697,7 +731,7 @@ function LorebookEditorInner({
                 entry={selectedEntry}
                 allEntries={entries}
                 onPersistUpdate={handleEntryPersistUpdate}
-                onOpenRecursionMap={handleOpenRecursionMap}
+                onOpenRecursionMap={() => handleOpenRecursionMap('ego')}
                 aiConfig={aiConfig}
                 samplerSettings={samplerSettings}
                 promptSettings={promptSettings}
@@ -723,14 +757,16 @@ function LorebookEditorInner({
         )}
       </div>
 
-      {isRecursionMapOpen && selectedEntry && recursionGraph && (
+      {showRecursionMap && recursionGraph && (
         <RecursionMapModal
-          focusEntry={selectedEntry}
+          focusEntry={selectedEntry ?? null}
           entries={entries}
           graph={recursionGraph}
           bookRecursiveScanning={draftLorebook.recursive_scanning}
+          initialTab={recursionMapTab}
           onClose={handleCloseRecursionMap}
           onNavigateToEntry={handleNavigateToEntry}
+          onUpdateEntries={handleUpdateRecursionFlags}
         />
       )}
     </div>

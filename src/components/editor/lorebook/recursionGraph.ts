@@ -22,7 +22,7 @@ export type EgoRecursionStats = {
   triggeredBy: number;
 };
 
-/** ST-style /pattern/flags — flags limited to typical JS regex flags. */
+/** ST-style /pattern/flags; flags limited to typical JS regex flags. */
 const REGEX_KEY = /^\/(.+)\/([gimsuy]*)$/s;
 
 function escapeRegExp(value: string): string {
@@ -69,7 +69,7 @@ export function contentMatchesKey(
       const pattern = `(?<![\\p{L}\\p{N}_])${escapeRegExp(trimmed)}(?![\\p{L}\\p{N}_])`;
       return new RegExp(pattern, flags).test(content);
     } catch {
-      // Unicode property escapes unavailable — simple boundary fallback.
+      // Unicode property escapes unavailable: simple boundary fallback.
       const flags = caseSensitive ? '' : 'i';
       return new RegExp(`\\b${escapeRegExp(trimmed)}\\b`, flags).test(content);
     }
@@ -146,6 +146,190 @@ export function getEgoStats(graph: RecursionGraph, entryId: number): EgoRecursio
   };
 }
 
+export type BookRecursionStats = {
+  entryCount: number;
+  edgeCount: number;
+  linkedCount: number;
+  isolatedCount: number;
+  excludeRecursionCount: number;
+  preventRecursionCount: number;
+  delayUntilRecursionCount: number;
+};
+
+export type RecursionComponent = {
+  id: string;
+  entryIds: number[];
+  edges: RecursionEdge[];
+};
+
+export type RecursionFlagPatch = Partial<
+  Pick<LorebookEntry, 'excludeRecursion' | 'preventRecursion' | 'delayUntilRecursion'>
+>;
+
+function degree(graph: RecursionGraph, id: number): number {
+  return (graph.outgoing.get(id)?.length ?? 0) + (graph.incoming.get(id)?.length ?? 0);
+}
+
+export function countEdges(graph: RecursionGraph): number {
+  let n = 0;
+  for (const edges of graph.outgoing.values()) n += edges.length;
+  return n;
+}
+
+export function getBookRecursionStats(
+  entries: LorebookEntry[],
+  graph: RecursionGraph,
+): BookRecursionStats {
+  let linkedCount = 0;
+  let excludeRecursionCount = 0;
+  let preventRecursionCount = 0;
+  let delayUntilRecursionCount = 0;
+
+  for (const entry of entries) {
+    if (degree(graph, entry.id) > 0) linkedCount += 1;
+    if (entry.excludeRecursion === true) excludeRecursionCount += 1;
+    if (entry.preventRecursion === true) preventRecursionCount += 1;
+    if (entry.delayUntilRecursion === true) delayUntilRecursionCount += 1;
+  }
+
+  return {
+    entryCount: entries.length,
+    edgeCount: countEdges(graph),
+    linkedCount,
+    isolatedCount: entries.length - linkedCount,
+    excludeRecursionCount,
+    preventRecursionCount,
+    delayUntilRecursionCount,
+  };
+}
+
+/**
+ * Undirected connected components over recursion edges.
+ * Isolated entries (degree 0) each form their own component and are
+ * returned after linked components, sorted by size desc then min id.
+ */
+export function getConnectedComponents(
+  entries: LorebookEntry[],
+  graph: RecursionGraph,
+): RecursionComponent[] {
+  const ids = entries.map((e) => e.id);
+  const idSet = new Set(ids);
+  const undirected = new Map<number, Set<number>>();
+  for (const id of ids) undirected.set(id, new Set());
+
+  const allEdges: RecursionEdge[] = [];
+  for (const edges of graph.outgoing.values()) {
+    for (const edge of edges) {
+      if (!idSet.has(edge.fromId) || !idSet.has(edge.toId)) continue;
+      allEdges.push(edge);
+      undirected.get(edge.fromId)?.add(edge.toId);
+      undirected.get(edge.toId)?.add(edge.fromId);
+    }
+  }
+
+  const visited = new Set<number>();
+  const components: RecursionComponent[] = [];
+
+  for (const start of ids) {
+    if (visited.has(start)) continue;
+    const stack = [start];
+    visited.add(start);
+    const memberSet = new Set<number>();
+    while (stack.length > 0) {
+      const cur = stack.pop()!;
+      memberSet.add(cur);
+      for (const next of undirected.get(cur) ?? []) {
+        if (!visited.has(next)) {
+          visited.add(next);
+          stack.push(next);
+        }
+      }
+    }
+
+    const entryIds = [...memberSet].sort((a, b) => a - b);
+    const edges = allEdges.filter(
+      (e) => memberSet.has(e.fromId) && memberSet.has(e.toId),
+    );
+    components.push({
+      id: `c-${entryIds[0] ?? start}`,
+      entryIds,
+      edges,
+    });
+  }
+
+  components.sort((a, b) => {
+    const aLinked = a.edges.length > 0 ? 1 : 0;
+    const bLinked = b.edges.length > 0 ? 1 : 0;
+    if (bLinked !== aLinked) return bLinked - aLinked;
+    if (b.entryIds.length !== a.entryIds.length) return b.entryIds.length - a.entryIds.length;
+    return (a.entryIds[0] ?? 0) - (b.entryIds[0] ?? 0);
+  });
+
+  return components;
+}
+
+/**
+ * BFS layers for layout within a component.
+ * Layer 0 = nodes with no inbound edges from the component (sources).
+ * Remaining cycle-only nodes are appended as a final layer.
+ */
+export function layerComponent(entryIds: number[], graph: RecursionGraph): number[][] {
+  if (entryIds.length === 0) return [];
+  const member = new Set(entryIds);
+
+  const inDegree = new Map<number, number>();
+  for (const id of entryIds) inDegree.set(id, 0);
+
+  for (const id of entryIds) {
+    for (const edge of graph.outgoing.get(id) ?? []) {
+      if (!member.has(edge.toId)) continue;
+      inDegree.set(edge.toId, (inDegree.get(edge.toId) ?? 0) + 1);
+    }
+  }
+
+  const layers: number[][] = [];
+  const placed = new Set<number>();
+  let frontier = entryIds.filter((id) => (inDegree.get(id) ?? 0) === 0).sort((a, b) => a - b);
+
+  // If every node has inbound (pure cycle), start with lowest id.
+  if (frontier.length === 0) {
+    frontier = [[...entryIds].sort((a, b) => a - b)[0]];
+  }
+
+  while (frontier.length > 0) {
+    layers.push(frontier);
+    for (const id of frontier) placed.add(id);
+    const nextSet = new Set<number>();
+    for (const id of frontier) {
+      for (const edge of graph.outgoing.get(id) ?? []) {
+        if (!member.has(edge.toId) || placed.has(edge.toId)) continue;
+        nextSet.add(edge.toId);
+      }
+    }
+    frontier = [...nextSet].sort((a, b) => a - b);
+    // Avoid infinite loop on cycles: only place unplaced neighbors once.
+    if (frontier.some((id) => placed.has(id))) {
+      frontier = frontier.filter((id) => !placed.has(id));
+    }
+  }
+
+  const leftover = entryIds.filter((id) => !placed.has(id)).sort((a, b) => a - b);
+  if (leftover.length > 0) layers.push(leftover);
+
+  return layers;
+}
+
+/** Flatten all edges from a graph (stable order by fromId, toId). */
+export function listEdges(graph: RecursionGraph): RecursionEdge[] {
+  const edges: RecursionEdge[] = [];
+  const fromIds = [...graph.outgoing.keys()].sort((a, b) => a - b);
+  for (const fromId of fromIds) {
+    const outs = [...(graph.outgoing.get(fromId) ?? [])].sort((a, b) => a.toId - b.toId);
+    edges.push(...outs);
+  }
+  return edges;
+}
+
 /** Replace one entry in a list (live draft merge for the open editor). */
 export function mergeEntryDraft(
   entries: LorebookEntry[],
@@ -154,9 +338,24 @@ export function mergeEntryDraft(
   return entries.map((entry) => (entry.id === draft.id ? draft : entry));
 }
 
+export function applyEntryFlagPatch(
+  entries: LorebookEntry[],
+  ids: number[],
+  patch: RecursionFlagPatch,
+): LorebookEntry[] {
+  if (ids.length === 0) return entries;
+  const idSet = new Set(ids);
+  return entries.map((entry) => (idSet.has(entry.id) ? { ...entry, ...patch } : entry));
+}
+
 export function entryDisplayName(entry: LorebookEntry, fallbackIndex?: number): string {
   const label = (entry.comment || entry.name || '').trim();
   if (label) return label;
   if (fallbackIndex !== undefined) return `Entry ${fallbackIndex}`;
   return `Entry #${entry.id}`;
+}
+
+/** Prefer list mode when the book is large enough that a free layout is noisy. */
+export function shouldPreferListLayout(entryCount: number, edgeCount: number): boolean {
+  return entryCount > 150 || edgeCount > 400;
 }

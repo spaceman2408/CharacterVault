@@ -14,7 +14,7 @@ export const FIELD_HELP = {
     'Always-on entry: needs no keywords and can activate regardless of chat content. (SillyTavern blue-circle / Constant strategy.)',
 
   primaryKeys:
-    'Keywords (or JS-style /regex/) that can activate this entry when found in scanned chat. Not case-sensitive by default. Keys themselves are not inserted into the prompt—only Content is. (SillyTavern: Key.)',
+    'Keywords (or JS-style /regex/) that can activate this entry when found in scanned chat. Not case-sensitive by default. Keys themselves are not inserted into the prompt, only Content is. (SillyTavern: Key.)',
 
   secondaryKeys:
     'Optional filter keys used with Selective. Ignored when Selective is off or this list is empty. Supports the same matching rules as primary keys. (SillyTavern: Optional Filter.)',
@@ -23,10 +23,10 @@ export const FIELD_HELP = {
     'When on, primary keys must match and secondary keys are checked with the selected logic before the entry can activate.',
 
   selectiveLogic: {
-    0: 'AND ANY — primary key match plus at least one secondary key in scanned context.',
-    1: 'NOT ALL — primary key match; blocked only if every secondary key is present.',
-    2: 'NOT ANY — primary key match and none of the secondary keys are present.',
-    3: 'AND ALL — primary key match and every secondary key is present.',
+    0: 'AND ANY: primary key match plus at least one secondary key in scanned context.',
+    1: 'NOT ALL: primary key match; blocked only if every secondary key is present.',
+    2: 'NOT ANY: primary key match and none of the secondary keys are present.',
+    3: 'AND ALL: primary key match and every secondary key is present.',
   } as Record<number, string>,
 
   insertionOrder:
@@ -60,10 +60,10 @@ export const FIELD_HELP = {
     'Once this entry activates, it will not trigger further recursive activations of other entries. (SillyTavern: Prevent further recursion.)',
 
   delayUntilRecursion:
-    'Only activates on recursive passes—not from the initial chat scan. Useful for layered lore that should unlock after another entry. (SillyTavern: Delay until recursion.)',
+    'Only activates on recursive passes, not from the initial chat scan. Useful for layered lore that should unlock after another entry. (SillyTavern: Delay until recursion.)',
 
   content:
-    'Text inserted into the prompt when the entry activates. Titles and keys are not inserted—put everything the model should see here, written as standalone text. (SillyTavern: Entry Content.)',
+    'Text inserted into the prompt when the entry activates. Titles and keys are not inserted; put everything the model should see here, written as standalone text. (SillyTavern: Entry Content.)',
 
   internalNotes:
     'Optional internal notes (Character Vault stores this as the entry name field). Not used as ST’s memo/title and not part of activation.',
