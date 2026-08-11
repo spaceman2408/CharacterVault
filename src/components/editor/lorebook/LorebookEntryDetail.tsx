@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
   ChevronUp,
+  GitFork,
   Sparkles,
   Square,
 } from 'lucide-react';
@@ -22,12 +23,19 @@ import {
 } from './constants';
 import { FIELD_HELP } from './fieldHelp';
 import { FieldInfoTip, FieldLabel } from './FieldInfoTip';
+import {
+  buildRecursionGraph,
+  getEgoStats,
+  mergeEntryDraft,
+} from './recursionGraph';
 import type { LorebookEntryDetailProps } from './types';
 import { hasNonDefaultActivation } from './utils';
 
 export function LorebookEntryDetail({
   entry,
+  allEntries,
   onPersistUpdate,
+  onOpenRecursionMap,
   aiConfig,
   samplerSettings,
   promptSettings,
@@ -142,6 +150,24 @@ export function LorebookEntryDetail({
     const next = (draftEntry.secondary_keys || []).join(', ');
     setSecondaryKeysInput((prev) => (prev !== next ? next : prev));
   }, [draftEntry.secondary_keys]);
+
+  // Glance stats only while Activation is open (avoids O(n²) rebuilds on every
+  // keystroke when the panel is collapsed).
+  const entriesForGraph = useMemo(
+    () => (isActivationOpen ? mergeEntryDraft(allEntries, draftEntry) : null),
+    [allEntries, draftEntry, isActivationOpen],
+  );
+  const recursionGraph = useMemo(
+    () => (entriesForGraph ? buildRecursionGraph(entriesForGraph) : null),
+    [entriesForGraph],
+  );
+  const egoStats = useMemo(
+    () =>
+      recursionGraph
+        ? getEgoStats(recursionGraph, draftEntry.id)
+        : { triggers: 0, triggeredBy: 0 },
+    [recursionGraph, draftEntry.id],
+  );
 
   const handleAbortGeneration = () => {
     tearDownKeyGeneration();
@@ -541,43 +567,72 @@ export function LorebookEntryDetail({
                     </label>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-                    <input
-                      type="checkbox"
-                      checked={draftEntry.excludeRecursion ?? false}
-                      onChange={(e) => persistPatch({ excludeRecursion: e.target.checked })}
-                      className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-                    />
-                    Non-recursable
-                    <FieldInfoTip text={FIELD_HELP.excludeRecursion} label="About Non-recursable" />
-                  </label>
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-                    <input
-                      type="checkbox"
-                      checked={draftEntry.preventRecursion ?? false}
-                      onChange={(e) => persistPatch({ preventRecursion: e.target.checked })}
-                      className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-                    />
-                    Prevent further recursion
-                    <FieldInfoTip
-                      text={FIELD_HELP.preventRecursion}
-                      label="About Prevent further recursion"
-                    />
-                  </label>
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-                    <input
-                      type="checkbox"
-                      checked={draftEntry.delayUntilRecursion ?? false}
-                      onChange={(e) => persistPatch({ delayUntilRecursion: e.target.checked })}
-                      className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-                    />
-                    Delay until recursion
-                    <FieldInfoTip
-                      text={FIELD_HELP.delayUntilRecursion}
-                      label="About Delay until recursion"
-                    />
-                  </label>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                      Recursion
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] tabular-nums text-fg-muted">
+                        {egoStats.triggers === 0 && egoStats.triggeredBy === 0 ? (
+                          'No recursion links'
+                        ) : (
+                          <>
+                            Triggers {egoStats.triggers}
+                            <span className="text-fg-subtle"> · </span>
+                            Triggered by {egoStats.triggeredBy}
+                          </>
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={onOpenRecursionMap}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-[11px] font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+                        title="Open recursion map"
+                      >
+                        <GitFork className="h-3.5 w-3.5" />
+                        Map
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
+                      <input
+                        type="checkbox"
+                        checked={draftEntry.excludeRecursion ?? false}
+                        onChange={(e) => persistPatch({ excludeRecursion: e.target.checked })}
+                        className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+                      />
+                      Non-recursable
+                      <FieldInfoTip text={FIELD_HELP.excludeRecursion} label="About Non-recursable" />
+                    </label>
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
+                      <input
+                        type="checkbox"
+                        checked={draftEntry.preventRecursion ?? false}
+                        onChange={(e) => persistPatch({ preventRecursion: e.target.checked })}
+                        className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+                      />
+                      Prevent further recursion
+                      <FieldInfoTip
+                        text={FIELD_HELP.preventRecursion}
+                        label="About Prevent further recursion"
+                      />
+                    </label>
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
+                      <input
+                        type="checkbox"
+                        checked={draftEntry.delayUntilRecursion ?? false}
+                        onChange={(e) => persistPatch({ delayUntilRecursion: e.target.checked })}
+                        className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
+                      />
+                      Delay until recursion
+                      <FieldInfoTip
+                        text={FIELD_HELP.delayUntilRecursion}
+                        label="About Delay until recursion"
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
             )}

@@ -41,7 +41,10 @@ export interface LorebookEntryListItemProps {
 
 export interface LorebookEntryDetailProps {
   entry: LorebookEntry;
+  /** All book entries (parent draft); open entry is merged with live draft for recursion stats. */
+  allEntries: LorebookEntry[];
   onPersistUpdate: (entry: LorebookEntry) => void;
+  onOpenRecursionMap: () => void;
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;

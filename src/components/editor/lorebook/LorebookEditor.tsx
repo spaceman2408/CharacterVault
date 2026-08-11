@@ -25,6 +25,8 @@ import { importLorebook, convertToSTLorebook } from '../../../services/LorebookC
 import { estimateTokens, BYTES_PER_TOKEN } from '../../../services/AIService';
 import { LorebookEntryDetail } from './LorebookEntryDetail';
 import { MemoizedLorebookEntryListItem } from './LorebookEntryListItem';
+import { RecursionMapModal } from './RecursionMapModal';
+import { buildRecursionGraph } from './recursionGraph';
 import type { LorebookEditorProps } from './types';
 import { FIELD_HELP } from './fieldHelp';
 import { FieldInfoTip, FieldLabel } from './FieldInfoTip';
@@ -69,6 +71,7 @@ function LorebookEditorInner({
   const [selectedEntryIndex, setSelectedEntryIndex] = useState(0);
   const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
   const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
+  const [isRecursionMapOpen, setIsRecursionMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,6 +90,21 @@ function LorebookEditorInner({
   const bookDescription = draftLorebook.description ?? '';
   const safeSelectedIndex = selectedEntryIndex < entries.length ? selectedEntryIndex : 0;
   const selectedEntry = entries[safeSelectedIndex];
+
+  // Drop map state when there is no focus entry (delete-all / empty book).
+  useEffect(() => {
+    if (!selectedEntry && isRecursionMapOpen) {
+      setIsRecursionMapOpen(false);
+    }
+  }, [selectedEntry, isRecursionMapOpen]);
+
+  const handleOpenRecursionMap = useCallback(() => {
+    setIsRecursionMapOpen(true);
+  }, []);
+
+  const handleCloseRecursionMap = useCallback(() => {
+    setIsRecursionMapOpen(false);
+  }, []);
 
   const buildUpdatedLorebook = useCallback(
     (
@@ -180,6 +198,16 @@ function LorebookEditorInner({
     return indexById;
   }, [entries]);
 
+  const handleNavigateToEntry = useCallback(
+    (entryId: number) => {
+      const index = entryIndexById.get(entryId);
+      if (index === undefined) return;
+      setSelectedEntryIndex(index);
+      setIsMobileViewOpen(true);
+    },
+    [entryIndexById],
+  );
+
   const selectedEntryTokenCount = useMemo(
     () => (selectedEntry ? estimateTokens(selectedEntry.content) : null),
     [selectedEntry],
@@ -193,6 +221,12 @@ function LorebookEditorInner({
         samplerSettings.contextLength,
       ),
     [entries, draftLorebook.token_budget, samplerSettings.contextLength],
+  );
+
+  // Only build the full graph while the map is open; glance stats rebuild in detail.
+  const recursionGraph = useMemo(
+    () => (isRecursionMapOpen ? buildRecursionGraph(entries) : null),
+    [entries, isRecursionMapOpen],
   );
 
   const handleEnableAllContext = useCallback(() => {
@@ -661,7 +695,9 @@ function LorebookEditorInner({
               <LorebookEntryDetail
                 key={selectedEntry.id}
                 entry={selectedEntry}
+                allEntries={entries}
                 onPersistUpdate={handleEntryPersistUpdate}
+                onOpenRecursionMap={handleOpenRecursionMap}
                 aiConfig={aiConfig}
                 samplerSettings={samplerSettings}
                 promptSettings={promptSettings}
@@ -686,6 +722,17 @@ function LorebookEditorInner({
           </div>
         )}
       </div>
+
+      {isRecursionMapOpen && selectedEntry && recursionGraph && (
+        <RecursionMapModal
+          focusEntry={selectedEntry}
+          entries={entries}
+          graph={recursionGraph}
+          bookRecursiveScanning={draftLorebook.recursive_scanning}
+          onClose={handleCloseRecursionMap}
+          onNavigateToEntry={handleNavigateToEntry}
+        />
+      )}
     </div>
   );
 }
