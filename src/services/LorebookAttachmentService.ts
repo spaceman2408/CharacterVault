@@ -89,6 +89,11 @@ export class LorebookAttachmentService {
   async listLinkedCharacters(lorebookId: string): Promise<CharacterListItem[]> {
     return characterDb.getCharacterListItemsLinkedToLorebook(lorebookId);
   }
+
+  /** Badge count without loading thumbnails into memory. */
+  async countLinkedCharacters(lorebookId: string): Promise<number> {
+    return characterDb.countCharactersLinkedToLorebook(lorebookId);
+  }
 }
 
 export const lorebookAttachmentService = new LorebookAttachmentService();

@@ -1225,6 +1225,24 @@ export class CharacterDatabase extends Dexie {
       .filter((item): item is CharacterListItem => item != null)
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   }
+
+  /**
+   * Count characters that attach this book without loading list-item thumbnails.
+   * Uses primary keys only so badge refreshes stay cheap.
+   */
+  async countCharactersLinkedToLorebook(lorebookId: string): Promise<number> {
+    const rows = await this.characterLorebookAttachments
+      .filter((row) => row.lorebookIds.includes(lorebookId))
+      .toArray();
+    if (rows.length === 0) return 0;
+
+    const characterIds = rows.map((row) => row.characterId);
+    const keys = await this.characterListIndex
+      .where('id')
+      .anyOf(characterIds)
+      .primaryKeys();
+    return keys.length;
+  }
 }
 
 /**

@@ -21,28 +21,85 @@ export function LinkedCharactersMenu({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [linkedCount, setLinkedCount] = useState(0);
   const [linked, setLinked] = useState<CharacterListItem[]>([]);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
 
-  const loadLinked = useCallback(async () => {
-    setLoading(true);
+  const mountedRef = useRef(true);
+  const countGenRef = useRef(0);
+  const listGenRef = useRef(0);
+  /** Eager open flag so in-flight list loads do not race React state. */
+  const openRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      openRef.current = false;
+      countGenRef.current += 1;
+      listGenRef.current += 1;
+    };
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    openRef.current = false;
+    // Cancel in-flight list loads so late results cannot re-pin thumbnails.
+    listGenRef.current += 1;
+    setOpen(false);
+    setLinked([]);
+    setMenuPosition(null);
+    setOpeningId(null);
+    setLoading(false);
+  }, []);
+
+  const loadCount = useCallback(async () => {
+    const gen = ++countGenRef.current;
     try {
-      const items = await lorebookAttachmentService.listLinkedCharacters(lorebookId);
-      setLinked(items);
+      const count = await lorebookAttachmentService.countLinkedCharacters(lorebookId);
+      if (!mountedRef.current || gen !== countGenRef.current) return;
+      setLinkedCount(count);
     } catch (err) {
-      console.error('Failed to load linked characters:', err);
-      setLinked([]);
-    } finally {
-      setLoading(false);
+      if (!mountedRef.current || gen !== countGenRef.current) return;
+      console.error('Failed to count linked characters:', err);
+      setLinkedCount(0);
     }
   }, [lorebookId]);
 
-  // Prefetch count for the badge when the open lorebook changes.
+  /** Full list items (incl. thumbnails) only while the menu is open. */
+  const loadList = useCallback(async () => {
+    const gen = ++listGenRef.current;
+    setLoading(true);
+    try {
+      const items = await lorebookAttachmentService.listLinkedCharacters(lorebookId);
+      if (!mountedRef.current || gen !== listGenRef.current || !openRef.current) return;
+      setLinkedCount(items.length);
+      setLinked(items);
+    } catch (err) {
+      if (!mountedRef.current || gen !== listGenRef.current) return;
+      console.error('Failed to load linked characters:', err);
+      setLinkedCount(0);
+      setLinked([]);
+    } finally {
+      if (mountedRef.current && gen === listGenRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [lorebookId]);
+
+  // Prefetch badge count only (keys, no thumbnail payloads).
   useEffect(() => {
-    void loadLinked();
-  }, [loadLinked]);
+    openRef.current = false;
+    listGenRef.current += 1;
+    setLinkedCount(0);
+    setLinked([]);
+    setOpen(false);
+    setMenuPosition(null);
+    setOpeningId(null);
+    setLoading(false);
+    void loadCount();
+  }, [loadCount]);
 
   useEffect(() => {
     if (!open) return;
@@ -55,11 +112,11 @@ export function LinkedCharactersMenu({
       ) {
         return;
       }
-      setOpen(false);
+      closeMenu();
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') closeMenu();
     };
 
     document.addEventListener('mousedown', handlePointerDown);
@@ -68,32 +125,38 @@ export function LinkedCharactersMenu({
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
   const handleToggle = () => {
-    if (!open && buttonRef.current) {
+    if (openRef.current) {
+      closeMenu();
+      return;
+    }
+    if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setMenuPosition({
         top: rect.bottom + 4,
         right: window.innerWidth - rect.right,
       });
-      void loadLinked();
     }
-    setOpen((prev) => !prev);
+    openRef.current = true;
+    setOpen(true);
+    void loadList();
   };
 
   const handleOpenCharacter = async (characterId: string) => {
     if (openingId) return;
     setOpeningId(characterId);
     try {
+      // openCharacter drops the lorebook workspace; avoid setState after unmount.
       await onOpenCharacter(characterId);
-      setOpen(false);
-    } finally {
+      if (!mountedRef.current) return;
+      closeMenu();
+    } catch {
+      if (!mountedRef.current) return;
       setOpeningId(null);
     }
   };
-
-  const count = linked.length;
 
   return (
     <div className="relative">
@@ -110,12 +173,12 @@ export function LinkedCharactersMenu({
         <span className="hidden sm:inline">Linked</span>
         <span
           className={`min-w-4 rounded-full px-1 text-[10px] font-semibold tabular-nums ${
-            count > 0
+            linkedCount > 0
               ? 'bg-accent-soft text-accent'
               : 'bg-muted text-fg-subtle'
           }`}
         >
-          {count}
+          {linkedCount}
         </span>
       </button>
 
