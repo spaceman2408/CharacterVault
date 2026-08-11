@@ -17,7 +17,7 @@ import {
   RotateCcw,
   X,
 } from 'lucide-react';
-import { useCharacterContext } from '../../context';
+import { useCharacterContext, useLorebookContext } from '../../context';
 import { CharacterSettingsPanel } from '../../components/settings/CharacterSettingsPanel';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { useAIGeneration } from './useAIGeneration';
@@ -33,7 +33,14 @@ import { GENERATION_FIELDS } from './types';
 
 export const AICreationStudio: React.FC = () => {
   const navigate = useNavigate();
-  const { createCharacter } = useCharacterContext();
+  const { createCharacter, closeCharacter } = useCharacterContext();
+  const { closeLorebook } = useLorebookContext();
+
+  // Drop full open workspaces so studio does not retain card/book payloads
+  useEffect(() => {
+    closeCharacter();
+    closeLorebook();
+  }, [closeCharacter, closeLorebook]);
 
   const {
     state,

@@ -29,10 +29,10 @@ export function CharacterSelectionView({
     duplicateCharacter,
     refreshCharacters,
   } = useCharacterContext();
-  const { lorebookListItems, closeLorebook } = useLorebookContext();
+  const { lorebookListItems } = useLorebookContext();
 
   const handleOpenCharacter = async (id: string) => {
-    closeLorebook();
+    // openCharacter drops any open lorebook payload (exclusive workspace)
     await openCharacter(id);
   };
 

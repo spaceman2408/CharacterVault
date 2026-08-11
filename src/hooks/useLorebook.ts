@@ -12,6 +12,10 @@ import type {
 } from '../db/characterTypes';
 import { lorebookService } from '../services/LorebookService';
 import { lorebookSnapshotService } from '../services/LorebookSnapshotService';
+import {
+  dropOpenCharacterPayload,
+  registerLorebookPayloadDrop,
+} from '../utils/workspaceExclusive';
 
 interface LorebookResult {
   lorebookListItems: LorebookListItem[];
@@ -39,6 +43,14 @@ export function useLorebook(): [LorebookResult, LorebookOperations] {
   const [currentLorebook, setCurrentLorebook] = useState<VaultLorebook | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  /** Clear open vault lorebook from memory (used by character open and local close). */
+  const dropLorebookPayload = useCallback(() => {
+    setCurrentLorebookId(null);
+    setCurrentLorebook(null);
+  }, []);
+
+  useEffect(() => registerLorebookPayloadDrop(dropLorebookPayload), [dropLorebookPayload]);
 
   const refreshLorebooks = useCallback(async () => {
     try {
@@ -83,6 +95,8 @@ export function useLorebook(): [LorebookResult, LorebookOperations] {
   }, [currentLorebookId]);
 
   const createLorebook = useCallback(async (input: CreateVaultLorebookInput) => {
+    // Exclusive workspace: never hold a full character card while a vault book is open
+    dropOpenCharacterPayload();
     const created = await lorebookService.create(input);
     await refreshLorebooks();
     setCurrentLorebookId(created.id);
@@ -92,6 +106,8 @@ export function useLorebook(): [LorebookResult, LorebookOperations] {
   }, [refreshLorebooks]);
 
   const openLorebook = useCallback(async (id: string) => {
+    // Exclusive workspace: drop full character before loading a full vault book
+    dropOpenCharacterPayload();
     const book = await lorebookService.get(id);
     if (!book) {
       throw new Error('Lorebook not found');
@@ -104,18 +120,16 @@ export function useLorebook(): [LorebookResult, LorebookOperations] {
   }, [refreshLorebooks]);
 
   const closeLorebook = useCallback(() => {
-    setCurrentLorebookId(null);
-    setCurrentLorebook(null);
-  }, []);
+    dropLorebookPayload();
+  }, [dropLorebookPayload]);
 
   const deleteLorebook = useCallback(async (id: string) => {
     await lorebookService.delete(id);
     if (currentLorebookId === id) {
-      setCurrentLorebookId(null);
-      setCurrentLorebook(null);
+      dropLorebookPayload();
     }
     await refreshLorebooks();
-  }, [currentLorebookId, refreshLorebooks]);
+  }, [currentLorebookId, refreshLorebooks, dropLorebookPayload]);
 
   const updateLorebook = useCallback(async (id: string, input: UpdateVaultLorebookInput) => {
     const updated = await lorebookService.update(id, input);

@@ -14,7 +14,7 @@ import {
   Upload,
 } from 'lucide-react';
 import type { LorebookListItem } from '../../db/characterTypes';
-import { useCharacterContext, useLorebookContext } from '../../context';
+import { useLorebookContext } from '../../context';
 
 function formatRelative(iso?: string): string {
   if (!iso) return '—';
@@ -32,7 +32,6 @@ function formatRelative(iso?: string): string {
 }
 
 export function LorebookVaultView(): React.ReactElement {
-  const { closeCharacter } = useCharacterContext();
   const {
     lorebookListItems,
     isLoading,
@@ -45,7 +44,7 @@ export function LorebookVaultView(): React.ReactElement {
   } = useLorebookContext();
 
   const handleOpen = async (id: string) => {
-    closeCharacter();
+    // openLorebook drops any open character payload (exclusive workspace)
     await openLorebook(id);
   };
 
@@ -71,7 +70,7 @@ export function LorebookVaultView(): React.ReactElement {
     e.preventDefault();
     if (!newName.trim()) return;
     try {
-      closeCharacter();
+      // createLorebook drops any open character payload (exclusive workspace)
       await createLorebook({ name: newName.trim() });
       setNewName('');
       setIsCreating(false);

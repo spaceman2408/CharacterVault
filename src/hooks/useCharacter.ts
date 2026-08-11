@@ -13,6 +13,10 @@ import type {
   CharacterVaultSettings,
   CharacterListItem,
 } from '../db/characterTypes';
+import {
+  dropOpenLorebookPayload,
+  registerCharacterPayloadDrop,
+} from '../utils/workspaceExclusive';
 
 const IMPORTED_CHARACTER_FLAG = 'character_vault_imported';
 
@@ -54,11 +58,26 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [settings, setSettings] = useState<CharacterVaultSettings | null>(null);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
   const specUpdateSequenceRef = useRef<Map<string, number>>(new Map());
   const currentCharacter = useMemo(
     () => characters.find(character => character.id === currentCharacterId) ?? null,
     [characters, currentCharacterId],
   );
+
+  /** Clear open card from memory (used by lorebook open and local close). */
+  const dropCharacterPayload = useCallback(() => {
+    setCurrentCharacterId(null);
+    setCharacters([]);
+    const prefs = settingsRef.current;
+    if (prefs?.lastActiveCharacterId !== undefined) {
+      void characterDb.updateSettings({ lastActiveCharacterId: undefined });
+      setSettings({ ...prefs, lastActiveCharacterId: undefined });
+    }
+  }, []);
+
+  useEffect(() => registerCharacterPayloadDrop(dropCharacterPayload), [dropCharacterPayload]);
 
   /**
    * Load list items and settings on mount
@@ -100,8 +119,10 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
    * Create a new character
    */
   const createCharacter = useCallback(async (input: CreateCharacterInput): Promise<Character> => {
+    // Exclusive workspace: never hold a full vault lorebook while a card is open
+    dropOpenLorebookPayload();
     const character = await characterDb.createCharacter(input);
-    // Only keep the open card in memory — never stack full characters
+    // Only keep the open card in memory - never stack full characters
     setCharacters([character]);
     setCharacterListItems((prev) => [toCharacterListItem(character), ...prev]);
     setCurrentCharacterId(character.id);
@@ -120,13 +141,15 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
    */
   const openCharacter = useCallback(async (characterId: string): Promise<void> => {
     try {
+      // Exclusive workspace: drop full lorebook before loading a full card
+      dropOpenLorebookPayload();
       const character = await characterDb.getCharacter(characterId);
       if (character) {
-        // Replace — do not accumulate every previously opened card in heap
+        // Replace - do not accumulate every previously opened card in heap
         setCharacters([character]);
 
         const lastOpenedAt = await characterDb.updateLastOpened(characterId);
-        // Patch one list row — avoid reloading every thumbnail from IndexedDB
+        // Patch one list row - avoid reloading every thumbnail from IndexedDB
         setCharacterListItems((prev) =>
           prev.map((item) =>
             item.id === characterId ? { ...item, lastOpenedAt } : item
@@ -155,14 +178,8 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
    * Close the current character
    */
   const closeCharacter = useCallback(() => {
-    setCurrentCharacterId(null);
-    // Drop full card payload (image + lorebook) when returning to the vault
-    setCharacters([]);
-    if (settings) {
-      characterDb.updateSettings({ lastActiveCharacterId: undefined });
-      setSettings({ ...settings, lastActiveCharacterId: undefined });
-    }
-  }, [settings]);
+    dropCharacterPayload();
+  }, [dropCharacterPayload]);
 
   /**
    * Delete a character

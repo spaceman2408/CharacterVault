@@ -3,9 +3,10 @@
  * @module @pages/ImportPage
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useClipboardImport } from '../hooks/useClipboardImport';
+import { useCharacterContext, useLorebookContext } from '../context';
 import type { CharacterCardV2 } from '../db/characterTypes';
 import {
   ClipboardPaste,
@@ -266,6 +267,8 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
 export const ImportPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const source = searchParams.get('source');
+  const { closeCharacter } = useCharacterContext();
+  const { closeLorebook } = useLorebookContext();
   const {
     importState,
     errorMessage,
@@ -277,6 +280,12 @@ export const ImportPage: React.FC = () => {
     goToLibrary,
     openImportedCharacter,
   } = useClipboardImport();
+
+  // Drop full open workspaces so import does not retain card/book payloads
+  useEffect(() => {
+    closeCharacter();
+    closeLorebook();
+  }, [closeCharacter, closeLorebook]);
 
   const isSillyTavernSource = source === 'st';
 

@@ -14,7 +14,7 @@ import {
   lorebookAttachmentService,
   type ResolvedLorebookAttachment,
 } from '../../services/LorebookAttachmentService';
-import { useCharacterContext, useLorebookContext } from '../../context';
+import { useLorebookContext } from '../../context';
 
 function cloneEntries(book: CharacterBook): CharacterBook['entries'] {
   return (book.entries || []).map((entry) => ({
@@ -76,7 +76,6 @@ export function CharacterLorebookAttachments({
   onCopyIntoEmbedded: (book: CharacterBook) => void;
 }): React.ReactElement {
   const { lorebookListItems, openLorebook, createLorebook } = useLorebookContext();
-  const { closeCharacter } = useCharacterContext();
   const [resolved, setResolved] = useState<ResolvedLorebookAttachment[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -139,7 +138,7 @@ export function CharacterLorebookAttachments({
   };
 
   const handleOpen = async (lorebookId: string) => {
-    closeCharacter();
+    // openLorebook drops the full character payload (exclusive workspace)
     await openLorebook(lorebookId);
   };
 
@@ -147,6 +146,7 @@ export function CharacterLorebookAttachments({
    * Open the full vault lorebook workspace.
    * Prefer the existing attachment; otherwise create a vault book from the
    * embedded character book, attach it, and open that.
+   * createLorebook / openLorebook drop character memory automatically.
    */
   const handleOpenInVault = async () => {
     if (busy) return;
@@ -154,7 +154,6 @@ export function CharacterLorebookAttachments({
     if (attached && !attached.missing && attached.lorebookId) {
       setBusy(true);
       try {
-        closeCharacter();
         await openLorebook(attached.lorebookId);
       } finally {
         setBusy(false);
@@ -173,18 +172,18 @@ export function CharacterLorebookAttachments({
     );
     if (!createOk) return;
 
+    // Snapshot embedded book before createLorebook drops the open character.
+    const book = cloneEmbeddedBook(embeddedBook, fallbackName);
+
     setBusy(true);
     try {
-      const book = cloneEmbeddedBook(embeddedBook, fallbackName);
       const created = await createLorebook({
         name: book.name || fallbackName,
         description: book.description || '',
         book,
       });
       await lorebookAttachmentService.attach(characterId, created.id);
-      await reload();
-      closeCharacter();
-      await openLorebook(created.id);
+      // createLorebook already opened the book and dropped character payload
     } catch (err) {
       console.error('Failed to open lorebook in vault:', err);
       window.alert(
