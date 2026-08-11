@@ -41,14 +41,22 @@ export function LorebookEntryDetail({
   markdownImageOpenLinks,
 }: LorebookEntryDetailProps): React.ReactElement {
   const [draftEntry, setDraftEntry] = useState(entry);
+  const draftEntryRef = useRef(entry);
+  draftEntryRef.current = draftEntry;
+
   const { editorRef, payloadPreviewModal } = useAIEditor({
     key: String(entry.id),
     value: draftEntry.content,
     onImmediateChange: (value) => {
-      setDraftEntry((prev) => ({ ...prev, content: value }));
+      setDraftEntry((prev) => {
+        const next = { ...prev, content: value };
+        draftEntryRef.current = next;
+        return next;
+      });
     },
     onPersistChange: (value) => {
-      const updatedEntry = { ...draftEntry, content: value };
+      const updatedEntry = { ...draftEntryRef.current, content: value };
+      draftEntryRef.current = updatedEntry;
       setDraftEntry(updatedEntry);
       onPersistUpdate(updatedEntry);
     },
@@ -78,8 +86,45 @@ export function LorebookEntryDetail({
   const [isActivationOpen, setIsActivationOpen] = useState(() => hasNonDefaultActivation(entry));
   const aiServiceRef = useRef<AIService | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
+  const keyGenGenerationRef = useRef(0);
+
+  const clearKeyGenTimeout = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  /** Abort network work and invalidate in-flight handlers (no setState). */
+  const tearDownKeyGeneration = () => {
+    keyGenGenerationRef.current += 1;
+    clearKeyGenTimeout();
+    aiServiceRef.current?.abort();
+    aiServiceRef.current = null;
+  };
 
   React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      tearDownKeyGeneration();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- unmount-only teardown
+  }, []);
+
+  React.useEffect(() => {
+    // Only cancel AI when switching entries — prop identity changes on every
+    // parent persist (including content debounce) and must not abort mid-gen.
+    tearDownKeyGeneration();
+    if (isMountedRef.current) {
+      setGeneratingKeys(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- id-only abort
+  }, [entry.id]);
+
+  React.useEffect(() => {
+    draftEntryRef.current = entry;
     setDraftEntry(entry);
     setKeysInput(entry.keys.join(', '));
     setSecondaryKeysInput((entry.secondary_keys || []).join(', '));
@@ -98,21 +143,11 @@ export function LorebookEntryDetail({
     setSecondaryKeysInput((prev) => (prev !== next ? next : prev));
   }, [draftEntry.secondary_keys]);
 
-  React.useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      aiServiceRef.current?.abort();
-    };
-  }, []);
-
   const handleAbortGeneration = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
+    tearDownKeyGeneration();
+    if (isMountedRef.current) {
+      setGeneratingKeys(false);
     }
-    aiServiceRef.current?.abort();
-    aiServiceRef.current = null;
-    setGeneratingKeys(false);
   };
 
   const handleGenerateKeys = async () => {
@@ -122,20 +157,29 @@ export function LorebookEntryDetail({
     }
     if (!draftEntry.content.trim()) return;
 
+    const generation = ++keyGenGenerationRef.current;
+    const isCurrent = () =>
+      isMountedRef.current && generation === keyGenGenerationRef.current;
+
     setGeneratingKeys(true);
+    const contentSnapshot = draftEntry.content;
     const effectiveConfig = resolveConfigForOperation(aiConfig, 'instruct', promptModels);
     aiServiceRef.current = new AIService(effectiveConfig, samplerSettings, promptSettings);
 
     timeoutRef.current = setTimeout(() => {
-      handleAbortGeneration();
+      if (generation === keyGenGenerationRef.current) {
+        handleAbortGeneration();
+      }
     }, 15000);
 
     try {
       let context = await Promise.resolve(getContextContent(contextSectionIds));
       let result;
       try {
-        result = await aiServiceRef.current.instructText(
-          draftEntry.content,
+        const service = aiServiceRef.current;
+        if (!service || !isCurrent()) return;
+        result = await service.instructText(
+          contentSnapshot,
           'Generate 2-5 comma-separated trigger keywords/keys that would cause this lorebook entry to activate. Output ONLY the comma-separated keywords, nothing else.',
           context,
         );
@@ -143,36 +187,39 @@ export function LorebookEntryDetail({
         context = [];
       }
 
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
+      if (!isCurrent()) return;
+
+      clearKeyGenTimeout();
 
       const parsedKeys = result.content
         .split(',')
         .map((k) => k.trim())
         .filter((k) => k);
       if (parsedKeys.length > 0) {
-        const mergedKeys = [...draftEntry.keys];
+        // Merge into latest draft so concurrent field edits are not clobbered.
+        const prev = draftEntryRef.current;
+        const mergedKeys = [...prev.keys];
         for (const key of parsedKeys) {
           if (!mergedKeys.some((k) => k.toLowerCase() === key.toLowerCase())) {
             mergedKeys.push(key);
           }
         }
+        const updatedEntry = { ...prev, keys: mergedKeys };
+        draftEntryRef.current = updatedEntry;
         setKeysInput(mergedKeys.join(', '));
-        const updatedEntry = { ...draftEntry, keys: mergedKeys };
         setDraftEntry(updatedEntry);
         onPersistUpdate(updatedEntry);
       }
     } catch {
       // Silent fail or aborted
     } finally {
-      aiServiceRef.current = null;
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+      if (generation === keyGenGenerationRef.current) {
+        aiServiceRef.current = null;
+        clearKeyGenTimeout();
       }
-      setGeneratingKeys(false);
+      if (isCurrent()) {
+        setGeneratingKeys(false);
+      }
     }
   };
 

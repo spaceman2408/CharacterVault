@@ -659,6 +659,7 @@ function LorebookEditorInner({
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 md:px-6 md:py-4">
               <LorebookEntryDetail
+                key={selectedEntry.id}
                 entry={selectedEntry}
                 onPersistUpdate={handleEntryPersistUpdate}
                 aiConfig={aiConfig}

@@ -23,6 +23,7 @@ export function FieldInfoTip({
   const tipId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
 
@@ -35,7 +36,7 @@ export function FieldInfoTip({
 
   const placeNearButton = useCallback(() => {
     const btn = buttonRef.current;
-    if (!btn) return;
+    if (!btn || !isMountedRef.current) return;
     const rect = btn.getBoundingClientRect();
 
     let left = side === 'right' ? rect.left : rect.right - TIP_WIDTH;
@@ -55,12 +56,14 @@ export function FieldInfoTip({
   const openTip = () => {
     clearCloseTimer();
     placeNearButton();
-    setOpen(true);
+    if (isMountedRef.current) setOpen(true);
   };
 
   const scheduleClose = () => {
     clearCloseTimer();
-    closeTimer.current = setTimeout(() => setOpen(false), 120);
+    closeTimer.current = setTimeout(() => {
+      if (isMountedRef.current) setOpen(false);
+    }, 120);
   };
 
   useEffect(() => {
@@ -74,7 +77,13 @@ export function FieldInfoTip({
     };
   }, [open, placeNearButton]);
 
-  useEffect(() => () => clearCloseTimer(), []);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      clearCloseTimer();
+    };
+  }, []);
 
   const tooltip =
     open &&
