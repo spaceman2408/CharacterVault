@@ -27,6 +27,7 @@ import { ProviderSelect } from '../components/ProviderSelect';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
 import type { ReasoningEffort } from '../../../db/characterTypes';
+import { getHiddenChainOfThoughtNote } from '../../../services/reasoning/hiddenChainOfThought';
 import type { SettingsTabProps } from '../types';
 
 export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpers }) => {
@@ -57,6 +58,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
   } = helpers;
 
   const localAIConfig = draft.ai;
+  const hiddenCotNote = getHiddenChainOfThoughtNote(localAIConfig.modelId);
 
   return (
     <div className="space-y-5">
@@ -282,6 +284,18 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
             isFetching={isFetchingModels || isFetchingModelsForCurrentUrl}
             disabled={false}
           />
+
+          {hiddenCotNote && (
+            <div
+              role="status"
+              className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+              <p className="text-xs leading-relaxed text-warning-soft-fg">
+                {hiddenCotNote}
+              </p>
+            </div>
+          )}
 
           {localAIConfig.modelId && supportsProviderSelection && (
             <div className="relative">

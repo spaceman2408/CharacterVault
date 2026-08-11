@@ -37,4 +37,12 @@ export {
 export { FORMAT_HINT_RULES, detectReasoningFormat } from './formatHints';
 export type { FormatHintRule } from './formatHints';
 
+export {
+  HIDDEN_COT_NOTE,
+  HIDDEN_COT_RULES,
+  getHiddenChainOfThoughtNote,
+  modelWithholdsReasoningText,
+} from './hiddenChainOfThought';
+export type { HiddenCotRule } from './hiddenChainOfThought';
+
 export { ReasoningParser } from './ReasoningParser';
