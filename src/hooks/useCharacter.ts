@@ -45,6 +45,8 @@ interface CharacterOperations {
   refreshCharacters: () => Promise<void>;
   updateSpecField: (characterId: string, field: keyof Character['data']['spec'], value: string | string[]) => Promise<Character>;
   updateSettings: (updates: Partial<Omit<CharacterVaultSettings, 'id'>>) => Promise<void>;
+  /** Re-read app settings from IndexedDB into context (e.g. after settings panel save). */
+  refreshSettings: () => Promise<void>;
 }
 
 /**
@@ -293,6 +295,16 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     }
   }, []);
 
+  const refreshSettings = useCallback(async (): Promise<void> => {
+    try {
+      const prefs = await characterDb.getSettings();
+      setSettings(prefs);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to refresh settings'));
+      throw err;
+    }
+  }, []);
+
   const result: CharacterResult = {
     characters,
     characterListItems,
@@ -312,6 +324,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     refreshCharacters,
     updateSpecField,
     updateSettings,
+    refreshSettings,
   };
 
   return [result, operations];

@@ -12,10 +12,12 @@ import {
   Loader2,
   MessageSquare,
   PanelRight,
+  Settings,
 } from 'lucide-react';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { LorebookEditor } from '../editor/LorebookEditor';
 import { LorebookHistoryModal } from '../history/LorebookHistoryModal';
+import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
 import { usePersistedPanelWidth } from '../ai/hooks/usePersistedPanelWidth';
 import type { CharacterBook, CharacterSection } from '../../db/characterTypes';
@@ -38,11 +40,12 @@ export function LorebookWorkspace(): React.ReactElement {
     updateLorebook,
     exportLorebook,
   } = useLorebookContext();
-  const { settings } = useCharacterContext();
+  const { settings, refreshSettings } = useCharacterContext();
 
   const [selectedText, setSelectedText] = useState('');
   const [fontSize, setFontSize] = useState(settings?.ui?.editorFontSize ?? 14);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [titleDraft, setTitleDraft] = useState(currentLorebook?.name ?? '');
   const [isMobile, setIsMobile] = useState(getIsMobileViewport);
@@ -227,6 +230,15 @@ export function LorebookWorkspace(): React.ReactElement {
           <Download className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Export</span>
         </button>
+        <button
+          type="button"
+          onClick={() => setIsSettingsOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+          title="Settings"
+        >
+          <Settings className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Settings</span>
+        </button>
 
         <button
           type="button"
@@ -328,6 +340,12 @@ export function LorebookWorkspace(): React.ReactElement {
           onClose={() => setHistoryOpen(false)}
         />
       )}
+
+      <CharacterSettingsPanel
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        reloadSettings={refreshSettings}
+      />
 
       <span className="sr-only" aria-hidden>
         {selectedText}

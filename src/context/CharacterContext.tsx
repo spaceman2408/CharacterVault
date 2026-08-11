@@ -38,6 +38,7 @@ interface CharacterContextValue {
   // Settings
   settings: CharacterVaultSettings | null;
   updateSettings: (updates: Partial<Omit<CharacterVaultSettings, 'id'>>) => Promise<void>;
+  refreshSettings: () => Promise<void>;
 
   // Loading state
   isLoading: boolean;
@@ -80,6 +81,7 @@ export function CharacterProvider({ children }: CharacterProviderProps): React.R
     refreshCharacters: operations.refreshCharacters,
     settings: result.settings,
     updateSettings: operations.updateSettings,
+    refreshSettings: operations.refreshSettings,
     isLoading: result.isLoading,
     error: result.error,
   };
