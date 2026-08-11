@@ -432,6 +432,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
           <CharacterLorebookAttachments
             characterId={currentCharacter.id}
             embeddedBook={currentCharacter.data?.characterBook}
+            characterName={currentCharacter.name}
             onCopyIntoEmbedded={(lorebook) => {
               void updateCharacter({
                 data: {

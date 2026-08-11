@@ -75,9 +75,10 @@ Attachments are **one-way**: character → **one** standalone book ID. They exis
 
 Open a **character**, go to the **Lorebook** section, and use the **Attached lorebook** panel:
 
+- **Open in vault** – opens the attached vault book if present; otherwise creates a vault copy from the character’s embedded lorebook, attaches it, and opens the full lorebook workspace
 - Attach or **Replace** the single vault book
 - Confirm copy into embedded (overwrite) when linking
-- Open the book in the lorebook workspace, or detach
+- Detach or re-copy into the embedded book as needed
 
 ## Import & export formats
 
