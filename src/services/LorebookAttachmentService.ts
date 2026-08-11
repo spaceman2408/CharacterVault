@@ -28,32 +28,40 @@ export class LorebookAttachmentService {
     characterId: string,
     lorebookIds: string[],
   ): Promise<CharacterLorebookAttachments> {
-    return characterDb.setCharacterLorebookAttachments(characterId, lorebookIds);
+    // At most one lorebook per character (keep last unique id if multiple passed).
+    const unique = [...new Set(lorebookIds)];
+    const limited = unique.length > 0 ? [unique[unique.length - 1]] : [];
+    return characterDb.setCharacterLorebookAttachments(characterId, limited);
   }
 
+  /**
+   * Attach a single lorebook, replacing any previous attachment.
+   * Callers should prompt to copy entries into the embedded book after attach.
+   */
   async attach(characterId: string, lorebookId: string): Promise<CharacterLorebookAttachments> {
+    return this.setAttachments(characterId, [lorebookId]);
+  }
+
+  async detach(characterId: string, lorebookId?: string): Promise<CharacterLorebookAttachments> {
     const current = await this.getAttachments(characterId);
-    if (current.lorebookIds.includes(lorebookId)) {
+    if (lorebookId !== undefined && !current.lorebookIds.includes(lorebookId)) {
       return current;
     }
-    return this.setAttachments(characterId, [...current.lorebookIds, lorebookId]);
-  }
-
-  async detach(characterId: string, lorebookId: string): Promise<CharacterLorebookAttachments> {
-    const current = await this.getAttachments(characterId);
-    return this.setAttachments(
-      characterId,
-      current.lorebookIds.filter((id) => id !== lorebookId),
-    );
+    return this.setAttachments(characterId, []);
   }
 
   async resolve(characterId: string): Promise<ResolvedLorebookAttachment[]> {
     const { lorebookIds } = await this.getAttachments(characterId);
+    // Normalize legacy multi-attach rows to a single id.
+    const ids = lorebookIds.length > 1 ? [lorebookIds[lorebookIds.length - 1]] : lorebookIds;
+    if (lorebookIds.length > 1) {
+      await this.setAttachments(characterId, ids);
+    }
     const resolved = await Promise.all(
-      lorebookIds.map(async (lorebookId) => {
-        const lorebook = (await characterDb.getLorebook(lorebookId)) ?? null;
+      ids.map(async (id) => {
+        const lorebook = (await characterDb.getLorebook(id)) ?? null;
         return {
-          lorebookId,
+          lorebookId: id,
           lorebook,
           missing: lorebook === null,
         };

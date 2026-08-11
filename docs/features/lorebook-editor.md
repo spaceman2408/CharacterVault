@@ -165,7 +165,7 @@ Standalone library import (multiple files, keep books separate) is on the [Loreb
 
 ## Attachments (characters)
 
-Characters can **attach** standalone vault books for vault-local AI use, or **copy** a book into the embedded lorebook for card export. See [Lorebook Vault → Attach](/features/lorebook-vault#attach-to-a-character-vault-local).
+Characters can **attach one** standalone vault book for vault-local use. Linking replaces any previous attach and prompts to **copy entries into the embedded lorebook** (overwrites). See [Lorebook Vault → Attach](/features/lorebook-vault#attach-to-a-character-vault-local).
 
 ## Next steps
 

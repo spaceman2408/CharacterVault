@@ -133,7 +133,8 @@ export interface UpdateVaultLorebookInput {
 }
 
 /**
- * Vault-local attachment of standalone lorebooks to a character.
+ * Vault-local attachment of a standalone lorebook to a character.
+ * At most one id is kept (legacy multi-id rows are collapsed on read).
  * Not part of SillyTavern card export.
  */
 export interface CharacterLorebookAttachments {

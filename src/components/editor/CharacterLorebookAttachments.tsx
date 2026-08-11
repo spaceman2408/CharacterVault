@@ -1,5 +1,7 @@
 /**
- * One-way attach panel: link standalone vault lorebooks to a character (vault-local).
+ * One-way attach panel: link a single standalone vault lorebook to a character.
+ * Linking replaces any previous attach and prompts to copy entries into the
+ * embedded character book (overwriting existing embedded entries).
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -10,6 +12,34 @@ import {
   type ResolvedLorebookAttachment,
 } from '../../services/LorebookAttachmentService';
 import { useCharacterContext, useLorebookContext } from '../../context';
+
+function cloneBookForEmbed(lorebook: VaultLorebook): CharacterBook {
+  return {
+    ...lorebook.book,
+    name: lorebook.book.name || lorebook.name,
+    description: lorebook.book.description ?? lorebook.description ?? '',
+    entries: (lorebook.book.entries || []).map((entry) => ({
+      ...entry,
+      extensions: { ...entry.extensions },
+      keys: [...entry.keys],
+      secondary_keys: entry.secondary_keys ? [...entry.secondary_keys] : undefined,
+    })),
+    extensions: { ...lorebook.book.extensions },
+  };
+}
+
+function promptCopyIntoEmbedded(
+  lorebook: VaultLorebook,
+  embeddedBook: CharacterBook | undefined,
+): boolean {
+  const entryCount = lorebook.book.entries?.length ?? 0;
+  const existing = embeddedBook?.entries?.length ?? 0;
+  const message =
+    existing > 0
+      ? `Copy ${entryCount} entries from "${lorebook.name}" into this character's embedded lorebook? This replaces the current ${existing} embedded entries.`
+      : `Copy ${entryCount} entries from "${lorebook.name}" into this character's embedded lorebook?`;
+  return window.confirm(message);
+}
 
 export function CharacterLorebookAttachments({
   characterId,
@@ -35,24 +65,48 @@ export function CharacterLorebookAttachments({
     void reload();
   }, [reload]);
 
-  const attachedIds = new Set(resolved.map((r) => r.lorebookId));
-  const available: LorebookListItem[] = lorebookListItems.filter((item) => !attachedIds.has(item.id));
+  const attached = resolved[0] ?? null;
+  const attachedId = attached?.lorebookId ?? null;
+
+  // Picker lists every vault book except the one already attached (replace flow).
+  const available: LorebookListItem[] = lorebookListItems.filter(
+    (item) => item.id !== attachedId,
+  );
 
   const handleAttach = async (lorebookId: string) => {
+    if (busy) return;
+
+    if (attachedId && attachedId !== lorebookId) {
+      const currentName = attached?.missing
+        ? 'the current attachment'
+        : `"${attached?.lorebook?.name || 'Untitled'}"`;
+      const replaceOk = window.confirm(
+        `Only one lorebook can be attached. Replace ${currentName} with this book?`,
+      );
+      if (!replaceOk) return;
+    }
+
     setBusy(true);
     try {
       await lorebookAttachmentService.attach(characterId, lorebookId);
-      await reload();
+      const next = await lorebookAttachmentService.resolve(characterId);
+      setResolved(next);
       setPickerOpen(false);
+
+      const linked = next.find((item) => item.lorebookId === lorebookId)?.lorebook;
+      if (linked && promptCopyIntoEmbedded(linked, embeddedBook)) {
+        onCopyIntoEmbedded(cloneBookForEmbed(linked));
+      }
     } finally {
       setBusy(false);
     }
   };
 
-  const handleDetach = async (lorebookId: string) => {
+  const handleDetach = async () => {
+    if (!attachedId || busy) return;
     setBusy(true);
     try {
-      await lorebookAttachmentService.detach(characterId, lorebookId);
+      await lorebookAttachmentService.detach(characterId, attachedId);
       await reload();
     } finally {
       setBusy(false);
@@ -65,25 +119,8 @@ export function CharacterLorebookAttachments({
   };
 
   const handleCopy = (lorebook: VaultLorebook) => {
-    const entryCount = lorebook.book.entries?.length ?? 0;
-    const existing = embeddedBook?.entries?.length ?? 0;
-    const message =
-      existing > 0
-        ? `Copy ${entryCount} entries from "${lorebook.name}" into the embedded character lorebook? This replaces the current ${existing} embedded entries.`
-        : `Copy ${entryCount} entries from "${lorebook.name}" into the embedded character lorebook?`;
-    if (!window.confirm(message)) return;
-    onCopyIntoEmbedded({
-      ...lorebook.book,
-      name: lorebook.book.name || lorebook.name,
-      description: lorebook.book.description ?? lorebook.description ?? '',
-      entries: (lorebook.book.entries || []).map((entry) => ({
-        ...entry,
-        extensions: { ...entry.extensions },
-        keys: [...entry.keys],
-        secondary_keys: entry.secondary_keys ? [...entry.secondary_keys] : undefined,
-      })),
-      extensions: { ...lorebook.book.extensions },
-    });
+    if (!promptCopyIntoEmbedded(lorebook, embeddedBook)) return;
+    onCopyIntoEmbedded(cloneBookForEmbed(lorebook));
   };
 
   return (
@@ -91,11 +128,11 @@ export function CharacterLorebookAttachments({
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-            Attached lorebooks
+            Attached lorebook
           </p>
           <p className="text-[11px] text-fg-muted">
-            Vault-only links. Not exported with the character card unless you copy into the embedded
-            book.
+            One vault book per character. Linking asks to copy entries into the embedded book
+            (overwrites embedded entries). Export still uses the embedded book unless you copy.
           </p>
         </div>
         <button
@@ -105,21 +142,26 @@ export function CharacterLorebookAttachments({
           className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Link2 className="h-3.5 w-3.5" />
-          Attach
+          {attachedId ? 'Replace' : 'Attach'}
         </button>
       </div>
 
       {pickerOpen && (
         <div className="mb-2 max-h-40 overflow-y-auto rounded-xl border border-border bg-surface p-1">
           {available.length === 0 ? (
-            <p className="px-2 py-2 text-xs text-fg-muted">No other lorebooks in the vault.</p>
+            <p className="px-2 py-2 text-xs text-fg-muted">
+              {lorebookListItems.length === 0
+                ? 'No lorebooks in the vault yet.'
+                : 'No other lorebooks to switch to.'}
+            </p>
           ) : (
             available.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => void handleAttach(item.id)}
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-fg hover:bg-hover"
+                disabled={busy}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-fg hover:bg-hover disabled:opacity-50"
               >
                 <Book className="h-3.5 w-3.5 shrink-0 text-accent" />
                 <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
@@ -130,59 +172,57 @@ export function CharacterLorebookAttachments({
         </div>
       )}
 
-      {resolved.length === 0 ? (
+      {!attached ? (
         <p className="text-xs text-fg-subtle">None attached.</p>
       ) : (
-        <ul className="space-y-1.5">
-          {resolved.map((item) => (
-            <li
-              key={item.lorebookId}
-              className="flex items-center gap-2 rounded-xl border border-border bg-surface px-2.5 py-2"
-            >
-              <Book className={`h-3.5 w-3.5 shrink-0 ${item.missing ? 'text-danger' : 'text-accent'}`} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-fg">
-                  {item.missing
-                    ? 'Missing lorebook'
-                    : item.lorebook?.name || 'Untitled'}
-                </p>
-                <p className="text-[11px] text-fg-muted">
-                  {item.missing
-                    ? 'Book was deleted from the vault'
-                    : `${item.lorebook?.book.entries?.length ?? 0} entries · vault only`}
-                </p>
-              </div>
-              {!item.missing && item.lorebook && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(item.lorebook!)}
-                    className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg"
-                    title="Copy into embedded character lorebook"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleOpen(item.lorebookId)}
-                    className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg"
-                    title="Open in lorebook vault"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </button>
-                </>
-              )}
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-2.5 py-2">
+          <Book
+            className={`h-3.5 w-3.5 shrink-0 ${attached.missing ? 'text-danger' : 'text-accent'}`}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-medium text-fg">
+              {attached.missing
+                ? 'Missing lorebook'
+                : attached.lorebook?.name || 'Untitled'}
+            </p>
+            <p className="text-[11px] text-fg-muted">
+              {attached.missing
+                ? 'Book was deleted from the vault'
+                : `${attached.lorebook?.book.entries?.length ?? 0} entries · vault link`}
+            </p>
+          </div>
+          {!attached.missing && attached.lorebook && (
+            <>
               <button
                 type="button"
-                onClick={() => void handleDetach(item.lorebookId)}
-                className="rounded-lg p-1.5 text-fg-muted hover:bg-danger-soft hover:text-danger"
-                title="Detach"
+                onClick={() => handleCopy(attached.lorebook!)}
+                disabled={busy}
+                className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-50"
+                title="Copy into embedded character lorebook (replaces entries)"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Copy className="h-3.5 w-3.5" />
               </button>
-            </li>
-          ))}
-        </ul>
+              <button
+                type="button"
+                onClick={() => void handleOpen(attached.lorebookId)}
+                disabled={busy}
+                className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-50"
+                title="Open in lorebook vault"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleDetach()}
+            disabled={busy}
+            className="rounded-lg p-1.5 text-fg-muted hover:bg-danger-soft hover:text-danger disabled:opacity-50"
+            title="Detach"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       )}
     </div>
   );

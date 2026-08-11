@@ -1190,9 +1190,12 @@ export class CharacterDatabase extends Dexie {
     characterId: string,
     lorebookIds: string[],
   ): Promise<CharacterLorebookAttachments> {
+    // At most one attached lorebook per character.
+    const unique = [...new Set(lorebookIds)];
+    const limited = unique.length > 0 ? [unique[unique.length - 1]] : [];
     const row: CharacterLorebookAttachments = {
       characterId,
-      lorebookIds: [...new Set(lorebookIds)],
+      lorebookIds: limited,
       updatedAt: new Date().toISOString(),
     };
     if (row.lorebookIds.length === 0) {

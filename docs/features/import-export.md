@@ -77,7 +77,7 @@ On the home vault **Lorebooks** tab you can import one or more JSON files as **n
 
 ### Attachments vs card export
 
-Attaching a vault book to a character is **vault-local** and does not by itself put those entries into PNG/JSON card export. Use **Copy into embedded lorebook** on the character’s Lorebook attach panel when you want the content on the card for SillyTavern.
+Attaching a vault book is **vault-local** (one book per character) and does not by itself put those entries into PNG/JSON card export. Linking prompts you to **copy into the embedded lorebook** (overwrites embedded entries). You can also copy again later from the attach panel.
 
 ## Next Steps
 

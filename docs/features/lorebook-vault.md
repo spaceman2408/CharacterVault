@@ -64,19 +64,20 @@ Open **History** in the workspace header to list, preview, restore, or delete sn
 
 ## Attach to a character (vault-local)
 
-Attachments are **one-way**: character → list of standalone book IDs. They exist only inside CharacterVault.
+Attachments are **one-way**: character → **one** standalone book ID. They exist only inside CharacterVault.
 
-- Used so Orion / AI context can pull from attached books while you edit that character
-- **Not** written into PNG/JSON card export by themselves
-- To put content on the card for SillyTavern export, use **Copy into embedded lorebook** from the attach panel (replaces the embedded book’s entries when confirmed)
+- Only **one** vault lorebook per character (linking another replaces the previous attach)
+- After you link, CharacterVault **asks to copy entries** into the character’s **embedded** lorebook (this **replaces** existing embedded entries if you confirm)
+- The vault link is **not** written into PNG/JSON card export by itself; the embedded book is what exports with the card
+- You can also re-copy later from the attach panel without changing the link
 
 ### Where to manage attachments
 
-Open a **character**, go to the **Lorebook** section, and use the **Attached lorebooks** panel:
+Open a **character**, go to the **Lorebook** section, and use the **Attached lorebook** panel:
 
-- Attach / detach books from the vault library
-- Open a book in the lorebook workspace
-- Copy a book’s entries into the character’s embedded lorebook
+- Attach or **Replace** the single vault book
+- Confirm copy into embedded (overwrite) when linking
+- Open the book in the lorebook workspace, or detach
 
 ## Import & export formats
 
