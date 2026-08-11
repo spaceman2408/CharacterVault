@@ -3,7 +3,11 @@
  */
 
 import { characterDb } from '../db/CharacterDatabase';
-import type { CharacterLorebookAttachments, VaultLorebook } from '../db/characterTypes';
+import type {
+  CharacterListItem,
+  CharacterLorebookAttachments,
+  VaultLorebook,
+} from '../db/characterTypes';
 
 export interface ResolvedLorebookAttachment {
   lorebookId: string;
@@ -76,6 +80,14 @@ export class LorebookAttachmentService {
     return resolved
       .filter((item): item is ResolvedLorebookAttachment & { lorebook: VaultLorebook } => !!item.lorebook)
       .map((item) => item.lorebook);
+  }
+
+  /**
+   * Characters that have this vault lorebook attached.
+   * Lightweight list items only (name/thumbnail); attach is edited from the character side.
+   */
+  async listLinkedCharacters(lorebookId: string): Promise<CharacterListItem[]> {
+    return characterDb.getCharacterListItemsLinkedToLorebook(lorebookId);
   }
 }
 

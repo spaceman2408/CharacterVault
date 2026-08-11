@@ -1205,6 +1205,26 @@ export class CharacterDatabase extends Dexie {
     await this.characterLorebookAttachments.put(row);
     return row;
   }
+
+  /**
+   * Characters that attach this vault lorebook (list index only; no full cards).
+   * Orphan attachment rows (deleted character) are omitted.
+   */
+  async getCharacterListItemsLinkedToLorebook(
+    lorebookId: string,
+  ): Promise<CharacterListItem[]> {
+    const rows = await this.characterLorebookAttachments
+      .filter((row) => row.lorebookIds.includes(lorebookId))
+      .toArray();
+    if (rows.length === 0) return [];
+
+    const items = await this.characterListIndex.bulkGet(
+      rows.map((row) => row.characterId),
+    );
+    return items
+      .filter((item): item is CharacterListItem => item != null)
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  }
 }
 
 /**

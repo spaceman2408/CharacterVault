@@ -20,6 +20,7 @@ import { LorebookHistoryModal } from '../history/LorebookHistoryModal';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
 import { usePersistedPanelWidth } from '../ai/hooks/usePersistedPanelWidth';
+import { LinkedCharactersMenu } from './LinkedCharactersMenu';
 import type { CharacterBook, CharacterSection } from '../../db/characterTypes';
 import { DEFAULT_SETTINGS } from '../../db/characterTypes';
 import { estimateTokens } from '../../services/AIService';
@@ -40,7 +41,7 @@ export function LorebookWorkspace(): React.ReactElement {
     updateLorebook,
     exportLorebook,
   } = useLorebookContext();
-  const { settings, refreshSettings } = useCharacterContext();
+  const { settings, refreshSettings, openCharacter } = useCharacterContext();
 
   const [selectedText, setSelectedText] = useState('');
   const [fontSize, setFontSize] = useState(settings?.ui?.editorFontSize ?? 14);
@@ -210,6 +211,11 @@ export function LorebookWorkspace(): React.ReactElement {
             </p>
           </div>
         </div>
+
+        <LinkedCharactersMenu
+          lorebookId={currentLorebook.id}
+          onOpenCharacter={(characterId) => openCharacter(characterId)}
+        />
 
         <button
           type="button"
