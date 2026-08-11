@@ -4,7 +4,8 @@
  */
 
 export { SectionEditor } from './SectionEditor';
-export { LorebookEditor } from './LorebookEditor';
+export { LorebookEditor } from './lorebook/LorebookEditor';
+export type { LorebookEditorProps } from './lorebook/types';
 export { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
 export { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 export { AIPayloadPreviewModal } from './AIPayloadPreviewModal';
