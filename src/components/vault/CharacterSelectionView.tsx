@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Book, Upload, User, X } from 'lucide-react';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { PromoBanner } from '../PromoBanner';
-import type { ConfirmTarget } from './types';
+import type { ConfirmTarget, VaultTab } from './types';
 import { useVaultLibrary } from './useVaultLibrary';
 import { useVaultIO } from './useVaultIO';
 import { VaultHeader } from './VaultHeader';
@@ -10,8 +10,6 @@ import { VaultToolbar } from './VaultToolbar';
 import { VaultGrid } from './VaultGrid';
 import { VaultModals } from './VaultModals';
 import { LorebookVaultView } from './LorebookVaultView';
-
-type VaultTab = 'characters' | 'lorebooks';
 
 const VAULT_TAB_KEY = 'characterVaultActiveTab';
 
@@ -29,7 +27,7 @@ export function CharacterSelectionView({
     duplicateCharacter,
     refreshCharacters,
   } = useCharacterContext();
-  const { lorebookListItems } = useLorebookContext();
+  const { lorebookListItems, createLorebook, importLorebookFile } = useLorebookContext();
 
   const handleOpenCharacter = async (id: string) => {
     // openCharacter drops any open lorebook payload (exclusive workspace)
@@ -46,12 +44,15 @@ export function CharacterSelectionView({
   });
 
   const [isCreating, setIsCreating] = useState(false);
-  const [newCharacterName, setNewCharacterName] = useState('');
+  const [newItemName, setNewItemName] = useState('');
+  const [lorebookSearch, setLorebookSearch] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<ConfirmTarget | null>(null);
   const [copyConfirm, setCopyConfirm] = useState<ConfirmTarget | null>(null);
 
   const selectTab = (tab: VaultTab) => {
     setVaultTab(tab);
+    setIsCreating(false);
+    setNewItemName('');
     try {
       localStorage.setItem(VAULT_TAB_KEY, tab);
     } catch {
@@ -71,7 +72,10 @@ export function CharacterSelectionView({
   const library = useVaultLibrary(characterListItems);
   const io = useVaultIO({
     characterCount: characterListItems.length,
+    lorebookCount: lorebookListItems.length,
+    vaultTab,
     refreshCharacters,
+    importLorebookFile,
   });
 
   const handlePromoDismiss = () => {
@@ -88,15 +92,24 @@ export function CharacterSelectionView({
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCharacterName.trim()) return;
+    const name = newItemName.trim();
+    if (!name) return;
     try {
-      await createCharacter({ name: newCharacterName.trim() });
-      setNewCharacterName('');
+      if (vaultTab === 'lorebooks') {
+        await createLorebook({ name });
+        setNewItemName('');
+        setIsCreating(false);
+        return;
+      }
+      await createCharacter({ name });
+      setNewItemName('');
       setIsCreating(false);
     } catch {
-      alert('Failed to create character');
+      alert(vaultTab === 'lorebooks' ? 'Failed to create lorebook' : 'Failed to create character');
     }
   };
+
+  const isLorebooksTab = vaultTab === 'lorebooks';
 
   return (
     <div
@@ -110,8 +123,12 @@ export function CharacterSelectionView({
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-overlay backdrop-blur-sm">
           <div className="rounded-2xl border-2 border-dashed border-accent/50 bg-surface/90 px-10 py-8 text-center shadow-2xl">
             <Upload className="mx-auto mb-3 h-10 w-10 text-accent opacity-90" />
-            <p className="text-lg font-semibold text-fg">Drop character cards to import</p>
-            <p className="mt-1 text-sm text-fg-muted">PNG or JSON — multiple files supported</p>
+            <p className="text-lg font-semibold text-fg">
+              {isLorebooksTab ? 'Drop lorebooks to import' : 'Drop character cards to import'}
+            </p>
+            <p className="mt-1 text-sm text-fg-muted">
+              {isLorebooksTab ? 'JSON — multiple files supported' : 'PNG or JSON — multiple files supported'}
+            </p>
           </div>
         </div>
       )}
@@ -132,8 +149,8 @@ export function CharacterSelectionView({
       )}
 
       <VaultHeader
-        searchQuery={library.searchQuery}
-        onSearchChange={library.setSearchQuery}
+        searchQuery={isLorebooksTab ? lorebookSearch : library.searchQuery}
+        onSearchChange={isLorebooksTab ? setLorebookSearch : library.setSearchQuery}
         isDark={isDark}
         onToggleTheme={toggleTheme}
         onReplayTutorial={onReplayTutorial}
@@ -142,9 +159,15 @@ export function CharacterSelectionView({
         onCreateClick={() => setIsCreating(true)}
         isImporting={io.isImporting}
         isExportingVault={io.isExportingVault}
-        hasCharacters={characterListItems.length > 0}
+        canBackup={io.canBackup}
         fileInputRef={io.fileInputRef}
         onImportChange={io.handleImport}
+        searchPlaceholder={isLorebooksTab ? 'Search lorebooks...' : 'Search name or tags...'}
+        importAccept={
+          isLorebooksTab ? '.json,application/json' : '.png,.json,image/png,application/json'
+        }
+        importTitle={isLorebooksTab ? 'Import lorebook JSON' : 'Import character cards'}
+        createLabel={isLorebooksTab ? 'New Lorebook' : 'Create'}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -179,36 +202,40 @@ export function CharacterSelectionView({
           </div>
         </div>
 
+        <VaultModals
+          isCreating={isCreating}
+          newCharacterName={newItemName}
+          onNewCharacterNameChange={setNewItemName}
+          onCreateSubmit={handleCreate}
+          onCreateCancel={() => {
+            setIsCreating(false);
+            setNewItemName('');
+          }}
+          createPlaceholder={isLorebooksTab ? 'Lorebook name...' : 'Character name...'}
+          deleteConfirm={deleteConfirm}
+          onDeleteConfirm={async () => {
+            if (deleteConfirm) {
+              await deleteCharacter(deleteConfirm.id);
+              setDeleteConfirm(null);
+            }
+          }}
+          onDeleteCancel={() => setDeleteConfirm(null)}
+          copyConfirm={copyConfirm}
+          onCopyConfirm={async () => {
+            if (copyConfirm) {
+              await duplicateCharacter(copyConfirm.id, `${copyConfirm.name} (Copy)`);
+              setCopyConfirm(null);
+            }
+          }}
+          onCopyCancel={() => setCopyConfirm(null)}
+          backupConfirmOpen={io.backupConfirmOpen}
+          isExportingVault={io.isExportingVault}
+          onBackupConfirm={() => void io.handleExportVault()}
+          onBackupCancel={io.handleBackupCancel}
+        />
+
         {vaultTab === 'characters' ? (
           <>
-            <VaultModals
-              isCreating={isCreating}
-              newCharacterName={newCharacterName}
-              onNewCharacterNameChange={setNewCharacterName}
-              onCreateSubmit={handleCreate}
-              onCreateCancel={() => setIsCreating(false)}
-              deleteConfirm={deleteConfirm}
-              onDeleteConfirm={async () => {
-                if (deleteConfirm) {
-                  await deleteCharacter(deleteConfirm.id);
-                  setDeleteConfirm(null);
-                }
-              }}
-              onDeleteCancel={() => setDeleteConfirm(null)}
-              copyConfirm={copyConfirm}
-              onCopyConfirm={async () => {
-                if (copyConfirm) {
-                  await duplicateCharacter(copyConfirm.id, `${copyConfirm.name} (Copy)`);
-                  setCopyConfirm(null);
-                }
-              }}
-              onCopyCancel={() => setCopyConfirm(null)}
-              backupConfirmOpen={io.backupConfirmOpen}
-              isExportingVault={io.isExportingVault}
-              onBackupConfirm={() => void io.handleExportVault()}
-              onBackupCancel={io.handleBackupCancel}
-            />
-
             <div className="mb-6 flex items-start gap-2 rounded-xl border border-border bg-surface/60 px-3 py-2.5 text-xs text-fg-muted sm:items-center">
               <svg
                 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fg-subtle sm:mt-0"
@@ -270,7 +297,10 @@ export function CharacterSelectionView({
             />
           </>
         ) : (
-          <LorebookVaultView />
+          <LorebookVaultView
+            searchQuery={lorebookSearch}
+            onRequestCreate={() => setIsCreating(true)}
+          />
         )}
       </main>
 

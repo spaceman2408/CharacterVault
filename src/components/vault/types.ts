@@ -1,5 +1,6 @@
 export type VaultSortMode = 'name' | 'recent';
 export type CardExportFormat = 'png' | 'json';
+export type VaultTab = 'characters' | 'lorebooks';
 
 export const VAULT_SORT_STORAGE_KEY = 'characterVaultSort';
 

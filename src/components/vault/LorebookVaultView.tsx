@@ -2,16 +2,14 @@
  * Lorebook tab content for the home vault.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Book,
   Copy,
   Download,
   Loader2,
   Plus,
-  Search,
   Trash2,
-  Upload,
   User,
   Users,
 } from 'lucide-react';
@@ -92,15 +90,19 @@ function LinkedCharactersOnCard({
   );
 }
 
-export function LorebookVaultView(): React.ReactElement {
+export function LorebookVaultView({
+  searchQuery,
+  onRequestCreate,
+}: {
+  searchQuery: string;
+  onRequestCreate: () => void;
+}): React.ReactElement {
   const {
     lorebookListItems,
     isLoading,
-    createLorebook,
     openLorebook,
     deleteLorebook,
     duplicateLorebook,
-    importLorebookFile,
     exportLorebook,
   } = useLorebookContext();
   const { characterListItems, openCharacter } = useCharacterContext();
@@ -145,13 +147,6 @@ export function LorebookVaultView(): React.ReactElement {
     await openLorebook(id);
   };
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return lorebookListItems;
@@ -168,38 +163,6 @@ export function LorebookVaultView(): React.ReactElement {
     });
   }, [lorebookListItems, searchQuery, linkedByBook]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    try {
-      // createLorebook drops any open character payload (exclusive workspace)
-      await createLorebook({ name: newName.trim() });
-      setNewName('');
-      setIsCreating(false);
-    } catch {
-      setStatusMessage('Failed to create lorebook');
-    }
-  };
-
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files?.length) return;
-    setIsImporting(true);
-    try {
-      let count = 0;
-      for (const file of Array.from(files)) {
-        await importLorebookFile(file);
-        count += 1;
-      }
-      setStatusMessage(`Imported ${count} lorebook${count === 1 ? '' : 's'}`);
-    } catch (err) {
-      setStatusMessage(err instanceof Error ? err.message : 'Import failed');
-    } finally {
-      setIsImporting(false);
-      e.target.value = '';
-    }
-  };
-
   const handleDelete = async (item: LorebookListItem) => {
     if (!window.confirm(`Delete lorebook "${item.name}"? This cannot be undone.`)) return;
     await deleteLorebook(item.id);
@@ -207,97 +170,6 @@ export function LorebookVaultView(): React.ReactElement {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-md flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-subtle" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search lorebooks..."
-            className="w-full rounded-full border border-transparent bg-muted py-2 pl-9 pr-4 text-sm outline-none transition-all focus:border-border-strong focus:bg-surface focus:ring-2 focus:ring-accent/20"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json,application/json"
-            multiple
-            onChange={(e) => void handleImport(e)}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent disabled:opacity-50"
-          >
-            {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Import
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsCreating(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90"
-          >
-            <Plus className="h-4 w-4" />
-            New Lorebook
-          </button>
-        </div>
-      </div>
-
-      {statusMessage && (
-        <div className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-fg">
-          {statusMessage}
-          <button
-            type="button"
-            className="ml-2 text-fg-subtle hover:text-fg"
-            onClick={() => setStatusMessage(null)}
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {isCreating && (
-        <form
-          onSubmit={(e) => void handleCreate(e)}
-          className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-end"
-        >
-          <div className="min-w-0 flex-1">
-            <label className="mb-1 block text-xs font-medium text-fg-muted">Name</label>
-            <input
-              autoFocus
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="World lore, setting bible…"
-              className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/20"
-            />
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsCreating(false);
-                setNewName('');
-              }}
-              className="rounded-xl border border-border px-3 py-2 text-sm text-fg-muted hover:bg-hover"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!newName.trim()}
-              className="rounded-xl bg-accent px-3 py-2 text-sm font-medium text-accent-fg disabled:opacity-50"
-            >
-              Create
-            </button>
-          </div>
-        </form>
-      )}
-
       <div className="flex items-center justify-between text-sm text-fg-muted">
         <span>
           {filtered.length === lorebookListItems.length
@@ -323,7 +195,7 @@ export function LorebookVaultView(): React.ReactElement {
           {!searchQuery && (
             <button
               type="button"
-              onClick={() => setIsCreating(true)}
+              onClick={onRequestCreate}
               className="mt-4 inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-accent-fg"
             >
               <Plus className="h-4 w-4" />

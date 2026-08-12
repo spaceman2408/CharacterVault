@@ -318,6 +318,20 @@ export class CharacterDatabase extends Dexie {
   }
 
   /**
+   * Yield every standalone lorebook one at a time (by primary key).
+   * Prefer this over loading the full table when building vault backups.
+   */
+  async *iterateAllLorebooks(): AsyncGenerator<VaultLorebook, void, undefined> {
+    const ids = await this.lorebooks.orderBy('updatedAt').reverse().primaryKeys();
+    for (const id of ids) {
+      const lorebook = await this.lorebooks.get(id);
+      if (lorebook) {
+        yield lorebook;
+      }
+    }
+  }
+
+  /**
    * Get lightweight list items for vault view.
    * Reads `characterListIndex` only — never loads full cards (imageData / lorebook).
    */

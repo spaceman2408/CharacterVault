@@ -18,6 +18,7 @@ export interface VaultModalsProps {
   isExportingVault: boolean;
   onBackupConfirm: () => void;
   onBackupCancel: () => void;
+  createPlaceholder?: string;
 }
 
 export function VaultModals({
@@ -36,6 +37,7 @@ export function VaultModals({
   isExportingVault,
   onBackupConfirm,
   onBackupCancel,
+  createPlaceholder = 'Character name...',
 }: VaultModalsProps): React.ReactElement {
   return (
     <>
@@ -48,7 +50,7 @@ export function VaultModals({
             <input
               autoFocus
               type="text"
-              placeholder="Character name..."
+              placeholder={createPlaceholder}
               value={newCharacterName}
               onChange={(e) => onNewCharacterNameChange(e.target.value)}
               className="flex-1 bg-transparent border-none focus:ring-0 text-base sm:text-lg font-medium placeholder:text-fg-subtle min-w-0 outline-none"
@@ -144,11 +146,11 @@ export function VaultModals({
               <h3 className="text-lg font-semibold text-fg">Backup Vault?</h3>
             </div>
             <p className="text-fg-muted mb-2">
-              Download a ZIP of every character in your vault.
+              Download a ZIP of every character and standalone lorebook in your vault.
             </p>
             <p className="text-sm text-fg-subtle mb-6">
-              Cards with images export as PNG; cards without export as JSON. This may take a
-              moment for large vaults.
+              Cards with images export as PNG; cards without export as JSON. Lorebooks export
+              as SillyTavern JSON in a lorebooks folder. This may take a moment for large vaults.
             </p>
             <div className="flex gap-3 justify-end">
               <button

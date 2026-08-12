@@ -4,7 +4,15 @@
  */
 
 import JSZip from 'jszip';
-import type { Character, CharacterBook, CharacterCardV2, LorebookEntry, ExportCharacterResult } from '../db/characterTypes';
+import type {
+  Character,
+  CharacterBook,
+  CharacterCardV2,
+  LorebookEntry,
+  ExportCharacterResult,
+  VaultLorebook,
+} from '../db/characterTypes';
+import { lorebookService } from './LorebookService';
 
 /**
  * Character Export Service
@@ -100,28 +108,29 @@ export class CharacterExportService {
 
   /**
    * Export the entire vault as a ZIP archive.
-   * Accepts an async iterable so callers can stream cards from IndexedDB one-by-one
-   * instead of materializing every full Character (imageData + lorebook) in an array.
-   * Uses PNG (embedded data) when the character has an image; otherwise JSON (V3).
+   * Streams cards and standalone lorebooks from IndexedDB one-by-one.
+   * Characters: PNG when an image exists, otherwise JSON (V3).
+   * Lorebooks: SillyTavern JSON under `lorebooks/`.
    */
   async exportVaultAsZip(
-    characters: AsyncIterable<Character> | Iterable<Character>
+    characters: AsyncIterable<Character> | Iterable<Character>,
+    lorebooks: AsyncIterable<VaultLorebook> | Iterable<VaultLorebook> = [],
   ): Promise<ExportCharacterResult> {
     try {
       const zip = new JSZip();
       const usedNames = new Map<string, number>();
-      let total = 0;
+      let characterTotal = 0;
+      let lorebookTotal = 0;
       let exported = 0;
       const failures: string[] = [];
 
       for await (const character of characters) {
-        total += 1;
+        characterTotal += 1;
         const hasImage = Boolean(character.imageData);
         const result = hasImage
           ? await this.exportAsPNG(character)
           : await this.exportAsJSON(character);
 
-        // PNG requires an image; if that path failed, fall back to JSON
         const finalResult =
           result.success && result.blob
             ? result
@@ -134,16 +143,32 @@ export class CharacterExportService {
           continue;
         }
 
-        const uniqueName = this.uniqueZipFilename(finalResult.filename, usedNames);
-        zip.file(uniqueName, finalResult.blob);
+        zip.file(
+          this.uniqueZipFilename(finalResult.filename, usedNames),
+          await finalResult.blob.arrayBuffer(),
+        );
         exported += 1;
-        // character + export intermediates are eligible for GC before the next card loads
       }
 
+      for await (const lorebook of lorebooks) {
+        lorebookTotal += 1;
+        try {
+          const { blob, filename } = lorebookService.exportToSTBlob(lorebook);
+          zip.file(
+            this.uniqueZipFilename(`lorebooks/${filename}`, usedNames),
+            await blob.arrayBuffer(),
+          );
+          exported += 1;
+        } catch {
+          failures.push(lorebook.name || 'lorebook');
+        }
+      }
+
+      const total = characterTotal + lorebookTotal;
       if (total === 0) {
         return {
           success: false,
-          error: 'No characters to export.',
+          error: 'Nothing to export.',
         };
       }
 
@@ -151,7 +176,7 @@ export class CharacterExportService {
         return {
           success: false,
           error: failures.length
-            ? `Failed to export any characters (${failures.join(', ')})`
+            ? `Failed to export any vault items (${failures.join(', ')})`
             : 'Failed to export vault.',
         };
       }

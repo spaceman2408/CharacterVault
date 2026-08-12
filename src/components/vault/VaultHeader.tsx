@@ -24,9 +24,13 @@ export interface VaultHeaderProps {
   onCreateClick: () => void;
   isImporting: boolean;
   isExportingVault: boolean;
-  hasCharacters: boolean;
+  canBackup: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onImportChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  searchPlaceholder?: string;
+  importAccept?: string;
+  importTitle?: string;
+  createLabel?: string;
 }
 
 export function VaultHeader({
@@ -40,9 +44,13 @@ export function VaultHeader({
   onCreateClick,
   isImporting,
   isExportingVault,
-  hasCharacters,
+  canBackup,
   fileInputRef,
   onImportChange,
+  searchPlaceholder = 'Search name or tags...',
+  importAccept = '.png,.json,image/png,application/json',
+  importTitle = 'Import',
+  createLabel = 'Create',
 }: VaultHeaderProps): React.ReactElement {
   return (
     <>
@@ -61,7 +69,7 @@ export function VaultHeader({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle group-focus-within:text-accent transition-colors" />
               <input
                 type="text"
-                placeholder="Search name or tags..."
+                placeholder={searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="w-full bg-muted border border-transparent focus:bg-surface focus:border-border-strong focus:ring-2 focus:ring-accent/20 rounded-full py-2 pl-9 pr-4 text-sm transition-all outline-none"
@@ -73,7 +81,7 @@ export function VaultHeader({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".png,.json,image/png,application/json"
+              accept={importAccept}
               multiple
               onChange={onImportChange}
               className="hidden"
@@ -94,7 +102,7 @@ export function VaultHeader({
               onClick={onImportClick}
               disabled={isImporting}
               className="sm:hidden p-2 text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors disabled:opacity-50"
-              title="Import"
+              title={importTitle}
             >
               {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             </button>
@@ -102,9 +110,9 @@ export function VaultHeader({
             <button
               type="button"
               onClick={onBackupClick}
-              disabled={!hasCharacters || isExportingVault}
+              disabled={!canBackup || isExportingVault}
               className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors disabled:opacity-50"
-              title="Download a ZIP backup of every character"
+              title="Download a ZIP backup of characters and lorebooks"
             >
               {isExportingVault ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               Backup
@@ -113,7 +121,7 @@ export function VaultHeader({
             <button
               type="button"
               onClick={onBackupClick}
-              disabled={!hasCharacters || isExportingVault}
+              disabled={!canBackup || isExportingVault}
               className="md:hidden p-2 text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors disabled:opacity-50"
               title="Backup vault"
             >
@@ -144,14 +152,14 @@ export function VaultHeader({
               className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-accent text-accent-fg hover:opacity-90 rounded-xl transition-opacity shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              Create
+              {createLabel}
             </button>
 
             <button
               type="button"
               onClick={onCreateClick}
               className="sm:hidden p-2 text-accent-fg bg-accent hover:opacity-90 rounded-lg transition-opacity"
-              title="Create New"
+              title={createLabel}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -188,7 +196,7 @@ export function VaultHeader({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle group-focus-within:text-accent transition-colors" />
           <input
             type="text"
-            placeholder="Search name or tags..."
+            placeholder={searchPlaceholder}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full bg-muted border border-transparent focus:bg-surface focus:border-border-strong focus:ring-2 focus:ring-accent/20 rounded-full py-2.5 pl-9 pr-4 text-sm transition-all outline-none"
