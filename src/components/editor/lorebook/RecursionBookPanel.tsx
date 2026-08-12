@@ -238,12 +238,8 @@ export function RecursionBookPanel({
       });
     }
 
-    filtered.sort((a, b) => {
-      const da = a.inbound + a.outbound;
-      const db = b.inbound + b.outbound;
-      if (db !== da) return db - da;
-      return entryDisplayName(a.entry).localeCompare(entryDisplayName(b.entry));
-    });
+    // Stable ST uid order so bulk flag edits (which change graph degrees) do not reshuffle.
+    filtered.sort((a, b) => a.entry.id - b.entry.id);
 
     return filtered;
   }, [entries, graph, query, filter, indexById]);
