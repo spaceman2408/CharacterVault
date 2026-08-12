@@ -17,7 +17,6 @@ export type RecursionMapModalProps = {
   graph: RecursionGraph;
   bookRecursiveScanning?: boolean;
   onClose: () => void;
-  onNavigateToEntry: (entryId: number) => void;
   onUpdateEntries: (ids: number[], patch: RecursionFlagPatch) => void;
   onPatchEntry: (id: number, patch: RecursionFlagPatch) => void;
 };
@@ -28,7 +27,6 @@ export function RecursionMapModal({
   graph,
   bookRecursiveScanning,
   onClose,
-  onNavigateToEntry,
   onUpdateEntries,
   onPatchEntry,
 }: RecursionMapModalProps): React.ReactElement {
@@ -114,7 +112,6 @@ export function RecursionMapModal({
             focusEntryId={focusEntry?.id ?? null}
             entries={entries}
             graph={graph}
-            onNavigateToEntry={onNavigateToEntry}
             onUpdateEntries={onUpdateEntries}
             onPatchEntry={onPatchEntry}
           />

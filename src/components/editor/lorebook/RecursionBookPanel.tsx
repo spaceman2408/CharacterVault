@@ -35,7 +35,6 @@ export type RecursionBookPanelProps = {
   focusEntryId: number | null;
   entries: LorebookEntry[];
   graph: RecursionGraph;
-  onNavigateToEntry: (entryId: number) => void;
   onUpdateEntries: (ids: number[], patch: RecursionFlagPatch) => void;
   onPatchEntry: (id: number, patch: RecursionFlagPatch) => void;
 };
@@ -99,14 +98,12 @@ function LinkRow({
   other,
   otherIndex,
   onInspect,
-  onOpen,
 }: {
   edge: RecursionEdge;
   direction: 'in' | 'out';
   other: LorebookEntry;
   otherIndex?: number;
   onInspect: () => void;
-  onOpen: () => void;
 }): React.ReactElement {
   return (
     <div className="flex items-start gap-2 rounded-xl border border-border bg-surface px-2.5 py-2">
@@ -142,13 +139,6 @@ function LinkRow({
           <RecursionFlagChips entry={other} />
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="shrink-0 rounded-lg border border-border px-2 py-1 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-      >
-        Edit
-      </button>
     </div>
   );
 }
@@ -213,7 +203,6 @@ export function RecursionBookPanel({
   focusEntryId,
   entries,
   graph,
-  onNavigateToEntry,
   onUpdateEntries,
   onPatchEntry,
 }: RecursionBookPanelProps): React.ReactElement {
@@ -571,22 +560,13 @@ export function RecursionBookPanel({
                       <RecursionFlagChips entry={inspectedEntry} />
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => onNavigateToEntry(inspectedEntry.id)}
-                      className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-                    >
-                      Open in editor
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleSelect(inspectedEntry.id)}
-                      className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-                    >
-                      {inspectedSelected ? 'Remove from selection' : 'Select'}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleSelect(inspectedEntry.id)}
+                    className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+                  >
+                    {inspectedSelected ? 'Remove from selection' : 'Select'}
+                  </button>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {FLAG_ROWS.map((row) => {
@@ -639,7 +619,6 @@ export function RecursionBookPanel({
                             other={other}
                             otherIndex={indexById.get(other.id)}
                             onInspect={() => inspect(other.id)}
-                            onOpen={() => onNavigateToEntry(other.id)}
                           />
                         </li>
                       );
@@ -672,7 +651,6 @@ export function RecursionBookPanel({
                             other={other}
                             otherIndex={indexById.get(other.id)}
                             onInspect={() => inspect(other.id)}
-                            onOpen={() => onNavigateToEntry(other.id)}
                           />
                         </li>
                       );

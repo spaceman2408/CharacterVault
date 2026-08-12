@@ -127,10 +127,9 @@ Switch to **List** next to the Web button for a plain table of every entry, with
 The right-hand panel shows the clicked entry: its keys, flags, who can unlock it, and what it unlocks, including which key made each connection. From here you can:
 
 - Toggle **Non-recursable**, **Prevent further**, or **Delay until recursion** for just this entry. These apply right away.
-- **Open in editor** to jump to the full entry editor (the map stays open).
 - **Select** it to add it to a bulk selection.
 
-Clicking another entry in its "Unlocked by" or "Unlocks" lists re-centers the inspection on that one, so you can walk a chain step by step.
+Clicking another entry in its "Unlocked by" or "Unlocks" lists inspects that one instead, so you can walk a chain step by step.
 
 ### Bulk flag changes
 

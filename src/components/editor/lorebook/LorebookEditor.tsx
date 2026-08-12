@@ -210,16 +210,6 @@ function LorebookEditorInner({
     return indexById;
   }, [entries]);
 
-  const handleNavigateToEntry = useCallback(
-    (entryId: number) => {
-      const index = entryIndexById.get(entryId);
-      if (index === undefined) return;
-      setSelectedEntryIndex(index);
-      setIsMobileViewOpen(true);
-    },
-    [entryIndexById],
-  );
-
   const handleUpdateRecursionFlags = useCallback(
     (
       ids: number[],
@@ -813,7 +803,6 @@ function LorebookEditorInner({
           graph={recursionGraph}
           bookRecursiveScanning={draftLorebook.recursive_scanning}
           onClose={handleCloseRecursionMap}
-          onNavigateToEntry={handleNavigateToEntry}
           onUpdateEntries={handleUpdateRecursionFlags}
           onPatchEntry={handlePatchRecursionEntry}
         />
