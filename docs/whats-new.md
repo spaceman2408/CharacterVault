@@ -12,10 +12,10 @@ Quick overview of recent updates to CharacterVault.
 - **Full book workspace** with shared lorebook editor, Orion chat, and snapshot history
 - **Attach** vault books to characters (vault-local AI context) or **copy into embedded** lorebook for card export
 - **ST field coverage** for common world-info options (selective logic, recursion flags, depth/role, probability, book scan depth / token budget)
-- **Recursion map**: This entry + Whole book views, select all / linked / visible, bulk recursion flags
+- **Recursion map** rebuilt: fullscreen **web view** of every unlock path in the book, with pan/zoom, hover spotlight, a list fallback for big books, per-entry flag toggles, and staged bulk edits you review before applying
 - Field **?** help aligned with SillyTavern World Info docs
 
-[Release 1.3.0 →](/releases/v1.3.0) · [Lorebook Vault](/features/lorebook-vault) · [Lorebook Editor](/features/lorebook-editor) · [Recursion map](/features/lorebook-editor#recursion-map)
+[Release 1.3.0 →](/releases/v1.3.0) · [Lorebook Vault](/features/lorebook-vault) · [Lorebook Editor](/features/lorebook-editor) · [Recursion map](/features/lorebook-editor#recursion-map) · [Map guide](/features/recursion-map-guide)
 
 ### CharacterVault 1.2.1
 

@@ -34,6 +34,7 @@ nav: [
           { text: 'Editor & AI Toolkit', link: '/features/editor' },
           { text: 'Greetings Editor', link: '/features/greetings-editor' },
           { text: 'Lorebook Editor', link: '/features/lorebook-editor' },
+          { text: 'Recursion Map Guide', link: '/features/recursion-map-guide' },
           { text: 'Lorebook Vault', link: '/features/lorebook-vault' },
           { text: 'Creator Notes Preview', link: '/features/creator-notes' },
           { text: 'Import & Export', link: '/features/import-export' },

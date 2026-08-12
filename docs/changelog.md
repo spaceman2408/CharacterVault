@@ -9,11 +9,11 @@ Standalone lorebook vault, richer World Info editing, and recursion map. Full no
 - Home vault **Lorebooks** tab: CRUD, import/export, duplicate, open full workspace
 - Shared lorebook editor for character-embedded and vault books (common ST fields + CodeMirror/AI content)
 - One-way **attach** to characters (vault-local); optional **copy into embedded** for card export
-- **Recursion map** (ego + whole book) with bulk Non-recursable / Prevent further / Delay until recursion
+- **Recursion map** rebuilt as a fullscreen web view (node graph, pan/zoom, hover spotlight) with staged bulk flag edits and per-entry flag toggles in the inspector
 - Lorebook snapshots (open / auto / manual / rollback)
 - Field help tips from SillyTavern World Info docs
 
-Details: [Lorebook Vault](/features/lorebook-vault) · [Lorebook Editor](/features/lorebook-editor) · [Recursion map](/features/lorebook-editor#recursion-map)
+Details: [Lorebook Vault](/features/lorebook-vault) · [Lorebook Editor](/features/lorebook-editor) · [Recursion map](/features/lorebook-editor#recursion-map) · [Map guide](/features/recursion-map-guide)
 
 ---
 

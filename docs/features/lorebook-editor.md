@@ -29,7 +29,7 @@ Expand **Lorebook** at the top of the sidebar:
 | **Scan depth** | How many recent chat messages ST scans for keys (book-level) |
 | **Token budget** | Max tokens World Info may consume at once (book-level) |
 | **Recursive scanning** | When on, activated entries can unlock others by naming their keys in **Content** |
-| **Map** | Opens the [Recursion map](#recursion-map) on the **Whole book** tab |
+| **Map** | Opens the [Recursion map](#recursion-map) |
 | **Delete lorebook** | Characters only: remove the embedded book (when offered) |
 
 ## Entry list
@@ -94,42 +94,59 @@ At-a-glance counts: **Triggers N · Triggered by M** (or “No recursion links�
 
 ## Recursion map
 
-An authoring aid for **recursive scanning**: if entry A’s **content** mentions entry B’s **primary keys**, A can unlock B (subject to flags).
+A full-screen map of how your entries unlock each other. If entry A's **content** mentions one of entry B's **primary keys**, there's a path from A to B: when A activates, B can activate right after it (as long as flags allow it).
 
 ### Open the map
 
-- Entry → **Activation** → **Map** (defaults to **This entry**)
-- Book settings → **Map** (defaults to **Whole book**)
+- Entry → **Activation** → **Map** (opens with that entry already inspected)
+- Book settings → **Map** (opens the whole book)
 
-### This entry
+Both open the same view; the only difference is whether an entry is pre-selected.
 
-Three columns:
+### The web view
 
-- **Triggered by** – entries that can unlock the current one
-- **This entry** – focus card and flags
-- **Triggers** – entries this one can unlock
+By default you get a picture of the whole book. Each box is an entry, each arrow is a path: the entry an arrow starts from mentions the other entry's keys in its content. Entries group into clusters so you can see which ones belong to the same chain. Little dots on a box show its flags (see the legend at the bottom).
 
-Click a neighbor to select it in the editor (map stays open and re-centers).
-
-### Whole book
-
-Master/detail browser for the entire book:
-
-| Area | Purpose |
+| Action | How |
 | :--- | :--- |
-| **Summary cards** | Unlock path count, linked vs standalone entries, flag counts |
-| **Entry list** | Search, filter (All / Linked / Standalone), sort by activity |
-| **Select all / visible / linked** | Multi-select for bulk flag edits |
-| **Inspector** | Unlocked by / Unlocks for the focused entry, with matched keys |
-| **Recursion controls** | Set **Non-recursable**, **Prevent further**, **Delay until recursion** On/Off for the selection (or the inspected entry) |
-| **Isolate** | Set non-recursable + prevent further (block both directions) |
-| **All unlock paths** | Collapsible list of A → B via key |
+| Move around | Drag the background |
+| Zoom | Scroll wheel, centered on your cursor |
+| Inspect an entry | Click it |
+| Select for bulk edits | Ctrl (or Cmd) + click; click again to deselect |
+| Reset camera | **Reset view** |
+| Show entries with no links | **Show standalone** |
+
+Hover an entry to light up just its connections and fade everything else. A legend at the bottom of the map explains the arrows and flag dots.
+
+### The list view
+
+Switch to **List** next to the Web button for a plain table of every entry, with search and All / Linked / Standalone filters. Same actions: click a row to inspect, use the checkbox to select. For very large books the map opens in list mode first, since a wall of boxes is slower to read and slower to draw.
+
+### Inspecting an entry
+
+The right-hand panel shows the clicked entry: its keys, flags, who can unlock it, and what it unlocks, including which key made each connection. From here you can:
+
+- Toggle **Non-recursable**, **Prevent further**, or **Delay until recursion** for just this entry. These apply right away.
+- **Open in editor** to jump to the full entry editor (the map stays open).
+- **Select** it to add it to a bulk selection.
+
+Clicking another entry in its "Unlocked by" or "Unlocks" lists re-centers the inspection on that one, so you can walk a chain step by step.
+
+### Bulk flag changes
+
+Selecting one or more entries opens a bar at the bottom. Pick On or Off for any of the three recursion flags, or use **Isolate: block both directions** (non-recursable plus prevent further). Nothing is applied yet. The bar shows exactly what is staged and for how many entries. Press **Apply** to commit, or **Discard** to back out. For big selections (more than 25 entries), Apply asks for a second click so a stray tap cannot rewrite half the book.
+
+Quick-select shortcuts in the bar: **All** entries, **Visible** (what search is showing), **Linked** (entries with at least one path), and **Clear**.
+
+### Small print
 
 ::: warning Authoring aid, not a full ST simulator
-The map uses **primary keys** in content (including simple `/regex/` support, case sensitivity, and whole-word options). It does **not** fully simulate selective secondary logic, probability, token budget, multi-step depth, or chat scan. Treat it as a guide for wiring recursion flags.
+The map reads **primary keys** in content (including simple `/regex/` support, case sensitivity, and whole-word options). It does **not** fully simulate selective secondary logic, probability, token budget, multi-step depth, or chat scan. Treat it as a guide for wiring recursion flags.
 :::
 
 If **Recursive scanning** is off on the book, the map still shows potential key hits and warns that SillyTavern will not recurse until scanning is enabled (book or global ST setting).
+
+For a walkthrough with examples, see the [Recursion Map Guide](/features/recursion-map-guide).
 
 ## AI key generation
 
@@ -169,6 +186,7 @@ Characters can **attach one** standalone vault book for vault-local use. Linking
 
 ## Next steps
 
+- [Recursion Map Guide](/features/recursion-map-guide)
 - [Lorebook Vault](/features/lorebook-vault)
 - [AI Context](/features/ai-context)
 - [Creating & Editing Characters](/getting-started/creating-characters)
