@@ -1,10 +1,13 @@
-import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CircleHelp } from 'lucide-react';
 
 const TIP_WIDTH = 256;
 const VIEWPORT_PAD = 8;
-const EST_TIP_HEIGHT = 120;
+const EST_TIP_HEIGHT = 72;
+const GAP = 6;
+
+type TipCoords = { left: number; top?: number; bottom?: number };
 
 /**
  * Compact help control for form labels (hover / focus / click).
@@ -22,10 +25,11 @@ export function FieldInfoTip({
 }): React.ReactElement {
   const tipId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const tipRef = useRef<HTMLSpanElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [coords, setCoords] = useState<TipCoords>({ left: 0 });
 
   const clearCloseTimer = () => {
     if (closeTimer.current) {
@@ -38,19 +42,26 @@ export function FieldInfoTip({
     const btn = buttonRef.current;
     if (!btn || !isMountedRef.current) return;
     const rect = btn.getBoundingClientRect();
+    const tip = tipRef.current;
+    const tipW = tip?.offsetWidth || TIP_WIDTH;
+    const tipH = tip?.offsetHeight || EST_TIP_HEIGHT;
 
-    let left = side === 'right' ? rect.left : rect.right - TIP_WIDTH;
+    let left = side === 'right' ? rect.left : rect.right - tipW;
     left = Math.max(
       VIEWPORT_PAD,
-      Math.min(left, window.innerWidth - TIP_WIDTH - VIEWPORT_PAD),
+      Math.min(left, window.innerWidth - tipW - VIEWPORT_PAD),
     );
 
-    let top = rect.bottom + 6;
-    if (top + EST_TIP_HEIGHT > window.innerHeight - VIEWPORT_PAD) {
-      top = Math.max(VIEWPORT_PAD, rect.top - EST_TIP_HEIGHT - 6);
-    }
+    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_PAD;
+    const placeBelow = spaceBelow >= tipH + GAP;
 
-    setCoords({ top, left });
+    if (placeBelow) {
+      setCoords({ left, top: rect.bottom + GAP });
+    } else {
+      // Anchor the bottom edge just above the icon so height guesses cannot
+      // send a short tip into the editor above (e.g. Internal notes).
+      setCoords({ left, bottom: window.innerHeight - rect.top + GAP });
+    }
   }, [side]);
 
   const openTip = () => {
@@ -65,6 +76,10 @@ export function FieldInfoTip({
       if (isMountedRef.current) setOpen(false);
     }, 120);
   };
+
+  useLayoutEffect(() => {
+    if (open) placeNearButton();
+  }, [open, placeNearButton, text]);
 
   useEffect(() => {
     if (!open) return;
@@ -90,12 +105,13 @@ export function FieldInfoTip({
     typeof document !== 'undefined' &&
     createPortal(
       <span
+        ref={tipRef}
         id={tipId}
         role="tooltip"
         onMouseEnter={openTip}
         onMouseLeave={scheduleClose}
         className="pointer-events-auto fixed z-9999 w-56 rounded-lg border border-border bg-surface p-2 text-left text-[11px] leading-snug text-fg shadow-xl sm:w-64"
-        style={{ top: coords.top, left: coords.left }}
+        style={{ top: coords.top, left: coords.left, bottom: coords.bottom }}
       >
         {text}
       </span>,
