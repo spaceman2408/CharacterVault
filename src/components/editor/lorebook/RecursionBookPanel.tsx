@@ -394,7 +394,7 @@ export function RecursionBookPanel({
         </div>
         {viewMode === 'list' && (
           <>
-            <div className="relative min-w-[10rem] flex-1">
+            <div className="relative min-w-40 flex-1">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
               <input
                 type="search"
@@ -456,13 +456,13 @@ export function RecursionBookPanel({
       {preferList && viewMode === 'web' && (
         <p className="shrink-0 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[11px] text-fg-muted">
           This book is large ({stats.entryCount} entries · {stats.edgeCount} links). The web view
-          may feel slow — the list view is usually easier here.
+          may feel slow, the list view is usually easier here.
         </p>
       )}
 
       {/* Map fills all remaining space; inspector/selection-bar overlay it */}
       <div className="relative min-h-0 flex-1">
-        {/* Web or list — full region */}
+        {/* Web or list, full region */}
         {viewMode === 'web' ? (
           <RecursionWebView
             entries={entries}
@@ -791,7 +791,7 @@ export function RecursionBookPanel({
               </div>
             ) : (
               <p className="text-[10px] text-fg-subtle">
-                Nothing staged — pick On/Off above, then Apply.
+                Nothing staged; pick On/Off above, then Apply.
               </p>
             )}
           </div>
