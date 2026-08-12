@@ -1,26 +1,35 @@
 /**
- * Whole-book recursion browser: pick an entry, see what unlocks it / what it unlocks,
- * multi-select for bulk ST recursion flags.
+ * Whole-book recursion browser. Merged view: web (SVG graph) or list on the
+ * left, inspector on the right, and a sticky selection bar for staged bulk
+ * flag edits. Inspecting an entry never implies editing it — flag changes
+ * require an explicit multi-select and an Apply step; single-entry flag
+ * editing lives in the entry detail editor.
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ArrowDownToLine,
-  ArrowRight,
   ArrowUpFromLine,
   CheckSquare,
+  GitFork,
+  List,
   Search,
   Square,
   X,
 } from 'lucide-react';
 import type { LorebookEntry } from '../../../db/characterTypes';
-import type { RecursionEdge, RecursionFlagPatch, RecursionGraph } from './recursionGraph';
+import type {
+  RecursionEdge,
+  RecursionFlagPatch,
+  RecursionGraph,
+} from './recursionGraph';
 import {
   entryDisplayName,
   getBookRecursionStats,
-  listEdges,
+  shouldPreferListLayout,
 } from './recursionGraph';
 import { RecursionFlagChips } from './RecursionFlagChips';
+import { RecursionWebView } from './RecursionWebView';
 
 export type RecursionBookPanelProps = {
   focusEntryId: number | null;
@@ -28,11 +37,35 @@ export type RecursionBookPanelProps = {
   graph: RecursionGraph;
   onNavigateToEntry: (entryId: number) => void;
   onUpdateEntries: (ids: number[], patch: RecursionFlagPatch) => void;
-  onFocusEntry?: (entryId: number) => void;
+  onPatchEntry: (id: number, patch: RecursionFlagPatch) => void;
 };
 
 type FlagKey = keyof RecursionFlagPatch;
 type ListFilter = 'all' | 'linked' | 'isolated';
+type ViewMode = 'web' | 'list';
+
+/** One staged bulk edit; 'both' = isolate (block recursion in both directions). */
+type PendingPatch = { key: FlagKey | 'both'; value: boolean };
+
+const FLAG_ROWS: { key: FlagKey; label: string; hint: string }[] = [
+  {
+    key: 'excludeRecursion',
+    label: 'Non-recursable',
+    hint: 'Nothing can unlock these entries by mentioning their keys.',
+  },
+  {
+    key: 'preventRecursion',
+    label: 'Prevent further recursion',
+    hint: 'When these activate, the chain stops there.',
+  },
+  {
+    key: 'delayUntilRecursion',
+    label: 'Delay until recursion',
+    hint: 'Only activate on recursive passes (not the first chat scan).',
+  },
+];
+
+const ARM_THRESHOLD = 25;
 
 function flagState(
   selected: LorebookEntry[],
@@ -55,6 +88,11 @@ function degrees(graph: RecursionGraph, id: number): { inbound: number; outbound
   };
 }
 
+function pendingLabel(pending: PendingPatch): string {
+  if (pending.key === 'both') return 'Isolate (both directions)';
+  return FLAG_ROWS.find((r) => r.key === pending.key)?.label ?? '';
+}
+
 function LinkRow({
   edge,
   direction,
@@ -74,9 +112,7 @@ function LinkRow({
     <div className="flex items-start gap-2 rounded-xl border border-border bg-surface px-2.5 py-2">
       <div
         className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-          direction === 'in'
-            ? 'bg-accent-soft text-accent'
-            : 'bg-success/15 text-success'
+          direction === 'in' ? 'bg-accent-soft text-accent' : 'bg-success/15 text-success'
         }`}
         aria-hidden
       >
@@ -121,45 +157,49 @@ function FlagToggleRow({
   label,
   hint,
   state,
-  disabled,
+  pendingValue,
   onSet,
 }: {
   label: string;
   hint: string;
   state: 'all-on' | 'all-off' | 'mixed' | 'empty';
-  disabled: boolean;
+  pendingValue: boolean | null;
   onSet: (value: boolean) => void;
 }): React.ReactElement {
   return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+    <div
+      className={`flex flex-col gap-1 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
+        pendingValue != null ? '-m-1.5 border border-dashed border-accent/60 bg-accent-soft/20 p-1.5' : ''
+      }`}
+    >
       <div className="min-w-0">
         <p className="text-xs font-medium text-fg">{label}</p>
         <p className="text-[11px] leading-snug text-fg-subtle">{hint}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        {state === 'mixed' && (
-          <span className="mr-1 text-[10px] text-fg-subtle">mixed</span>
-        )}
+        {state === 'mixed' && <span className="mr-1 text-[10px] text-fg-subtle">mixed</span>}
         <button
           type="button"
-          disabled={disabled}
           onClick={() => onSet(true)}
-          className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium touch-manipulation disabled:opacity-40 ${
-            state === 'all-on'
-              ? 'border-accent bg-accent-soft text-accent'
-              : 'border-border bg-surface text-fg-muted hover:bg-hover hover:text-fg'
+          className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium touch-manipulation ${
+            pendingValue === true
+              ? 'border-accent bg-accent text-accent-fg'
+              : state === 'all-on'
+                ? 'border-accent bg-accent-soft text-accent'
+                : 'border-border bg-surface text-fg-muted hover:bg-hover hover:text-fg'
           }`}
         >
           On
         </button>
         <button
           type="button"
-          disabled={disabled}
           onClick={() => onSet(false)}
-          className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium touch-manipulation disabled:opacity-40 ${
-            state === 'all-off'
-              ? 'border-border bg-muted text-fg'
-              : 'border-border bg-surface text-fg-muted hover:bg-hover hover:text-fg'
+          className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium touch-manipulation ${
+            pendingValue === false
+              ? 'border-accent bg-accent text-accent-fg'
+              : state === 'all-off'
+                ? 'border-border bg-muted text-fg'
+                : 'border-border bg-surface text-fg-muted hover:bg-hover hover:text-fg'
           }`}
         >
           Off
@@ -175,24 +215,22 @@ export function RecursionBookPanel({
   graph,
   onNavigateToEntry,
   onUpdateEntries,
+  onPatchEntry,
 }: RecursionBookPanelProps): React.ReactElement {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+  const [inspectedId, setInspectedId] = useState<number | null>(() =>
+    focusEntryId != null && entries.some((e) => e.id === focusEntryId) ? focusEntryId : null,
+  );
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ListFilter>('all');
-  const [showAllLinks, setShowAllLinks] = useState(false);
+  const [forcedView, setForcedView] = useState<ViewMode | null>(null);
+  const [showStandalone, setShowStandalone] = useState(false);
+  const [pendingPatch, setPendingPatch] = useState<PendingPatch | null>(null);
+  const [applyArmed, setApplyArmed] = useState(false);
 
   const entryIdSet = useMemo(() => new Set(entries.map((e) => e.id)), [entries]);
 
-  // Inspected entry follows editor selection (list / path clicks call onNavigateToEntry).
-  const inspectId = useMemo(() => {
-    if (focusEntryId != null && entryIdSet.has(focusEntryId)) {
-      return focusEntryId;
-    }
-    return entries[0]?.id ?? null;
-  }, [focusEntryId, entries, entryIdSet]);
-
   const stats = useMemo(() => getBookRecursionStats(entries, graph), [entries, graph]);
-  const edges = useMemo(() => listEdges(graph), [graph]);
 
   const indexById = useMemo(() => {
     const map = new Map<number, number>();
@@ -206,7 +244,10 @@ export function RecursionBookPanel({
     return map;
   }, [entries]);
 
-  // Drop ids for deleted entries so bulk ops and selection state cannot retain ghosts.
+  const preferList = shouldPreferListLayout(entries.length, stats.edgeCount);
+  const viewMode: ViewMode = forcedView ?? (preferList ? 'list' : 'web');
+
+  // Drop ids for deleted entries so bulk ops cannot act on ghosts.
   const activeSelectedIds = useMemo(() => {
     if (selectedIds.size === 0) return selectedIds;
     let pruned = false;
@@ -240,23 +281,28 @@ export function RecursionBookPanel({
 
     // Stable ST uid order so bulk flag edits (which change graph degrees) do not reshuffle.
     filtered.sort((a, b) => a.entry.id - b.entry.id);
-
     return filtered;
   }, [entries, graph, query, filter, indexById]);
 
-  const inspectEntry = inspectId != null ? entryById.get(inspectId) ?? null : null;
-  const inbound = inspectId != null ? (graph.incoming.get(inspectId) ?? []) : [];
-  const outbound = inspectId != null ? (graph.outgoing.get(inspectId) ?? []) : [];
+  // Rendering goes through the map, so a deleted entry reads as "nothing inspected".
+  const inspectedEntry = inspectedId != null ? entryById.get(inspectedId) ?? null : null;
+  const inbound = inspectedEntry ? (graph.incoming.get(inspectedEntry.id) ?? []) : [];
+  const outbound = inspectedEntry ? (graph.outgoing.get(inspectedEntry.id) ?? []) : [];
 
   const selectedEntries = useMemo(
     () => entries.filter((e) => activeSelectedIds.has(e.id)),
     [entries, activeSelectedIds],
   );
 
-  const inspectAsSelection = useCallback(() => {
-    if (inspectId == null) return;
-    setSelectedIds(new Set([inspectId]));
-  }, [inspectId]);
+  /** Any change to the selection discards a staged patch. */
+  const clearPending = useCallback(() => {
+    setPendingPatch(null);
+    setApplyArmed(false);
+  }, []);
+
+  const inspect = useCallback((id: number) => {
+    setInspectedId(id);
+  }, []);
 
   const toggleSelect = useCallback(
     (id: number) => {
@@ -269,25 +315,20 @@ export function RecursionBookPanel({
         else if (entryIdSet.has(id)) next.add(id);
         return next;
       });
+      clearPending();
     },
-    [entryIdSet],
-  );
-
-  const inspect = useCallback(
-    (id: number) => {
-      // Single navigation path (parent may also wire onFocusEntry to navigate).
-      onNavigateToEntry(id);
-    },
-    [onNavigateToEntry],
+    [entryIdSet, clearPending],
   );
 
   const selectAllEntries = useCallback(() => {
     setSelectedIds(new Set(entries.map((e) => e.id)));
-  }, [entries]);
+    clearPending();
+  }, [entries, clearPending]);
 
   const selectAllVisible = useCallback(() => {
     setSelectedIds(new Set(sortedEntries.map((s) => s.entry.id)));
-  }, [sortedEntries]);
+    clearPending();
+  }, [sortedEntries, clearPending]);
 
   const selectAllLinked = useCallback(() => {
     const next = new Set<number>();
@@ -296,90 +337,64 @@ export function RecursionBookPanel({
       if (inbound + outbound > 0) next.add(e.id);
     }
     setSelectedIds(next);
-  }, [entries, graph]);
+    clearPending();
+  }, [entries, graph, clearPending]);
 
-  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    clearPending();
+  }, [clearPending]);
 
-  const setFlag = useCallback(
-    (ids: number[], key: FlagKey, value: boolean) => {
-      if (ids.length === 0) return;
-      onUpdateEntries(ids, { [key]: value });
-    },
-    [onUpdateEntries],
-  );
+  const stageFlag = useCallback((key: FlagKey, value: boolean) => {
+    setPendingPatch((prev) =>
+      prev && prev.key === key && prev.value === value ? null : { key, value },
+    );
+    setApplyArmed(false);
+  }, []);
 
-  const bulkIds =
-    activeSelectedIds.size > 0
-      ? [...activeSelectedIds]
-      : inspectId != null
-        ? [inspectId]
-        : [];
-  const bulkEntries =
-    activeSelectedIds.size > 0
-      ? selectedEntries
-      : inspectEntry
-        ? [inspectEntry]
-        : [];
-  const bulkLabel =
-    activeSelectedIds.size > 1
-      ? `${activeSelectedIds.size} selected entries`
-      : activeSelectedIds.size === 1
-        ? entryDisplayName(selectedEntries[0], indexById.get(selectedEntries[0].id))
-        : inspectEntry
-          ? entryDisplayName(inspectEntry, indexById.get(inspectEntry.id))
-          : 'No entry';
+  const stageIsolate = useCallback(() => {
+    setPendingPatch((prev) =>
+      prev && prev.key === 'both' ? null : { key: 'both', value: true },
+    );
+    setApplyArmed(false);
+  }, []);
+
+  const applyPending = useCallback(() => {
+    if (!pendingPatch || activeSelectedIds.size === 0) return;
+    if (activeSelectedIds.size > ARM_THRESHOLD && !applyArmed) {
+      setApplyArmed(true);
+      return;
+    }
+    const patch: RecursionFlagPatch =
+      pendingPatch.key === 'both'
+        ? { excludeRecursion: pendingPatch.value, preventRecursion: pendingPatch.value }
+        : { [pendingPatch.key]: pendingPatch.value };
+    onUpdateEntries([...activeSelectedIds], patch);
+    setPendingPatch(null);
+    setApplyArmed(false);
+  }, [pendingPatch, activeSelectedIds, applyArmed, onUpdateEntries]);
+
+  const inspectedSelected = inspectedEntry != null && activeSelectedIds.has(inspectedEntry.id);
 
   return (
-    <div className="flex min-h-0 flex-col gap-3">
-      {/* Plain-language book summary */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="rounded-xl border border-border bg-muted/30 px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">
-            Unlock paths
-          </p>
-          <p className="mt-0.5 text-lg font-semibold tabular-nums text-fg">{stats.edgeCount}</p>
-          <p className="text-[11px] text-fg-muted">entry → entry links</p>
+    <div className="flex h-full min-h-0 flex-col gap-2">
+      {/* Toolbar */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex items-center gap-3 text-[11px] text-fg-subtle">
+          <span>
+            <span className="font-semibold tabular-nums text-fg">{stats.edgeCount}</span> paths
+          </span>
+          <span>
+            <span className="font-semibold tabular-nums text-fg">{stats.linkedCount}</span>
+            <span className="text-fg-subtle">/{stats.entryCount}</span> in web
+          </span>
+          <span>
+            <span className="font-semibold tabular-nums text-fg">{stats.isolatedCount}</span> standalone
+          </span>
         </div>
-        <div className="rounded-xl border border-border bg-muted/30 px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">
-            In the web
-          </p>
-          <p className="mt-0.5 text-lg font-semibold tabular-nums text-fg">{stats.linkedCount}</p>
-          <p className="text-[11px] text-fg-muted">of {stats.entryCount} entries</p>
-        </div>
-        <div className="rounded-xl border border-border bg-muted/30 px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">
-            Standalone
-          </p>
-          <p className="mt-0.5 text-lg font-semibold tabular-nums text-fg">{stats.isolatedCount}</p>
-          <p className="text-[11px] text-fg-muted">no recursion links</p>
-        </div>
-        <div className="rounded-xl border border-border bg-muted/30 px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">
-            Flagged
-          </p>
-          <p className="mt-0.5 text-sm font-medium tabular-nums text-fg">
-            {stats.excludeRecursionCount + stats.preventRecursionCount + stats.delayUntilRecursionCount}
-          </p>
-          <p className="text-[11px] text-fg-muted">
-            {stats.excludeRecursionCount} non-rec · {stats.preventRecursionCount} prevent ·{' '}
-            {stats.delayUntilRecursionCount} delay
-          </p>
-        </div>
-      </div>
-
-      <p className="text-[11px] leading-snug text-fg-subtle">
-        An unlock path means one entry’s <span className="text-fg-muted">content</span> contains
-        another entry’s <span className="text-fg-muted">primary keys</span>. Click an entry to
-        inspect its paths; use checkboxes to change flags on many at once.
-      </p>
-
-      {/* Master / detail */}
-      <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(14rem,18rem)_1fr]">
-        {/* Entry list */}
-        <div className="flex min-h-0 flex-col rounded-xl border border-border bg-muted/20">
-          <div className="shrink-0 space-y-2 border-b border-border p-2.5">
-            <div className="relative">
+        {viewMode === 'list' && (
+          <>
+            <div className="relative min-w-[10rem] flex-1">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
               <input
                 type="search"
@@ -389,7 +404,7 @@ export function RecursionBookPanel({
                 className="w-full rounded-lg border border-border bg-surface py-1.5 pl-8 pr-2 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
               />
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex gap-1">
               {(
                 [
                   ['all', 'All'],
@@ -401,7 +416,7 @@ export function RecursionBookPanel({
                   key={id}
                   type="button"
                   onClick={() => setFilter(id)}
-                  className={`rounded-md px-2 py-1 text-[11px] font-medium touch-manipulation ${
+                  className={`rounded-md px-2 py-1.5 text-[11px] font-medium touch-manipulation ${
                     filter === id
                       ? 'bg-accent-soft text-accent'
                       : 'text-fg-muted hover:bg-hover hover:text-fg'
@@ -411,116 +426,129 @@ export function RecursionBookPanel({
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap gap-1">
-              <button
-                type="button"
-                onClick={selectAllEntries}
-                disabled={entries.length === 0}
-                className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] font-medium text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-40 touch-manipulation"
-                title="Select every entry in the book for bulk flag edits"
-              >
-                Select all
-              </button>
-              {(query.trim() || filter !== 'all') && (
-                <button
-                  type="button"
-                  onClick={selectAllVisible}
-                  disabled={sortedEntries.length === 0}
-                  className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-40 touch-manipulation"
-                  title="Select only the entries currently shown in this list"
-                >
-                  Select visible ({sortedEntries.length})
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={selectAllLinked}
-                className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-                title="Select entries that have at least one unlock path"
-              >
-                Select linked
-              </button>
-              {activeSelectedIds.size > 0 && (
-                <button
-                  type="button"
-                  onClick={clearSelection}
-                  className="inline-flex items-center gap-0.5 rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-                >
-                  <X className="h-3 w-3" />
-                  Clear ({activeSelectedIds.size})
-                </button>
-              )}
-            </div>
-          </div>
-
-          <ul className="min-h-0 max-h-[min(40vh,20rem)] flex-1 overflow-y-auto lg:max-h-[min(52vh,28rem)]">
-            {sortedEntries.length === 0 ? (
-              <li className="px-3 py-6 text-center text-xs text-fg-muted">No matching entries.</li>
-            ) : (
-              sortedEntries.map(({ entry, inbound: inN, outbound: outN }) => {
-                const active = inspectId === entry.id;
-                const checked = activeSelectedIds.has(entry.id);
-                return (
-                  <li key={entry.id} className="border-b border-border/60 last:border-b-0">
-                    <div
-                      className={`flex items-stretch gap-0.5 ${
-                        active ? 'bg-accent-soft/60' : 'hover:bg-hover/40'
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleSelect(entry.id)}
-                        className="flex shrink-0 items-center px-2 text-fg-muted hover:text-fg touch-manipulation"
-                        aria-label={checked ? 'Deselect' : 'Select for bulk edit'}
-                        title="Select for bulk flag edit"
-                      >
-                        {checked ? (
-                          <CheckSquare className="h-4 w-4 text-accent" />
-                        ) : (
-                          <Square className="h-4 w-4" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => inspect(entry.id)}
-                        className="min-w-0 flex-1 px-1 py-2 text-left touch-manipulation"
-                      >
-                        <p className="truncate text-sm font-medium text-fg">
-                          {entryDisplayName(entry, indexById.get(entry.id))}
-                        </p>
-                        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-fg-muted">
-                          {inN + outN === 0 ? (
-                            <span className="text-fg-subtle">standalone</span>
-                          ) : (
-                            <>
-                              <span className="inline-flex items-center gap-0.5" title="Unlocked by">
-                                <ArrowDownToLine className="h-3 w-3 text-accent" />
-                                {inN}
-                              </span>
-                              <span className="inline-flex items-center gap-0.5" title="Unlocks">
-                                <ArrowUpFromLine className="h-3 w-3 text-success" />
-                                {outN}
-                              </span>
-                            </>
-                          )}
-                        </p>
-                      </button>
-                    </div>
-                  </li>
-                );
-              })
-            )}
-          </ul>
+          </>
+        )}
+        <div className="ml-auto flex gap-1 rounded-lg border border-border p-0.5" role="group" aria-label="View mode">
+          {(
+            [
+              ['web', 'Web', GitFork],
+              ['list', 'List', List],
+            ] as const
+          ).map(([id, label, Icon]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setForcedView(id)}
+              aria-pressed={viewMode === id}
+              className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium touch-manipulation ${
+                viewMode === id
+                  ? 'bg-accent-soft text-accent'
+                  : 'text-fg-muted hover:bg-hover hover:text-fg'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Inspector */}
-        <div className="flex min-h-0 flex-col gap-3">
-          {!inspectEntry ? (
-            <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-fg-muted">
-              Select an entry on the left to see its unlock paths.
+      {preferList && viewMode === 'web' && (
+        <p className="shrink-0 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[11px] text-fg-muted">
+          This book is large ({stats.entryCount} entries · {stats.edgeCount} links). The web view
+          may feel slow — the list view is usually easier here.
+        </p>
+      )}
+
+      {/* Map fills all remaining space; inspector/selection-bar overlay it */}
+      <div className="relative min-h-0 flex-1">
+        {/* Web or list — full region */}
+        {viewMode === 'web' ? (
+          <RecursionWebView
+            entries={entries}
+            graph={graph}
+            indexById={indexById}
+            inspectedId={inspectedId}
+            selectedIds={activeSelectedIds}
+            showStandalone={showStandalone}
+            onToggleShowStandalone={setShowStandalone}
+            onInspect={inspect}
+            onToggleSelect={toggleSelect}
+          />
+        ) : (
+          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-muted/20">
+            <ul className="min-h-0 flex-1 overflow-y-auto">
+              {sortedEntries.length === 0 ? (
+                <li className="px-3 py-6 text-center text-xs text-fg-muted">No matching entries.</li>
+              ) : (
+                sortedEntries.map(({ entry, inbound: inN, outbound: outN }) => {
+                  const active = inspectedId === entry.id;
+                  const checked = activeSelectedIds.has(entry.id);
+                  return (
+                    <li key={entry.id} className="border-b border-border/60 last:border-b-0">
+                      <div
+                        className={`flex items-stretch gap-0.5 ${
+                          active ? 'bg-accent-soft/60' : 'hover:bg-hover/40'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleSelect(entry.id)}
+                          className="flex shrink-0 items-center px-2 text-fg-muted hover:text-fg touch-manipulation"
+                          aria-label={checked ? 'Deselect' : 'Select for bulk edit'}
+                          aria-pressed={checked}
+                          title="Select for bulk flag edit"
+                        >
+                          {checked ? (
+                            <CheckSquare className="h-4 w-4 text-accent" />
+                          ) : (
+                            <Square className="h-4 w-4" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => inspect(entry.id)}
+                          className="min-w-0 flex-1 px-1 py-2 text-left touch-manipulation"
+                        >
+                          <p className="truncate text-sm font-medium text-fg">
+                            {entryDisplayName(entry, indexById.get(entry.id))}
+                          </p>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-fg-muted">
+                            {inN + outN === 0 ? (
+                              <span className="text-fg-subtle">standalone</span>
+                            ) : (
+                              <>
+                                <span className="inline-flex items-center gap-0.5" title="Unlocked by">
+                                  <ArrowDownToLine className="h-3 w-3 text-accent" />
+                                  {inN}
+                                </span>
+                                <span className="inline-flex items-center gap-0.5" title="Unlocks">
+                                  <ArrowUpFromLine className="h-3 w-3 text-success" />
+                                  {outN}
+                                </span>
+                              </>
+                            )}
+                          </p>
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* Inspector — absolute overlay, never resizes the map */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex w-full max-w-sm flex-col gap-3 p-3 sm:w-96">
+          {!inspectedEntry ? (
+            <div className="flex flex-1 items-end justify-end">
+              <p className="rounded-lg border border-dashed border-border bg-surface/85 px-3 py-2 text-[11px] text-fg-subtle backdrop-blur-sm">
+                Click a {viewMode === 'web' ? 'node' : 'row'} to inspect it
+              </p>
             </div>
           ) : (
-            <>
+            <div className="pointer-events-auto flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto rounded-2xl border border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-md">
               <div className="rounded-xl border border-accent/40 bg-accent-soft/30 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -528,249 +556,247 @@ export function RecursionBookPanel({
                       Inspecting
                     </p>
                     <p className="truncate text-base font-semibold text-fg">
-                      {entryDisplayName(inspectEntry, indexById.get(inspectEntry.id))}
+                      {entryDisplayName(inspectedEntry, indexById.get(inspectedEntry.id))}
                     </p>
-                    {inspectEntry.keys?.length > 0 && (
+                    {inspectedEntry.keys?.length > 0 && (
                       <p
                         className="mt-1 truncate text-[11px] text-fg-muted"
-                        title={inspectEntry.keys.join(', ')}
+                        title={inspectedEntry.keys.join(', ')}
                       >
-                        Keys: {inspectEntry.keys.slice(0, 6).join(', ')}
-                        {inspectEntry.keys.length > 6 ? '…' : ''}
+                        Keys: {inspectedEntry.keys.slice(0, 6).join(', ')}
+                        {inspectedEntry.keys.length > 6 ? '…' : ''}
                       </p>
                     )}
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      <RecursionFlagChips entry={inspectEntry} />
+                      <RecursionFlagChips entry={inspectedEntry} />
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       type="button"
-                      onClick={() => onNavigateToEntry(inspectEntry.id)}
+                      onClick={() => onNavigateToEntry(inspectedEntry.id)}
                       className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
                     >
                       Open in editor
                     </button>
                     <button
                       type="button"
-                      onClick={inspectAsSelection}
+                      onClick={() => toggleSelect(inspectedEntry.id)}
                       className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
                     >
-                      Select this
+                      {inspectedSelected ? 'Remove from selection' : 'Select'}
                     </button>
                   </div>
                 </div>
-
-                {/* How to read */}
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <div className="flex items-center gap-2 rounded-lg border border-border/80 bg-surface/80 px-2.5 py-2 text-[11px] text-fg-muted">
-                    <ArrowDownToLine className="h-4 w-4 shrink-0 text-accent" />
-                    <span>
-                      <span className="font-semibold text-fg">{inbound.length}</span> entries can
-                      unlock this one
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg border border-border/80 bg-surface/80 px-2.5 py-2 text-[11px] text-fg-muted">
-                    <ArrowUpFromLine className="h-4 w-4 shrink-0 text-success" />
-                    <span>
-                      This one can unlock{' '}
-                      <span className="font-semibold text-fg">{outbound.length}</span> entries
-                    </span>
-                  </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {FLAG_ROWS.map((row) => {
+                    const on = inspectedEntry[row.key] === true;
+                    return (
+                      <button
+                        key={row.key}
+                        type="button"
+                        aria-pressed={on}
+                        title={row.hint}
+                        onClick={() => onPatchEntry(inspectedEntry.id, { [row.key]: !on })}
+                        className={`rounded-lg border px-2 py-1 text-[10px] font-medium touch-manipulation ${
+                          on
+                            ? 'border-accent bg-accent-soft text-accent'
+                            : 'border-border bg-surface text-fg-muted hover:bg-hover hover:text-fg'
+                        }`}
+                      >
+                        {row.label}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <section className="space-y-2">
-                  <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                    <ArrowDownToLine className="h-3.5 w-3.5 text-accent" />
-                    Unlocked by ({inbound.length})
-                  </h3>
-                  {inbound.length === 0 ? (
-                    <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs leading-relaxed text-fg-muted">
-                      {inspectEntry.excludeRecursion
-                        ? 'Non-recursable is on: nothing can unlock this via recursion.'
-                        : 'No other entry’s content mentions this entry’s keys.'}
-                    </p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {inbound.map((edge) => {
-                        const other = entryById.get(edge.fromId);
-                        if (!other) return null;
-                        return (
-                          <li key={`in-${edge.fromId}`}>
-                            <LinkRow
-                              edge={edge}
-                              direction="in"
-                              other={other}
-                              otherIndex={indexById.get(other.id)}
-                              onInspect={() => inspect(other.id)}
-                              onOpen={() => onNavigateToEntry(other.id)}
-                            />
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </section>
-
-                <section className="space-y-2">
-                  <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                    <ArrowUpFromLine className="h-3.5 w-3.5 text-success" />
-                    Unlocks ({outbound.length})
-                  </h3>
-                  {outbound.length === 0 ? (
-                    <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs leading-relaxed text-fg-muted">
-                      {inspectEntry.preventRecursion
-                        ? 'Prevent further recursion is on: this entry will not unlock others.'
-                        : 'This entry’s content does not mention other entries’ keys.'}
-                    </p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {outbound.map((edge) => {
-                        const other = entryById.get(edge.toId);
-                        if (!other) return null;
-                        return (
-                          <li key={`out-${edge.toId}`}>
-                            <LinkRow
-                              edge={edge}
-                              direction="out"
-                              other={other}
-                              otherIndex={indexById.get(other.id)}
-                              onInspect={() => inspect(other.id)}
-                              onOpen={() => onNavigateToEntry(other.id)}
-                            />
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </section>
-              </div>
-            </>
-          )}
-
-          {/* Flag controls: inspect target or multi-select */}
-          {bulkIds.length > 0 && (
-            <div className="space-y-3 rounded-xl border border-border bg-surface p-3 shadow-sm">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                  Recursion controls
-                </p>
-                <p className="mt-0.5 text-xs text-fg-muted">
-                  Applying to: <span className="font-medium text-fg">{bulkLabel}</span>
-                  {activeSelectedIds.size === 0 && (
-                    <span className="text-fg-subtle">
-                      {' '}
-                      (inspect target; use Select all or checkboxes for bulk)
-                    </span>
-                  )}
+                <p className="mt-2 text-[10px] leading-snug text-fg-subtle">
+                  These toggles apply immediately to this entry. Select entries below to stage a
+                  change across many.
                 </p>
               </div>
-              <div className="space-y-3 divide-y divide-border/80">
-                <div className="pb-3">
-                  <FlagToggleRow
-                    label="Non-recursable"
-                    hint="Others cannot unlock these entries by mentioning their keys."
-                    state={flagState(bulkEntries, 'excludeRecursion')}
-                    disabled={bulkIds.length === 0}
-                    onSet={(v) => setFlag(bulkIds, 'excludeRecursion', v)}
-                  />
-                </div>
-                <div className="py-3">
-                  <FlagToggleRow
-                    label="Prevent further recursion"
-                    hint="When these activate, they will not unlock further entries."
-                    state={flagState(bulkEntries, 'preventRecursion')}
-                    disabled={bulkIds.length === 0}
-                    onSet={(v) => setFlag(bulkIds, 'preventRecursion', v)}
-                  />
-                </div>
-                <div className="pt-3">
-                  <FlagToggleRow
-                    label="Delay until recursion"
-                    hint="Only activate on recursive passes (not the first chat scan)."
-                    state={flagState(bulkEntries, 'delayUntilRecursion')}
-                    disabled={bulkIds.length === 0}
-                    onSet={(v) => setFlag(bulkIds, 'delayUntilRecursion', v)}
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                disabled={bulkIds.length === 0}
-                onClick={() =>
-                  onUpdateEntries(bulkIds, {
-                    excludeRecursion: true,
-                    preventRecursion: true,
-                  })
-                }
-                className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:opacity-40 touch-manipulation sm:w-auto"
-              >
-                Isolate: block both directions
-              </button>
+
+              <section className="space-y-2">
+                <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                  <ArrowDownToLine className="h-3.5 w-3.5 text-accent" />
+                  Unlocked by ({inbound.length})
+                </h3>
+                {inbound.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs leading-relaxed text-fg-muted">
+                    {inspectedEntry.excludeRecursion
+                      ? 'Non-recursable is on: nothing can unlock this via recursion.'
+                      : 'No other entry’s content mentions this entry’s keys.'}
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {inbound.map((edge) => {
+                      const other = entryById.get(edge.fromId);
+                      if (!other) return null;
+                      return (
+                        <li key={`in-${edge.fromId}`}>
+                          <LinkRow
+                            edge={edge}
+                            direction="in"
+                            other={other}
+                            otherIndex={indexById.get(other.id)}
+                            onInspect={() => inspect(other.id)}
+                            onOpen={() => onNavigateToEntry(other.id)}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
+
+              <section className="space-y-2">
+                <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                  <ArrowUpFromLine className="h-3.5 w-3.5 text-success" />
+                  Unlocks ({outbound.length})
+                </h3>
+                {outbound.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs leading-relaxed text-fg-muted">
+                    {inspectedEntry.preventRecursion
+                      ? 'Prevent further recursion is on: this entry will not unlock others.'
+                      : 'This entry’s content does not mention other entries’ keys.'}
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {outbound.map((edge) => {
+                      const other = entryById.get(edge.toId);
+                      if (!other) return null;
+                      return (
+                        <li key={`out-${edge.toId}`}>
+                          <LinkRow
+                            edge={edge}
+                            direction="out"
+                            other={other}
+                            otherIndex={indexById.get(other.id)}
+                            onInspect={() => inspect(other.id)}
+                            onOpen={() => onNavigateToEntry(other.id)}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </section>
             </div>
           )}
         </div>
-      </div>
 
-      {/* All paths (secondary, collapsible) */}
-      <div className="rounded-xl border border-border">
-        <button
-          type="button"
-          onClick={() => setShowAllLinks((v) => !v)}
-          className="flex w-full items-center justify-between px-3 py-2.5 text-left touch-manipulation hover:bg-hover/40"
-        >
-          <span className="text-xs font-semibold text-fg">
-            All unlock paths in this book
-            <span className="ml-1.5 font-normal text-fg-muted">({edges.length})</span>
-          </span>
-          <span className="text-[11px] text-fg-subtle">{showAllLinks ? 'Hide' : 'Show'}</span>
-        </button>
-        {showAllLinks && (
-          <div className="border-t border-border">
-            {edges.length === 0 ? (
-              <p className="px-3 py-4 text-xs text-fg-muted">No unlock paths yet.</p>
+        {/* Selection bar — absolute overlay at map bottom, never resizes the map */}
+        {activeSelectedIds.size > 0 && (
+          <div className="absolute inset-x-3 bottom-3 z-10 space-y-3 rounded-xl border border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-md">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <p className="text-xs font-semibold text-fg">
+              {activeSelectedIds.size} {activeSelectedIds.size === 1 ? 'entry' : 'entries'} selected
+            </p>
+            <div className="flex flex-wrap gap-1">
+              <button
+                type="button"
+                onClick={selectAllEntries}
+                className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+              >
+                All
+              </button>
+              {(query.trim() || filter !== 'all') && (
+                <button
+                  type="button"
+                  onClick={selectAllVisible}
+                  disabled={sortedEntries.length === 0}
+                  className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-40 touch-manipulation"
+                >
+                  Visible ({sortedEntries.length})
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={selectAllLinked}
+                className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+              >
+                Linked
+              </button>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="inline-flex items-center gap-0.5 rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+              >
+                <X className="h-3 w-3" />
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3 divide-y divide-border/80">
+            {FLAG_ROWS.map((row, i) => (
+              <div
+                key={row.key}
+                className={i === 0 ? 'pb-3' : i === FLAG_ROWS.length - 1 ? 'pt-3' : 'py-3'}
+              >
+                <FlagToggleRow
+                  label={row.label}
+                  hint={row.hint}
+                  state={flagState(selectedEntries, row.key)}
+                  pendingValue={
+                    pendingPatch?.key === row.key ? pendingPatch.value : null
+                  }
+                  onSet={(v) => stageFlag(row.key, v)}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={stageIsolate}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors touch-manipulation ${
+                pendingPatch?.key === 'both'
+                  ? 'border-accent bg-accent-soft text-accent'
+                  : 'border-border bg-muted/40 text-fg-muted hover:bg-hover hover:text-fg'
+              }`}
+              title="Stage Non-recursable ON + Prevent further recursion ON for the selection"
+            >
+              Isolate: block both directions
+            </button>
+            {pendingPatch ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[11px] text-fg-muted">
+                  Pending: <span className="font-medium text-fg">{pendingLabel(pendingPatch)}</span>{' '}
+                  → {pendingPatch.value ? 'ON' : 'OFF'} for {activeSelectedIds.size}{' '}
+                  {activeSelectedIds.size === 1 ? 'entry' : 'entries'}
+                </p>
+                <button
+                  type="button"
+                  onClick={applyPending}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold touch-manipulation ${
+                    applyArmed
+                      ? 'bg-warning text-fg-inverse'
+                      : 'bg-accent text-accent-fg hover:opacity-90'
+                  }`}
+                >
+                  {activeSelectedIds.size > ARM_THRESHOLD && !applyArmed
+                    ? `Apply to ${activeSelectedIds.size} entries…`
+                    : applyArmed
+                      ? 'Confirm apply'
+                      : 'Apply'}
+                </button>
+                <button
+                  type="button"
+                  onClick={clearPending}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+                >
+                  Discard
+                </button>
+              </div>
             ) : (
-              <ul className="max-h-48 divide-y divide-border overflow-y-auto">
-                {edges.map((edge) => {
-                  const from = entryById.get(edge.fromId);
-                  const to = entryById.get(edge.toId);
-                  if (!from || !to) return null;
-                  return (
-                    <li
-                      key={`${edge.fromId}->${edge.toId}`}
-                      className="flex flex-wrap items-center gap-1.5 px-3 py-2 text-xs"
-                    >
-                      <button
-                        type="button"
-                        className="font-medium text-fg hover:text-accent"
-                        onClick={() => inspect(edge.fromId)}
-                      >
-                        {entryDisplayName(from, indexById.get(from.id))}
-                      </button>
-                      <ArrowRight className="h-3 w-3 shrink-0 text-fg-subtle" aria-hidden />
-                      <button
-                        type="button"
-                        className="font-medium text-fg hover:text-accent"
-                        onClick={() => inspect(edge.toId)}
-                      >
-                        {entryDisplayName(to, indexById.get(to.id))}
-                      </button>
-                      <span
-                        className="min-w-0 truncate text-fg-subtle"
-                        title={edge.matchedKeys.join(', ')}
-                      >
-                        via {edge.matchedKeys.slice(0, 3).join(', ')}
-                        {edge.matchedKeys.length > 3 ? '…' : ''}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <p className="text-[10px] text-fg-subtle">
+                Nothing staged — pick On/Off above, then Apply.
+              </p>
             )}
           </div>
-        )}
+        </div>
+      )}
       </div>
     </div>
   );

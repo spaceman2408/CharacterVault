@@ -26,8 +26,12 @@ import { importLorebook, convertToSTLorebook } from '../../../services/LorebookC
 import { estimateTokens, BYTES_PER_TOKEN } from '../../../services/AIService';
 import { LorebookEntryDetail } from './LorebookEntryDetail';
 import { MemoizedLorebookEntryListItem } from './LorebookEntryListItem';
-import { RecursionMapModal, type RecursionMapTab } from './RecursionMapModal';
-import { applyEntryFlagPatch, buildRecursionGraph } from './recursionGraph';
+import { RecursionMapModal } from './RecursionMapModal';
+import {
+  applyEntryFlagPatch,
+  buildRecursionGraph,
+  type RecursionFlagPatch,
+} from './recursionGraph';
 import type { LorebookEditorProps } from './types';
 import { FIELD_HELP } from './fieldHelp';
 import { FieldInfoTip, FieldLabel } from './FieldInfoTip';
@@ -73,7 +77,6 @@ function LorebookEditorInner({
   const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
   const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
   const [isRecursionMapOpen, setIsRecursionMapOpen] = useState(false);
-  const [recursionMapTab, setRecursionMapTab] = useState<RecursionMapTab>('ego');
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,9 +96,8 @@ function LorebookEditorInner({
   const safeSelectedIndex = selectedEntryIndex < entries.length ? selectedEntryIndex : 0;
   const selectedEntry = entries[safeSelectedIndex];
 
-  const handleOpenRecursionMap = useCallback((tab: RecursionMapTab = 'ego') => {
+  const handleOpenRecursionMap = useCallback(() => {
     if (entries.length === 0) return;
-    setRecursionMapTab(tab);
     setIsRecursionMapOpen(true);
   }, [entries.length]);
 
@@ -223,9 +225,15 @@ function LorebookEditorInner({
       const newEntries = applyEntryFlagPatch(entries, ids, patch);
       persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
     },
-    [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook],
+        [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook],
   );
 
+  const handlePatchRecursionEntry = useCallback(
+    (id: number, patch: RecursionFlagPatch) => {
+      handleUpdateRecursionFlags([id], patch);
+    },
+    [handleUpdateRecursionFlags],
+  );
   const selectedEntryTokenCount = useMemo(
     () => (selectedEntry ? estimateTokens(selectedEntry.content) : null),
     [selectedEntry],
@@ -485,7 +493,7 @@ function LorebookEditorInner({
                 {entries.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => handleOpenRecursionMap('book')}
+                    onClick={() => handleOpenRecursionMap()}
                     className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-[11px] font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
                     title="Open whole-book recursion map"
                   >
@@ -731,7 +739,7 @@ function LorebookEditorInner({
                 entry={selectedEntry}
                 allEntries={entries}
                 onPersistUpdate={handleEntryPersistUpdate}
-                onOpenRecursionMap={() => handleOpenRecursionMap('ego')}
+                onOpenRecursionMap={() => handleOpenRecursionMap()}
                 aiConfig={aiConfig}
                 samplerSettings={samplerSettings}
                 promptSettings={promptSettings}
@@ -763,10 +771,10 @@ function LorebookEditorInner({
           entries={entries}
           graph={recursionGraph}
           bookRecursiveScanning={draftLorebook.recursive_scanning}
-          initialTab={recursionMapTab}
           onClose={handleCloseRecursionMap}
           onNavigateToEntry={handleNavigateToEntry}
           onUpdateEntries={handleUpdateRecursionFlags}
+          onPatchEntry={handlePatchRecursionEntry}
         />
       )}
     </div>
