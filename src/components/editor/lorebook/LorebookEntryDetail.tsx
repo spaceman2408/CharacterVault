@@ -349,12 +349,22 @@ export function LorebookEntryDetail({
                 Primary Keys
               </FieldLabel>
               <span className="text-[11px] text-fg-subtle">comma separated</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={keysInput}
+                onChange={(e) => setKeysInput(e.target.value)}
+                onBlur={handleKeysBlur}
+                placeholder="castle, fortress, stronghold"
+                className={FIELD_CLASS}
+              />
               <button
                 type="button"
                 onClick={() => void handleGenerateKeys()}
                 disabled={!generatingKeys && !draftEntry.content.trim()}
                 title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
-                className={`ml-auto rounded-lg p-1.5 transition-colors touch-manipulation ${
+                className={`shrink-0 rounded-lg p-2 transition-colors touch-manipulation ${
                   generatingKeys
                     ? 'animate-pulse text-danger hover:bg-danger-soft'
                     : 'text-fg-subtle hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40'
@@ -367,14 +377,6 @@ export function LorebookEntryDetail({
                 )}
               </button>
             </div>
-            <input
-              type="text"
-              value={keysInput}
-              onChange={(e) => setKeysInput(e.target.value)}
-              onBlur={handleKeysBlur}
-              placeholder="castle, fortress, stronghold"
-              className={FIELD_CLASS}
-            />
           </div>
 
           <div>
