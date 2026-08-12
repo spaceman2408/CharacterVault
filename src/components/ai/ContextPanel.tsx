@@ -13,15 +13,13 @@ import {
   Info,
   Check,
   Plus,
-  FileText,
-  Pencil,
 } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { CHARACTER_SECTIONS } from '../../db/characterTypes';
 import type { CharacterSection, SectionMeta } from '../../db/characterTypes';
 import { estimateTokens, BYTES_PER_TOKEN } from '../../services/AIService';
 import { estimateCustomContextTokensFromCharLength } from '../../services/CustomContextService';
-import { CustomContextModal } from './CustomContextModal';
+import { CustomContextBlock } from './CustomContextBlock';
 
 const EXCLUDED_CONTEXT_SECTIONS = new Set([
   'image',
@@ -65,12 +63,6 @@ export function ContextPanel({
   const hasCurrentCharacter = currentCharacterData !== null;
   const currentCharacterId = currentCharacter?.id ?? null;
   const [searchQuery, setSearchQuery] = useState('');
-  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
-
-  // Drop modal (and its draft body) when the open character changes
-  React.useEffect(() => {
-    setIsCustomModalOpen(false);
-  }, [currentCharacterId]);
 
   const handleSearchQueryChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
@@ -208,19 +200,6 @@ export function ContextPanel({
     return totalTokens;
   }, [currentCharacterData, contextSectionIds, customContextTokens]);
 
-  const handleToggleCustomEnabled = useCallback(() => {
-    if (!hasCustomContext) return;
-    void setCustomContextEnabled(!customContextMeta.enabled);
-  }, [hasCustomContext, customContextMeta.enabled, setCustomContextEnabled]);
-
-  const handleClearCustom = useCallback(() => {
-    if (!hasCustomContext) return;
-    if (!window.confirm('Remove custom context for this character? This cannot be undone.')) {
-      return;
-    }
-    void clearCustomContext();
-  }, [hasCustomContext, clearCustomContext]);
-
   const usageData = useMemo(() => {
     const tokenCount = calculateTokenCount();
     const percentage = Math.min(100, (tokenCount / contextLimit) * 100);
@@ -323,85 +302,20 @@ export function ContextPanel({
       </div>
 
       {/* Custom context (vault-local, per character) */}
-      <div className="px-4 py-3 border-b border-border shrink-0 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">
-            Custom
-          </span>
-          {hasCustomContext && (
-            <button
-              type="button"
-              onClick={handleClearCustom}
-              className="text-xs text-fg-subtle hover:text-danger transition-colors"
-            >
-              Remove
-            </button>
-          )}
+      {currentCharacterId && (
+        <div className="px-4 py-3 border-b border-border shrink-0">
+          <CustomContextBlock
+            key={currentCharacterId}
+            ownerId={currentCharacterId}
+            owner="character"
+            meta={customContextMeta}
+            contextLength={contextLimit}
+            onSetEnabled={setCustomContextEnabled}
+            onSave={saveCustomContext}
+            onClear={clearCustomContext}
+          />
         </div>
-
-        {!hasCustomContext ? (
-          <button
-            type="button"
-            onClick={() => setIsCustomModalOpen(true)}
-            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl border border-dashed border-border-strong text-fg-muted hover:border-accent hover:text-accent hover:bg-accent-soft transition-colors text-left"
-          >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span className="min-w-0">
-              <span className="block text-sm font-medium">Add custom context…</span>
-              <span className="block text-xs text-fg-subtle mt-0.5">
-                Paste notes or reference text for this character
-              </span>
-            </span>
-          </button>
-        ) : (
-          <div
-            className={`flex items-start gap-2.5 px-2.5 py-2 rounded-xl border transition-colors ${
-              customContextEnabled
-                ? 'border-accent/40 bg-accent-soft shadow-sm'
-                : 'border-border bg-surface'
-            }`}
-          >
-            <button
-              type="button"
-              onClick={handleToggleCustomEnabled}
-              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                customContextEnabled
-                  ? 'border-accent bg-accent text-accent-fg'
-                  : 'border-border-strong bg-surface'
-              }`}
-              title={customContextEnabled ? 'Exclude from AI context' : 'Include in AI context'}
-              aria-pressed={customContextEnabled}
-            >
-              {customContextEnabled && <Check className="w-3 h-3" strokeWidth={3} />}
-            </button>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-fg-muted shrink-0" />
-                <span
-                  className={`text-sm font-medium truncate ${
-                    customContextEnabled ? 'text-accent' : 'text-fg'
-                  }`}
-                >
-                  Custom context
-                </span>
-              </div>
-              <p className="text-xs text-fg-muted mt-0.5">
-                ~{estimateCustomContextTokensFromCharLength(customContextMeta.charLength).toLocaleString()}{' '}
-                tokens
-                {!customContextMeta.enabled && ' · off'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsCustomModalOpen(true)}
-              className="p-1.5 rounded-lg text-fg-muted hover:text-accent hover:bg-accent-soft transition-colors shrink-0"
-              title="Edit custom context"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Selected chips + include-current affordance */}
       <div className="px-4 py-3 border-b border-border shrink-0 space-y-2">
@@ -551,16 +465,6 @@ export function ContextPanel({
         )}
       </div>
 
-      {currentCharacterId && (
-        <CustomContextModal
-          isOpen={isCustomModalOpen}
-          characterId={currentCharacterId}
-          initialEnabled={customContextMeta.enabled || !hasCustomContext}
-          contextLength={contextLimit}
-          onClose={() => setIsCustomModalOpen(false)}
-          onSave={saveCustomContext}
-        />
-      )}
     </div>
   );
 }

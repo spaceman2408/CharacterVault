@@ -43,6 +43,7 @@ export type {
   SpellDictionaryCacheEntry,
   SpellcheckSettings,
   CharacterCustomContext,
+  LorebookCustomContext,
   CustomContextMeta,
 } from './characterTypes';
 export {

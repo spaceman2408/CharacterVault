@@ -2,12 +2,21 @@ import type {
   AIConfig,
   CharacterBook,
   CharacterSection,
+  CustomContextMeta,
   LorebookEntry,
   PromptModelMap,
   PromptSettings,
   SamplerSettings,
   SpellcheckSettings,
 } from '../../../db/characterTypes';
+
+export interface LorebookCustomContextControls {
+  ownerId: string;
+  meta: CustomContextMeta;
+  onSetEnabled: (enabled: boolean) => Promise<void>;
+  onSave: (input: { content: string; enabled: boolean }) => Promise<void>;
+  onClear: () => Promise<void>;
+}
 
 export interface LorebookEditorProps {
   lorebook: CharacterBook | undefined;
@@ -26,6 +35,8 @@ export interface LorebookEditorProps {
   characterName?: string;
   spellcheck?: SpellcheckSettings;
   markdownImageOpenLinks?: boolean;
+  /** Standalone vault books only — not used for character-embedded lorebooks */
+  customContext?: LorebookCustomContextControls;
 }
 
 export interface LorebookEntryListItemProps {

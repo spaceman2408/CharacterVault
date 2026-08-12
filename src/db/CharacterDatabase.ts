@@ -18,6 +18,7 @@ import type {
   SpellDictionaryCacheEntry,
   StoredImage,
   CharacterCustomContext,
+  LorebookCustomContext,
   VaultLorebook,
   LorebookListItem,
   LorebookSnapshot,
@@ -146,6 +147,9 @@ export class CharacterDatabase extends Dexie {
   /** Per-character vault-local custom AI context (1:1 with character) */
   characterCustomContext!: Table<CharacterCustomContext, string>;
 
+  /** Per-lorebook vault-local custom AI context (1:1 with standalone book) */
+  lorebookCustomContext!: Table<LorebookCustomContext, string>;
+
   /** Standalone lorebooks (world info library) */
   lorebooks!: Table<VaultLorebook, string>;
 
@@ -255,6 +259,22 @@ export class CharacterDatabase extends Dexie {
       lorebookListIndex: 'id, name, updatedAt, lastOpenedAt',
       lorebookSnapshots: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
       characterLorebookAttachments: 'characterId',
+    });
+
+    // Version 9: Per-lorebook custom AI context (vault-local, not book export)
+    this.version(9).stores({
+      characters: 'id, name, updatedAt, createdAt',
+      settings: 'id',
+      snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+      storedImages: 'id',
+      spellDictionaryCache: 'id',
+      characterListIndex: 'id, name, updatedAt, lastOpenedAt',
+      characterCustomContext: 'characterId',
+      lorebooks: 'id, name, updatedAt, createdAt',
+      lorebookListIndex: 'id, name, updatedAt, lastOpenedAt',
+      lorebookSnapshots: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+      characterLorebookAttachments: 'characterId',
+      lorebookCustomContext: 'lorebookId',
     });
   }
 
@@ -1022,11 +1042,13 @@ export class CharacterDatabase extends Dexie {
         this.lorebookListIndex,
         this.lorebookSnapshots,
         this.characterLorebookAttachments,
+        this.lorebookCustomContext,
       ],
       async () => {
         await this.lorebooks.delete(id);
         await this.lorebookListIndex.delete(id);
         await this.lorebookSnapshots.where('lorebookId').equals(id).delete();
+        await this.lorebookCustomContext.delete(id);
 
         // Drop attach references to this book
         const attachments = await this.characterLorebookAttachments.toArray();
@@ -1078,10 +1100,25 @@ export class CharacterDatabase extends Dexie {
       lastOpenedAt: timestamp,
     };
 
-    await this.transaction('rw', this.lorebooks, this.lorebookListIndex, async () => {
-      await this.lorebooks.add(duplicated);
-      await this.syncLorebookListIndex(duplicated);
-    });
+    await this.transaction(
+      'rw',
+      this.lorebooks,
+      this.lorebookListIndex,
+      this.lorebookCustomContext,
+      async () => {
+        await this.lorebooks.add(duplicated);
+        await this.syncLorebookListIndex(duplicated);
+
+        const customContext = await this.lorebookCustomContext.get(id);
+        if (customContext) {
+          await this.lorebookCustomContext.put({
+            ...customContext,
+            lorebookId: newId,
+            updatedAt: timestamp,
+          });
+        }
+      },
+    );
     return duplicated;
   }
 

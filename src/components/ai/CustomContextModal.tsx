@@ -1,5 +1,5 @@
 /**
- * @fileoverview Modal editor for per-character custom AI context.
+ * @fileoverview Modal editor for vault-local custom AI context.
  * Loads body from IndexedDB on open; does not keep content after close.
  * @module components/ai/CustomContextModal
  */
@@ -7,28 +7,34 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, FileText, LoaderCircle, X } from 'lucide-react';
-import { customContextService } from '../../services/CustomContextService';
+import {
+  customContextService,
+  type CustomContextOwner,
+} from '../../services/CustomContextService';
 import { estimateTokens, BYTES_PER_TOKEN } from '../../services/AIService';
 
 export interface CustomContextModalProps {
   isOpen: boolean;
-  characterId: string;
+  ownerId: string;
+  owner: CustomContextOwner;
   /** Initial enabled flag from meta (content is loaded inside) */
   initialEnabled: boolean;
   contextLength: number;
   onClose: () => void;
-  /** Persist via editor context so meta updates without retaining body */
+  /** Persist via parent so meta updates without retaining body */
   onSave: (input: { content: string; enabled: boolean }) => Promise<void>;
 }
 
 function CustomContextModalBody({
-  characterId,
+  ownerId,
+  owner,
   initialEnabled,
   contextLength,
   onClose,
   onSave,
 }: {
-  characterId: string;
+  ownerId: string;
+  owner: CustomContextOwner;
   initialEnabled: boolean;
   contextLength: number;
   onClose: () => void;
@@ -57,7 +63,7 @@ function CustomContextModalBody({
 
     void (async () => {
       try {
-        const body = await customContextService.getContent(characterId);
+        const body = await customContextService.getContent(ownerId, owner);
         if (cancelled || !mountedRef.current) return;
         setContent(body ?? '');
         setEnabled(initialEnabled || (body != null && body.length > 0));
@@ -74,7 +80,7 @@ function CustomContextModalBody({
     return () => {
       cancelled = true;
     };
-  }, [characterId, initialEnabled]);
+  }, [ownerId, owner, initialEnabled]);
 
   const tokenEstimate = useMemo(() => {
     if (!content.trim()) return 0;
@@ -135,7 +141,7 @@ function CustomContextModalBody({
             </h3>
             <p className="mt-0.5 text-xs leading-relaxed text-fg-muted">
               Paste notes or reference text for Orion and the AI toolbar. Stored only in this vault,
-              not exported with the character card.
+              not exported with the card or book.
             </p>
           </div>
         </div>
@@ -240,11 +246,12 @@ function CustomContextModalBody({
 }
 
 /**
- * Modal for editing vault-local custom AI context for one character.
+ * Modal for editing vault-local custom AI context for one character or lorebook.
  */
 export function CustomContextModal({
   isOpen,
-  characterId,
+  ownerId,
+  owner,
   initialEnabled,
   contextLength,
   onClose,
@@ -275,8 +282,9 @@ export function CustomContextModal({
     <div className="fixed inset-0 z-120 flex items-center justify-center bg-overlay p-3 backdrop-blur-sm sm:p-4">
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
       <CustomContextModalBody
-        key={characterId}
-        characterId={characterId}
+        key={`${owner}:${ownerId}`}
+        ownerId={ownerId}
+        owner={owner}
         initialEnabled={initialEnabled}
         contextLength={contextLength}
         onClose={onClose}

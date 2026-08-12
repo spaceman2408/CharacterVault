@@ -4,6 +4,7 @@
  */
 
 export { ContextPanel } from './ContextPanel';
+export { CustomContextBlock, type CustomContextBlockProps } from './CustomContextBlock';
 export { CustomContextModal, type CustomContextModalProps } from './CustomContextModal';
 export { AIChatPanel, type AIChatPanelProps, type ChatMessage } from './AIChatPanel';
 export { StreamingText, StreamingMarkdown, type StreamingTextProps } from './StreamingText';

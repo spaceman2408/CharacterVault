@@ -20,6 +20,7 @@ export function computeContextUsage(
   entries: LorebookEntry[],
   tokenBudget: number | undefined,
   samplerContextLength: number | undefined,
+  extraTokens = 0,
 ): ContextUsageSummary {
   let included = 0;
   let tokens = 0;
@@ -31,6 +32,8 @@ export function computeContextUsage(
     if (entry.keys?.length) tokens += estimateTokens(entry.keys.join(','));
     if (entry.comment) tokens += estimateTokens(entry.comment);
   }
+
+  tokens += extraTokens;
 
   const limit = Math.max(
     1,

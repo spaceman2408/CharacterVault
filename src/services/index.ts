@@ -53,6 +53,7 @@ export {
   CUSTOM_CONTEXT_HEADER,
   formatCustomContextChunk,
   estimateCustomContextTokensFromCharLength,
+  type CustomContextOwner,
 } from './CustomContextService';
 export {
   openHistoryAfterFlush,

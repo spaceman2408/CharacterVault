@@ -1,12 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CharacterCustomContext } from '../../src/db/characterTypes';
+import type { CharacterCustomContext, LorebookCustomContext } from '../../src/db/characterTypes';
 
-const { get, put, del, update } = vi.hoisted(() => {
+const { get, put, del, update, lbGet, lbPut, lbDel, lbUpdate } = vi.hoisted(() => {
   const getFn = vi.fn();
   const putFn = vi.fn();
   const delFn = vi.fn();
   const updateFn = vi.fn();
-  return { get: getFn, put: putFn, del: delFn, update: updateFn };
+  const lbGetFn = vi.fn();
+  const lbPutFn = vi.fn();
+  const lbDelFn = vi.fn();
+  const lbUpdateFn = vi.fn();
+  return {
+    get: getFn,
+    put: putFn,
+    del: delFn,
+    update: updateFn,
+    lbGet: lbGetFn,
+    lbPut: lbPutFn,
+    lbDel: lbDelFn,
+    lbUpdate: lbUpdateFn,
+  };
 });
 
 vi.mock('../../src/db', () => ({
@@ -16,6 +29,12 @@ vi.mock('../../src/db', () => ({
       put,
       delete: del,
       update,
+    },
+    lorebookCustomContext: {
+      get: lbGet,
+      put: lbPut,
+      delete: lbDel,
+      update: lbUpdate,
     },
   },
 }));
@@ -31,6 +50,19 @@ function makeRow(overrides: Partial<CharacterCustomContext> = {}): CharacterCust
   return {
     characterId: 'char-1',
     content: 'Hello world',
+    enabled: true,
+    updatedAt: '2020-01-01T00:00:00.000Z',
+    charLength: 11,
+    ...overrides,
+  };
+}
+
+function makeLorebookRow(
+  overrides: Partial<LorebookCustomContext> = {},
+): LorebookCustomContext {
+  return {
+    lorebookId: 'book-1',
+    content: 'World notes',
     enabled: true,
     updatedAt: '2020-01-01T00:00:00.000Z',
     charLength: 11,
@@ -133,5 +165,37 @@ describe('CustomContextService', () => {
     del.mockResolvedValue(undefined);
     await service.clear('char-1');
     expect(del).toHaveBeenCalledWith('char-1');
+  });
+
+  it('routes lorebook owner to the lorebook table', async () => {
+    lbGet.mockResolvedValue(makeLorebookRow());
+    await expect(service.getMeta('book-1', 'lorebook')).resolves.toEqual({
+      enabled: true,
+      charLength: 11,
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    });
+    expect(lbGet).toHaveBeenCalledWith('book-1');
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('save for lorebook writes lorebookId and skips the character table', async () => {
+    lbPut.mockResolvedValue(undefined);
+    const meta = await service.save('book-1', { content: 'abc', enabled: true }, 'lorebook');
+    expect(lbPut).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lorebookId: 'book-1',
+        content: 'abc',
+        enabled: true,
+        charLength: 3,
+      }),
+    );
+    expect(put).not.toHaveBeenCalled();
+    expect(meta.charLength).toBe(3);
+  });
+
+  it('getEnabledContent for lorebook reads the lorebook table', async () => {
+    lbGet.mockResolvedValue(makeLorebookRow({ content: '  notes  ', charLength: 9 }));
+    await expect(service.getEnabledContent('book-1', 'lorebook')).resolves.toBe('  notes  ');
+    expect(get).not.toHaveBeenCalled();
   });
 });

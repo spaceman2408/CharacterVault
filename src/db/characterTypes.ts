@@ -226,6 +226,19 @@ export interface CharacterCustomContext {
   charLength: number;
 }
 
+/**
+ * Vault-local custom AI context for a standalone lorebook (1:1).
+ * Not part of lorebook export/import or SillyTavern fields.
+ */
+export interface LorebookCustomContext {
+  lorebookId: UUID;
+  content: string;
+  /** When true, body is included in Orion + AI toolbar context */
+  enabled: boolean;
+  updatedAt: Timestamp;
+  charLength: number;
+}
+
 /** Lightweight custom-context fields safe to keep in React state */
 export interface CustomContextMeta {
   enabled: boolean;

@@ -3,7 +3,7 @@
  * Layout: entry list (includes AI context toggles) | editor | optional Orion.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Book,
@@ -21,9 +21,13 @@ import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
 import { usePersistedPanelWidth } from '../ai/hooks/usePersistedPanelWidth';
 import { LinkedCharactersMenu } from './LinkedCharactersMenu';
-import type { CharacterBook, CharacterSection } from '../../db/characterTypes';
-import { DEFAULT_SETTINGS } from '../../db/characterTypes';
+import type { CharacterBook, CharacterSection, CustomContextMeta } from '../../db/characterTypes';
+import { DEFAULT_SETTINGS, EMPTY_CUSTOM_CONTEXT_META } from '../../db/characterTypes';
 import { estimateTokens } from '../../services/AIService';
+import {
+  customContextService,
+  formatCustomContextChunk,
+} from '../../services/CustomContextService';
 import { lorebookSnapshotService } from '../../services/LorebookSnapshotService';
 
 const DESKTOP_MIN_WIDTH_PX = 1024;
@@ -54,6 +58,12 @@ export function LorebookWorkspace(): React.ReactElement {
   const [titleDraft, setTitleDraft] = useState(currentLorebook?.name ?? '');
   const [isMobile, setIsMobile] = useState(getIsMobileViewport);
   const [isChatOpen, setIsChatOpen] = useState(() => !getIsMobileViewport());
+  const [customContextMeta, setCustomContextMeta] = useState<CustomContextMeta>({
+    ...EMPTY_CUSTOM_CONTEXT_META,
+  });
+  const openedLorebookIdRef = useRef<string | null>(null);
+  const currentLorebookIdRef = useRef<string | null>(currentLorebook?.id ?? null);
+  currentLorebookIdRef.current = currentLorebook?.id ?? null;
 
   const {
     width: chatPanelWidth,
@@ -85,6 +95,23 @@ export function LorebookWorkspace(): React.ReactElement {
   useEffect(() => {
     setTitleDraft(currentLorebook?.name ?? '');
   }, [currentLorebook?.id, currentLorebook?.name]);
+
+  useEffect(() => {
+    const lorebookId = currentLorebook?.id ?? null;
+    if (!lorebookId) {
+      openedLorebookIdRef.current = null;
+      setCustomContextMeta({ ...EMPTY_CUSTOM_CONTEXT_META });
+      return;
+    }
+    if (openedLorebookIdRef.current === lorebookId) return;
+    openedLorebookIdRef.current = lorebookId;
+    setCustomContextMeta({ ...EMPTY_CUSTOM_CONTEXT_META });
+    void customContextService.getMeta(lorebookId, 'lorebook').then((meta) => {
+      if (openedLorebookIdRef.current === lorebookId) {
+        setCustomContextMeta(meta);
+      }
+    });
+  }, [currentLorebook?.id]);
 
   useEffect(() => {
     if (!currentLorebook) return;
@@ -127,21 +154,100 @@ export function LorebookWorkspace(): React.ReactElement {
     return chunks;
   }, [currentLorebook]);
 
-  const getContextContent = useCallback(
-    (sectionIds: CharacterSection[]): string[] => {
-      void sectionIds;
-      return buildBookContextChunks();
+  const resolveBookContextForAI = useCallback(
+    async (): Promise<string[]> => {
+      const chunks = buildBookContextChunks();
+      const lorebookId = currentLorebookIdRef.current;
+      if (!lorebookId) return chunks;
+      try {
+        const customBody = await customContextService.getEnabledContent(lorebookId, 'lorebook');
+        if (customBody) {
+          chunks.push(formatCustomContextChunk(customBody));
+        }
+      } catch (error) {
+        console.error('Failed to load custom context for AI:', error);
+      }
+      return chunks;
     },
     [buildBookContextChunks],
+  );
+
+  const getContextContent = useCallback(
+    (sectionIds: CharacterSection[]): Promise<string[]> => {
+      void sectionIds;
+      return resolveBookContextForAI();
+    },
+    [resolveBookContextForAI],
   );
 
   const getChatContextContent = useCallback(
     async (entryIds: string[]): Promise<string[]> => {
       void entryIds;
-      return buildBookContextChunks();
+      return resolveBookContextForAI();
     },
-    [buildBookContextChunks],
+    [resolveBookContextForAI],
   );
+
+  const setCustomContextEnabled = useCallback(async (enabled: boolean): Promise<void> => {
+    const lorebookId = currentLorebookIdRef.current;
+    if (!lorebookId) return;
+
+    setCustomContextMeta((prev) => {
+      if (prev.charLength === 0) return prev;
+      return {
+        ...prev,
+        enabled,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    try {
+      const updated = await customContextService.setEnabled(lorebookId, enabled, 'lorebook');
+      if (!updated && openedLorebookIdRef.current === lorebookId) {
+        setCustomContextMeta({ ...EMPTY_CUSTOM_CONTEXT_META });
+      }
+    } catch (error) {
+      console.error('Failed to update custom context enabled flag:', error);
+      if (openedLorebookIdRef.current === lorebookId) {
+        setCustomContextMeta((prev) => {
+          if (prev.charLength === 0) return prev;
+          return { ...prev, enabled: !enabled };
+        });
+      }
+      throw error;
+    }
+  }, []);
+
+  const saveCustomContext = useCallback(async (input: {
+    content: string;
+    enabled: boolean;
+  }): Promise<void> => {
+    const lorebookId = currentLorebookIdRef.current;
+    if (!lorebookId) return;
+    try {
+      const meta = await customContextService.save(lorebookId, input, 'lorebook');
+      if (openedLorebookIdRef.current === lorebookId) {
+        setCustomContextMeta(meta);
+      }
+    } catch (error) {
+      console.error('Failed to save custom context:', error);
+      throw error;
+    }
+  }, []);
+
+  const clearCustomContext = useCallback(async (): Promise<void> => {
+    const lorebookId = currentLorebookIdRef.current;
+    if (!lorebookId) return;
+    try {
+      await customContextService.clear(lorebookId, 'lorebook');
+      if (openedLorebookIdRef.current === lorebookId) {
+        setCustomContextMeta({ ...EMPTY_CUSTOM_CONTEXT_META });
+      }
+    } catch (error) {
+      console.error('Failed to clear custom context:', error);
+      throw error;
+    }
+  }, []);
 
   const handleBookChange = useCallback(
     async (book: CharacterBook) => {
@@ -313,6 +419,13 @@ export function LorebookWorkspace(): React.ReactElement {
             characterName={currentLorebook.name}
             spellcheck={spellcheck}
             markdownImageOpenLinks={markdownImageOpenLinks}
+            customContext={{
+              ownerId: currentLorebook.id,
+              meta: customContextMeta,
+              onSetEnabled: setCustomContextEnabled,
+              onSave: saveCustomContext,
+              onClear: clearCustomContext,
+            }}
           />
         </main>
 
@@ -351,6 +464,9 @@ export function LorebookWorkspace(): React.ReactElement {
               <AIChatPanel
                 selectedText={selectedText}
                 contextEntryIds={['lorebook']}
+                customContextIncluded={
+                  customContextMeta.enabled && customContextMeta.charLength > 0
+                }
                 aiConfig={aiConfig}
                 samplerSettings={samplerSettings}
                 promptSettings={promptSettings}

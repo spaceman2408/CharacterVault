@@ -24,6 +24,8 @@ import {
 import type { CharacterBook, LorebookEntry } from '../../../db/characterTypes';
 import { importLorebook, convertToSTLorebook } from '../../../services/LorebookConverter';
 import { estimateTokens, BYTES_PER_TOKEN } from '../../../services/AIService';
+import { estimateCustomContextTokensFromCharLength } from '../../../services/CustomContextService';
+import { CustomContextBlock } from '../../ai/CustomContextBlock';
 import { LorebookEntryDetail } from './LorebookEntryDetail';
 import { MemoizedLorebookEntryListItem } from './LorebookEntryListItem';
 import { RecursionMapModal } from './RecursionMapModal';
@@ -66,6 +68,7 @@ function LorebookEditorInner({
   characterName,
   spellcheck,
   markdownImageOpenLinks,
+  customContext,
 }: LorebookEditorProps): React.ReactElement {
   const normalizedPropLorebook = useMemo(
     () => normalizeCharacterBook(lorebook),
@@ -239,14 +242,20 @@ function LorebookEditorInner({
     [selectedEntry],
   );
 
+  const customContextTokens =
+    customContext?.meta.enabled && customContext.meta.charLength > 0
+      ? estimateCustomContextTokensFromCharLength(customContext.meta.charLength)
+      : 0;
+
   const contextSummary = useMemo(
     () =>
       computeContextUsage(
         entries,
         draftLorebook.token_budget,
         samplerSettings.contextLength,
+        customContextTokens,
       ),
-    [entries, draftLorebook.token_budget, samplerSettings.contextLength],
+    [entries, draftLorebook.token_budget, samplerSettings.contextLength, customContextTokens],
   );
 
   // Only build the full graph while the map is open; glance stats rebuild in detail.
@@ -519,91 +528,123 @@ function LorebookEditorInner({
           )}
         </div>
 
-        {entries.length > 0 && (
+        {(entries.length > 0 || customContext) && (
           <div className="shrink-0 space-y-2 border-b border-border px-3 py-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={`Search ${entries.length} entries...`}
-                className="w-full rounded-lg border border-border bg-surface py-2 pl-8 pr-7 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-            {searchQuery && (
-              <p className="text-[11px] text-fg-muted">
-                {filteredEntries.length} of {entries.length} entries
-              </p>
+            {entries.length > 0 && (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-fg-subtle" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={`Search ${entries.length} entries...`}
+                    className="w-full rounded-lg border border-border bg-surface py-2 pl-8 pr-7 text-xs text-fg placeholder:text-fg-subtle outline-none focus:ring-2 focus:ring-accent/20"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {searchQuery && (
+                  <p className="text-[11px] text-fg-muted">
+                    {filteredEntries.length} of {entries.length} entries
+                  </p>
+                )}
+              </>
             )}
             <div className="space-y-2 rounded-lg border border-border/80 bg-surface/80 px-2.5 py-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                    AI context
-                  </p>
-                  <FieldInfoTip text={FIELD_HELP.aiContext} label="About AI context" />
-                </div>
-                <div className="flex shrink-0 items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={handleEnableAllContext}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
-                    title="Include all entries in AI context"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDisableAllContext}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
-                    title="Exclude all entries from AI context"
-                  >
-                    <EyeOff className="h-3.5 w-3.5" />
-                    None
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="text-fg-muted">
-                    {contextSummary.included} of {entries.length} entries
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className={`font-medium tabular-nums ${usageColorClass}`}>
-                      {contextSummary.tokens.toLocaleString()} /{' '}
-                      {contextSummary.limit.toLocaleString()}
-                    </span>
-                    <FieldInfoTip
-                      side="left"
-                      label="About token usage"
-                      text={`Token estimate uses bytes ÷ ${BYTES_PER_TOKEN} (rounded up) for included entries. Limit uses the book token budget when set, otherwise sampler context length.`}
-                    />
-                    {contextSummary.status === 'danger' && (
-                      <span className="flex items-center text-danger" title="Near or over limit">
-                        <AlertCircle className="h-3.5 w-3.5" />
-                      </span>
-                    )}
+              {entries.length > 0 && (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                        AI context
+                      </p>
+                      <FieldInfoTip text={FIELD_HELP.aiContext} label="About AI context" />
+                    </div>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={handleEnableAllContext}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+                        title="Include all entries in AI context"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDisableAllContext}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+                        title="Exclude all entries from AI context"
+                      >
+                        <EyeOff className="h-3.5 w-3.5" />
+                        None
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-hover">
-                  <div
-                    className={`h-full transition-all duration-300 ${usageBarClass}`}
-                    style={{ width: `${contextSummary.percentage}%` }}
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-fg-muted">
+                        {contextSummary.included} of {entries.length} entries
+                        {customContextTokens > 0 ? ' + custom' : ''}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`font-medium tabular-nums ${usageColorClass}`}>
+                          {contextSummary.tokens.toLocaleString()} /{' '}
+                          {contextSummary.limit.toLocaleString()}
+                        </span>
+                        <FieldInfoTip
+                          side="left"
+                          label="About token usage"
+                          text={`Token estimate uses bytes ÷ ${BYTES_PER_TOKEN} (rounded up) for included entries${customContext ? ' and custom context' : ''}. Limit uses the book token budget when set, otherwise sampler context length.`}
+                        />
+                        {contextSummary.status === 'danger' && (
+                          <span className="flex items-center text-danger" title="Near or over limit">
+                            <AlertCircle className="h-3.5 w-3.5" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-hover">
+                      <div
+                        className={`h-full transition-all duration-300 ${usageBarClass}`}
+                        style={{ width: `${contextSummary.percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {customContext && (
+                <div className={entries.length > 0 ? 'border-t border-border/60 pt-2' : ''}>
+                  {entries.length === 0 && (
+                    <div className="mb-2 flex items-center gap-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                        AI context
+                      </p>
+                      <FieldInfoTip text={FIELD_HELP.aiContext} label="About AI context" />
+                    </div>
+                  )}
+                  <CustomContextBlock
+                    key={customContext.ownerId}
+                    ownerId={customContext.ownerId}
+                    owner="lorebook"
+                    meta={customContext.meta}
+                    contextLength={contextSummary.limit}
+                    onSetEnabled={customContext.onSetEnabled}
+                    onSave={customContext.onSave}
+                    onClear={customContext.onClear}
+                    density="compact"
                   />
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}
