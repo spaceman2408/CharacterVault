@@ -164,13 +164,13 @@ export function LinkedCharactersMenu({
         ref={buttonRef}
         type="button"
         onClick={handleToggle}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+        className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
         title="Characters that attach this lorebook"
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <Users className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Linked</span>
+        <Users className="w-4 h-4" />
+        <span className="hidden md:inline">Linked</span>
         <span
           className={`min-w-4 rounded-full px-1 text-[10px] font-semibold tabular-nums ${
             linkedCount > 0

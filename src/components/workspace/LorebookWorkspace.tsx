@@ -28,6 +28,9 @@ import { lorebookSnapshotService } from '../../services/LorebookSnapshotService'
 
 const DESKTOP_MIN_WIDTH_PX = 1024;
 
+const HEADER_ACTION_CLASS =
+  'flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200';
+
 function getIsMobileViewport(): boolean {
   if (typeof window === 'undefined') return false;
   return window.matchMedia(`(max-width: ${DESKTOP_MIN_WIDTH_PX - 1}px)`).matches;
@@ -180,92 +183,114 @@ export function LorebookWorkspace(): React.ReactElement {
   }
 
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-bg text-fg">
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface/90 px-3 backdrop-blur-md sm:gap-3 sm:px-4">
-        <button
-          type="button"
-          onClick={closeLorebook}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">Vault</span>
-        </button>
+    <div className="h-dvh w-full flex flex-col bg-bg overflow-hidden">
+      <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-surface/60 backdrop-blur-xl border-b border-border/60 shrink-0">
+        <div className="flex items-center gap-3 md:gap-4 min-w-0">
+          <button
+            type="button"
+            onClick={closeLorebook}
+            className="p-2 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent active:scale-95 shrink-0"
+            title="Back to vault"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
 
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
-            <Book className="h-4 w-4 text-accent" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <input
-              type="text"
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onBlur={() => void handleTitleBlur()}
-              className="w-full truncate bg-transparent text-sm font-semibold text-fg outline-none focus:ring-0"
-              aria-label="Lorebook name"
-            />
-            <p className="truncate text-[11px] text-fg-muted">
-              {entryCount} entr{entryCount === 1 ? 'y' : 'ies'}
-              {totalTokens > 0 ? ` · ${totalTokens.toLocaleString()} tokens` : ''}
-              {isSaving ? ' · Saving…' : ''}
-            </p>
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-hover flex items-center justify-center shrink-0">
+              <Book className="w-4 h-4 md:w-5 md:h-5 text-accent" />
+            </div>
+            <div className="min-w-0">
+              <input
+                type="text"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={() => void handleTitleBlur()}
+                className="w-full max-w-64 truncate bg-transparent font-semibold text-fg text-sm md:text-base outline-none focus:ring-0"
+                aria-label="Lorebook name"
+              />
+              <p className="text-xs text-fg-muted hidden sm:block truncate">
+                {entryCount} entr{entryCount === 1 ? 'y' : 'ies'}
+                {totalTokens > 0 ? ` · ${totalTokens.toLocaleString()} tokens` : ''}
+                {isSaving ? ' · Saving…' : ''}
+              </p>
+            </div>
           </div>
         </div>
 
-        <LinkedCharactersMenu
-          lorebookId={currentLorebook.id}
-          onOpenCharacter={(characterId) => openCharacter(characterId)}
-        />
+        <div className="flex items-center gap-1 md:gap-2">
+          {isMobile ? (
+            <button
+              type="button"
+              onClick={toggleChat}
+              className={`p-2 rounded-lg transition-colors ${
+                isChatOpen
+                  ? 'bg-accent text-accent-fg'
+                  : 'text-fg-muted hover:text-accent hover:bg-accent-soft'
+              }`}
+              title={isChatOpen ? 'Hide Ask AI Panel' : 'Show Ask AI Panel'}
+              aria-pressed={isChatOpen}
+            >
+              <MessageSquare className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleChat}
+              className={`hidden lg:flex p-2 rounded-lg transition-colors ${
+                isChatOpen
+                  ? 'bg-accent text-accent-fg'
+                  : 'text-fg-muted hover:text-accent hover:bg-accent-soft'
+              }`}
+              title={isChatOpen ? 'Hide Ask AI Panel' : 'Show Ask AI Panel'}
+              aria-pressed={isChatOpen}
+            >
+              <PanelRight className="w-4 h-4" />
+            </button>
+          )}
 
-        <button
-          type="button"
-          onClick={() => setHistoryOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
-          title="History"
-        >
-          <History className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">History</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => void exportLorebook(currentLorebook.id)}
-          disabled={entryCount === 0}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40 touch-manipulation"
-          title="Export SillyTavern JSON"
-        >
-          <Download className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Export</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setIsSettingsOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
-          title="Settings"
-        >
-          <Settings className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Settings</span>
-        </button>
+          <div className="h-6 w-px bg-hover mx-1 hidden sm:block" />
 
-        <button
-          type="button"
-          onClick={toggleChat}
-          className={`rounded-lg p-2 transition-colors ${
-            isChatOpen
-              ? 'bg-accent text-accent-fg'
-              : 'text-fg-muted hover:bg-accent-soft hover:text-accent'
-          }`}
-          title={isChatOpen ? 'Hide Orion' : 'Show Orion'}
-          aria-pressed={isChatOpen}
-        >
-          {isMobile ? <MessageSquare className="h-4 w-4" /> : <PanelRight className="h-4 w-4" />}
-        </button>
+          <LinkedCharactersMenu
+            lorebookId={currentLorebook.id}
+            onOpenCharacter={(characterId) => openCharacter(characterId)}
+          />
+
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className={HEADER_ACTION_CLASS}
+            title="Open revisions"
+          >
+            <History className="w-4 h-4" />
+            <span className="hidden md:inline">Snapshots</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            className={HEADER_ACTION_CLASS}
+            title="AI Settings"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="hidden md:inline">Settings</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportLorebook(currentLorebook.id)}
+            disabled={entryCount === 0}
+            className={`${HEADER_ACTION_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
+            title="Export SillyTavern JSON"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden md:inline">Export</span>
+          </button>
+        </div>
       </header>
 
       {isMobile && isChatOpen && (
         <button
           type="button"
           aria-label="Close Orion"
-          className="fixed inset-0 z-30 bg-overlay/50 backdrop-blur-[1px]"
+          className="fixed inset-0 z-30 bg-overlay backdrop-blur-sm lg:hidden"
           onClick={() => setIsChatOpen(false)}
         />
       )}
