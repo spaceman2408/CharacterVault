@@ -4,7 +4,12 @@
  */
 
 export { useAutoScroll, type UseAutoScrollOptions, type UseAutoScrollReturn } from './useAutoScroll';
-export { useAIChat, type UseAIChatOptions, type UseAIChatReturn } from './useAIChat';
+export {
+  useAIChat,
+  resolveContextAtCallTime,
+  type UseAIChatOptions,
+  type UseAIChatReturn,
+} from './useAIChat';
 export {
   usePersistedPanelWidth,
   type UsePersistedPanelWidthOptions,

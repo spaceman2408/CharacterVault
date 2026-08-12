@@ -22,6 +22,8 @@ export interface UseAIChatOptions {
   showReasoning: boolean;
   getContextContent?: (entryIds: string[]) => Promise<string[]>;
   contextEntryIds: string[];
+  /** When true, still resolve context even if no card sections are pinned */
+  customContextIncluded?: boolean;
 }
 
 export interface UseAIChatReturn {
@@ -45,16 +47,19 @@ function trimHistory(messages: ChatMessage[]): ChatMessage[] {
   return messages.slice(messages.length - MAX_CHAT_MESSAGES);
 }
 
-async function resolveContextAtCallTime(
+export async function resolveContextAtCallTime(
   getContextContent: ((entryIds: string[]) => Promise<string[]>) | undefined,
-  contextEntryIds: string[]
+  contextEntryIds: string[],
+  customContextIncluded = false,
 ): Promise<string[]> {
-  if (!getContextContent || contextEntryIds.length === 0) {
+  if (!getContextContent) return [];
+  if (contextEntryIds.length === 0 && !customContextIncluded) {
     return [];
   }
   try {
     return await getContextContent(contextEntryIds);
-  } catch {
+  } catch (error) {
+    console.error('Failed to resolve AI context:', error);
     return [];
   }
 }
@@ -134,6 +139,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     enableStreaming,
     getContextContent,
     contextEntryIds,
+    customContextIncluded = false,
   } = options;
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -160,6 +166,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const enableStreamingRef = useRef(enableStreaming);
   const getContextContentRef = useRef(getContextContent);
   const contextEntryIdsRef = useRef(contextEntryIds);
+  const customContextIncludedRef = useRef(customContextIncluded);
 
   useEffect(() => {
     chatHistoryRef.current = chatHistory;
@@ -185,6 +192,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   useEffect(() => {
     contextEntryIdsRef.current = contextEntryIds;
   }, [contextEntryIds]);
+  useEffect(() => {
+    customContextIncludedRef.current = customContextIncluded;
+  }, [customContextIncluded]);
 
   const isAIConfigured = useMemo(() => {
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
@@ -348,7 +358,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
         contextArray = await resolveContextAtCallTime(
           getContextContentRef.current,
-          contextEntryIdsRef.current
+          contextEntryIdsRef.current,
+          customContextIncludedRef.current,
         );
 
         if (!isCurrent()) {

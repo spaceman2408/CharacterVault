@@ -62,6 +62,7 @@ export function AIChatPanel({
     showReasoning: aiConfig.showReasoning ?? true,
     getContextContent,
     contextEntryIds,
+    customContextIncluded,
   });
 
   const { containerRef: chatContainerRef } = useAutoScroll({
