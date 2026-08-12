@@ -94,6 +94,11 @@ export class LorebookAttachmentService {
   async countLinkedCharacters(lorebookId: string): Promise<number> {
     return characterDb.countCharactersLinkedToLorebook(lorebookId);
   }
+
+  /** All lorebook → character id links (no thumbnails). */
+  async listLinkedCharacterIdsByLorebook(): Promise<Record<string, string[]>> {
+    return characterDb.getLinkedCharacterIdsByLorebook();
+  }
 }
 
 export const lorebookAttachmentService = new LorebookAttachmentService();

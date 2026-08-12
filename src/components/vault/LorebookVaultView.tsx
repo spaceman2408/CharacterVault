@@ -2,7 +2,7 @@
  * Lorebook tab content for the home vault.
  */
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Book,
   Copy,
@@ -12,9 +12,12 @@ import {
   Search,
   Trash2,
   Upload,
+  User,
+  Users,
 } from 'lucide-react';
-import type { LorebookListItem } from '../../db/characterTypes';
-import { useLorebookContext } from '../../context';
+import type { CharacterListItem, LorebookListItem } from '../../db/characterTypes';
+import { useCharacterContext, useLorebookContext } from '../../context';
+import { lorebookAttachmentService } from '../../services/LorebookAttachmentService';
 
 function formatRelative(iso?: string): string {
   if (!iso) return '—';
@@ -31,6 +34,64 @@ function formatRelative(iso?: string): string {
   return date.toLocaleDateString();
 }
 
+function LinkedCharactersOnCard({
+  characters,
+  onOpenCharacter,
+}: {
+  characters: CharacterListItem[];
+  onOpenCharacter: (characterId: string) => void;
+}): React.ReactElement | null {
+  if (characters.length === 0) return null;
+
+  const preview = characters.slice(0, 3);
+  const extra = characters.length - preview.length;
+  const names = characters
+    .slice(0, 2)
+    .map((item) => item.name || 'Untitled')
+    .join(', ');
+
+  return (
+    <div className="mt-2.5 flex items-center gap-2">
+      <Users className="h-3 w-3 shrink-0 text-fg-subtle" />
+      <div className="flex shrink-0 -space-x-1.5">
+        {preview.map((character) => (
+          <button
+            key={character.id}
+            type="button"
+            title={`Open ${character.name || 'character'}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenCharacter(character.id);
+            }}
+            className="relative h-6 w-6 overflow-hidden rounded-full border border-surface bg-muted ring-1 ring-border transition-transform hover:z-10 hover:scale-110"
+          >
+            {character.thumbnailData ? (
+              <img
+                src={character.thumbnailData}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-fg-subtle">
+                <User className="h-3 w-3" />
+              </span>
+            )}
+          </button>
+        ))}
+        {extra > 0 && (
+          <span className="relative flex h-6 w-6 items-center justify-center rounded-full border border-surface bg-muted text-[9px] font-semibold text-fg-muted ring-1 ring-border">
+            +{extra}
+          </span>
+        )}
+      </div>
+      <p className="min-w-0 truncate text-[11px] text-fg-muted">
+        {names}
+        {characters.length > 2 ? ` +${characters.length - 2}` : ''}
+      </p>
+    </div>
+  );
+}
+
 export function LorebookVaultView(): React.ReactElement {
   const {
     lorebookListItems,
@@ -42,6 +103,42 @@ export function LorebookVaultView(): React.ReactElement {
     importLorebookFile,
     exportLorebook,
   } = useLorebookContext();
+  const { characterListItems, openCharacter } = useCharacterContext();
+
+  const [linksByBook, setLinksByBook] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void lorebookAttachmentService.listLinkedCharacterIdsByLorebook().then((map) => {
+      if (!cancelled) setLinksByBook(map);
+    }).catch((err) => {
+      console.error('Failed to load lorebook links:', err);
+      if (!cancelled) setLinksByBook({});
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lorebookListItems]);
+
+  const charactersById = useMemo(() => {
+    const map = new Map<string, CharacterListItem>();
+    for (const item of characterListItems) {
+      map.set(item.id, item);
+    }
+    return map;
+  }, [characterListItems]);
+
+  const linkedByBook = useMemo(() => {
+    const result = new Map<string, CharacterListItem[]>();
+    for (const [lorebookId, characterIds] of Object.entries(linksByBook)) {
+      const linked = characterIds
+        .map((id) => charactersById.get(id))
+        .filter((item): item is CharacterListItem => item != null)
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+      if (linked.length > 0) result.set(lorebookId, linked);
+    }
+    return result;
+  }, [linksByBook, charactersById]);
 
   const handleOpen = async (id: string) => {
     // openLorebook drops any open character payload (exclusive workspace)
@@ -58,13 +155,18 @@ export function LorebookVaultView(): React.ReactElement {
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return lorebookListItems;
-    return lorebookListItems.filter(
-      (item) =>
+    return lorebookListItems.filter((item) => {
+      if (
         item.name.toLowerCase().includes(q) ||
         (item.description || '').toLowerCase().includes(q) ||
-        item.tags.some((tag) => tag.toLowerCase().includes(q)),
-    );
-  }, [lorebookListItems, searchQuery]);
+        item.tags.some((tag) => tag.toLowerCase().includes(q))
+      ) {
+        return true;
+      }
+      const linked = linkedByBook.get(item.id);
+      return Boolean(linked?.some((character) => character.name.toLowerCase().includes(q)));
+    });
+  }, [lorebookListItems, searchQuery, linkedByBook]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,6 +364,10 @@ export function LorebookVaultView(): React.ReactElement {
                   <span>Updated {formatRelative(item.updatedAt)}</span>
                 </div>
               </button>
+              <LinkedCharactersOnCard
+                characters={linkedByBook.get(item.id) ?? []}
+                onOpenCharacter={(characterId) => void openCharacter(characterId)}
+              />
               <div className="mt-3 flex items-center gap-1 border-t border-border pt-3">
                 <button
                   type="button"

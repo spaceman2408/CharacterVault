@@ -1227,6 +1227,23 @@ export class CharacterDatabase extends Dexie {
   }
 
   /**
+   * Reverse index: lorebookId → characterIds (attachment rows only; no thumbnails).
+   * Used by the vault list to join against the in-memory character list index.
+   */
+  async getLinkedCharacterIdsByLorebook(): Promise<Record<string, string[]>> {
+    const rows = await this.characterLorebookAttachments.toArray();
+    const result: Record<string, string[]> = {};
+    for (const row of rows) {
+      for (const lorebookId of row.lorebookIds) {
+        const list = result[lorebookId];
+        if (list) list.push(row.characterId);
+        else result[lorebookId] = [row.characterId];
+      }
+    }
+    return result;
+  }
+
+  /**
    * Count characters that attach this book without loading list-item thumbnails.
    * Uses primary keys only so badge refreshes stay cheap.
    */
