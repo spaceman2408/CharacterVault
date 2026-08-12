@@ -65,6 +65,23 @@ export class LorebookSnapshotService {
     lorebook: VaultLorebook,
     source: SnapshotSource,
   ): Promise<LorebookSnapshot | null> {
+    if (source === 'open') {
+      const existing = await characterDb.getLorebookSnapshotMetadata(lorebook.id);
+      const openSnapshots = existing.filter((meta) => meta.source === 'open');
+      if (openSnapshots.length > 0) {
+        // Metadata is newest-first; keep the oldest baseline and drop leftover duplicates.
+        if (openSnapshots.length > 1) {
+          const oldestId = openSnapshots[openSnapshots.length - 1].id;
+          for (const meta of openSnapshots) {
+            if (meta.id !== oldestId) {
+              await characterDb.deleteLorebookSnapshot(meta.id);
+            }
+          }
+        }
+        return null;
+      }
+    }
+
     const payload = buildLorebookSnapshotPayload(lorebook);
     const payloadHash = await computeLorebookPayloadHash(payload);
     return characterDb.createLorebookSnapshot({
@@ -84,7 +101,37 @@ export class LorebookSnapshotService {
   }
 
   async delete(snapshotId: string): Promise<void> {
+    const existing = await characterDb.getLorebookSnapshotById(snapshotId);
+    if (existing?.source === 'open') {
+      throw new Error('The opened baseline cannot be deleted');
+    }
     return characterDb.deleteLorebookSnapshot(snapshotId);
+  }
+
+  /**
+   * Overwrite the opened baseline in place with the current lorebook.
+   * Skips when the payload already matches.
+   */
+  async overwriteBaseline(
+    lorebook: VaultLorebook,
+    snapshotId: string,
+  ): Promise<'updated' | 'skipped'> {
+    const existing = await characterDb.getLorebookSnapshotById(snapshotId);
+    if (!existing) {
+      throw new Error('Snapshot not found');
+    }
+    if (existing.source !== 'open') {
+      throw new Error('Only the opened baseline can be updated');
+    }
+
+    const payload = buildLorebookSnapshotPayload(lorebook);
+    const payloadHash = await computeLorebookPayloadHash(payload);
+    if (existing.payloadHash === payloadHash) {
+      return 'skipped';
+    }
+
+    await characterDb.overwriteLorebookSnapshot(snapshotId, payload, payloadHash);
+    return 'updated';
   }
 
   /**

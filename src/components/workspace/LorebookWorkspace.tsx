@@ -21,14 +21,19 @@ import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
 import { usePersistedPanelWidth } from '../ai/hooks/usePersistedPanelWidth';
 import { LinkedCharactersMenu } from './LinkedCharactersMenu';
-import type { CharacterBook, CharacterSection, CustomContextMeta } from '../../db/characterTypes';
+import type {
+  CharacterBook,
+  CharacterSection,
+  CustomContextMeta,
+  VaultLorebook,
+} from '../../db/characterTypes';
 import { DEFAULT_SETTINGS, EMPTY_CUSTOM_CONTEXT_META } from '../../db/characterTypes';
 import { estimateTokens } from '../../services/AIService';
 import {
   customContextService,
   formatCustomContextChunk,
 } from '../../services/CustomContextService';
-import { lorebookSnapshotService } from '../../services/LorebookSnapshotService';
+import { showEphemeralToast } from '../../utils/ephemeralToast';
 
 const DESKTOP_MIN_WIDTH_PX = 1024;
 
@@ -63,7 +68,12 @@ export function LorebookWorkspace(): React.ReactElement {
   });
   const openedLorebookIdRef = useRef<string | null>(null);
   const currentLorebookIdRef = useRef<string | null>(currentLorebook?.id ?? null);
+  const currentLorebookRef = useRef<VaultLorebook | null>(currentLorebook);
+  const titleDraftRef = useRef(titleDraft);
+  const pendingSaveRef = useRef<Promise<VaultLorebook | null>>(Promise.resolve(null));
   currentLorebookIdRef.current = currentLorebook?.id ?? null;
+  currentLorebookRef.current = currentLorebook;
+  titleDraftRef.current = titleDraft;
 
   const {
     width: chatPanelWidth,
@@ -112,14 +122,6 @@ export function LorebookWorkspace(): React.ReactElement {
       }
     });
   }, [currentLorebook?.id]);
-
-  useEffect(() => {
-    if (!currentLorebook) return;
-    const timer = window.setTimeout(() => {
-      void lorebookSnapshotService.createFromLorebook(currentLorebook, 'auto');
-    }, 30_000);
-    return () => window.clearTimeout(timer);
-  }, [currentLorebook]);
 
   const aiConfig = settings?.ai ?? DEFAULT_SETTINGS.ai;
   const samplerSettings = settings?.sampler ?? DEFAULT_SETTINGS.sampler;
@@ -251,32 +253,64 @@ export function LorebookWorkspace(): React.ReactElement {
 
   const handleBookChange = useCallback(
     async (book: CharacterBook) => {
-      if (!currentLorebook) return;
+      const lorebook = currentLorebookRef.current;
+      if (!lorebook) return;
       setIsSaving(true);
-      try {
-        await updateLorebookBook(currentLorebook.id, book);
-        if (book.name && book.name.trim() && book.name.trim() !== currentLorebook.name) {
-          await updateLorebook(currentLorebook.id, { name: book.name.trim() });
+      const save = (async () => {
+        try {
+          let updated = await updateLorebookBook(lorebook.id, book);
+          const nextName = book.name?.trim();
+          if (nextName && nextName !== lorebook.name) {
+            updated = await updateLorebook(lorebook.id, { name: nextName });
+          }
+          return updated;
+        } finally {
+          setIsSaving(false);
         }
-      } finally {
-        setIsSaving(false);
-      }
+      })();
+      pendingSaveRef.current = save.then(
+        (updated) => updated,
+        () => currentLorebookRef.current,
+      );
+      await save;
     },
-    [currentLorebook, updateLorebookBook, updateLorebook],
+    [updateLorebookBook, updateLorebook],
   );
 
   const handleTitleBlur = useCallback(async () => {
-    if (!currentLorebook) return;
-    const next = titleDraft.trim();
-    if (!next || next === currentLorebook.name) return;
-    await updateLorebook(currentLorebook.id, {
+    const lorebook = currentLorebookRef.current;
+    if (!lorebook) return;
+    const next = titleDraftRef.current.trim();
+    if (!next || next === lorebook.name) return;
+    const updated = await updateLorebook(lorebook.id, {
       name: next,
       book: {
-        ...currentLorebook.book,
+        ...lorebook.book,
         name: next,
       },
     });
-  }, [currentLorebook, titleDraft, updateLorebook]);
+    currentLorebookRef.current = updated;
+  }, [updateLorebook]);
+
+  const flushPendingLorebook = useCallback(async (): Promise<VaultLorebook | null> => {
+    const saved = await pendingSaveRef.current;
+    const lorebook = saved ?? currentLorebookRef.current;
+    if (!lorebook) return null;
+    const nextName = titleDraftRef.current.trim();
+    if (nextName && nextName !== lorebook.name) {
+      const updated = await updateLorebook(lorebook.id, {
+        name: nextName,
+        book: {
+          ...lorebook.book,
+          name: nextName,
+        },
+      });
+      currentLorebookRef.current = updated;
+      return updated;
+    }
+    currentLorebookRef.current = lorebook;
+    return lorebook;
+  }, [updateLorebook]);
 
   const toggleChat = () => setIsChatOpen((open) => !open);
 
@@ -485,6 +519,10 @@ export function LorebookWorkspace(): React.ReactElement {
         <LorebookHistoryModal
           lorebookId={currentLorebook.id}
           onClose={() => setHistoryOpen(false)}
+          onFlushPending={flushPendingLorebook}
+          onToast={(type, title, message) => {
+            showEphemeralToast({ type, title, message, durationMs: 3500 });
+          }}
         />
       )}
 

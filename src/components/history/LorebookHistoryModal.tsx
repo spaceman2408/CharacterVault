@@ -3,14 +3,17 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { History, RotateCcw, Trash2, X } from 'lucide-react';
-import type { LorebookSnapshot, LorebookSnapshotMetadata } from '../../db/characterTypes';
+import { Camera, Check, History, LoaderCircle, RotateCcw, Trash2, X } from 'lucide-react';
+import type {
+  LorebookSnapshot,
+  LorebookSnapshotMetadata,
+  VaultLorebook,
+} from '../../db/characterTypes';
 import { useLorebookContext } from '../../context';
 import { lorebookSnapshotService } from '../../services/LorebookSnapshotService';
-import { lorebookService } from '../../services/LorebookService';
 
 const SOURCE_LABELS: Record<string, string> = {
-  open: 'Open',
+  open: 'Opened',
   auto: 'Auto',
   manual: 'Manual',
   rollback: 'Rollback',
@@ -27,9 +30,13 @@ function formatWhen(iso: string): string {
 export function LorebookHistoryModal({
   lorebookId,
   onClose,
+  onFlushPending,
+  onToast,
 }: {
   lorebookId: string;
   onClose: () => void;
+  onFlushPending: () => Promise<VaultLorebook | null>;
+  onToast: (type: 'success' | 'info' | 'error', title: string, message: string) => void;
 }): React.ReactElement {
   const { refreshLorebooks, openLorebook } = useLorebookContext();
   const [items, setItems] = useState<LorebookSnapshotMetadata[]>([]);
@@ -37,19 +44,31 @@ export function LorebookHistoryModal({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const reload = useCallback(async () => {
-    setLoading(true);
+  const reload = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     try {
       const meta = await lorebookSnapshotService.listMetadata(lorebookId);
       setItems(meta);
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [lorebookId]);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      try {
+        const meta = await lorebookSnapshotService.listMetadata(lorebookId);
+        if (!cancelled) setItems(meta);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lorebookId]);
 
   const handleSelect = async (id: string) => {
     const snap = await lorebookSnapshotService.getById(id);
@@ -67,28 +86,83 @@ export function LorebookHistoryModal({
       await lorebookSnapshotService.restore(selected.id);
       await openLorebook(lorebookId);
       await refreshLorebooks();
-      await reload();
+      await reload({ silent: true });
       setSelected(null);
+      onToast('success', 'Lorebook restored', 'The lorebook was restored from the selected revision.');
+    } catch {
+      onToast('error', 'Restore failed', 'The lorebook could not be restored from this revision.');
     } finally {
       setBusy(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    const target = items.find((item) => item.id === id);
+    if (target?.source === 'open') return;
     if (!window.confirm('Delete this snapshot?')) return;
-    await lorebookSnapshotService.delete(id);
-    if (selected?.id === id) setSelected(null);
-    await reload();
+    setBusy(true);
+    try {
+      await lorebookSnapshotService.delete(id);
+      if (selected?.id === id) setSelected(null);
+      await reload({ silent: true });
+      onToast('success', 'Revision deleted', 'The selected revision was removed from local history.');
+    } catch {
+      onToast('error', 'Delete failed', 'The revision could not be deleted.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleUpdateBaseline = async () => {
+    if (!selected || selected.source !== 'open') return;
+    const confirmed = window.confirm(
+      'Replace the opened baseline with the current lorebook? The original baseline cannot be recovered.',
+    );
+    if (!confirmed) return;
+    setBusy(true);
+    try {
+      const book = await onFlushPending();
+      if (!book) {
+        onToast('error', 'Update failed', 'The current lorebook could not be read.');
+        return;
+      }
+      const result = await lorebookSnapshotService.overwriteBaseline(book, selected.id);
+      if (result === 'updated') {
+        onToast(
+          'success',
+          'Baseline updated',
+          'The opened baseline was overwritten with the current lorebook.',
+        );
+        await reload({ silent: true });
+        const snap = await lorebookSnapshotService.getById(selected.id);
+        setSelected(snap ?? null);
+      } else {
+        onToast('info', 'No new revision', 'No changes were detected since the opened baseline.');
+      }
+    } catch {
+      onToast('error', 'Update failed', 'The opened baseline could not be overwritten.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleManualSnapshot = async () => {
     setBusy(true);
     try {
-      const book = await lorebookService.get(lorebookId);
-      if (book) {
-        await lorebookSnapshotService.createFromLorebook(book, 'manual');
-        await reload();
+      const book = await onFlushPending();
+      if (!book) {
+        onToast('error', 'Save failed', 'The current lorebook could not be read.');
+        return;
       }
+      const snapshot = await lorebookSnapshotService.createFromLorebook(book, 'manual');
+      if (snapshot) {
+        onToast('success', 'Revision saved', 'A new manual revision was added to local history.');
+        await reload({ silent: true });
+      } else {
+        onToast('info', 'No new revision', 'No changes were detected since the latest revision.');
+      }
+    } catch {
+      onToast('error', 'Save failed', 'A manual revision could not be saved.');
     } finally {
       setBusy(false);
     }
@@ -109,19 +183,21 @@ export function LorebookHistoryModal({
               Lorebook History
             </h2>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => void handleManualSnapshot()}
               disabled={busy}
-              className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-fg transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Snapshot now
+              {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              Save snapshot
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg"
+              disabled={busy}
+              className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -152,17 +228,19 @@ export function LorebookHistoryModal({
                         </p>
                         <p className="text-xs text-fg-muted">{formatWhen(item.createdAt)}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleDelete(item.id);
-                        }}
-                        className="rounded p-1 text-fg-subtle hover:bg-danger-soft hover:text-danger"
-                        title="Delete snapshot"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {item.source !== 'open' ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDelete(item.id);
+                          }}
+                          className="rounded p-1 text-fg-subtle hover:bg-danger-soft hover:text-danger"
+                          title="Delete snapshot"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      ) : null}
                     </button>
                   </li>
                 ))}
@@ -196,15 +274,28 @@ export function LorebookHistoryModal({
                     <li className="text-fg-subtle">…and more</li>
                   )}
                 </ul>
-                <button
-                  type="button"
-                  onClick={() => void handleRestore()}
-                  disabled={busy}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-3 py-2.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 disabled:opacity-50"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Restore snapshot
-                </button>
+                <div className="flex flex-col gap-2">
+                  {selected.source === 'open' && (
+                    <button
+                      type="button"
+                      onClick={() => void handleUpdateBaseline()}
+                      disabled={busy}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-warning/40 bg-warning-soft px-3 py-2.5 text-sm font-medium text-warning-soft-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      <Check className="h-4 w-4" />
+                      Update baseline
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handleRestore()}
+                    disabled={busy}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-3 py-2.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Restore snapshot
+                  </button>
+                </div>
               </div>
             )}
           </div>

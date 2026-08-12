@@ -22,6 +22,7 @@ import type {
   VaultLorebook,
   LorebookListItem,
   LorebookSnapshot,
+  LorebookSnapshotPayload,
   CreateLorebookSnapshotInput,
   LorebookSnapshotMetadata,
   CreateVaultLorebookInput,
@@ -1213,17 +1214,39 @@ export class CharacterDatabase extends Dexie {
     await this.lorebookSnapshots.delete(snapshotId);
   }
 
+  /**
+   * Overwrite a lorebook snapshot payload in place.
+   * Preserves id, source, and createdAt — used to update the opened baseline.
+   */
+  async overwriteLorebookSnapshot(
+    snapshotId: string,
+    payload: LorebookSnapshotPayload,
+    payloadHash: string,
+  ): Promise<void> {
+    const existing = await this.lorebookSnapshots.get(snapshotId);
+    if (!existing) {
+      throw new Error('Snapshot not found');
+    }
+    if (existing.source !== 'open') {
+      throw new Error('Only the opened baseline can be updated');
+    }
+    await this.lorebookSnapshots.update(snapshotId, { payload, payloadHash });
+  }
+
   async pruneLorebookSnapshots(lorebookId: string, limit: number): Promise<void> {
     const snapshots = await this.lorebookSnapshots
       .where('lorebookId')
       .equals(lorebookId)
       .sortBy('createdAt');
 
-    if (snapshots.length <= limit) {
+    const prunable = snapshots.filter((snapshot) => snapshot.source !== 'open');
+    const reserved = snapshots.length - prunable.length;
+    const keep = Math.max(0, limit - reserved);
+    if (prunable.length <= keep) {
       return;
     }
 
-    const toDelete = snapshots.slice(0, snapshots.length - limit);
+    const toDelete = prunable.slice(0, prunable.length - keep);
     await Promise.all(toDelete.map((snapshot) => this.lorebookSnapshots.delete(snapshot.id)));
   }
 
