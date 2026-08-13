@@ -78,6 +78,23 @@ function computeLayout(
     cursorX += compWidth + COMP_GAP;
   });
 
+  // Back-link arcs rise above the top row; reserve headroom so auto-fit shows them.
+  let arcPad = 0;
+  for (const [fromId, outs] of graph.outgoing) {
+    const from = pos.get(fromId);
+    if (!from) continue;
+    for (const edge of outs) {
+      const to = pos.get(edge.toId);
+      if (!to || to.x >= from.x) continue;
+      arcPad = Math.max(arcPad, backArcRise(from.x - to.x) + 72);
+    }
+  }
+  if (arcPad > 0) {
+    for (const p of pos.values()) p.y += arcPad;
+    for (const cluster of clusters) cluster.y += arcPad;
+    linkedBottom += arcPad;
+  }
+
   if (linked.length > 0) linkedBottom += COMP_PAD;
 
   let boundsWidth = linked.length > 0 ? cursorX - COMP_GAP : 0;
@@ -111,11 +128,38 @@ function computeLayout(
   };
 }
 
-function edgePath(from: NodePos, to: NodePos): string {
+function backArcRise(span: number): number {
+  return Math.max(34, Math.min(120, span * 0.3));
+}
+
+const BACK_EDGE_SPACING = 11;
+const BACK_EDGE_BUMP = 14;
+// Fan endpoints stay on the node's top edge, and total rise staggering stays
+// under the headroom computeLayout reserves (rise + MAX_BUMP_SPAN < pad).
+const BACK_EDGE_FAN_WIDTH = NODE_W - 24;
+const BACK_EDGE_MAX_BUMP_SPAN = 66;
+
+type BackEdgeMeta = { startDx: number; endDx: number; bump: number };
+
+function edgePath(from: NodePos, to: NodePos, meta?: BackEdgeMeta): string {
   const x1 = from.x + NODE_W;
   const y1 = from.y + NODE_H / 2;
   const x2 = to.x;
   const y2 = to.y + NODE_H / 2;
+
+  // Back link (target in a column left of the source): a side-to-side cubic
+  // degenerates into a straight line overshooting both nodes, so draw a
+  // loop-back arch instead — off the top of the source, over the row, and
+  // down into the top of the target (arrowhead points down). Parallel arches
+  // get fanned horizontally and staggered vertically so each stays traceable.
+  if (to.x < from.x) {
+    const fromCx = from.x + NODE_W / 2 + (meta?.startDx ?? 0);
+    const toCx = to.x + NODE_W / 2 + (meta?.endDx ?? 0);
+    const apexY =
+      Math.min(from.y, to.y) - backArcRise(from.x - to.x) - (meta?.bump ?? 0);
+    return `M ${fromCx} ${from.y} C ${fromCx} ${apexY}, ${toCx} ${apexY}, ${toCx} ${to.y}`;
+  }
+
   const dx = Math.max(24, Math.abs(x2 - x1) / 2);
   return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 }
@@ -168,6 +212,53 @@ export function RecursionWebView({
     [topologyKey],
   );
   const edges = useMemo(() => listEdges(graph), [graph]);
+  const backEdgeMeta = useMemo(() => {
+    const bySource = new Map<number, string[]>();
+    const byTarget = new Map<number, string[]>();
+    for (const edge of edges) {
+      const from = layout.pos.get(edge.fromId);
+      const to = layout.pos.get(edge.toId);
+      if (!from || !to || to.x >= from.x) continue;
+      const key = `${edge.fromId}->${edge.toId}`;
+      const s = bySource.get(edge.fromId);
+      if (s) s.push(key);
+      else bySource.set(edge.fromId, [key]);
+      const t = byTarget.get(edge.toId);
+      if (t) t.push(key);
+      else byTarget.set(edge.toId, [key]);
+    }
+    const meta = new Map<string, BackEdgeMeta>();
+    for (const group of bySource.values()) {
+      group.sort();
+      const spacing = Math.min(
+        BACK_EDGE_SPACING,
+        BACK_EDGE_FAN_WIDTH / Math.max(1, group.length - 1),
+      );
+      group.forEach((key, i) => {
+        const m = meta.get(key) ?? { startDx: 0, endDx: 0, bump: 0 };
+        m.startDx = (i - (group.length - 1) / 2) * spacing;
+        meta.set(key, m);
+      });
+    }
+    for (const group of byTarget.values()) {
+      group.sort();
+      const spacing = Math.min(
+        BACK_EDGE_SPACING,
+        BACK_EDGE_FAN_WIDTH / Math.max(1, group.length - 1),
+      );
+      const bumpStep = Math.min(
+        BACK_EDGE_BUMP,
+        BACK_EDGE_MAX_BUMP_SPAN / Math.max(1, group.length - 1),
+      );
+      group.forEach((key, i) => {
+        const m = meta.get(key) ?? { startDx: 0, endDx: 0, bump: 0 };
+        m.endDx = (i - (group.length - 1) / 2) * spacing;
+        m.bump = i * bumpStep;
+        meta.set(key, m);
+      });
+    }
+    return meta;
+  }, [edges, layout]);
   const entryById = useMemo(() => {
     const map = new Map<number, LorebookEntry>();
     for (const e of entries) map.set(e.id, e);
@@ -363,7 +454,7 @@ export function RecursionWebView({
             return (
               <path
                 key={`${edge.fromId}->${edge.toId}`}
-                d={edgePath(from, to)}
+                d={edgePath(from, to, backEdgeMeta.get(`${edge.fromId}->${edge.toId}`))}
                 fill="none"
                 markerEnd={hot ? 'url(#rec-arrow-hot)' : 'url(#rec-arrow)'}
                 className={`transition-opacity ${
@@ -452,6 +543,28 @@ export function RecursionWebView({
                 </text>
                 <NodeFlagDots entry={entry} present={flagsPresent(entry)} />
               </g>
+            );
+          })}
+
+          {/* Back-link origin ports, above nodes so a partly-hidden arch's source stays visible */}
+          {edges.map((edge) => {
+            const from = layout.pos.get(edge.fromId);
+            const to = layout.pos.get(edge.toId);
+            if (!from || !to || to.x >= from.x) return null;
+            const meta = backEdgeMeta.get(`${edge.fromId}->${edge.toId}`);
+            const cx = from.x + NODE_W / 2 + (meta?.startDx ?? 0);
+            const hot =
+              hoveredId != null && (edge.fromId === hoveredId || edge.toId === hoveredId);
+            return (
+              <circle
+                key={`port-${edge.fromId}->${edge.toId}`}
+                cx={cx}
+                cy={from.y}
+                r={3}
+                className={`transition-opacity ${
+                  hot ? 'fill-accent' : 'fill-border-strong'
+                } ${dimmed && !hot ? 'opacity-15' : 'opacity-90'}`}
+              />
             );
           })}
         </g>
