@@ -380,7 +380,7 @@ export function LorebookAttachmentButton(): React.ReactElement | null {
         if (menuOpen) closeMenu();
         else openMenu(event.currentTarget);
       }}
-      className={`inline-flex max-w-[10rem] items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors touch-manipulation disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`inline-flex items-center justify-center gap-0 rounded-lg border p-2 text-xs font-medium transition-colors touch-manipulation disabled:cursor-not-allowed disabled:opacity-40 md:max-w-[10rem] md:gap-1.5 md:px-2.5 md:py-1.5 ${
         menuOpen
           ? 'border-accent bg-accent text-accent-fg'
           : attached?.missing
@@ -389,10 +389,11 @@ export function LorebookAttachmentButton(): React.ReactElement | null {
       }`}
       aria-expanded={menuOpen}
       aria-haspopup="dialog"
+      aria-label={attached && !attached.missing ? `Attached: ${label}` : attached?.missing ? 'Missing lorebook' : 'Attach lorebook'}
       title={attached && !attached.missing ? `Attached: ${label}` : 'Attached lorebook'}
     >
       <Link2 className="h-3.5 w-3.5 shrink-0" />
-      <span className="min-w-0 truncate">{label}</span>
+      <span className="hidden min-w-0 truncate md:inline">{label}</span>
       {attached && !attached.missing && !menuOpen ? (
         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
       ) : null}

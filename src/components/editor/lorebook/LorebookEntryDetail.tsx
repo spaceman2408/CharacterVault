@@ -359,7 +359,7 @@ export function LorebookEntryDetail({
       <div className="relative mt-2 flex min-h-0 flex-1 flex-col">
         <div
           ref={editorRef}
-          className="min-h-0 w-full flex-1 overflow-hidden rounded-xl border border-border bg-bg shadow-inner"
+          className="relative z-0 min-h-0 w-full flex-1 overflow-hidden rounded-xl border border-border bg-bg shadow-inner"
         />
 
         {isOptionsOpen && (
@@ -367,7 +367,7 @@ export function LorebookEntryDetail({
             id="lorebook-entry-options"
             role="dialog"
             aria-label="Entry options"
-            className="absolute inset-0 z-10 flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl"
+            className="absolute inset-0 z-30 flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl"
           >
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
               <p className="text-sm font-semibold text-fg">Entry options</p>

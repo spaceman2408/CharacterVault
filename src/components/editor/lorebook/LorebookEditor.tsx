@@ -750,10 +750,11 @@ function LorebookEditorInner({
               <button
                 type="button"
                 onClick={() => setIsMobileViewOpen(false)}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg md:hidden touch-manipulation"
+                className="inline-flex items-center justify-center rounded-lg p-2 text-fg-muted transition-colors hover:bg-hover hover:text-fg md:hidden touch-manipulation"
+                aria-label="Back to entry list"
+                title="Back to entry list"
               >
                 <ChevronLeft className="h-4 w-4" />
-                Back
               </button>
               <div className="min-w-0 flex-1 md:block">
                 <input
@@ -772,22 +773,23 @@ function LorebookEditorInner({
                   </p>
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-1 md:gap-1.5">
                 {attachment ? <LorebookAttachmentButton /> : null}
                 <button
                   type="button"
                   onClick={() => setIsOptionsOpen((open) => !open)}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors touch-manipulation ${
+                  className={`inline-flex items-center justify-center gap-0 rounded-lg border p-2 text-xs font-medium transition-colors touch-manipulation md:gap-1.5 md:px-2.5 md:py-1.5 ${
                     isOptionsOpen
                       ? 'border-accent bg-accent text-accent-fg'
                       : 'border-border text-fg-muted hover:bg-hover hover:text-fg'
                   }`}
                   aria-expanded={isOptionsOpen}
                   aria-controls="lorebook-entry-options"
+                  aria-label="Entry options"
                   title="Entry options"
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
-                  Options
+                  <span className="hidden md:inline">Options</span>
                   {!isOptionsOpen && hasNonDefaultOptions(selectedEntry) ? (
                     <span
                       className="h-1.5 w-1.5 rounded-full bg-accent"
@@ -798,11 +800,12 @@ function LorebookEditorInner({
                 <button
                   type="button"
                   onClick={() => handleDeleteEntry(safeSelectedIndex)}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation"
+                  className="inline-flex shrink-0 items-center justify-center gap-0 rounded-lg border p-2 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation md:gap-1.5 md:px-2.5 md:py-1.5"
+                  aria-label="Delete entry"
                   title="Delete entry"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Delete</span>
+                  <span className="hidden md:inline">Delete</span>
                 </button>
               </div>
             </div>
