@@ -365,24 +365,28 @@ export function RecursionWebView({
     [onInspect, onToggleSelect],
   );
 
-  const hoveredNeighborIds = useMemo(() => {
-    if (hoveredId == null) return null;
-    const set = new Set<number>([hoveredId]);
+  // Pathway highlighting pins to the inspected node; hovering another node
+  // temporarily takes over, falling back to the inspected node on mouse-out.
+  const highlightId = hoveredId ?? inspectedId;
+
+  const highlightedNeighborIds = useMemo(() => {
+    if (highlightId == null) return null;
+    const set = new Set<number>([highlightId]);
     for (const edge of edges) {
-      if (edge.fromId === hoveredId) set.add(edge.toId);
-      if (edge.toId === hoveredId) set.add(edge.fromId);
+      if (edge.fromId === highlightId) set.add(edge.toId);
+      if (edge.toId === highlightId) set.add(edge.fromId);
     }
     return set;
-  }, [hoveredId, edges]);
+  }, [highlightId, edges]);
 
-  const dimmed = hoveredNeighborIds != null;
+  const dimmed = highlightedNeighborIds != null;
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-muted/10">
       <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-border bg-surface/90 px-2.5 py-1.5 text-[10px] leading-snug text-fg-subtle shadow-sm backdrop-blur-sm">
         <span className="inline-flex items-center gap-1">
           <MousePointerClick className="h-3 w-3" />
-          Click inspects · Ctrl-click selects · drag pans · scroll zooms
+          Click inspects & pins paths · Ctrl-click selects · drag pans · scroll zooms
         </span>
       </div>
       <div className="absolute right-3 top-3 z-10 flex gap-1.5">
@@ -447,7 +451,8 @@ export function RecursionWebView({
             const to = layout.pos.get(edge.toId);
             if (!from || !to) return null;
             const hot =
-              hoveredId != null && (edge.fromId === hoveredId || edge.toId === hoveredId);
+              highlightId != null &&
+              (edge.fromId === highlightId || edge.toId === highlightId);
             const fromEntry = entryById.get(edge.fromId);
             const toEntry = entryById.get(edge.toId);
             if (!fromEntry || !toEntry) return null;
@@ -488,7 +493,7 @@ export function RecursionWebView({
             const p = layout.pos.get(entry.id);
             if (!p) return null;
             const isHovered = hoveredId === entry.id;
-            const isNeighbor = hoveredNeighborIds?.has(entry.id) ?? false;
+             const isNeighbor = highlightedNeighborIds?.has(entry.id) ?? false;
             const isDim = dimmed && !isNeighbor;
             const isInspected = inspectedId === entry.id;
             const isSelected = selectedIds.has(entry.id);
@@ -554,7 +559,8 @@ export function RecursionWebView({
             const meta = backEdgeMeta.get(`${edge.fromId}->${edge.toId}`);
             const cx = from.x + NODE_W / 2 + (meta?.startDx ?? 0);
             const hot =
-              hoveredId != null && (edge.fromId === hoveredId || edge.toId === hoveredId);
+              highlightId != null &&
+              (edge.fromId === highlightId || edge.toId === highlightId);
             return (
               <circle
                 key={`port-${edge.fromId}->${edge.toId}`}
