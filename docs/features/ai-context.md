@@ -125,9 +125,11 @@ Each lorebook entry has two independent settings:
 
 You might disable certain entries for Orion and the AI toolbar because they're too long, irrelevant to editing, or you'd rather the AI not see them. Meanwhile, those same entries stay enabled for actual roleplay. The settings don't affect each other.
 
-### Attached vault lorebooks
+### Linked library books
 
-Standalone books from the [Lorebook Vault](/features/lorebook-vault) can be **attached** to a character for vault-local use (including AI work). Attachment does not export with the card unless you copy entries into the embedded lorebook. Entry-level context eyes still apply to embedded entries as above.
+You can **link** a book from the [Lorebook Vault](/features/lorebook-vault) to a character. Linked books stay in sync with the lorebook on the card, so Orion and the AI toolbar see the same entries you would export. Entry-level context eyes still apply as above.
+
+See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
 
 ## Next Steps
 

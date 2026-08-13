@@ -1,9 +1,9 @@
 # Lorebook Vault
 
-Standalone **SillyTavern-compatible lorebooks** (World Info) live in their own library, separate from character cards. Create, edit, import, export, and snapshot books without opening a character. Optionally **attach** a book to a character for vault-local AI context, or **copy** it into the card’s embedded lorebook for export.
+Standalone **SillyTavern-compatible lorebooks** (World Info) live in their own library, separate from character cards. Create, edit, import, export, and snapshot books without opening a character. You can **link** a library book to one or more characters so they share the same entries.
 
 ::: tip
-The entry editor is shared with character-embedded lorebooks. Field details, recursion map, and AI key generation are covered in [Lorebook Editor](/features/lorebook-editor).
+The entry editor is the same one you see on a character’s **Lorebook** tab. Field details, recursion map, and AI key generation are covered in [Lorebook Editor](/features/lorebook-editor).
 :::
 
 ## Characters vs Lorebooks
@@ -62,23 +62,42 @@ Standalone books have their own snapshot history (similar to character snapshots
 
 Open **History** in the workspace header to list, preview, restore, or delete snapshots. See also [Snapshots & Rollback](/features/snapshots-history#standalone-lorebook-snapshots).
 
-## Attach to a character (vault-local)
+## Linking a book to a character {#attach-to-a-character-vault-local}
 
-Attachments are **one-way**: character → **one** standalone book ID. They exist only inside CharacterVault.
+A character can have **one** linked library book. Several characters can share that same book.
 
-- Only **one** vault lorebook per character (linking another replaces the previous attach)
-- After you link, CharacterVault **asks to copy entries** into the character’s **embedded** lorebook (this **replaces** existing embedded entries if you confirm)
-- The vault link is **not** written into PNG/JSON card export by itself; the embedded book is what exports with the card
-- You can also re-copy later from the attach panel without changing the link
+Manage the link from a **character** → **Lorebook** tab → **Attached lorebook**.
 
-### Where to manage attachments
+### First link
 
-Open a **character**, go to the **Lorebook** section, and use the **Attached lorebook** panel:
+1. Click **Attach** and pick a book (or **Replace** if one is already linked).
+2. CharacterVault asks if you want to copy that book’s entries onto the character. Confirming **replaces** the lorebook already on the character.
+3. You can copy again later from the panel without changing the link.
 
-- **Open in vault** – opens the attached vault book if present; otherwise creates a vault copy from the character’s embedded lorebook, attaches it, and opens the full lorebook workspace
-- Attach or **Replace** the single vault book
-- Confirm copy into embedded (overwrite) when linking
-- Detach or re-copy into the embedded book as needed
+If nothing is linked yet, **Open in vault** can create a library book from the character’s current lorebook, link it, and open it.
+
+### How they stay in sync
+
+Once linked, the library book and the lorebook on the character are kept together:
+
+| You do this | What happens |
+| :--- | :--- |
+| Edit the lorebook on the character, then **Open in vault** | The library book updates to match, then opens |
+| Edit the book in the Lorebooks workspace | Every linked character’s lorebook updates |
+| Restore a snapshot of the library book | Linked characters get that restored version too |
+
+Leaving the lorebook workspace (back to the library, or opening a linked character) finishes any pending update first.
+
+### Export, detach, and sharing
+
+- **Exporting a character** (PNG or JSON) includes the lorebook **on that character**, not the link itself. After a sync, those entries are on the card, so they go with the export.
+- **Detach** breaks the link. The character keeps whatever was last on the card. The library book stays in **Lorebooks**.
+- Linking another book replaces the previous link (you’ll be asked first).
+- If you do **not** want a character to follow later library edits, **Detach** it first.
+
+### Linked characters (from the book)
+
+In the lorebook workspace, **Linked** lists characters that use this book. Opening one of them saves the book first so the character already has your latest edits.
 
 ## Import & export formats
 

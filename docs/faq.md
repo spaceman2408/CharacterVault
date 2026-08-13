@@ -32,7 +32,7 @@ Yes. Syntax like `![alt](https://…)` is always highlighted. To open the URL on
 You can:
 
 - **Edit every field** of a V2/V3 character card: description, personality, greetings, lorebook, creator notes, and extensions
-- **Keep standalone lorebooks** in a second vault library (World Info), with import/export, snapshots, and optional attach to characters
+- **Keep standalone lorebooks** in a second vault library (World Info), with import/export, snapshots, and optional linking to characters (linked books stay in sync)
 - **Use AI to help you write** through Orion (a built-in chat assistant) and an AI toolbar with enhance, rephrase, shorten, fix, and other operations
 - **Save snapshots** at any point and roll back to previous versions, either the entire card or individual sections
 - **Import and export** PNG cards with embedded data and JSON files, compatible with SillyTavern, TavernAI, and other tools
@@ -40,7 +40,9 @@ You can:
 :::
 
 ::: details What is the Lorebook Vault?
-The home screen has a **Lorebooks** tab for standalone SillyTavern-compatible world-info books that are not tied to a single character. You can create, import, export, duplicate, snapshot, and edit them in a full workspace (including Orion). Optionally **attach** a book to a character for vault-local AI context, or **copy** it into the character’s embedded lorebook so it exports with the card.
+The home screen has a **Lorebooks** tab for standalone SillyTavern-compatible world-info books. You can create, import, export, duplicate, snapshot, and edit them without opening a character.
+
+A character can **link** one library book. Several characters can share the same book. After you link, you’ll be asked whether to copy that book onto the character. From then on they stay in sync: **Open in vault** updates the library book from the character; edits in the Lorebooks workspace update every linked character. Exporting a card includes the lorebook on that character, not the link itself. **Detach** if you want a character to stop following the library book.
 
 [Lorebook Vault →](/features/lorebook-vault) · [Lorebook Editor →](/features/lorebook-editor)
 :::

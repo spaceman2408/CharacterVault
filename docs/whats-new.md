@@ -10,7 +10,7 @@ Quick overview of recent updates to CharacterVault.
 
 - **Lorebook library** on the home vault: create, search, import, export, duplicate, delete standalone World Info books
 - **Full book workspace** with shared lorebook editor, Orion chat, and snapshot history
-- **Attach** vault books to characters (vault-local AI context) or **copy into embedded** lorebook for card export
+- **Link** library books to characters: **Open in vault** updates the library book from the character; edits in the Lorebooks workspace update every linked character. Export still uses the lorebook on the card.
 - **ST field coverage** for common world-info options (selective logic, recursion flags, depth/role, probability, book scan depth / token budget)
 - **Recursion map** rebuilt: fullscreen **web view** of every unlock path in the book, with pan/zoom, hover spotlight, a list fallback for big books, per-entry flag toggles, and staged bulk edits you review before applying
 - Field **?** help aligned with SillyTavern World Info docs

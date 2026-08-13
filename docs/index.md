@@ -8,7 +8,7 @@ CharacterVault is a browser-based tool for building character cards with the V2/
 
 - **Generate complete characters with AI** using the Creation Studio — describe your concept or select tags, and the AI creates a full character card from scratch
 - **Edit every field** of a V2/V3 character card, including name, tags, description, personality, greetings, and lorebook
-- **Manage standalone lorebooks** in a second vault library (SillyTavern World Info), with snapshots and optional attach to characters
+- **Manage standalone lorebooks** in a second vault library (SillyTavern World Info), with snapshots and optional linking to characters (linked books stay in sync)
 - **Map recursion** between lorebook entries and bulk-edit recursion flags without leaving the editor
 - **Use AI to help you write** with Orion, a built-in chat assistant, and an AI toolbar that can enhance, rephrase, shorten, and fix text with an in-editor ghost preview, plus search, resize text, and normalize HTML entities
 - **Save snapshots** at any point and roll back to them later, section by section

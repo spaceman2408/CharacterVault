@@ -4,7 +4,7 @@ The **Lorebook** editor manages SillyTavern-style **World Info** entries: text t
 
 The same editor is used in two places:
 
-1. **Character** workspace → **Lorebook** tab (embedded `character_book` on the card)
+1. **Character** workspace → **Lorebook** tab (the lorebook that lives on the card)
 2. **Lorebook vault** → open a standalone book ([Lorebook Vault](/features/lorebook-vault))
 
 ::: tip
@@ -30,7 +30,7 @@ Expand **Lorebook** at the top of the sidebar:
 | **Token budget** | Max tokens World Info may consume at once (book-level) |
 | **Recursive scanning** | When on, activated entries can unlock others by naming their keys in **Content** |
 | **Map** | Opens the [Recursion map](#recursion-map) |
-| **Delete lorebook** | Characters only: remove the embedded book (when offered) |
+| **Delete lorebook** | Characters only: remove the lorebook from the card (when offered) |
 
 ## Entry list
 
@@ -161,7 +161,7 @@ Entry **Content** uses the shared CodeMirror stack: AI toolbar, spellcheck, macr
 
 ## Import & export
 
-Works for both character-embedded and vault books.
+Works for both the lorebook on a character and a library book.
 
 ### Export
 
@@ -179,9 +179,13 @@ Works for both character-embedded and vault books.
 Standalone library import (multiple files, keep books separate) is on the [Lorebook Vault](/features/lorebook-vault) tab. Character/vault **editor** import replaces the **current** book’s entries.
 :::
 
-## Attachments (characters)
+## Linking a library book (characters)
 
-Characters can **attach one** standalone vault book for vault-local use. Linking replaces any previous attach and prompts to **copy entries into the embedded lorebook** (overwrites). See [Lorebook Vault → Attach](/features/lorebook-vault#attach-to-a-character-vault-local).
+A character can link **one** book from the Lorebooks library. After you link, you’ll be asked whether to copy that book onto the character (this replaces the lorebook already on the card).
+
+Once linked, they stay in sync: **Open in vault** writes the character’s current lorebook to the library book; edits in the library workspace update every linked character. The link itself stays in CharacterVault; exporting a card includes the lorebook on that character.
+
+See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
 
 ## Next steps
 

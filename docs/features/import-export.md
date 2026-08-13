@@ -75,9 +75,11 @@ See [Lorebook Editor → Import & Export](/features/lorebook-editor#import--expo
 
 On the home vault **Lorebooks** tab you can import one or more JSON files as **new standalone books**, export any book, and keep them separate from character cards. See [Lorebook Vault](/features/lorebook-vault).
 
-### Attachments vs card export
+### Linking vs card export
 
-Attaching a vault book is **vault-local** (one book per character) and does not by itself put those entries into PNG/JSON card export. Linking prompts you to **copy into the embedded lorebook** (overwrites embedded entries). You can also copy again later from the attach panel.
+A character can link **one** library book. The **link** stays in CharacterVault and is not written into PNG/JSON by itself. After you link (or later edit either side), the lorebook **on the character** is what export includes — so a synced book does go out with the card.
+
+Linking asks if you want to copy the library book onto the character first (this replaces the lorebook already on the card). See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
 
 ## Next Steps
 

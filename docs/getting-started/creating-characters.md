@@ -78,7 +78,7 @@ Character Vault generates a 128×192 JPEG thumbnail for the library grid view au
 
 ## Lorebook / World Info
 
-The **Lorebook** tab edits the character’s **embedded** world info (`character_book`), which exports with the card. Each entry can include:
+The **Lorebook** tab edits the world info that lives **on the character** and exports with the card. Each entry can include:
 
 | Field | Description |
 | :--- | :--- |
@@ -97,9 +97,9 @@ Also available: AI context eye toggles, AI key generation, book-level scan depth
 
 For the full two-panel editor, see [Lorebook Editor](/features/lorebook-editor).
 
-### Standalone books and attachments
+### Library books and linking
 
-A separate **Lorebooks** library on the home vault holds books that are **not** on the card by default. You can attach them to a character for vault-local AI context, or copy entries into the embedded book for SillyTavern export. See [Lorebook Vault](/features/lorebook-vault).
+The home screen **Lorebooks** tab holds books you can edit without opening a character. Link one book to a character (several characters can share it). After that, **Open in vault** and edits in the library workspace keep the two sides together. Exporting the card includes the lorebook on the character. See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
 
 ## Creator Notes
 
