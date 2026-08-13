@@ -114,6 +114,8 @@ export interface CharacterEditorContextValue {
   updateCharacter: (input: Partial<Character>) => Promise<Character>;
   /** Update a specific spec field */
   updateSpecField: (field: keyof Character['data']['spec'], value: string | string[]) => Promise<Character>;
+  /** Commit queued debounced character/spec saves and return the latest card */
+  flushPendingSaves: () => Promise<Character | null>;
   
   /** Set font size */
   setFontSize: (size: number) => void;

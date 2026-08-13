@@ -220,6 +220,8 @@ export interface UseAIEditorReturn {
   setContent: (content: string) => void;
   /** Portal modal for preflight AI payload inspection (mount next to editor) */
   payloadPreviewModal: React.ReactNode;
+  /** Persist any queued debounced editor value immediately */
+  flushPendingPersist: () => void;
 }
 
 /**
@@ -1361,5 +1363,6 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     reject,
     setContent,
     payloadPreviewModal,
+    flushPendingPersist,
   };
 }

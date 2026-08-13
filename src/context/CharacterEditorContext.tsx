@@ -1140,6 +1140,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     setActiveSection,
     updateCharacter,
     updateSpecField,
+    flushPendingSaves,
     setFontSize,
     setSelectedText,
     setContextSectionIds: setContextSectionIdsCallback,

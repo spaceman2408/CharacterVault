@@ -1322,17 +1322,48 @@ export class CharacterDatabase extends Dexie {
    * Uses primary keys only so badge refreshes stay cheap.
    */
   async countCharactersLinkedToLorebook(lorebookId: string): Promise<number> {
+    const ids = await this.getCharacterIdsLinkedToLorebook(lorebookId);
+    return ids.length;
+  }
+
+  /** Linked character ids only (no thumbnails). Omits deleted cards. */
+  async getCharacterIdsLinkedToLorebook(lorebookId: string): Promise<string[]> {
     const rows = await this.characterLorebookAttachments
       .filter((row) => row.lorebookIds.includes(lorebookId))
       .toArray();
-    if (rows.length === 0) return 0;
+    if (rows.length === 0) return [];
 
     const characterIds = rows.map((row) => row.characterId);
     const keys = await this.characterListIndex
       .where('id')
       .anyOf(characterIds)
       .primaryKeys();
-    return keys.length;
+    return keys as string[];
+  }
+
+  /**
+   * Replace a character's embedded lorebook.
+   * Returns false if the card is gone. Skips the put when the book is unchanged.
+   * Single get — does not re-read the card through updateCharacter.
+   */
+  async updateCharacterEmbeddedBook(id: string, book: CharacterBook): Promise<boolean> {
+    const character = await this.characters.get(id);
+    if (!character) return false;
+    if (JSON.stringify(character.data.characterBook ?? null) === JSON.stringify(book)) {
+      return true;
+    }
+
+    character.data = {
+      ...character.data,
+      characterBook: book,
+    };
+    character.updatedAt = new Date().toISOString();
+
+    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
+      await this.characters.put(character);
+      await this.syncCharacterListIndex(character);
+    });
+    return true;
   }
 }
 

@@ -3,6 +3,7 @@
  */
 
 import { characterDb } from '../db/CharacterDatabase';
+import { lorebookAttachmentService } from './LorebookAttachmentService';
 import type {
   LorebookSnapshot,
   LorebookSnapshotMetadata,
@@ -150,6 +151,7 @@ export class LorebookSnapshotService {
       book: snapshot.payload.book,
     });
 
+    await lorebookAttachmentService.writeVaultToLinkedCharacters(updated.id, updated);
     await this.createFromLorebook(updated, 'rollback');
     return updated;
   }

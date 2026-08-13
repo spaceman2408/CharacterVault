@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
   ChevronUp,
@@ -30,6 +30,7 @@ import {
 } from './recursionGraph';
 import type { LorebookEntryDetailProps } from './types';
 import { hasNonDefaultActivation } from './utils';
+import { registerLorebookDraftFlush } from './draftFlush';
 
 export function LorebookEntryDetail({
   entry,
@@ -52,7 +53,7 @@ export function LorebookEntryDetail({
   const draftEntryRef = useRef(entry);
   draftEntryRef.current = draftEntry;
 
-  const { editorRef, payloadPreviewModal } = useAIEditor({
+  const { editorRef, payloadPreviewModal, flushPendingPersist } = useAIEditor({
     key: String(entry.id),
     value: draftEntry.content,
     onImmediateChange: (value) => {
@@ -85,6 +86,8 @@ export function LorebookEntryDetail({
     spellcheck,
     markdownImageOpenLinks,
   });
+
+  useEffect(() => registerLorebookDraftFlush(flushPendingPersist), [flushPendingPersist]);
 
   const [keysInput, setKeysInput] = React.useState(entry.keys.join(', '));
   const [secondaryKeysInput, setSecondaryKeysInput] = React.useState(

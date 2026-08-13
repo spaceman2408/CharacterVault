@@ -4,16 +4,53 @@
 
 import { characterDb } from '../db/CharacterDatabase';
 import type {
+  CharacterBook,
   CharacterListItem,
   CharacterLorebookAttachments,
   VaultLorebook,
 } from '../db/characterTypes';
+import { createEmptyCharacterBook } from '../db/characterTypes';
 
 export interface ResolvedLorebookAttachment {
   lorebookId: string;
   lorebook: VaultLorebook | null;
   /** True when the ID is attached but the book was deleted */
   missing: boolean;
+}
+
+export function cloneLorebookEntries(book: CharacterBook): CharacterBook['entries'] {
+  return (book.entries || []).map((entry) => ({
+    ...entry,
+    extensions: { ...entry.extensions },
+    keys: [...entry.keys],
+    secondary_keys: entry.secondary_keys ? [...entry.secondary_keys] : undefined,
+  }));
+}
+
+export function cloneBookForEmbed(lorebook: VaultLorebook): CharacterBook {
+  return {
+    ...lorebook.book,
+    name: lorebook.book.name || lorebook.name,
+    description: lorebook.book.description ?? lorebook.description ?? '',
+    entries: cloneLorebookEntries(lorebook.book),
+    extensions: { ...lorebook.book.extensions },
+  };
+}
+
+export function cloneEmbeddedBook(
+  embeddedBook: CharacterBook | undefined,
+  fallbackName: string,
+): CharacterBook {
+  if (!embeddedBook) {
+    return createEmptyCharacterBook(fallbackName);
+  }
+  return {
+    ...embeddedBook,
+    name: (embeddedBook.name || '').trim() || fallbackName,
+    description: embeddedBook.description ?? '',
+    entries: cloneLorebookEntries(embeddedBook),
+    extensions: { ...(embeddedBook.extensions || {}) },
+  };
 }
 
 export class LorebookAttachmentService {
@@ -98,6 +135,44 @@ export class LorebookAttachmentService {
   /** All lorebook → character id links (no thumbnails). */
   async listLinkedCharacterIdsByLorebook(): Promise<Record<string, string[]>> {
     return characterDb.getLinkedCharacterIdsByLorebook();
+  }
+
+  /**
+   * Overwrite a vault book with the character's current embedded lorebook.
+   * Used when opening the attached book from the character editor.
+   * Also pushes the new vault book to every other linked character.
+   */
+  async writeEmbeddedToVault(
+    lorebookId: string,
+    embedded: CharacterBook,
+    fallbackName: string,
+  ): Promise<VaultLorebook> {
+    const book = cloneEmbeddedBook(embedded, fallbackName);
+    const updated = await characterDb.updateLorebook(lorebookId, {
+      book,
+      name: book.name?.trim() || undefined,
+      description: book.description,
+    });
+    await this.writeVaultToLinkedCharacters(lorebookId, updated);
+    return updated;
+  }
+
+  /**
+   * Copy the vault book into every linked character's embedded lorebook.
+   * Each card gets its own clone. Missing cards are skipped.
+   */
+  async writeVaultToLinkedCharacters(
+    lorebookId: string,
+    vault: VaultLorebook,
+  ): Promise<number> {
+    const characterIds = await characterDb.getCharacterIdsLinkedToLorebook(lorebookId);
+    let written = 0;
+    for (const characterId of characterIds) {
+      const book = cloneBookForEmbed(vault);
+      const exists = await characterDb.updateCharacterEmbeddedBook(characterId, book);
+      if (exists) written += 1;
+    }
+    return written;
   }
 }
 

@@ -21,6 +21,7 @@ import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
 import { usePersistedPanelWidth } from '../ai/hooks/usePersistedPanelWidth';
 import { LinkedCharactersMenu } from './LinkedCharactersMenu';
+import { flushLorebookDraft } from '../editor/lorebook/draftFlush';
 import type {
   CharacterBook,
   CharacterSection,
@@ -33,7 +34,10 @@ import {
   customContextService,
   formatCustomContextChunk,
 } from '../../services/CustomContextService';
+import { lorebookAttachmentService } from '../../services/LorebookAttachmentService';
 import { showEphemeralToast } from '../../utils/ephemeralToast';
+
+const LINKED_CHARACTER_SYNC_MS = 400;
 
 const DESKTOP_MIN_WIDTH_PX = 1024;
 
@@ -71,6 +75,8 @@ export function LorebookWorkspace(): React.ReactElement {
   const currentLorebookRef = useRef<VaultLorebook | null>(currentLorebook);
   const titleDraftRef = useRef(titleDraft);
   const pendingSaveRef = useRef<Promise<VaultLorebook | null>>(Promise.resolve(null));
+  const linkedSyncTimerRef = useRef<number | null>(null);
+  const linkedSyncPromiseRef = useRef<Promise<void>>(Promise.resolve());
   currentLorebookIdRef.current = currentLorebook?.id ?? null;
   currentLorebookRef.current = currentLorebook;
   titleDraftRef.current = titleDraft;
@@ -251,6 +257,57 @@ export function LorebookWorkspace(): React.ReactElement {
     }
   }, []);
 
+  const syncLinkedCharacters = useCallback(async (lorebook: VaultLorebook) => {
+    try {
+      await lorebookAttachmentService.writeVaultToLinkedCharacters(lorebook.id, lorebook);
+    } catch (error) {
+      console.error('Failed to sync lorebook to linked characters:', error);
+    }
+  }, []);
+
+  const scheduleLinkedSync = useCallback(
+    (lorebook: VaultLorebook) => {
+      if (linkedSyncTimerRef.current !== null) {
+        window.clearTimeout(linkedSyncTimerRef.current);
+      }
+      linkedSyncTimerRef.current = window.setTimeout(() => {
+        linkedSyncTimerRef.current = null;
+        const run = syncLinkedCharacters(lorebook);
+        linkedSyncPromiseRef.current = run;
+      }, LINKED_CHARACTER_SYNC_MS);
+    },
+    [syncLinkedCharacters],
+  );
+
+  const flushLinkedSync = useCallback(
+    async (lorebook: VaultLorebook | null) => {
+      if (linkedSyncTimerRef.current !== null) {
+        window.clearTimeout(linkedSyncTimerRef.current);
+        linkedSyncTimerRef.current = null;
+        if (lorebook) {
+          await syncLinkedCharacters(lorebook);
+          return;
+        }
+      }
+      await linkedSyncPromiseRef.current;
+    },
+    [syncLinkedCharacters],
+  );
+
+  useEffect(() => {
+    return () => {
+      // Leave paths already flushed. Only write here if a debounce is still pending
+      // (workspace dropped without handleClose / handleOpenLinkedCharacter).
+      if (linkedSyncTimerRef.current === null) return;
+      window.clearTimeout(linkedSyncTimerRef.current);
+      linkedSyncTimerRef.current = null;
+      const lorebook = currentLorebookRef.current;
+      if (lorebook) {
+        void lorebookAttachmentService.writeVaultToLinkedCharacters(lorebook.id, lorebook);
+      }
+    };
+  }, []);
+
   const handleBookChange = useCallback(
     async (book: CharacterBook) => {
       const lorebook = currentLorebookRef.current;
@@ -263,6 +320,9 @@ export function LorebookWorkspace(): React.ReactElement {
           if (nextName && nextName !== lorebook.name) {
             updated = await updateLorebook(lorebook.id, { name: nextName });
           }
+          if (updated) {
+            scheduleLinkedSync(updated);
+          }
           return updated;
         } finally {
           setIsSaving(false);
@@ -274,7 +334,7 @@ export function LorebookWorkspace(): React.ReactElement {
       );
       await save;
     },
-    [updateLorebookBook, updateLorebook],
+    [updateLorebookBook, updateLorebook, scheduleLinkedSync],
   );
 
   const handleTitleBlur = useCallback(async () => {
@@ -290,27 +350,42 @@ export function LorebookWorkspace(): React.ReactElement {
       },
     });
     currentLorebookRef.current = updated;
-  }, [updateLorebook]);
+    scheduleLinkedSync(updated);
+  }, [updateLorebook, scheduleLinkedSync]);
 
   const flushPendingLorebook = useCallback(async (): Promise<VaultLorebook | null> => {
+    flushLorebookDraft();
     const saved = await pendingSaveRef.current;
     const lorebook = saved ?? currentLorebookRef.current;
     if (!lorebook) return null;
     const nextName = titleDraftRef.current.trim();
+    let latest = lorebook;
     if (nextName && nextName !== lorebook.name) {
-      const updated = await updateLorebook(lorebook.id, {
+      latest = await updateLorebook(lorebook.id, {
         name: nextName,
         book: {
           ...lorebook.book,
           name: nextName,
         },
       });
-      currentLorebookRef.current = updated;
-      return updated;
     }
-    currentLorebookRef.current = lorebook;
-    return lorebook;
-  }, [updateLorebook]);
+    currentLorebookRef.current = latest;
+    await flushLinkedSync(latest);
+    return latest;
+  }, [updateLorebook, flushLinkedSync]);
+
+  const handleClose = useCallback(async () => {
+    await flushPendingLorebook();
+    closeLorebook();
+  }, [flushPendingLorebook, closeLorebook]);
+
+  const handleOpenLinkedCharacter = useCallback(
+    async (characterId: string) => {
+      await flushPendingLorebook();
+      await openCharacter(characterId);
+    },
+    [flushPendingLorebook, openCharacter],
+  );
 
   const toggleChat = () => setIsChatOpen((open) => !open);
 
@@ -328,7 +403,7 @@ export function LorebookWorkspace(): React.ReactElement {
         <div className="flex items-center gap-3 md:gap-4 min-w-0">
           <button
             type="button"
-            onClick={closeLorebook}
+            onClick={() => void handleClose()}
             className="p-2 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent active:scale-95 shrink-0"
             title="Back to vault"
           >
@@ -392,7 +467,7 @@ export function LorebookWorkspace(): React.ReactElement {
 
           <LinkedCharactersMenu
             lorebookId={currentLorebook.id}
-            onOpenCharacter={(characterId) => openCharacter(characterId)}
+            onOpenCharacter={handleOpenLinkedCharacter}
           />
 
           <button

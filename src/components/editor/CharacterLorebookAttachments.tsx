@@ -2,54 +2,21 @@
  * One-way attach panel: link a single standalone vault lorebook to a character.
  * Linking replaces any previous attach and prompts to copy entries into the
  * embedded character book (overwriting existing embedded entries).
- * "Open in vault" opens the attached book, or promotes the embedded book into
- * the vault (create + attach) when none exists yet.
+ * "Open in vault" writes the current embedded book onto the attached vault
+ * copy (or creates one from embedded) and opens the lorebook workspace.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Book, ExternalLink, Link2, Trash2, Copy } from 'lucide-react';
 import type { CharacterBook, LorebookListItem, VaultLorebook } from '../../db/characterTypes';
-import { createEmptyCharacterBook } from '../../db/characterTypes';
 import {
+  cloneBookForEmbed,
+  cloneEmbeddedBook,
   lorebookAttachmentService,
   type ResolvedLorebookAttachment,
 } from '../../services/LorebookAttachmentService';
-import { useLorebookContext } from '../../context';
-
-function cloneEntries(book: CharacterBook): CharacterBook['entries'] {
-  return (book.entries || []).map((entry) => ({
-    ...entry,
-    extensions: { ...entry.extensions },
-    keys: [...entry.keys],
-    secondary_keys: entry.secondary_keys ? [...entry.secondary_keys] : undefined,
-  }));
-}
-
-function cloneBookForEmbed(lorebook: VaultLorebook): CharacterBook {
-  return {
-    ...lorebook.book,
-    name: lorebook.book.name || lorebook.name,
-    description: lorebook.book.description ?? lorebook.description ?? '',
-    entries: cloneEntries(lorebook.book),
-    extensions: { ...lorebook.book.extensions },
-  };
-}
-
-function cloneEmbeddedBook(
-  embeddedBook: CharacterBook | undefined,
-  fallbackName: string,
-): CharacterBook {
-  if (!embeddedBook) {
-    return createEmptyCharacterBook(fallbackName);
-  }
-  return {
-    ...embeddedBook,
-    name: (embeddedBook.name || '').trim() || fallbackName,
-    description: embeddedBook.description ?? '',
-    entries: cloneEntries(embeddedBook),
-    extensions: { ...(embeddedBook.extensions || {}) },
-  };
-}
+import { useCharacterEditorContext, useLorebookContext } from '../../context';
+import { flushLorebookDraft } from './lorebook/draftFlush';
 
 function promptCopyIntoEmbedded(
   lorebook: VaultLorebook,
@@ -76,6 +43,7 @@ export function CharacterLorebookAttachments({
   onCopyIntoEmbedded: (book: CharacterBook) => void;
 }): React.ReactElement {
   const { lorebookListItems, openLorebook, createLorebook } = useLorebookContext();
+  const { flushPendingSaves } = useCharacterEditorContext();
   const [resolved, setResolved] = useState<ResolvedLorebookAttachment[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -137,15 +105,47 @@ export function CharacterLorebookAttachments({
     }
   };
 
-  const handleOpen = async (lorebookId: string) => {
-    // openLorebook drops the full character payload (exclusive workspace)
+  const fallbackVaultName = (book?: CharacterBook) =>
+    (book?.name || '').trim() ||
+    (characterName ? `${characterName}'s Lorebook` : 'Character Lorebook');
+
+  /**
+   * Commit in-editor lorebook draft + queued character save, then write that
+   * book onto the attached vault copy. openLorebook drops the character.
+   */
+  const pushEmbeddedAndOpen = async (lorebookId: string) => {
+    flushLorebookDraft();
+    const latest = await flushPendingSaves();
+    const book = latest?.data.characterBook ?? embeddedBook;
+    if (book) {
+      await lorebookAttachmentService.writeEmbeddedToVault(
+        lorebookId,
+        book,
+        fallbackVaultName(book),
+      );
+    }
     await openLorebook(lorebookId);
+  };
+
+  const handleOpen = async (lorebookId: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await pushEmbeddedAndOpen(lorebookId);
+    } catch (err) {
+      console.error('Failed to open lorebook in vault:', err);
+      window.alert(
+        err instanceof Error ? err.message : 'Could not open the vault lorebook.',
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   /**
    * Open the full vault lorebook workspace.
-   * Prefer the existing attachment; otherwise create a vault book from the
-   * embedded character book, attach it, and open that.
+   * Prefer the existing attachment (push current embedded first); otherwise
+   * create a vault book from the embedded character book, attach it, and open.
    * createLorebook / openLorebook drop character memory automatically.
    */
   const handleOpenInVault = async () => {
@@ -154,16 +154,19 @@ export function CharacterLorebookAttachments({
     if (attached && !attached.missing && attached.lorebookId) {
       setBusy(true);
       try {
-        await openLorebook(attached.lorebookId);
+        await pushEmbeddedAndOpen(attached.lorebookId);
+      } catch (err) {
+        console.error('Failed to open lorebook in vault:', err);
+        window.alert(
+          err instanceof Error ? err.message : 'Could not open the vault lorebook.',
+        );
       } finally {
         setBusy(false);
       }
       return;
     }
 
-    const fallbackName =
-      (embeddedBook?.name || '').trim() ||
-      (characterName ? `${characterName}'s Lorebook` : 'Character Lorebook');
+    const fallbackName = fallbackVaultName(embeddedBook);
     const entryCount = embeddedBook?.entries?.length ?? 0;
     const createOk = window.confirm(
       entryCount > 0
@@ -172,11 +175,12 @@ export function CharacterLorebookAttachments({
     );
     if (!createOk) return;
 
-    // Snapshot embedded book before createLorebook drops the open character.
-    const book = cloneEmbeddedBook(embeddedBook, fallbackName);
-
     setBusy(true);
     try {
+      flushLorebookDraft();
+      const latest = await flushPendingSaves();
+      // Snapshot embedded book before createLorebook drops the open character.
+      const book = cloneEmbeddedBook(latest?.data.characterBook ?? embeddedBook, fallbackName);
       const created = await createLorebook({
         name: book.name || fallbackName,
         description: book.description || '',
@@ -207,8 +211,10 @@ export function CharacterLorebookAttachments({
             Attached lorebook
           </p>
           <p className="text-[11px] text-fg-muted">
-            One vault book per character. Open in vault uses the attachment, or creates one from
-            the embedded book. Linking asks to copy entries into the embedded book (overwrites).
+            One vault book per character. Open in vault writes the current embedded book to the
+            attachment (or creates one), then opens it. Vault edits write back to every linked
+            character's embedded book. Linking asks to copy entries into the embedded book
+            (overwrites).
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
@@ -219,7 +225,7 @@ export function CharacterLorebookAttachments({
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
             title={
               attached && !attached.missing
-                ? 'Open attached vault lorebook'
+                ? 'Write current lorebook to the attached vault book and open it'
                 : 'Create vault lorebook from embedded book and open it'
             }
           >
