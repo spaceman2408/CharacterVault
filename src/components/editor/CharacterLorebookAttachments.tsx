@@ -17,6 +17,7 @@ import {
 } from '../../services/LorebookAttachmentService';
 import { useCharacterEditorContext, useLorebookContext } from '../../context';
 import { flushLorebookDraft } from './lorebook/draftFlush';
+import { FieldLabel } from './lorebook/FieldInfoTip';
 
 function promptCopyIntoEmbedded(
   lorebook: VaultLorebook,
@@ -206,17 +207,13 @@ export function CharacterLorebookAttachments({
   return (
     <div className="shrink-0 border-b border-border bg-muted/30 px-3 py-3 sm:px-4">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-            Attached lorebook
-          </p>
-          <p className="text-[11px] text-fg-muted">
-            One vault book per character. Open in vault writes the current embedded book to the
-            attachment (or creates one), then opens it. Vault edits write back to every linked
-            character's embedded book. Linking asks to copy entries into the embedded book
-            (overwrites).
-          </p>
-        </div>
+        <FieldLabel
+          help="One library book per character. Open in vault writes this lorebook to the linked book (or creates one), then opens it. Edits in the library update every linked character. Linking asks to copy entries onto the character (replaces what's already there)."
+          helpLabel="About attached lorebooks"
+          className="mb-0 flex min-w-0 items-center gap-1 text-xs font-semibold uppercase tracking-wider text-fg-subtle"
+        >
+          Attached lorebook
+        </FieldLabel>
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
           <button
             type="button"
