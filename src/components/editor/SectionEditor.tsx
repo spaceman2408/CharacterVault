@@ -10,7 +10,6 @@ import type { CharacterSection } from '../../db/characterTypes';
 import { CHARACTER_SECTIONS } from '../../db/characterTypes';
 import { GreetingsEditor } from './GreetingsEditor';
 import { LorebookEditor } from './LorebookEditor';
-import { CharacterLorebookAttachments } from './CharacterLorebookAttachments';
 import { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { useAIEditor } from '../../hooks';
@@ -428,21 +427,6 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
   if (section === 'lorebook') {
     return (
       <div className="absolute inset-0 flex h-full w-full flex-col animate-fade-in-slow">
-        {currentCharacter?.id && (
-          <CharacterLorebookAttachments
-            characterId={currentCharacter.id}
-            embeddedBook={currentCharacter.data?.characterBook}
-            characterName={currentCharacter.name}
-            onCopyIntoEmbedded={(lorebook) => {
-              void updateCharacter({
-                data: {
-                  ...currentCharacter.data,
-                  characterBook: lorebook,
-                },
-              });
-            }}
-          />
-        )}
         <div className="min-h-0 flex-1">
           <LorebookEditor
             lorebook={currentCharacter?.data?.characterBook}
@@ -475,6 +459,23 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
             characterName={currentCharacter?.name}
             spellcheck={spellcheck}
             markdownImageOpenLinks={markdownImageOpenLinks}
+            attachment={
+              currentCharacter?.id
+                ? {
+                    characterId: currentCharacter.id,
+                    embeddedBook: currentCharacter.data?.characterBook,
+                    characterName: currentCharacter.name,
+                    onCopyIntoEmbedded: (lorebook) => {
+                      void updateCharacter({
+                        data: {
+                          ...currentCharacter.data,
+                          characterBook: lorebook,
+                        },
+                      });
+                    },
+                  }
+                : undefined
+            }
           />
         </div>
       </div>

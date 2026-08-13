@@ -399,8 +399,8 @@ export function LorebookWorkspace(): React.ReactElement {
 
   return (
     <div className="h-dvh w-full flex flex-col bg-bg overflow-hidden">
-      <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-surface/60 backdrop-blur-xl border-b border-border/60 shrink-0">
-        <div className="flex items-center gap-3 md:gap-4 min-w-0">
+      <header className="h-16 flex items-center justify-between px-2 sm:px-4 md:px-6 bg-surface/60 backdrop-blur-xl border-b border-border/60 shrink-0">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4">
           <button
             type="button"
             onClick={() => void handleClose()}
@@ -411,8 +411,8 @@ export function LorebookWorkspace(): React.ReactElement {
           </button>
 
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-hover flex items-center justify-center shrink-0">
-              <Book className="w-4 h-4 md:w-5 md:h-5 text-accent" />
+            <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-hover sm:flex md:h-10 md:w-10">
+              <Book className="h-4 w-4 text-accent md:h-5 md:w-5" />
             </div>
             <div className="min-w-0">
               <input
@@ -432,7 +432,7 @@ export function LorebookWorkspace(): React.ReactElement {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 md:gap-2">
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-2">
           {isMobile ? (
             <button
               type="button"

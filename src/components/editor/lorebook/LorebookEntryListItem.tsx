@@ -25,7 +25,7 @@ function LorebookEntryListItem({
     <div
       onClick={onSelect}
       className={`
-        relative cursor-pointer rounded-xl border p-3 transition-colors touch-manipulation
+        relative cursor-pointer rounded-xl border p-2.5 transition-colors touch-manipulation
         ${isSelected
           ? 'border-accent bg-accent-soft ring-1 ring-accent'
           : 'border-border bg-surface hover:border-accent/40 hover:bg-accent-soft/60'

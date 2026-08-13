@@ -1,11 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ChevronDown,
-  ChevronUp,
-  GitFork,
-  Sparkles,
-  Square,
-} from 'lucide-react';
+import { GitFork, Sparkles, Square, X } from 'lucide-react';
 import { AIService } from '../../../services/AIService';
 import { resolveConfigForOperation } from '../../../services/resolveOperationConfig';
 import { useAIEditor } from '../../../hooks';
@@ -29,8 +23,8 @@ import {
   mergeEntryDraft,
 } from './recursionGraph';
 import type { LorebookEntryDetailProps } from './types';
-import { hasNonDefaultActivation } from './utils';
 import { registerLorebookDraftFlush } from './draftFlush';
+import { ToggleChip } from './ToggleChip';
 
 export function LorebookEntryDetail({
   entry,
@@ -48,6 +42,8 @@ export function LorebookEntryDetail({
   onFontSizeChange,
   spellcheck,
   markdownImageOpenLinks,
+  isOptionsOpen,
+  onOptionsOpenChange,
 }: LorebookEntryDetailProps): React.ReactElement {
   const [draftEntry, setDraftEntry] = useState(entry);
   const draftEntryRef = useRef(entry);
@@ -94,7 +90,6 @@ export function LorebookEntryDetail({
     (entry.secondary_keys || []).join(', '),
   );
   const [generatingKeys, setGeneratingKeys] = useState(false);
-  const [isActivationOpen, setIsActivationOpen] = useState(() => hasNonDefaultActivation(entry));
   const aiServiceRef = useRef<AIService | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
@@ -139,9 +134,6 @@ export function LorebookEntryDetail({
     setDraftEntry(entry);
     setKeysInput(entry.keys.join(', '));
     setSecondaryKeysInput((entry.secondary_keys || []).join(', '));
-    if (hasNonDefaultActivation(entry)) {
-      setIsActivationOpen(true);
-    }
   }, [entry]);
 
   React.useEffect(() => {
@@ -154,11 +146,11 @@ export function LorebookEntryDetail({
     setSecondaryKeysInput((prev) => (prev !== next ? next : prev));
   }, [draftEntry.secondary_keys]);
 
-  // Glance stats only while Activation is open (avoids O(n²) rebuilds on every
+  // Glance stats only while Options is open (avoids O(n²) rebuilds on every
   // keystroke when the panel is collapsed).
   const entriesForGraph = useMemo(
-    () => (isActivationOpen ? mergeEntryDraft(allEntries, draftEntry) : null),
-    [allEntries, draftEntry, isActivationOpen],
+    () => (isOptionsOpen ? mergeEntryDraft(allEntries, draftEntry) : null),
+    [allEntries, draftEntry, isOptionsOpen],
   );
   const recursionGraph = useMemo(
     () => (entriesForGraph ? buildRecursionGraph(entriesForGraph) : null),
@@ -171,6 +163,15 @@ export function LorebookEntryDetail({
         : { triggers: 0, triggeredBy: 0 },
     [recursionGraph, draftEntry.id],
   );
+
+  useEffect(() => {
+    if (!isOptionsOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onOptionsOpenChange(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOptionsOpen, onOptionsOpenChange]);
 
   const handleAbortGeneration = () => {
     tearDownKeyGeneration();
@@ -275,11 +276,6 @@ export function LorebookEntryDetail({
     setDraftEntry(updatedEntry);
     onPersistUpdate(updatedEntry);
   };
-  const handleCommentChange = (value: string) => {
-    const updatedEntry = { ...draftEntry, comment: value };
-    setDraftEntry(updatedEntry);
-    onPersistUpdate(updatedEntry);
-  };
   const handlePriorityChange = (value: string) => {
     const num = parseInt(value, 10);
     const updatedEntry = { ...draftEntry, priority: Number.isNaN(num) ? 0 : num };
@@ -306,82 +302,85 @@ export function LorebookEntryDetail({
   };
 
   return (
-    <div className="h-full min-h-0 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-      <div className="flex flex-col gap-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="space-y-3">
-          <div>
-            <FieldLabel help={FIELD_HELP.entryTitle}>Entry Title</FieldLabel>
-            <input
-              type="text"
-              value={draftEntry.comment || ''}
-              onChange={(e) => handleCommentChange(e.target.value)}
-              placeholder="Memo / display name (optional)"
-              className={FIELD_CLASS}
-            />
-          </div>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <FieldLabel
+            help={FIELD_HELP.primaryKeys}
+            className="mb-0 hidden shrink-0 items-center gap-1 text-xs font-semibold uppercase tracking-wider text-fg-subtle sm:flex"
+          >
+            Keys
+          </FieldLabel>
+          <input
+            type="text"
+            value={keysInput}
+            onChange={(e) => setKeysInput(e.target.value)}
+            onBlur={handleKeysBlur}
+            placeholder="Primary keys, comma separated"
+            aria-label="Primary keys"
+            className={FIELD_CLASS}
+          />
+          <button
+            type="button"
+            onClick={() => void handleGenerateKeys()}
+            disabled={!generatingKeys && !draftEntry.content.trim()}
+            title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
+            className={`shrink-0 rounded-lg p-2 transition-colors touch-manipulation ${
+              generatingKeys
+                ? 'animate-pulse text-danger hover:bg-danger-soft'
+                : 'text-fg-subtle hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40'
+            }`}
+          >
+            {generatingKeys ? (
+              <Square className="h-3.5 w-3.5 fill-current" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <ToggleChip
+            pressed={draftEntry.enabled}
+            onPressedChange={(next) => persistPatch({ enabled: next })}
+          >
+            Enabled
+          </ToggleChip>
+          <FieldInfoTip text={FIELD_HELP.enabled} label="About Enabled" />
+          <ToggleChip
+            pressed={draftEntry.constant ?? false}
+            onPressedChange={(next) => persistPatch({ constant: next })}
+          >
+            Constant
+          </ToggleChip>
+          <FieldInfoTip text={FIELD_HELP.constant} label="About Constant" />
+        </div>
+      </div>
 
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-              <input
-                type="checkbox"
-                checked={draftEntry.enabled}
-                onChange={(e) => persistPatch({ enabled: e.target.checked })}
-                className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-              />
-              Enabled
-              <FieldInfoTip text={FIELD_HELP.enabled} label="About Enabled" />
-            </label>
-            <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-              <input
-                type="checkbox"
-                checked={draftEntry.constant ?? false}
-                onChange={(e) => persistPatch({ constant: e.target.checked })}
-                className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-              />
-              Constant
-              <FieldInfoTip text={FIELD_HELP.constant} label="About Constant" />
-            </label>
-          </div>
+      <div className="relative mt-2 flex min-h-0 flex-1 flex-col">
+        <div
+          ref={editorRef}
+          className="min-h-0 w-full flex-1 overflow-hidden rounded-xl border border-border bg-bg shadow-inner"
+        />
 
-          <div>
-            <div className="mb-1.5 flex items-center gap-2">
-              <FieldLabel
-                help={FIELD_HELP.primaryKeys}
-                className="mb-0 flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-fg-subtle"
-              >
-                Primary Keys
-              </FieldLabel>
-              <span className="text-[11px] text-fg-subtle">comma separated</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="text"
-                value={keysInput}
-                onChange={(e) => setKeysInput(e.target.value)}
-                onBlur={handleKeysBlur}
-                placeholder="castle, fortress, stronghold"
-                className={FIELD_CLASS}
-              />
+        {isOptionsOpen && (
+          <div
+            id="lorebook-entry-options"
+            role="dialog"
+            aria-label="Entry options"
+            className="absolute inset-0 z-10 flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
+              <p className="text-sm font-semibold text-fg">Entry options</p>
               <button
                 type="button"
-                onClick={() => void handleGenerateKeys()}
-                disabled={!generatingKeys && !draftEntry.content.trim()}
-                title={generatingKeys ? 'Stop generation' : 'Generate trigger keys with AI'}
-                className={`shrink-0 rounded-lg p-2 transition-colors touch-manipulation ${
-                  generatingKeys
-                    ? 'animate-pulse text-danger hover:bg-danger-soft'
-                    : 'text-fg-subtle hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40'
-                }`}
+                onClick={() => onOptionsOpenChange(false)}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
               >
-                {generatingKeys ? (
-                  <Square className="h-3.5 w-3.5 fill-current" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
+                <X className="h-3.5 w-3.5" />
+                Done
               </button>
             </div>
-          </div>
-
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3 [-webkit-overflow-scrolling:touch]">
           <div>
             <div className="mb-1.5 flex flex-wrap items-center gap-2">
               <FieldLabel
@@ -390,16 +389,13 @@ export function LorebookEntryDetail({
               >
                 Secondary Keys
               </FieldLabel>
-              <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-fg-muted">
-                <input
-                  type="checkbox"
-                  checked={draftEntry.selective ?? false}
-                  onChange={(e) => persistPatch({ selective: e.target.checked })}
-                  className="h-3.5 w-3.5 rounded border-border-strong text-accent focus:ring-accent"
-                />
+              <ToggleChip
+                pressed={draftEntry.selective ?? false}
+                onPressedChange={(next) => persistPatch({ selective: next })}
+              >
                 Selective
-                <FieldInfoTip text={FIELD_HELP.selective} label="About Selective" />
-              </label>
+              </ToggleChip>
+              <FieldInfoTip text={FIELD_HELP.selective} label="About Selective" />
               {(draftEntry.selective ?? false) && (
                 <>
                   <select
@@ -409,7 +405,7 @@ export function LorebookEntryDetail({
                         selectiveLogic: Number(e.target.value) as LorebookSelectiveLogic,
                       })
                     }
-                    className="rounded-lg border border-border bg-bg px-2 py-1 text-xs text-fg outline-none focus:ring-2 focus:ring-accent/20"
+                    className="rounded-lg border border-border bg-bg px-2 py-1.5 text-xs text-fg outline-none focus:ring-2 focus:ring-accent/20"
                   >
                     {SELECTIVE_LOGIC_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -499,177 +495,134 @@ export function LorebookEntryDetail({
             </div>
           )}
 
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-              <input
-                type="checkbox"
-                checked={draftEntry.case_sensitive ?? false}
-                onChange={(e) => persistPatch({ case_sensitive: e.target.checked })}
-                className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-              />
-              Case Sensitive
+          <div>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+              Matching
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <ToggleChip
+                pressed={draftEntry.case_sensitive ?? false}
+                onPressedChange={(next) => persistPatch({ case_sensitive: next })}
+              >
+                Case sensitive
+              </ToggleChip>
               <FieldInfoTip text={FIELD_HELP.caseSensitive} label="About Case Sensitive" />
-            </label>
-            <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-              <input
-                type="checkbox"
-                checked={draftEntry.matchWholeWords ?? false}
-                onChange={(e) => persistPatch({ matchWholeWords: e.target.checked })}
-                className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-              />
-              Match Whole Words
+              <ToggleChip
+                pressed={draftEntry.matchWholeWords ?? false}
+                onPressedChange={(next) => persistPatch({ matchWholeWords: next })}
+              >
+                Match whole words
+              </ToggleChip>
               <FieldInfoTip text={FIELD_HELP.matchWholeWords} label="About Match Whole Words" />
-            </label>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-muted/30">
-            <button
-              type="button"
-              onClick={() => setIsActivationOpen((open) => !open)}
-              className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-medium text-fg-muted transition-colors hover:bg-hover/40 touch-manipulation"
-            >
-              <span>Activation</span>
-              {isActivationOpen ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </button>
-            {isActivationOpen && (
-              <div className="space-y-3 border-t border-border px-3 py-3">
-                <div>
-                  <FieldLabel help={FIELD_HELP.probability}>Probability %</FieldLabel>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={draftEntry.probability ?? 100}
-                      onChange={(e) => {
-                        const num = parseInt(e.target.value, 10);
-                        const probability = Number.isNaN(num)
-                          ? 100
-                          : Math.min(100, Math.max(0, num));
-                        persistPatch({
-                          probability,
-                          useProbability:
-                            probability < 100 ? true : (draftEntry.useProbability ?? false),
-                        });
-                      }}
-                      className={FIELD_CLASS}
-                    />
-                    <label className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-                      <input
-                        type="checkbox"
-                        checked={
-                          draftEntry.useProbability ?? (draftEntry.probability ?? 100) < 100
-                        }
-                        onChange={(e) => persistPatch({ useProbability: e.target.checked })}
-                        className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-                      />
-                      Use %
-                      <FieldInfoTip text={FIELD_HELP.useProbability} label="About Use %" />
-                    </label>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                      Recursion
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] tabular-nums text-fg-muted">
-                        {egoStats.triggers === 0 && egoStats.triggeredBy === 0 ? (
-                          'No recursion links'
-                        ) : (
-                          <>
-                            Triggers {egoStats.triggers}
-                            <span className="text-fg-subtle"> · </span>
-                            Triggered by {egoStats.triggeredBy}
-                          </>
-                        )}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={onOpenRecursionMap}
-                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-[11px] font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
-                        title="Open recursion map"
-                      >
-                        <GitFork className="h-3.5 w-3.5" />
-                        Map
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-                      <input
-                        type="checkbox"
-                        checked={draftEntry.excludeRecursion ?? false}
-                        onChange={(e) => persistPatch({ excludeRecursion: e.target.checked })}
-                        className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-                      />
-                      Non-recursable
-                      <FieldInfoTip text={FIELD_HELP.excludeRecursion} label="About Non-recursable" />
-                    </label>
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-                      <input
-                        type="checkbox"
-                        checked={draftEntry.preventRecursion ?? false}
-                        onChange={(e) => persistPatch({ preventRecursion: e.target.checked })}
-                        className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-                      />
-                      Prevent further recursion
-                      <FieldInfoTip
-                        text={FIELD_HELP.preventRecursion}
-                        label="About Prevent further recursion"
-                      />
-                    </label>
-                    <label className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-muted">
-                      <input
-                        type="checkbox"
-                        checked={draftEntry.delayUntilRecursion ?? false}
-                        onChange={(e) => persistPatch({ delayUntilRecursion: e.target.checked })}
-                        className="h-4 w-4 rounded border-border-strong text-accent focus:ring-accent"
-                      />
-                      Delay until recursion
-                      <FieldInfoTip
-                        text={FIELD_HELP.delayUntilRecursion}
-                        label="About Delay until recursion"
-                      />
-                    </label>
-                  </div>
-                </div>
+          <div>
+            <FieldLabel help={FIELD_HELP.probability}>Probability %</FieldLabel>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={draftEntry.probability ?? 100}
+                onChange={(e) => {
+                  const num = parseInt(e.target.value, 10);
+                  const probability = Number.isNaN(num)
+                    ? 100
+                    : Math.min(100, Math.max(0, num));
+                  persistPatch({
+                    probability,
+                    useProbability:
+                      probability < 100 ? true : (draftEntry.useProbability ?? false),
+                  });
+                }}
+                className={FIELD_CLASS}
+              />
+              <ToggleChip
+                pressed={draftEntry.useProbability ?? (draftEntry.probability ?? 100) < 100}
+                onPressedChange={(next) => persistPatch({ useProbability: next })}
+              >
+                Use %
+              </ToggleChip>
+              <FieldInfoTip text={FIELD_HELP.useProbability} label="About Use %" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                Recursion
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] tabular-nums text-fg-muted">
+                  {egoStats.triggers === 0 && egoStats.triggeredBy === 0 ? (
+                    'No recursion links'
+                  ) : (
+                    <>
+                      Triggers {egoStats.triggers}
+                      <span className="text-fg-subtle"> · </span>
+                      Triggered by {egoStats.triggeredBy}
+                    </>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={onOpenRecursionMap}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-[11px] font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+                  title="Open recursion map"
+                >
+                  <GitFork className="h-3.5 w-3.5" />
+                  Map
+                </button>
               </div>
-            )}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <ToggleChip
+                pressed={draftEntry.excludeRecursion ?? false}
+                onPressedChange={(next) => persistPatch({ excludeRecursion: next })}
+              >
+                Non-recursable
+              </ToggleChip>
+              <FieldInfoTip text={FIELD_HELP.excludeRecursion} label="About Non-recursable" />
+              <ToggleChip
+                pressed={draftEntry.preventRecursion ?? false}
+                onPressedChange={(next) => persistPatch({ preventRecursion: next })}
+              >
+                Prevent further
+              </ToggleChip>
+              <FieldInfoTip
+                text={FIELD_HELP.preventRecursion}
+                label="About Prevent further recursion"
+              />
+              <ToggleChip
+                pressed={draftEntry.delayUntilRecursion ?? false}
+                onPressedChange={(next) => persistPatch({ delayUntilRecursion: next })}
+              >
+                Delay until recursion
+              </ToggleChip>
+              <FieldInfoTip
+                text={FIELD_HELP.delayUntilRecursion}
+                label="About Delay until recursion"
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-1.5">
-          <FieldLabel
-            help={FIELD_HELP.content}
-            className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-fg-subtle"
-          >
-            Content
-          </FieldLabel>
-          <div
-            ref={editorRef}
-            className="h-[min(50dvh,22rem)] min-h-64 w-full overflow-hidden rounded-xl border border-border bg-bg shadow-inner"
-          />
-        </div>
-
-        <div>
-          <FieldLabel help={FIELD_HELP.internalNotes}>Internal notes</FieldLabel>
-          <input
-            type="text"
-            value={draftEntry.name || ''}
-            onChange={(e) => handleNameChange(e.target.value)}
-            placeholder="Optional notes (not used in output)"
-            className={FIELD_CLASS}
-          />
-        </div>
-
-        {payloadPreviewModal}
+          <div>
+            <FieldLabel help={FIELD_HELP.internalNotes}>Internal notes</FieldLabel>
+            <input
+              type="text"
+              value={draftEntry.name || ''}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="Optional notes (not used in output)"
+              className={FIELD_CLASS}
+            />
+          </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {payloadPreviewModal}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import {
   Plus,
   Search,
   Settings,
+  SlidersHorizontal,
   Trash2,
   Upload,
   X,
@@ -26,6 +27,10 @@ import { importLorebook, convertToSTLorebook } from '../../../services/LorebookC
 import { estimateTokens, BYTES_PER_TOKEN } from '../../../services/AIService';
 import { estimateCustomContextTokensFromCharLength } from '../../../services/CustomContextService';
 import { CustomContextBlock } from '../../ai/CustomContextBlock';
+import {
+  LorebookAttachmentButton,
+  LorebookAttachmentProvider,
+} from '../CharacterLorebookAttachments';
 import { LorebookEntryDetail } from './LorebookEntryDetail';
 import { MemoizedLorebookEntryListItem } from './LorebookEntryListItem';
 import { RecursionMapModal } from './RecursionMapModal';
@@ -40,6 +45,7 @@ import { FieldInfoTip, FieldLabel } from './FieldInfoTip';
 import {
   computeContextUsage,
   createBlankLorebookEntry,
+  hasNonDefaultOptions,
   isEntryContextEnabled,
   nextAvailableEntryId,
   normalizeCharacterBook,
@@ -69,6 +75,7 @@ function LorebookEditorInner({
   spellcheck,
   markdownImageOpenLinks,
   customContext,
+  attachment,
 }: LorebookEditorProps): React.ReactElement {
   const normalizedPropLorebook = useMemo(
     () => normalizeCharacterBook(lorebook),
@@ -80,6 +87,7 @@ function LorebookEditorInner({
   const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
   const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
   const [isRecursionMapOpen, setIsRecursionMapOpen] = useState(false);
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,6 +106,10 @@ function LorebookEditorInner({
   const bookDescription = draftLorebook.description ?? '';
   const safeSelectedIndex = selectedEntryIndex < entries.length ? selectedEntryIndex : 0;
   const selectedEntry = entries[safeSelectedIndex];
+
+  useEffect(() => {
+    setIsOptionsOpen(false);
+  }, [selectedEntry?.id]);
 
   const handleOpenRecursionMap = useCallback(() => {
     if (entries.length === 0) return;
@@ -361,7 +373,7 @@ function LorebookEditorInner({
         ? 'bg-yellow-500'
         : 'bg-danger';
 
-  return (
+  const editor = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden md:flex-row">
       <div
         className={`
@@ -371,32 +383,39 @@ function LorebookEditorInner({
         `}
       >
         <div className="shrink-0 border-b border-border">
-          <button
-            type="button"
-            onClick={() => setIsBookSettingsOpen(!isBookSettingsOpen)}
-            className="flex w-full items-center justify-between px-3 py-3 text-sm font-medium text-fg-muted transition-colors hover:bg-hover/50 touch-manipulation"
-          >
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface">
-                <Settings className="h-4 w-4" />
+          <div className="flex items-center gap-1.5 px-3 py-2">
+            <button
+              type="button"
+              onClick={() => setIsBookSettingsOpen(!isBookSettingsOpen)}
+              className="flex min-w-0 flex-1 items-center justify-between py-1 text-sm font-medium text-fg-muted transition-colors hover:text-fg touch-manipulation"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface">
+                  <Settings className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 text-left">
+                  <p className="text-sm font-semibold text-fg">Lorebook</p>
+                  <p className="text-xs font-normal text-fg-muted">
+                    {entries.length} entr{entries.length === 1 ? 'y' : 'ies'}
+                    {isBookSettingsOpen ? '' : ' · Settings'}
+                  </p>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold text-fg">Lorebook</p>
-                <p className="text-xs font-normal text-fg-muted">
-                  {entries.length} entr{entries.length === 1 ? 'y' : 'ies'}
-                  {isBookSettingsOpen ? '' : ' · Settings'}
-                </p>
+              {isBookSettingsOpen ? (
+                <ChevronUp className="h-4 w-4 shrink-0" />
+              ) : (
+                <ChevronDown className="h-4 w-4 shrink-0" />
+              )}
+            </button>
+            {attachment ? (
+              <div className="shrink-0 md:hidden">
+                <LorebookAttachmentButton />
               </div>
-            </div>
-            {isBookSettingsOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
+            ) : null}
+          </div>
 
           {isBookSettingsOpen && (
-            <div className="space-y-3 px-3 pb-3">
+            <div className="max-h-[min(40vh,16rem)] space-y-3 overflow-y-auto overscroll-contain px-3 pb-3 [-webkit-overflow-scrolling:touch]">
               <div>
                 <label className="mb-1 block text-xs font-medium text-fg-muted">Book Name</label>
                 <input
@@ -519,7 +538,7 @@ function LorebookEditorInner({
         </div>
 
         {(entries.length > 0 || customContext) && (
-          <div className="shrink-0 space-y-2 border-b border-border px-3 py-2">
+          <div className="shrink-0 space-y-1.5 border-b border-border px-3 py-2">
             {entries.length > 0 && (
               <>
                 <div className="relative">
@@ -548,7 +567,7 @@ function LorebookEditorInner({
                 )}
               </>
             )}
-            <div className="space-y-2 rounded-lg border border-border/80 bg-surface/80 px-2.5 py-2">
+            <div className="space-y-1.5 rounded-lg border border-border/80 bg-surface/80 px-2.5 py-1.5">
               {entries.length > 0 && (
                 <>
                   <div className="flex items-center justify-between gap-2">
@@ -613,15 +632,7 @@ function LorebookEditorInner({
                 </>
               )}
               {customContext && (
-                <div className={entries.length > 0 ? 'border-t border-border/60 pt-2' : ''}>
-                  {entries.length === 0 && (
-                    <div className="mb-2 flex items-center gap-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                        AI context
-                      </p>
-                      <FieldInfoTip text={FIELD_HELP.aiContext} label="About AI context" />
-                    </div>
-                  )}
+                <div className={entries.length > 0 ? 'border-t border-border/60 pt-1.5' : ''}>
                   <CustomContextBlock
                     key={customContext.ownerId}
                     ownerId={customContext.ownerId}
@@ -639,7 +650,7 @@ function LorebookEditorInner({
           </div>
         )}
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+        <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2.5">
           {entries.length === 0 ? (
             <div className="flex h-full min-h-40 flex-col items-center justify-center px-4 py-10 text-center text-fg-subtle">
               <Book className="mb-3 h-10 w-10 opacity-40" />
@@ -686,7 +697,7 @@ function LorebookEditorInner({
           )}
         </div>
 
-        <div className="shrink-0 space-y-2 border-t border-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="shrink-0 border-t border-border p-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex gap-2">
             <input
               ref={fileInputRef}
@@ -698,7 +709,7 @@ function LorebookEditorInner({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
+              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface px-2.5 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
               title="Import lorebook from JSON file"
             >
               <Upload className="h-4 w-4" />
@@ -708,22 +719,22 @@ function LorebookEditorInner({
               type="button"
               onClick={handleExport}
               disabled={entries.length === 0}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40 touch-manipulation"
+              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface px-2.5 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-40 touch-manipulation"
               title="Export lorebook to JSON file"
             >
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Export</span>
             </button>
+            <button
+              type="button"
+              onClick={handleAddEntry}
+              className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong bg-surface px-2.5 py-2 text-sm font-medium text-fg-muted transition-colors hover:border-accent/50 hover:bg-accent-soft hover:text-accent touch-manipulation"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New Entry</span>
+              <span className="sm:hidden">New</span>
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={handleAddEntry}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface px-3 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:border-accent/50 hover:bg-accent-soft hover:text-accent touch-manipulation"
-          >
-            <Plus className="h-4 w-4" />
-            New Entry
-          </button>
         </div>
       </div>
 
@@ -745,26 +756,57 @@ function LorebookEditorInner({
                 Back
               </button>
               <div className="min-w-0 flex-1 md:block">
-                <p className="truncate text-sm font-semibold text-fg">
-                  {selectedEntry.comment || selectedEntry.name || `Entry ${safeSelectedIndex}`}
-                </p>
+                <input
+                  type="text"
+                  value={selectedEntry.comment || ''}
+                  onChange={(e) =>
+                    handleEntryPersistUpdate({ ...selectedEntry, comment: e.target.value })
+                  }
+                  placeholder={selectedEntry.name || `Entry ${safeSelectedIndex}`}
+                  aria-label="Entry title"
+                  className="w-full min-w-0 truncate bg-transparent text-sm font-semibold text-fg outline-none placeholder:text-fg-subtle focus:ring-0"
+                />
                 {selectedEntryTokenCount !== null && (
                   <p className="text-xs text-fg-muted">
                     {selectedEntryTokenCount.toLocaleString()} tokens
                   </p>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => handleDeleteEntry(safeSelectedIndex)}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation"
-                title="Delete entry"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Delete</span>
-              </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {attachment ? <LorebookAttachmentButton /> : null}
+                <button
+                  type="button"
+                  onClick={() => setIsOptionsOpen((open) => !open)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors touch-manipulation ${
+                    isOptionsOpen
+                      ? 'border-accent bg-accent text-accent-fg'
+                      : 'border-border text-fg-muted hover:bg-hover hover:text-fg'
+                  }`}
+                  aria-expanded={isOptionsOpen}
+                  aria-controls="lorebook-entry-options"
+                  title="Entry options"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Options
+                  {!isOptionsOpen && hasNonDefaultOptions(selectedEntry) ? (
+                    <span
+                      className="h-1.5 w-1.5 rounded-full bg-accent"
+                      aria-label="Non-default options"
+                    />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteEntry(safeSelectedIndex)}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation"
+                  title="Delete entry"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Delete</span>
+                </button>
+              </div>
             </div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 md:px-6 md:py-4">
+            <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden px-3 py-2 sm:px-4 md:px-6 md:py-3">
               <LorebookEntryDetail
                 key={selectedEntry.id}
                 entry={selectedEntry}
@@ -782,15 +824,24 @@ function LorebookEditorInner({
                 onFontSizeChange={onFontSizeChange}
                 spellcheck={spellcheck}
                 markdownImageOpenLinks={markdownImageOpenLinks}
+                isOptionsOpen={isOptionsOpen}
+                onOptionsOpenChange={setIsOptionsOpen}
               />
             </div>
           </div>
         ) : (
-          <div className="flex h-full items-center justify-center text-fg-subtle">
-            <div className="px-6 text-center">
-              <Book className="mx-auto mb-3 h-12 w-12 opacity-40" />
-              <p className="text-sm font-medium text-fg-muted">Select an entry to edit</p>
-              <p className="mt-1 text-xs">Or create a new one to get started</p>
+          <div className="flex h-full min-h-0 flex-col">
+            {attachment ? (
+              <div className="flex shrink-0 justify-end border-b border-border px-3 py-2.5 sm:px-4 md:px-6">
+                <LorebookAttachmentButton />
+              </div>
+            ) : null}
+            <div className="flex min-h-0 flex-1 items-center justify-center text-fg-subtle">
+              <div className="px-6 text-center">
+                <Book className="mx-auto mb-3 h-12 w-12 opacity-40" />
+                <p className="text-sm font-medium text-fg-muted">Select an entry to edit</p>
+                <p className="mt-1 text-xs">Or create a new one to get started</p>
+              </div>
             </div>
           </div>
         )}
@@ -808,6 +859,21 @@ function LorebookEditorInner({
         />
       )}
     </div>
+  );
+
+  if (!attachment) return editor;
+
+  return (
+    <LorebookAttachmentProvider
+      characterId={attachment.characterId}
+      embeddedBook={attachment.embeddedBook}
+      characterName={attachment.characterName}
+      onCopyIntoEmbedded={attachment.onCopyIntoEmbedded}
+      closeSignal={isOptionsOpen}
+      onMenuOpen={() => setIsOptionsOpen(false)}
+    >
+      {editor}
+    </LorebookAttachmentProvider>
   );
 }
 

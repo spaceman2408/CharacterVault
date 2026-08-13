@@ -16,6 +16,19 @@ export function hasNonDefaultActivation(entry: LorebookEntry): boolean {
   );
 }
 
+export function hasNonDefaultOptions(entry: LorebookEntry): boolean {
+  return (
+    hasNonDefaultActivation(entry) ||
+    entry.selective === true ||
+    (entry.secondary_keys?.length ?? 0) > 0 ||
+    (entry.position !== undefined && entry.position !== 'before_char') ||
+    (entry.priority !== undefined && entry.priority !== 0) ||
+    entry.case_sensitive === true ||
+    entry.matchWholeWords === true ||
+    Boolean(entry.name?.trim())
+  );
+}
+
 export function computeContextUsage(
   entries: LorebookEntry[],
   tokenBudget: number | undefined,

@@ -37,6 +37,15 @@ export interface LorebookEditorProps {
   markdownImageOpenLinks?: boolean;
   /** Standalone vault books only — not used for character-embedded lorebooks */
   customContext?: LorebookCustomContextControls;
+  /** Character workspace only — compact attach control in the entry header */
+  attachment?: LorebookAttachmentControls;
+}
+
+export interface LorebookAttachmentControls {
+  characterId: string;
+  embeddedBook: CharacterBook | undefined;
+  characterName?: string;
+  onCopyIntoEmbedded: (book: CharacterBook) => void;
 }
 
 export interface LorebookEntryListItemProps {
@@ -67,6 +76,8 @@ export interface LorebookEntryDetailProps {
   onFontSizeChange?: (size: number) => void;
   spellcheck?: SpellcheckSettings;
   markdownImageOpenLinks?: boolean;
+  isOptionsOpen: boolean;
+  onOptionsOpenChange: (open: boolean) => void;
 }
 
 export type ContextUsageStatus = 'good' | 'warning' | 'danger';
