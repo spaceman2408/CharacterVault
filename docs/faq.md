@@ -48,7 +48,7 @@ A character can **link** one library book. Several characters can share the same
 :::
 
 ::: details What is the recursion map?
-In the lorebook editor, **Activation → Map** (or book settings **Map**) shows which entries can unlock others via recursive scanning: if one entry’s content mentions another’s primary keys. Use the **Whole book** tab to browse all unlock paths and bulk-set Non-recursable / Prevent further / Delay until recursion. It is an authoring aid, not a full SillyTavern runtime simulator.
+In the lorebook editor, **Options → Map** (or book settings **Map**) shows which entries can unlock others via recursive scanning: if one entry’s content mentions another’s primary keys. From the map you can inspect unlock paths and bulk-set Non-recursable / Prevent further / Delay until recursion. It is an authoring aid, not a full SillyTavern runtime simulator.
 
 [Lorebook Editor → Recursion map](/features/lorebook-editor#recursion-map)
 :::

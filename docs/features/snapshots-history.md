@@ -103,12 +103,11 @@ Books in the [Lorebook Vault](/features/lorebook-vault) have a separate history 
 
 | Source | Meaning |
 | :--- | :--- |
-| **Open** | Baseline-style snapshot when applicable |
-| **Auto** | Periodic snapshot while the book stays open |
-| **Manual** | **Snapshot now** in the History modal |
+| **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. |
+| **Manual** | **Snapshot now** in the History modal (only if something changed) |
 | **Rollback** | Created after a restore |
 
-You can list snapshots, preview book metadata and a sample of entries, restore a snapshot over the current book, or delete individual snapshots. Restore asks for confirmation. History is stored locally with the rest of the vault.
+You can list snapshots, preview book metadata and a sample of entries, restore a snapshot over the current book, or delete individual snapshots. Restore asks for confirmation. Restoring a library book also updates every linked character. History is stored locally with the rest of the vault.
 
 ## Next Steps
 

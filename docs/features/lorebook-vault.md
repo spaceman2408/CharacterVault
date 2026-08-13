@@ -55,9 +55,8 @@ Standalone books have their own snapshot history (similar to character snapshots
 
 | Source | When |
 | :--- | :--- |
-| **Open** | Baseline when first opened (as applicable) |
-| **Auto** | Periodic save while the book stays open |
-| **Manual** | **Snapshot now** in the History modal |
+| **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. |
+| **Manual** | **Snapshot now** in the History modal (only if something changed) |
 | **Rollback** | After restoring a previous snapshot |
 
 Open **History** in the workspace header to list, preview, restore, or delete snapshots. See also [Snapshots & Rollback](/features/snapshots-history#standalone-lorebook-snapshots).
@@ -66,7 +65,7 @@ Open **History** in the workspace header to list, preview, restore, or delete sn
 
 A character can have **one** linked library book. Several characters can share that same book.
 
-Manage the link from a **character** → **Lorebook** tab → **Attached lorebook**.
+Manage the link from a **character** → **Lorebook** tab → **Attach** in the entry header (next to **Options**). On a phone, **Attach** is also next to book settings on the entry list.
 
 ### First link
 

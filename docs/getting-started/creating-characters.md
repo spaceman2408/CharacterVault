@@ -93,7 +93,7 @@ The **Lorebook** tab edits the world info that lives **on the character** and ex
 | **Probability** | Optional chance after a match |
 | **Recursion flags** | Non-recursable, prevent further, delay until recursion |
 
-Also available: AI context eye toggles, AI key generation, book-level scan depth / token budget / recursive scanning, and a **recursion map** for who unlocks whom.
+Also available: AI context eye toggles, AI key generation, book-level scan depth / token budget / recursive scanning, and a **recursion map** for who unlocks whom. Extra World Info fields live under **Options** so the content editor stays in view.
 
 For the full two-panel editor, see [Lorebook Editor](/features/lorebook-editor).
 

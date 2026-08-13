@@ -13,10 +13,14 @@ Field help icons (**?**) next to labels summarize SillyTavern World Info behavio
 
 ## Two-panel layout
 
-- **Left sidebar** – Book settings, search, AI context usage, entry list, import/export, new entry
-- **Right panel** – Selected entry’s fields and content editor
+Content stays in front. Extra controls open from the header so the editor can use the space.
 
-On mobile, list and detail switch with a **Back** control.
+- **Left sidebar** – Book settings, search, AI context usage, entry list, import/export, new entry
+- **Right panel** – Entry title, keys, Enabled / Constant, and the content editor
+
+**Options** and (on a character) **Attach** sit in the entry header. Click either to open a panel over the editor; click again, **Done**, or **Escape** to close. Opening one closes the other.
+
+On a phone, the list and the entry swap: tap a row to edit, **Back** to return to the list. **Attach** is also next to book settings on the list so you can reach it without opening an entry.
 
 ## Book settings
 
@@ -61,14 +65,25 @@ Bottom of the sidebar:
 
 ## Entry detail
 
-### Core fields
+The header title is the ST entry title (memo). It is not sent as content. Next to it: **Attach** (characters only), **Options**, and **Delete**. **Options** shows a small accent dot when this entry has non-default settings.
+
+Always on screen:
 
 | Field | Description |
 | :--- | :--- |
-| **Entry title** | Memo / display label (ST entry title). Not sent as content. |
+| **Primary keys** | Keywords or `/regex/` that can activate the entry |
 | **Enabled** | When off, the entry never activates in SillyTavern |
 | **Constant** | Always-on; no keyword required |
-| **Primary keys** | Keywords or `/regex/` that can activate the entry |
+| **Content** | Text injected when the entry activates (full CodeMirror + AI toolbar) |
+
+Enabled and Constant are pressable chips (accent when on).
+
+### Options
+
+Click **Options** to cover the content editor. **Done** or **Escape** closes it. Fields inside:
+
+| Field | Description |
+| :--- | :--- |
 | **Secondary keys** | Optional filter keys when **Selective** is on |
 | **Selective** + logic | AND ANY / NOT ALL / NOT ANY / AND ALL (ST selectiveLogic) |
 | **Insertion order** | Higher numbers insert later / closer to the end of context |
@@ -76,19 +91,11 @@ Bottom of the sidebar:
 | **Depth / role** | For **at depth**: chat depth and system / user / assistant role |
 | **Case sensitive** | Exact letter case for keys |
 | **Match whole words** | Whole-word style matching for plain keys |
-| **Content** | Text injected when the entry activates (full CodeMirror + AI toolbar) |
-| **Internal notes** | Optional notes (stored as the entry name field; not ST memo) |
-
-### Activation (probability & recursion)
-
-Expand **Activation** for:
-
-| Field | Description |
-| :--- | :--- |
 | **Probability %** / **Use %** | Chance the entry is inserted after it would activate |
 | **Non-recursable** | Other entries cannot unlock this one via recursive scanning |
 | **Prevent further recursion** | When this activates, it will not unlock further entries |
 | **Delay until recursion** | Only activates on recursive passes, not the first chat scan |
+| **Internal notes** | Optional notes (stored as the entry name field; not ST memo) |
 
 At-a-glance counts: **Triggers N · Triggered by M** (or “No recursion links”), plus **Map**.
 
@@ -98,7 +105,7 @@ A full-screen map of how your entries unlock each other. If entry A's **content*
 
 ### Open the map
 
-- Entry → **Activation** → **Map** (opens with that entry already inspected)
+- Entry → **Options** → **Map** (opens with that entry already inspected)
 - Book settings → **Map** (opens the whole book)
 
 Both open the same view; the only difference is whether an entry is pre-selected.
@@ -180,6 +187,8 @@ Standalone library import (multiple files, keep books separate) is on the [Loreb
 :::
 
 ## Linking a library book (characters)
+
+On a character, **Attach** in the entry header (or next to book settings on a phone) opens the link panel: **Open in vault**, **Attach** / **Replace**, copy, and **Detach**. The button label is **Attach**, the linked book’s name, or **Missing**.
 
 A character can link **one** book from the Lorebooks library. After you link, you’ll be asked whether to copy that book onto the character (this replaces the lorebook already on the card).
 

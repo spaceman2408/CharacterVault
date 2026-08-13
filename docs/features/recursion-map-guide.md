@@ -15,7 +15,7 @@ The recursion map draws those chain reactions for the current book so you can se
 :::
 
 ::: details Reading the picture
-Open the map from book settings (**Map**) or an entry's **Activation** section (**Map**). You get a full-screen view where:
+Open the map from book settings (**Map**) or an entry's **Options** panel (**Map**). You get a full-screen view where:
 
 - **Each box is an entry.**
 - **Each arrow is a possible unlock.** An arrow from A to B means A's content mentions one of B's keys. Hover the arrow (or the boxes) for the actual key.
