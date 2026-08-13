@@ -7,7 +7,7 @@ import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { GitFork, X } from 'lucide-react';
 import type { LorebookEntry } from '../../../db/characterTypes';
-import type { RecursionFlagPatch, RecursionGraph } from './recursionGraph';
+import type { RecursionEntryPatch, RecursionFlagPatch, RecursionGraph } from './recursionGraph';
 import { countEdges } from './recursionGraph';
 import { RecursionBookPanel } from './RecursionBookPanel';
 
@@ -18,7 +18,7 @@ export type RecursionMapModalProps = {
   bookRecursiveScanning?: boolean;
   onClose: () => void;
   onUpdateEntries: (ids: number[], patch: RecursionFlagPatch) => void;
-  onPatchEntry: (id: number, patch: RecursionFlagPatch) => void;
+  onPatchEntry: (id: number, patch: RecursionEntryPatch) => void;
 };
 
 export function RecursionMapModal({
@@ -43,10 +43,10 @@ export function RecursionMapModal({
     const prev = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onCloseRef.current();
-      }
+      if (e.key !== 'Escape') return;
+      if (e.defaultPrevented) return;
+      e.preventDefault();
+      onCloseRef.current();
     };
     window.addEventListener('keydown', onKey);
     return () => {

@@ -166,6 +166,44 @@ export type RecursionFlagPatch = Partial<
   Pick<LorebookEntry, 'excludeRecursion' | 'preventRecursion' | 'delayUntilRecursion'>
 >;
 
+/** Single-entry map patch: flags and/or primary keys. */
+export type RecursionEntryPatch = RecursionFlagPatch & Partial<Pick<LorebookEntry, 'keys'>>;
+
+/** Split a comma-separated key field the same way the entry editor does. */
+export function parseKeyList(input: string): string[] {
+  return input
+    .split(',')
+    .map((key) => key.trim())
+    .filter((key) => key.length > 0);
+}
+
+export function addKey(keys: string[], key: string): string[] {
+  const trimmed = key.trim();
+  if (!trimmed) return keys;
+  if (keys.some((existing) => existing.toLowerCase() === trimmed.toLowerCase())) return keys;
+  return [...keys, trimmed];
+}
+
+export function removeKey(keys: string[], key: string): string[] {
+  const index = keys.indexOf(key);
+  if (index < 0) return keys;
+  return keys.filter((_, i) => i !== index);
+}
+
+export function replaceKey(keys: string[], from: string, to: string): string[] {
+  const next = to.trim();
+  if (!next) return keys;
+  const index = keys.indexOf(from);
+  if (index < 0) return keys;
+  if (next === from) return keys;
+  if (keys.some((existing, i) => i !== index && existing.toLowerCase() === next.toLowerCase())) {
+    return keys;
+  }
+  const copy = [...keys];
+  copy[index] = next;
+  return copy;
+}
+
 function degree(graph: RecursionGraph, id: number): number {
   return (graph.outgoing.get(id)?.length ?? 0) + (graph.incoming.get(id)?.length ?? 0);
 }
@@ -341,12 +379,14 @@ export function mergeEntryDraft(
 export function applyEntryFlagPatch(
   entries: LorebookEntry[],
   ids: number[],
-  patch: RecursionFlagPatch,
+  patch: RecursionEntryPatch,
 ): LorebookEntry[] {
   if (ids.length === 0) return entries;
   const idSet = new Set(ids);
   return entries.map((entry) => (idSet.has(entry.id) ? { ...entry, ...patch } : entry));
 }
+
+export const applyEntryPatch = applyEntryFlagPatch;
 
 export function entryDisplayName(entry: LorebookEntry, fallbackIndex?: number): string {
   const label = (entry.comment || entry.name || '').trim();

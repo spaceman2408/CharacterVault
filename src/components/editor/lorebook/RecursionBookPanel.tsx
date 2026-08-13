@@ -1,9 +1,8 @@
 /**
  * Whole-book recursion browser. Merged view: web (SVG graph) or list on the
  * left, inspector on the right, and a sticky selection bar for staged bulk
- * flag edits. Inspecting an entry never implies editing it — flag changes
- * require an explicit multi-select and an Apply step; single-entry flag
- * editing lives in the entry detail editor.
+ * flag edits. Single-entry flag and primary-key edits apply immediately;
+ * bulk flag changes still require an explicit Apply step.
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
@@ -20,6 +19,7 @@ import {
 import type { LorebookEntry } from '../../../db/characterTypes';
 import type {
   RecursionEdge,
+  RecursionEntryPatch,
   RecursionFlagPatch,
   RecursionGraph,
 } from './recursionGraph';
@@ -29,6 +29,7 @@ import {
   shouldPreferListLayout,
 } from './recursionGraph';
 import { RecursionFlagChips } from './RecursionFlagChips';
+import { RecursionKeyChips } from './RecursionKeyChips';
 import { RecursionWebView } from './RecursionWebView';
 
 export type RecursionBookPanelProps = {
@@ -36,7 +37,7 @@ export type RecursionBookPanelProps = {
   entries: LorebookEntry[];
   graph: RecursionGraph;
   onUpdateEntries: (ids: number[], patch: RecursionFlagPatch) => void;
-  onPatchEntry: (id: number, patch: RecursionFlagPatch) => void;
+  onPatchEntry: (id: number, patch: RecursionEntryPatch) => void;
 };
 
 type FlagKey = keyof RecursionFlagPatch;
@@ -97,13 +98,17 @@ function LinkRow({
   direction,
   other,
   otherIndex,
+  ownerKeys,
   onInspect,
+  onChangeOwnerKeys,
 }: {
   edge: RecursionEdge;
   direction: 'in' | 'out';
   other: LorebookEntry;
   otherIndex?: number;
+  ownerKeys: string[];
   onInspect: () => void;
+  onChangeOwnerKeys: (keys: string[]) => void;
 }): React.ReactElement {
   return (
     <div className="flex items-start gap-2 rounded-xl border border-border bg-surface px-2.5 py-2">
@@ -127,14 +132,23 @@ function LinkRow({
         >
           {entryDisplayName(other, otherIndex)}
         </button>
-        <p className="mt-0.5 truncate text-[11px] text-fg-muted" title={edge.matchedKeys.join(', ')}>
-          {direction === 'in' ? 'mentions' : 'matched'}{' '}
-          <span className="font-medium text-fg-muted">
-            {edge.matchedKeys.slice(0, 3).join(', ')}
-            {edge.matchedKeys.length > 3 ? '…' : ''}
-          </span>
-          {direction === 'in' ? ' in its content' : ' in this content'}
+        <p className="mt-0.5 text-[11px] text-fg-muted">
+          {direction === 'in'
+            ? 'Mentions these keys in its content'
+            : 'These keys match in this content'}
         </p>
+        {edge.matchedKeys.length > 0 && (
+          <div className="mt-1">
+            <RecursionKeyChips
+              keys={ownerKeys}
+              displayKeys={edge.matchedKeys}
+              onChange={onChangeOwnerKeys}
+              aria-label={
+                direction === 'in' ? 'This entry’s matched keys' : 'That entry’s matched keys'
+              }
+            />
+          </div>
+        )}
         <div className="mt-1 flex flex-wrap gap-1">
           <RecursionFlagChips entry={other} />
         </div>
@@ -547,15 +561,6 @@ export function RecursionBookPanel({
                     <p className="truncate text-base font-semibold text-fg">
                       {entryDisplayName(inspectedEntry, indexById.get(inspectedEntry.id))}
                     </p>
-                    {inspectedEntry.keys?.length > 0 && (
-                      <p
-                        className="mt-1 truncate text-[11px] text-fg-muted"
-                        title={inspectedEntry.keys.join(', ')}
-                      >
-                        Keys: {inspectedEntry.keys.slice(0, 6).join(', ')}
-                        {inspectedEntry.keys.length > 6 ? '…' : ''}
-                      </p>
-                    )}
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       <RecursionFlagChips entry={inspectedEntry} />
                     </div>
@@ -567,6 +572,20 @@ export function RecursionBookPanel({
                   >
                     {inspectedSelected ? 'Remove from selection' : 'Select'}
                   </button>
+                </div>
+                <div className="mt-2">
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">
+                    Keys
+                  </p>
+                  <RecursionKeyChips
+                    keys={inspectedEntry.keys ?? []}
+                    onChange={(nextKeys) => onPatchEntry(inspectedEntry.id, { keys: nextKeys })}
+                    placeholder="Add a key"
+                    aria-label="Primary keys for this entry"
+                  />
+                  <p className="mt-1 text-[10px] leading-snug text-fg-subtle">
+                    Edits write to this entry and update the map immediately.
+                  </p>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {FLAG_ROWS.map((row) => {
@@ -618,7 +637,11 @@ export function RecursionBookPanel({
                             direction="in"
                             other={other}
                             otherIndex={indexById.get(other.id)}
+                            ownerKeys={inspectedEntry.keys ?? []}
                             onInspect={() => inspect(other.id)}
+                            onChangeOwnerKeys={(nextKeys) =>
+                              onPatchEntry(inspectedEntry.id, { keys: nextKeys })
+                            }
                           />
                         </li>
                       );
@@ -650,7 +673,11 @@ export function RecursionBookPanel({
                             direction="out"
                             other={other}
                             otherIndex={indexById.get(other.id)}
+                            ownerKeys={other.keys ?? []}
                             onInspect={() => inspect(other.id)}
+                            onChangeOwnerKeys={(nextKeys) =>
+                              onPatchEntry(other.id, { keys: nextKeys })
+                            }
                           />
                         </li>
                       );

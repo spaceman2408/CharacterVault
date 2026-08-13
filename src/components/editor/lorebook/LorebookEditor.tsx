@@ -37,8 +37,9 @@ import { RecursionMapModal } from './RecursionMapModal';
 import {
   applyEntryFlagPatch,
   buildRecursionGraph,
-  type RecursionFlagPatch,
+  type RecursionEntryPatch,
 } from './recursionGraph';
+import { flushLorebookDraft } from './draftFlush';
 import type { LorebookEditorProps } from './types';
 import { FIELD_HELP } from './fieldHelp';
 import { FieldInfoTip, FieldLabel } from './FieldInfoTip';
@@ -113,6 +114,7 @@ function LorebookEditorInner({
 
   const handleOpenRecursionMap = useCallback(() => {
     if (entries.length === 0) return;
+    flushLorebookDraft();
     setIsRecursionMapOpen(true);
   }, [entries.length]);
 
@@ -234,7 +236,7 @@ function LorebookEditorInner({
   );
 
   const handlePatchRecursionEntry = useCallback(
-    (id: number, patch: RecursionFlagPatch) => {
+    (id: number, patch: RecursionEntryPatch) => {
       handleUpdateRecursionFlags([id], patch);
     },
     [handleUpdateRecursionFlags],

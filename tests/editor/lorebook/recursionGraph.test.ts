@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { LorebookEntry } from '../../../src/db/characterTypes';
 import {
+  addKey,
   applyEntryFlagPatch,
+  applyEntryPatch,
   buildRecursionGraph,
   contentMatchesKey,
   getBookRecursionStats,
@@ -9,6 +11,9 @@ import {
   getEgoStats,
   layerComponent,
   mergeEntryDraft,
+  parseKeyList,
+  removeKey,
+  replaceKey,
   shouldPreferListLayout,
 } from '../../../src/components/editor/lorebook/recursionGraph';
 
@@ -215,5 +220,50 @@ describe('book stats, components, layers', () => {
     expect(shouldPreferListLayout(10, 10)).toBe(false);
     expect(shouldPreferListLayout(151, 0)).toBe(true);
     expect(shouldPreferListLayout(10, 401)).toBe(true);
+  });
+});
+
+describe('key list helpers', () => {
+  it('parseKeyList trims and drops empties', () => {
+    expect(parseKeyList('  Alpha, , Beta,Gamma  ')).toEqual(['Alpha', 'Beta', 'Gamma']);
+    expect(parseKeyList('')).toEqual([]);
+    expect(parseKeyList('   ,  ,')).toEqual([]);
+  });
+
+  it('addKey appends and dedupes case-insensitively', () => {
+    expect(addKey(['Alpha'], 'Beta')).toEqual(['Alpha', 'Beta']);
+    expect(addKey(['Alpha'], '  alpha  ')).toEqual(['Alpha']);
+    expect(addKey(['Alpha'], '   ')).toEqual(['Alpha']);
+  });
+
+  it('removeKey drops the first exact match', () => {
+    expect(removeKey(['Alpha', 'Beta'], 'Alpha')).toEqual(['Beta']);
+    expect(removeKey(['Alpha', 'Beta'], 'alpha')).toEqual(['Alpha', 'Beta']);
+    expect(removeKey(['Alpha'], 'Missing')).toEqual(['Alpha']);
+  });
+
+  it('replaceKey renames unless empty or colliding', () => {
+    expect(replaceKey(['Alpha', 'Beta'], 'Alpha', 'Gamma')).toEqual(['Gamma', 'Beta']);
+    expect(replaceKey(['Alpha', 'Beta'], 'Alpha', '  ')).toEqual(['Alpha', 'Beta']);
+    expect(replaceKey(['Alpha', 'Beta'], 'Alpha', 'beta')).toEqual(['Alpha', 'Beta']);
+    expect(replaceKey(['Alpha'], 'Missing', 'Gamma')).toEqual(['Alpha']);
+    expect(replaceKey(['Alpha'], 'Alpha', 'Alpha')).toEqual(['Alpha']);
+  });
+
+  it('applyEntryPatch writes keys onto selected entries', () => {
+    const a = entry({ id: 1, keys: ['Old'] });
+    const b = entry({ id: 2, keys: ['Keep'] });
+    const next = applyEntryPatch([a, b], [1], { keys: ['New'] });
+    expect(next[0].keys).toEqual(['New']);
+    expect(next[1].keys).toEqual(['Keep']);
+  });
+
+  it('key patch drops edges on rebuild', () => {
+    const a = entry({ id: 1, content: 'Target word', keys: ['A'] });
+    const b = entry({ id: 2, keys: ['Target'], content: 'x' });
+    let entries = [a, b];
+    expect(getBookRecursionStats(entries, buildRecursionGraph(entries)).edgeCount).toBe(1);
+    entries = applyEntryPatch(entries, [2], { keys: ['Other'] });
+    expect(getBookRecursionStats(entries, buildRecursionGraph(entries)).edgeCount).toBe(0);
   });
 });

@@ -192,19 +192,25 @@ export function RecursionWebView({
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; baseX: number; baseY: number; moved: boolean } | null>(null);
 
-  // Topology key identifies the graph's structural shape (which entries exist,
-  // which are linked to which, standalone visibility). Flag-only edits change
-  // entries/graph object identity but NOT topology, so the layout — and the
-  // auto fitView keyed off it — stays put while the user inspects/selects/bulk-edits.
+  // Identity (which entries exist + standalone visibility) vs full topology
+  // (plus which edges exist). Flag-only edits change neither. Key edits change
+  // edges and must relayout, but must not yank the camera.
+  const entryIdentityKey = useMemo(
+    () =>
+      `${showStandalone ? 1 : 0}:${entries
+        .map((e) => e.id)
+        .sort((a, b) => a - b)
+        .join(',')}`,
+    [entries, showStandalone],
+  );
   const topologyKey = useMemo(() => {
-    const ids = entries.map((e) => e.id).sort((a, b) => a - b);
     const edgePairs: string[] = [];
     for (const [fromId, outs] of graph.outgoing) {
       for (const edge of outs) edgePairs.push(`${fromId}>${edge.toId}`);
     }
     edgePairs.sort();
-    return `${showStandalone ? 1 : 0}:${ids.join(',')}|${edgePairs.join(',')}`;
-  }, [entries, graph, showStandalone]);
+    return `${entryIdentityKey}|${edgePairs.join(',')}`;
+  }, [entryIdentityKey, graph]);
 
   const layout = useMemo(
     () => computeLayout(entries, graph, showStandalone),
@@ -282,26 +288,40 @@ export function RecursionWebView({
     });
   }, [layout]);
 
-  // Center the graph whenever the layout shape changes.
+  const fitViewRef = useRef(fitView);
   useEffect(() => {
-    fitView();
-  }, [fitView]);
+    fitViewRef.current = fitView;
+  });
 
-  // Keep the fit when the container is resized (map region is now flex-sized).
+  // Auto-fit when the entry set or standalone visibility changes, not when
+  // only edges change (key edits). Reset view / resize still fit explicitly.
+  const fitTokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (fitTokenRef.current === entryIdentityKey) return;
+    fitTokenRef.current = entryIdentityKey;
+    fitViewRef.current();
+  }, [entryIdentityKey]);
+
+  // Keep the fit when the container is resized. fitView identity changes on
+  // every key-driven relayout; observe once and call through the ref so we
+  // do not allocate a new ResizeObserver per edit.
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg || typeof ResizeObserver === 'undefined') return;
     let raf = 0;
     const ro = new ResizeObserver(() => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(fitView);
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        fitViewRef.current();
+      });
     });
     ro.observe(svg);
     return () => {
-      cancelAnimationFrame(raf);
+      if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [fitView]);
+  }, []);
 
   // Native wheel listener: React's synthetic onWheel cannot preventDefault reliably.
   useEffect(() => {

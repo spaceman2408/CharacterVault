@@ -21,6 +21,7 @@ import {
   buildRecursionGraph,
   getEgoStats,
   mergeEntryDraft,
+  parseKeyList,
 } from './recursionGraph';
 import type { LorebookEntryDetailProps } from './types';
 import { registerLorebookDraftFlush } from './draftFlush';
@@ -83,16 +84,46 @@ export function LorebookEntryDetail({
     markdownImageOpenLinks,
   });
 
-  useEffect(() => registerLorebookDraftFlush(flushPendingPersist), [flushPendingPersist]);
-
   const [keysInput, setKeysInput] = React.useState(entry.keys.join(', '));
   const [secondaryKeysInput, setSecondaryKeysInput] = React.useState(
     (entry.secondary_keys || []).join(', '),
   );
+  const keysInputRef = useRef(keysInput);
+  const secondaryKeysInputRef = useRef(secondaryKeysInput);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    keysInputRef.current = keysInput;
+    secondaryKeysInputRef.current = secondaryKeysInput;
+  });
+
+  const flushDraft = React.useCallback(() => {
+    flushPendingPersist();
+    const prev = draftEntryRef.current;
+    const keys = parseKeyList(keysInputRef.current);
+    const secondary = parseKeyList(secondaryKeysInputRef.current);
+    const keysSame =
+      keys.length === prev.keys.length && keys.every((key, i) => key === prev.keys[i]);
+    const prevSecondary = prev.secondary_keys ?? [];
+    const secondarySame =
+      secondary.length === prevSecondary.length &&
+      secondary.every((key, i) => key === prevSecondary[i]);
+    if (keysSame && secondarySame) return;
+    const updatedEntry = { ...prev, keys, secondary_keys: secondary };
+    draftEntryRef.current = updatedEntry;
+    if (isMountedRef.current) {
+      setDraftEntry(updatedEntry);
+      setKeysInput(keys.join(', '));
+      setSecondaryKeysInput(secondary.join(', '));
+    }
+    onPersistUpdate(updatedEntry);
+  }, [flushPendingPersist, onPersistUpdate]);
+
+  useEffect(() => registerLorebookDraftFlush(flushDraft), [flushDraft]);
+
   const [generatingKeys, setGeneratingKeys] = useState(false);
   const aiServiceRef = useRef<AIService | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMountedRef = useRef(true);
   const keyGenGenerationRef = useRef(0);
 
   const clearKeyGenTimeout = () => {
@@ -259,19 +290,13 @@ export function LorebookEntryDetail({
     onPersistUpdate(updatedEntry);
   };
   const handleKeysBlur = () => {
-    const parsedKeys = keysInput
-      .split(',')
-      .map((k) => k.trim())
-      .filter((k) => k);
+    const parsedKeys = parseKeyList(keysInput);
     const updatedEntry = { ...draftEntry, keys: parsedKeys };
     setDraftEntry(updatedEntry);
     onPersistUpdate(updatedEntry);
   };
   const handleSecondaryKeysBlur = () => {
-    const parsedKeys = secondaryKeysInput
-      .split(',')
-      .map((k) => k.trim())
-      .filter((k) => k);
+    const parsedKeys = parseKeyList(secondaryKeysInput);
     const updatedEntry = { ...draftEntry, secondary_keys: parsedKeys };
     setDraftEntry(updatedEntry);
     onPersistUpdate(updatedEntry);
