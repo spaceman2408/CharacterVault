@@ -28,7 +28,7 @@ Entries with no connections are hidden by default to keep the picture clean. **S
 ::: details Getting around
 - **Drag** the background to pan, **scroll** to zoom toward your cursor.
 - **Reset view** fits the whole book back on screen.
-- **Hover** an entry to spotlight just its connections and fade the rest.
+- **Hover** an entry to spotlight just its connections and fade the rest. **Click** to pin those paths and open the inspector. Click the same entry again to clear the pin so the whole map is even.
 - The **List** button (top right) swaps the picture for a searchable table. Handy on very large books, which open in list mode automatically.
 :::
 
@@ -39,7 +39,7 @@ Click any entry. A panel slides in on the right showing three things:
 2. **Unlocked by**: entries whose content mentions this entry's keys. Each row shows the matched keys as chips, with the line *Mentions these keys in its content*.
 3. **Unlocks**: entries this entry can wake up. Each row shows that entry's matched keys as chips, with the line *These keys match in this content*.
 
-Click any entry in those two lists to inspect it instead. Walking those rows is the fastest way to follow a chain and check that each hop makes sense.
+Click any entry in those two lists to inspect it instead. Walking those rows is the fastest way to follow a chain and check that each hop makes sense. Click the same box again, or the inspector **X**, to close the panel and drop the path highlight.
 
 For quick fixes, edit the key chips or use the three flag buttons (**Non-recursable**, **Prevent further recursion**, **Delay until recursion**). Both write immediately.
 :::

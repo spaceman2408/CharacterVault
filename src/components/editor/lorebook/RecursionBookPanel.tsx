@@ -304,7 +304,11 @@ export function RecursionBookPanel({
   }, []);
 
   const inspect = useCallback((id: number) => {
-    setInspectedId(id);
+    setInspectedId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const clearInspected = useCallback(() => {
+    setInspectedId(null);
   }, []);
 
   const toggleSelect = useCallback(
@@ -511,6 +515,7 @@ export function RecursionBookPanel({
                         <button
                           type="button"
                           onClick={() => inspect(entry.id)}
+                          aria-pressed={active}
                           className="min-w-0 flex-1 px-1 py-2 text-left touch-manipulation"
                         >
                           <p className="truncate text-sm font-medium text-fg">
@@ -565,13 +570,24 @@ export function RecursionBookPanel({
                       <RecursionFlagChips entry={inspectedEntry} />
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => toggleSelect(inspectedEntry.id)}
-                    className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-                  >
-                    {inspectedSelected ? 'Remove from selection' : 'Select'}
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleSelect(inspectedEntry.id)}
+                      className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+                    >
+                      {inspectedSelected ? 'Remove from selection' : 'Select'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearInspected}
+                      className="rounded-lg border border-border bg-surface p-1.5 text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+                      aria-label="Stop inspecting"
+                      title="Stop inspecting"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-2">
                   <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">

@@ -118,7 +118,7 @@ By default you get a picture of the whole book. Each box is an entry, each arrow
 | :--- | :--- |
 | Move around | Drag the background |
 | Zoom | Scroll wheel, centered on your cursor |
-| Inspect an entry | Click it |
+| Inspect an entry | Click it; click the same box again to clear |
 | Select for bulk edits | Ctrl (or Cmd) + click; click again to deselect |
 | Reset camera | **Reset view** |
 | Show entries with no links | **Show standalone** |
@@ -127,7 +127,7 @@ Hover an entry to light up just its connections and fade everything else. A lege
 
 ### The list view
 
-Switch to **List** next to the Web button for a plain table of every entry, with search and All / Linked / Standalone filters. Same actions: click a row to inspect, use the checkbox to select. For very large books the map opens in list mode first, since a wall of boxes is slower to read and slower to draw.
+Switch to **List** next to the Web button for a plain table of every entry, with search and All / Linked / Standalone filters. Same actions: click a row to inspect (again to clear), use the checkbox to select. For very large books the map opens in list mode first, since a wall of boxes is slower to read and slower to draw.
 
 ### Inspecting an entry
 
@@ -140,7 +140,7 @@ The right-hand panel shows the clicked entry: its keys, flags, who can unlock it
 
 Escape while renaming a chip cancels the rename and leaves the map open. Pan and zoom stay put when arrows appear or vanish; use **Reset view** to recenter.
 
-Clicking another entry in its "Unlocked by" or "Unlocks" lists inspects that one instead, so you can walk a chain step by step.
+Clicking another entry in its "Unlocked by" or "Unlocks" lists inspects that one instead, so you can walk a chain step by step. Click the inspected box again, or the inspector **X**, to close the panel and drop the path highlight.
 
 ### Bulk flag changes
 

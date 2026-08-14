@@ -1,7 +1,7 @@
 /**
  * SVG web view of the recursion graph: nodes laid out per connected component
  * (BFS layers via recursionGraph helpers), edges with arrowheads, pan/zoom,
- * hover link highlighting, click-to-inspect and ctrl-click multi-select.
+ * hover link highlighting, click-to-inspect (again to clear) and ctrl-click multi-select.
  * The list view remains the accessible equivalent; every action here
  * (inspect / select) mirrors one available in list mode.
  */
@@ -379,10 +379,16 @@ export function RecursionWebView({
   // clicks only fire for genuine presses on the node itself.
   const handleNodeActivate = useCallback(
     (e: React.MouseEvent | React.KeyboardEvent, id: number) => {
-      if ('ctrlKey' in e && (e.ctrlKey || e.metaKey)) onToggleSelect(id);
-      else onInspect(id);
+      if ('ctrlKey' in e && (e.ctrlKey || e.metaKey)) {
+        onToggleSelect(id);
+        return;
+      }
+      // Clearing inspect while the pointer is still on the node would otherwise
+      // keep the hover spotlight; drop hover so the whole map is even.
+      if (inspectedId === id) setHoveredId(null);
+      onInspect(id);
     },
-    [onInspect, onToggleSelect],
+    [inspectedId, onInspect, onToggleSelect],
   );
 
   // Pathway highlighting pins to the inspected node; hovering another node
@@ -406,7 +412,7 @@ export function RecursionWebView({
       <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-lg border border-border bg-surface/90 px-2.5 py-1.5 text-[10px] leading-snug text-fg-subtle shadow-sm backdrop-blur-sm">
         <span className="inline-flex items-center gap-1">
           <MousePointerClick className="h-3 w-3" />
-          Click inspects & pins paths · Ctrl-click selects · drag pans · scroll zooms
+          Click inspects & pins paths · click again clears · Ctrl-click selects · drag pans · scroll zooms
         </span>
       </div>
       <div className="absolute right-3 top-3 z-10 flex gap-1.5">
@@ -537,7 +543,7 @@ export function RecursionWebView({
                 tabIndex={0}
                 role="button"
                 aria-pressed={isInspected}
-                aria-label={`Entry ${entryDisplayName(entry, indexById.get(entry.id))}. Click to inspect, Ctrl-click to select.`}
+                aria-label={`Entry ${entryDisplayName(entry, indexById.get(entry.id))}. Click to inspect, click again to clear, Ctrl-click to select.`}
               >
                 <title>{entryDisplayName(entry, indexById.get(entry.id))}</title>
                 <rect
