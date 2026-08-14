@@ -3,7 +3,7 @@
  * Two-panel: entry list sidebar + detail editor.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   Book,
@@ -19,11 +19,10 @@ import {
   Settings,
   SlidersHorizontal,
   Trash2,
-  Upload,
   X,
 } from 'lucide-react';
 import type { CharacterBook, LorebookEntry } from '../../../db/characterTypes';
-import { importLorebook, convertToSTLorebook } from '../../../services/LorebookConverter';
+import { convertToSTLorebook } from '../../../services/LorebookConverter';
 import { estimateTokens, BYTES_PER_TOKEN } from '../../../services/AIService';
 import { estimateCustomContextTokensFromCharLength } from '../../../services/CustomContextService';
 import { CustomContextBlock } from '../../ai/CustomContextBlock';
@@ -90,7 +89,6 @@ function LorebookEditorInner({
   const [isRecursionMapOpen, setIsRecursionMapOpen] = useState(false);
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -294,51 +292,6 @@ function LorebookEditorInner({
     if (!window.confirm(message)) return;
     onDelete();
   }, [onDelete, entries.length]);
-
-  const handleImportFile = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text) as unknown;
-        const importedBook = importLorebook(data);
-
-        if (!importedBook) {
-          alert(
-            'Could not recognize the lorebook format. Please ensure it is a valid SillyTavern or CharacterVault export.',
-          );
-          return;
-        }
-
-        if (entries.length > 0) {
-          const confirmed = window.confirm(
-            `This will replace all ${entries.length} existing entries with ${importedBook.entries.length} imported entries. Continue?`,
-          );
-          if (!confirmed) return;
-        }
-
-        persistLorebook({
-          name: importedBook.name || bookName,
-          description: importedBook.description || bookDescription,
-          scan_depth: importedBook.scan_depth,
-          token_budget: importedBook.token_budget,
-          recursive_scanning: importedBook.recursive_scanning,
-          entries: importedBook.entries,
-          extensions: importedBook.extensions || {},
-        });
-        setSelectedEntryIndex(0);
-        alert(`Successfully imported ${importedBook.entries.length} entries.`);
-      } catch (err) {
-        console.error('Import error:', err);
-        alert(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      } finally {
-        e.target.value = '';
-      }
-    },
-    [entries.length, bookName, bookDescription, persistLorebook],
-  );
 
   const handleExport = useCallback(() => {
     if (entries.length === 0) return;
@@ -701,22 +654,6 @@ function LorebookEditorInner({
 
         <div className="shrink-0 border-t border-border p-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,application/json"
-              onChange={(e) => void handleImportFile(e)}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface px-2.5 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg touch-manipulation"
-              title="Import lorebook from JSON file"
-            >
-              <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">Import</span>
-            </button>
             <button
               type="button"
               onClick={handleExport}
