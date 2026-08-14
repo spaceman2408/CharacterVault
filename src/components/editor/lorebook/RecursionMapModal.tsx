@@ -57,7 +57,9 @@ export function RecursionMapModal({
     };
   }, []);
 
-  const recursionOff = bookRecursiveScanning !== true;
+  // Unspecified means a typical ST standalone world (global WI recursive scan
+  // decides). Only warn when this book explicitly turns scanning off.
+  const recursionOff = bookRecursiveScanning === false;
 
   const handleBackdropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onCloseRef.current();

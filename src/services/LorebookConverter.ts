@@ -80,9 +80,15 @@ export interface STLorebookEntry {
  */
 export interface STLorebookExport {
   entries: Record<string, STLorebookEntry>;
+  scan_depth?: number;
+  token_budget?: number;
+  recursive_scanning?: boolean;
   originalData?: {
     name?: string;
     description?: string;
+    scan_depth?: number;
+    token_budget?: number;
+    recursive_scanning?: boolean;
     entries?: Array<{
       id: number;
       keys: string[];
@@ -248,6 +254,28 @@ export function convertSTEntry(entry: STLorebookEntry): LorebookEntry {
   };
 }
 
+function readOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function readOptionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+/** Book-level scan settings from a character_book / ST originalData / root export. */
+function readBookScanSettings(source: unknown): Pick<
+  CharacterBook,
+  'scan_depth' | 'token_budget' | 'recursive_scanning'
+> {
+  if (!source || typeof source !== 'object') return {};
+  const s = source as Record<string, unknown>;
+  return {
+    scan_depth: readOptionalNumber(s.scan_depth ?? s.scanDepth),
+    token_budget: readOptionalNumber(s.token_budget ?? s.tokenBudget),
+    recursive_scanning: readOptionalBoolean(s.recursive_scanning ?? s.recursiveScanning),
+  };
+}
+
 /**
  * Convert a SillyTavern lorebook export to CharacterBook format
  * @param data - The ST export data
@@ -268,12 +296,18 @@ export function convertSTLorebook(data: STLorebookExport): CharacterBook {
     }
   }
 
-  // Try to get name/description from originalData if available, otherwise empty
+  // Name/description and book scan settings live on originalData when ST
+  // extracted a character_book. Some exports also put scan settings on the root.
   const originalData = data.originalData;
+  const fromOriginal = readBookScanSettings(originalData);
+  const fromRoot = readBookScanSettings(data);
 
   return {
     name: originalData?.name || '',
     description: originalData?.description || '',
+    scan_depth: fromOriginal.scan_depth ?? fromRoot.scan_depth,
+    token_budget: fromOriginal.token_budget ?? fromRoot.token_budget,
+    recursive_scanning: fromOriginal.recursive_scanning ?? fromRoot.recursive_scanning,
     entries,
     extensions: originalData?.extensions || {},
   };
@@ -456,6 +490,9 @@ export function convertToSTLorebook(book: CharacterBook): STLorebookExport {
     originalData: {
       name: book.name || '',
       description: book.description || '',
+      scan_depth: book.scan_depth,
+      token_budget: book.token_budget,
+      recursive_scanning: book.recursive_scanning,
       entries: book.entries.map(entry => ({
         id: entry.id,
         keys: entry.keys,

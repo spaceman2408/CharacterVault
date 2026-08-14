@@ -160,4 +160,99 @@ describe('LorebookConverter', () => {
     const reimported = importLorebook(exported);
     expect(reimported?.entries).toHaveLength(2);
   });
+
+  it('imports book-level scan settings from ST originalData', () => {
+    const book = convertSTLorebook({
+      entries: {
+        '0': {
+          uid: 0,
+          key: ['a'],
+          keysecondary: [],
+          comment: 'A',
+          content: 'Alpha',
+          constant: false,
+          selective: false,
+          order: 0,
+          position: 0,
+          disable: false,
+          caseSensitive: false,
+        },
+      },
+      originalData: {
+        name: 'Matrus',
+        description: '',
+        scan_depth: 4,
+        token_budget: 512,
+        recursive_scanning: true,
+      },
+    });
+
+    expect(book.name).toBe('Matrus');
+    expect(book.scan_depth).toBe(4);
+    expect(book.token_budget).toBe(512);
+    expect(book.recursive_scanning).toBe(true);
+  });
+
+  it('falls back to root-level scan settings when originalData omits them', () => {
+    const book = convertSTLorebook({
+      entries: {
+        '0': {
+          uid: 0,
+          key: ['a'],
+          keysecondary: [],
+          comment: 'A',
+          content: 'Alpha',
+          constant: false,
+          selective: false,
+          order: 0,
+          position: 0,
+          disable: false,
+          caseSensitive: false,
+        },
+      },
+      recursive_scanning: true,
+      scan_depth: 2,
+      token_budget: 200,
+    });
+
+    expect(book.recursive_scanning).toBe(true);
+    expect(book.scan_depth).toBe(2);
+    expect(book.token_budget).toBe(200);
+  });
+
+  it('round-trips book-level scan settings through ST export', () => {
+    const book = convertSTLorebook({
+      entries: {
+        '0': {
+          uid: 0,
+          key: ['a'],
+          keysecondary: [],
+          comment: 'A',
+          content: 'Alpha',
+          constant: false,
+          selective: false,
+          order: 0,
+          position: 0,
+          disable: false,
+          caseSensitive: false,
+        },
+      },
+      originalData: {
+        name: 'Matrus',
+        recursive_scanning: true,
+        scan_depth: 3,
+        token_budget: 400,
+      },
+    });
+
+    const exported = convertToSTLorebook(book);
+    expect(exported.originalData?.recursive_scanning).toBe(true);
+    expect(exported.originalData?.scan_depth).toBe(3);
+    expect(exported.originalData?.token_budget).toBe(400);
+
+    const back = importLorebook(exported);
+    expect(back?.recursive_scanning).toBe(true);
+    expect(back?.scan_depth).toBe(3);
+    expect(back?.token_budget).toBe(400);
+  });
 });
