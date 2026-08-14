@@ -95,6 +95,7 @@ export const RecursionWebView = React.memo(function RecursionWebView({
 }: RecursionWebViewProps): React.ReactElement {
   const svgRef = useRef<SVGSVGElement>(null);
   const worldRef = useRef<SVGGElement>(null);
+  const hlRootRef = useRef<SVGGElement>(null);
   const viewRef = useRef<View>(INITIAL_VIEW);
   const hoveredRef = useRef<number | null>(null);
   const inspectRef = useRef(inspectedId);
@@ -118,18 +119,18 @@ export const RecursionWebView = React.memo(function RecursionWebView({
   }, []);
 
   const paintHighlight = useCallback(() => {
-    const world = worldRef.current;
-    if (!world) return;
-    world.querySelectorAll('.is-hot, .is-pointer').forEach((el) => {
+    const root = hlRootRef.current;
+    if (!root) return;
+    root.querySelectorAll('.is-hot, .is-pointer').forEach((el) => {
       el.classList.remove('is-hot', 'is-pointer');
     });
     const hoverId = hoveredRef.current;
     const id = hoverId ?? inspectRef.current;
     if (id == null) {
-      world.classList.remove('is-hl');
+      root.classList.remove('is-hl');
       return;
     }
-    world.classList.add('is-hl');
+    root.classList.add('is-hl');
     const nodes = new Set<number>([id]);
     const edgeKeys: string[] = [];
     for (const edge of graphRef.current.outgoing.get(id) ?? []) {
@@ -141,13 +142,13 @@ export const RecursionWebView = React.memo(function RecursionWebView({
       edgeKeys.push(`${edge.fromId}->${edge.toId}`);
     }
     for (const nid of nodes) {
-      world.querySelector(`[data-n="${nid}"]`)?.classList.add('is-hot');
+      root.querySelector(`[data-n="${nid}"]`)?.classList.add('is-hot');
     }
     for (const key of edgeKeys) {
-      world.querySelectorAll(`[data-e="${key}"]`).forEach((el) => el.classList.add('is-hot'));
+      root.querySelectorAll(`[data-e="${key}"]`).forEach((el) => el.classList.add('is-hot'));
     }
     if (hoverId != null) {
-      world.querySelector(`[data-n="${hoverId}"]`)?.classList.add('is-pointer');
+      root.querySelector(`[data-n="${hoverId}"]`)?.classList.add('is-pointer');
     }
   }, []);
 
@@ -449,7 +450,6 @@ export const RecursionWebView = React.memo(function RecursionWebView({
       >
         <style>
           {`
-            .rec-world { will-change: transform; }
             .rec-edge, .rec-port { pointer-events: none; }
             .rec-world.is-hl .rec-edge, .rec-world.is-hl .rec-port { opacity: 0.15; }
             .rec-world.is-hl .rec-edge.is-hot {
@@ -489,7 +489,8 @@ export const RecursionWebView = React.memo(function RecursionWebView({
           </marker>
         </defs>
 
-        <g ref={worldRef} className="rec-world">
+        <g ref={worldRef} transform={viewTransform(viewRef.current)}>
+          <g ref={hlRootRef} className="rec-world">
           {/* Edges under nodes */}
           {edges.map((edge) => {
             const from = layout.pos.get(edge.fromId);
@@ -612,6 +613,7 @@ export const RecursionWebView = React.memo(function RecursionWebView({
               />
             );
           })}
+          </g>
         </g>
       </svg>
 
