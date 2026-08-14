@@ -13,6 +13,11 @@ import type {
 import { createEmptyCharacterBook } from '../db/characterTypes';
 import { convertToSTLorebook, importLorebook } from './LorebookConverter';
 
+/** Filename stem used as the imported book name. Keeps Windows copy suffixes. */
+export function nameFromLorebookFile(fileName: string): string {
+  return fileName.replace(/\.json$/i, '').trim();
+}
+
 function sanitizeFilename(name: string, suffix: string): string {
   // eslint-disable-next-line no-control-regex
   let sanitized = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_');
@@ -67,14 +72,17 @@ export class LorebookService {
 
   /**
    * Import ST/CV lorebook JSON into the vault as a new standalone book.
+   * When preferredName is set (file import), it wins over the name inside the JSON
+   * so download suffixes like "(1)" stay on the vault book.
    */
-  async importFromData(data: unknown, fallbackName = 'Imported Lorebook'): Promise<VaultLorebook> {
+  async importFromData(data: unknown, preferredName?: string): Promise<VaultLorebook> {
     const book = importLorebook(data);
     if (!book) {
       throw new Error('Could not recognize the lorebook format');
     }
 
-    const name = (book.name || '').trim() || fallbackName;
+    const name =
+      (preferredName ?? '').trim() || (book.name || '').trim() || 'Imported Lorebook';
     return characterDb.createLorebook({
       name,
       description: book.description || '',
@@ -96,8 +104,7 @@ export class LorebookService {
       throw new Error('File is not valid JSON');
     }
 
-    const baseName = file.name.replace(/\.json$/i, '').trim();
-    return this.importFromData(data, baseName || 'Imported Lorebook');
+    return this.importFromData(data, nameFromLorebookFile(file.name));
   }
 
   /** Build SillyTavern export blob for a vault lorebook. */
