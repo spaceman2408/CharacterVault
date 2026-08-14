@@ -131,10 +131,14 @@ Switch to **List** next to the Web button for a plain table of every entry, with
 
 ### Inspecting an entry
 
-The right-hand panel shows the clicked entry: its keys, flags, who can unlock it, and what it unlocks, including which key made each connection. From here you can:
+The right-hand panel shows the clicked entry: its keys, flags, who can unlock it, and what it unlocks. From here you can:
 
+- Edit **primary keys** as chips under **Keys**. Click a chip to rename it, **X** to remove it, or type in the field to add one (Enter or comma). These write to the actual entry and update the map immediately. They are the real trigger keys, not map-only labels.
+- On **Unlocked by** / **Unlocks** rows, the matched keywords are chips too. **Unlocked by** edits this entry’s keys (`Mentions these keys in its content`). **Unlocks** edits the *other* entry’s keys (`These keys match in this content`). Removing a matched chip on an Unlocks row drops that hop.
 - Toggle **Non-recursable**, **Prevent further**, or **Delay until recursion** for just this entry. These apply right away.
 - **Select** it to add it to a bulk selection.
+
+Escape while renaming a chip cancels the rename and leaves the map open. Pan and zoom stay put when arrows appear or vanish; use **Reset view** to recenter.
 
 Clicking another entry in its "Unlocked by" or "Unlocks" lists inspects that one instead, so you can walk a chain step by step.
 
@@ -147,7 +151,7 @@ Quick-select shortcuts in the bar: **All** entries, **Visible** (what search is 
 ### Small print
 
 ::: warning Authoring aid, not a full ST simulator
-The map reads **primary keys** in content (including simple `/regex/` support, case sensitivity, and whole-word options). It does **not** fully simulate selective secondary logic, probability, token budget, multi-step depth, or chat scan. Treat it as a guide for wiring recursion flags.
+The map reads **primary keys** in content (including simple `/regex/` support, case sensitivity, and whole-word options). Key chips on the map edit those same primary keys. It does **not** fully simulate selective secondary logic, probability, token budget, multi-step depth, or chat scan. Treat it as a guide for wiring keys and recursion flags.
 :::
 
 If **Recursive scanning** is off on the book, the map still shows potential key hits and warns that SillyTavern will not recurse until scanning is enabled (book or global ST setting).

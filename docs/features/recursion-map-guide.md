@@ -35,13 +35,27 @@ Entries with no connections are hidden by default to keep the picture clean. **S
 ::: details A first inspection
 Click any entry. A panel slides in on the right showing three things:
 
-1. The entry's keys and flags.
-2. **Unlocked by**: entries whose content mentions this entry's keys. Each row shows which key did the mentioning.
-3. **Unlocks**: entries this entry can wake up, and which of their keys it mentions.
+1. The entry's keys (as chips) and flags.
+2. **Unlocked by**: entries whose content mentions this entry's keys. Each row shows the matched keys as chips, with the line *Mentions these keys in its content*.
+3. **Unlocks**: entries this entry can wake up. Each row shows that entry's matched keys as chips, with the line *These keys match in this content*.
 
-Click any entry in those two lists to inspect it instead. Following "mentions / matched" rows is the fastest way to walk a chain and check that each hop makes sense.
+Click any entry in those two lists to inspect it instead. Walking those rows is the fastest way to follow a chain and check that each hop makes sense.
 
-For quick fixes, the three flag buttons in the panel (**Non-recursable**, **Prevent further recursion**, **Delay until recursion**) toggle that single entry immediately.
+For quick fixes, edit the key chips or use the three flag buttons (**Non-recursable**, **Prevent further recursion**, **Delay until recursion**). Both write immediately.
+:::
+
+::: details Editing keys on the map
+The chips are the entry's real primary keys. Changing them updates the lorebook entry and redraws the arrows. You do not have to close the map and go back to the Keys field, though that field stays in sync.
+
+- **Inspector Keys**: add, rename, or remove any of this entry's primary keys.
+- **Unlocked by chips**: same list as inspector Keys (this entry owns them).
+- **Unlocks chips**: the *other* entry's keys. Remove or rename one to break or retarget that hop without opening that entry first.
+
+Click a chip to rename it. Enter or blur saves; Escape cancels and leaves the map open. **X** removes it. Type next to the inspector chips and press Enter or comma to add a key.
+
+These are the same keys SillyTavern uses to activate the entry from chat, not aliases for the picture. Secondary (selective) keys are not on the map.
+
+The camera stays where you left it when arrows appear or vanish. **Reset view** recenters if a new cluster lands off-screen.
 :::
 
 ## Flags
@@ -72,15 +86,15 @@ The map does not rearrange itself while you work. Flag changes don't add or remo
 ## Common repairs
 
 ::: details A chain explodes into everything
-Inspect the entry where the explosion starts and look at its "Unlocks" list. Usually one broad key (a name, a place) is matching half the book. Either tighten that target's keys, or set **Prevent further recursion** on the entry that fans out.
+Inspect the entry where the explosion starts and look at its "Unlocks" list. Usually one broad key (a name, a place) is matching half the book. Tighten that target's keys on the hop chips, or set **Prevent further recursion** on the entry that fans out.
 :::
 
 ::: details Two entries keep re-triggering each other
-A mentions B's key, B mentions A's key. Flags can't break the loop by themselves; the clean fix is removing one direction's key from the other entry's content. Use the map to find both arrows, then close it and edit that content.
+A mentions B's key, B mentions A's key. Flags can't break the loop by themselves. If the hop is a key you do not actually want, remove that chip on the Unlocks row. If the word should stay as a trigger but should not appear in the other entry's **content**, close the map and edit that prose.
 :::
 
 ::: details An entry never fires recursively
-Click it and check "Unlocked by". Empty? Either nothing mentions its keys (rename the keys or mention them where you want), or **Non-recursable** is on, which the panel will say directly.
+Click it and check "Unlocked by". Empty? Either nothing mentions its keys (rename the keys in the inspector chips, or mention them where you want), or **Non-recursable** is on, which the panel will say directly.
 :::
 
 ::: details Deep lore fires too early
