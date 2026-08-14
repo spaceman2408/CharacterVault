@@ -6,130 +6,36 @@
  * (inspect / select) mirrors one available in list mode.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Maximize2, MousePointerClick } from 'lucide-react';
 import type { LorebookEntry } from '../../../db/characterTypes';
 import type { RecursionGraph } from './recursionGraph';
-import { entryDisplayName, getConnectedComponents, layerComponent, listEdges } from './recursionGraph';
-
-const NODE_W = 148;
-const NODE_H = 40;
-const COL_GAP = 64;
-const ROW_GAP = 22;
-const COMP_GAP = 72;
-const COMP_PAD = 28;
-const STANDALONE_ROW_GAP = 16;
+import { entryDisplayName, listEdges } from './recursionGraph';
+import { NODE_H, NODE_W, backArcRise, computeLayout, type NodePos } from './recursionLayout';
 
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
 
-type NodePos = { x: number; y: number; componentIndex: number };
+type View = { x: number; y: number; k: number };
 
-type Layout = {
-  pos: Map<number, NodePos>;
-  bounds: { width: number; height: number };
-  clusters: { componentIndex: number; label: string; x: number; y: number }[];
-  standaloneCount: number;
-};
+const INITIAL_VIEW: View = { x: 16, y: 16, k: 1 };
 
-function truncateLabel(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+function viewTransform(v: View): string {
+  return `translate(${v.x},${v.y}) scale(${v.k})`;
 }
 
-function computeLayout(
-  entries: LorebookEntry[],
-  graph: RecursionGraph,
-  showStandalone: boolean,
-): Layout {
-  const pos = new Map<number, NodePos>();
-  const clusters: Layout['clusters'] = [];
-  const components = getConnectedComponents(entries, graph);
-  const linked = components.filter((c) => c.edges.length > 0);
-  const standalone = components.filter((c) => c.edges.length === 0);
-
-  let cursorX = 0;
-  let linkedBottom = 0;
-
-  linked.forEach((component, componentIndex) => {
-    const layers = layerComponent(component.entryIds, graph);
-    const nodeCount = component.entryIds.length;
-    layers.forEach((layer, layerIdx) => {
-      layer.forEach((id, rowIdx) => {
-        pos.set(id, {
-          x: cursorX + layerIdx * (NODE_W + COL_GAP),
-          y: rowIdx * (NODE_H + ROW_GAP),
-          componentIndex,
-        });
-      });
-    });
-    const compWidth = layers.length * NODE_W + Math.max(0, layers.length - 1) * COL_GAP;
-    let compHeight = 0;
-    for (const layer of layers) {
-      const h = layer.length * NODE_H + Math.max(0, layer.length - 1) * ROW_GAP;
-      if (h > compHeight) compHeight = h;
-    }
-    if (compHeight > linkedBottom) linkedBottom = compHeight;
-    clusters.push({
-      componentIndex,
-      label: `Cluster of ${nodeCount}`,
-      x: cursorX,
-      y: compHeight + 14,
-    });
-    cursorX += compWidth + COMP_GAP;
-  });
-
-  // Back-link arcs rise above the top row; reserve headroom so auto-fit shows them.
-  let arcPad = 0;
-  for (const [fromId, outs] of graph.outgoing) {
-    const from = pos.get(fromId);
-    if (!from) continue;
-    for (const edge of outs) {
-      const to = pos.get(edge.toId);
-      if (!to || to.x >= from.x) continue;
-      arcPad = Math.max(arcPad, backArcRise(from.x - to.x) + 72);
-    }
-  }
-  if (arcPad > 0) {
-    for (const p of pos.values()) p.y += arcPad;
-    for (const cluster of clusters) cluster.y += arcPad;
-    linkedBottom += arcPad;
-  }
-
-  if (linked.length > 0) linkedBottom += COMP_PAD;
-
-  let boundsWidth = linked.length > 0 ? cursorX - COMP_GAP : 0;
-  let boundsHeight = linkedBottom;
-
-  let standaloneCount = 0;
-  if (showStandalone && standalone.length > 0) {
-    const ids = standalone.map((c) => c.entryIds[0]).sort((a, b) => a - b);
-    const cols = Math.max(2, Math.min(6, Math.ceil(Math.sqrt(ids.length))));
-    ids.forEach((id, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = col * (NODE_W + COL_GAP);
-      const y = linkedBottom + 24 + row * (NODE_H + STANDALONE_ROW_GAP);
-      pos.set(id, { x, y, componentIndex: -1 });
-      standaloneCount += 1;
-      const right = x + NODE_W;
-      const bottom = y + NODE_H;
-      if (right > boundsWidth) boundsWidth = right;
-      if (bottom > boundsHeight) boundsHeight = bottom;
-    });
-  } else {
-    standaloneCount = standalone.length;
-  }
-
+function zoomAt(prev: View, px: number, py: number, factor: number): View {
+  const k = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev.k * factor));
+  const scale = k / prev.k;
   return {
-    pos,
-    bounds: { width: Math.max(boundsWidth, 1), height: Math.max(boundsHeight, 1) },
-    clusters,
-    standaloneCount,
+    k,
+    x: px - (px - prev.x) * scale,
+    y: py - (py - prev.y) * scale,
   };
 }
 
-function backArcRise(span: number): number {
-  return Math.max(34, Math.min(120, span * 0.3));
+function truncateLabel(value: string, max: number): string {
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
 const BACK_EDGE_SPACING = 11;
@@ -176,7 +82,7 @@ export type RecursionWebViewProps = {
   onToggleSelect: (id: number) => void;
 };
 
-export function RecursionWebView({
+export const RecursionWebView = React.memo(function RecursionWebView({
   entries,
   graph,
   indexById,
@@ -188,9 +94,62 @@ export function RecursionWebView({
   onToggleSelect,
 }: RecursionWebViewProps): React.ReactElement {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [view, setView] = useState({ x: 16, y: 16, k: 1 });
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; baseX: number; baseY: number; moved: boolean } | null>(null);
+  const worldRef = useRef<SVGGElement>(null);
+  const viewRef = useRef<View>(INITIAL_VIEW);
+  const hoveredRef = useRef<number | null>(null);
+  const inspectRef = useRef(inspectedId);
+  const graphRef = useRef(graph);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+    baseX: number;
+    baseY: number;
+    moved: boolean;
+    raf: number;
+  } | null>(null);
+  const wheelRafRef = useRef(0);
+  const wheelAccRef = useRef({ px: 0, py: 0, factor: 1 });
+
+  const applyView = useCallback(() => {
+    worldRef.current?.setAttribute('transform', viewTransform(viewRef.current));
+  }, []);
+
+  const paintHighlight = useCallback(() => {
+    const world = worldRef.current;
+    if (!world) return;
+    world.querySelectorAll('.is-hot, .is-pointer').forEach((el) => {
+      el.classList.remove('is-hot', 'is-pointer');
+    });
+    const hoverId = hoveredRef.current;
+    const id = hoverId ?? inspectRef.current;
+    if (id == null) {
+      world.classList.remove('is-hl');
+      return;
+    }
+    world.classList.add('is-hl');
+    const nodes = new Set<number>([id]);
+    const edgeKeys: string[] = [];
+    for (const edge of graphRef.current.outgoing.get(id) ?? []) {
+      nodes.add(edge.toId);
+      edgeKeys.push(`${edge.fromId}->${edge.toId}`);
+    }
+    for (const edge of graphRef.current.incoming.get(id) ?? []) {
+      nodes.add(edge.fromId);
+      edgeKeys.push(`${edge.fromId}->${edge.toId}`);
+    }
+    for (const nid of nodes) {
+      world.querySelector(`[data-n="${nid}"]`)?.classList.add('is-hot');
+    }
+    for (const key of edgeKeys) {
+      world.querySelectorAll(`[data-e="${key}"]`).forEach((el) => el.classList.add('is-hot'));
+    }
+    if (hoverId != null) {
+      world.querySelector(`[data-n="${hoverId}"]`)?.classList.add('is-pointer');
+    }
+  }, []);
 
   // Identity (which entries exist + standalone visibility) vs full topology
   // (plus which edges exist). Flag-only edits change neither. Key edits change
@@ -271,32 +230,40 @@ export function RecursionWebView({
     return map;
   }, [entries]);
 
+  const layoutRef = useRef(layout);
+
   const fitView = useCallback(() => {
     const svg = svgRef.current;
     if (!svg) return;
     const { clientWidth, clientHeight } = svg;
     if (clientWidth === 0 || clientHeight === 0) return;
-    const { width, height } = layout.bounds;
+    const { width, height } = layoutRef.current.bounds;
     const k = Math.max(
       MIN_ZOOM,
       Math.min(1, (clientWidth - 48) / width, (clientHeight - 48) / height),
     );
-    setView({
+    viewRef.current = {
       k,
       x: (clientWidth - width * k) / 2,
       y: (clientHeight - height * k) / 2,
-    });
-  }, [layout]);
+    };
+    applyView();
+  }, [applyView]);
 
   const fitViewRef = useRef(fitView);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    inspectRef.current = inspectedId;
+    graphRef.current = graph;
+    layoutRef.current = layout;
     fitViewRef.current = fitView;
+    applyView();
+    paintHighlight();
   });
 
   // Auto-fit when the entry set or standalone visibility changes, not when
   // only edges change (key edits). Reset view / resize still fit explicitly.
   const fitTokenRef = useRef<string | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (fitTokenRef.current === entryIdentityKey) return;
     fitTokenRef.current = entryIdentityKey;
     fitViewRef.current();
@@ -323,39 +290,60 @@ export function RecursionWebView({
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      const drag = dragRef.current;
+      if (drag?.raf) cancelAnimationFrame(drag.raf);
+      dragRef.current = null;
+    };
+  }, []);
+
   // Native wheel listener: React's synthetic onWheel cannot preventDefault reliably.
+  // Camera lives on the world <g> transform so scroll/pan never re-render 500+ edges.
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
+    const flushWheel = () => {
+      wheelRafRef.current = 0;
+      const acc = wheelAccRef.current;
+      if (acc.factor === 1) return;
+      viewRef.current = zoomAt(viewRef.current, acc.px, acc.py, acc.factor);
+      acc.factor = 1;
+      applyView();
+    };
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const rect = svg.getBoundingClientRect();
-      const px = e.clientX - rect.left;
-      const py = e.clientY - rect.top;
-      setView((prev) => {
-        const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-        const k = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev.k * factor));
-        const scale = k / prev.k;
-        return {
-          k,
-          x: px - (px - prev.x) * scale,
-          y: py - (py - prev.y) * scale,
-        };
-      });
+      wheelAccRef.current.px = e.clientX - rect.left;
+      wheelAccRef.current.py = e.clientY - rect.top;
+      wheelAccRef.current.factor *= e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      if (!wheelRafRef.current) {
+        wheelRafRef.current = requestAnimationFrame(flushWheel);
+      }
     };
     svg.addEventListener('wheel', onWheel, { passive: false });
-    return () => svg.removeEventListener('wheel', onWheel);
-  }, []);
+    return () => {
+      svg.removeEventListener('wheel', onWheel);
+      if (wheelRafRef.current) {
+        cancelAnimationFrame(wheelRafRef.current);
+        wheelRafRef.current = 0;
+      }
+    };
+  }, [applyView]);
 
   const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     if ((e.target as Element).closest('[data-node]')) return;
+    if (dragRef.current?.raf) cancelAnimationFrame(dragRef.current.raf);
     dragRef.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
-      baseX: view.x,
-      baseY: view.y,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      baseX: viewRef.current.x,
+      baseY: viewRef.current.y,
       moved: false,
+      raf: 0,
     };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -363,16 +351,34 @@ export function RecursionWebView({
   const onPointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
-    const dx = e.clientX - drag.startX;
-    const dy = e.clientY - drag.startY;
+    drag.lastX = e.clientX;
+    drag.lastY = e.clientY;
+    const dx = drag.lastX - drag.startX;
+    const dy = drag.lastY - drag.startY;
     if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
-    if (drag.moved) {
-      setView((prev) => ({ ...prev, x: drag.baseX + dx, y: drag.baseY + dy }));
-    }
+    if (!drag.moved || drag.raf) return;
+    drag.raf = requestAnimationFrame(() => {
+      drag.raf = 0;
+      viewRef.current = {
+        ...viewRef.current,
+        x: drag.baseX + (drag.lastX - drag.startX),
+        y: drag.baseY + (drag.lastY - drag.startY),
+      };
+      applyView();
+    });
   };
 
   const onPointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (dragRef.current?.pointerId === e.pointerId) dragRef.current = null;
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    if (drag.raf) cancelAnimationFrame(drag.raf);
+    if (drag.moved) {
+      const dx = e.clientX - drag.startX;
+      const dy = e.clientY - drag.startY;
+      viewRef.current = { ...viewRef.current, x: drag.baseX + dx, y: drag.baseY + dy };
+      applyView();
+    }
+    dragRef.current = null;
   };
 
   // Pointer capture retargets the click after a background pan, so node
@@ -385,27 +391,23 @@ export function RecursionWebView({
       }
       // Clearing inspect while the pointer is still on the node would otherwise
       // keep the hover spotlight; drop hover so the whole map is even.
-      if (inspectedId === id) setHoveredId(null);
+      if (inspectRef.current === id) {
+        hoveredRef.current = null;
+        paintHighlight();
+      }
       onInspect(id);
     },
-    [inspectedId, onInspect, onToggleSelect],
+    [onInspect, onToggleSelect, paintHighlight],
   );
 
-  // Pathway highlighting pins to the inspected node; hovering another node
-  // temporarily takes over, falling back to the inspected node on mouse-out.
-  const highlightId = hoveredId ?? inspectedId;
-
-  const highlightedNeighborIds = useMemo(() => {
-    if (highlightId == null) return null;
-    const set = new Set<number>([highlightId]);
-    for (const edge of edges) {
-      if (edge.fromId === highlightId) set.add(edge.toId);
-      if (edge.toId === highlightId) set.add(edge.fromId);
-    }
-    return set;
-  }, [highlightId, edges]);
-
-  const dimmed = highlightedNeighborIds != null;
+  const hoverNode = useCallback(
+    (id: number | null) => {
+      if (hoveredRef.current === id) return;
+      hoveredRef.current = id;
+      paintHighlight();
+    },
+    [paintHighlight],
+  );
 
   return (
     <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-muted/10">
@@ -445,6 +447,23 @@ export function RecursionWebView({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
+        <style>
+          {`
+            .rec-world { will-change: transform; }
+            .rec-edge, .rec-port { pointer-events: none; }
+            .rec-world.is-hl .rec-edge, .rec-world.is-hl .rec-port { opacity: 0.15; }
+            .rec-world.is-hl .rec-edge.is-hot {
+              opacity: 0.7;
+              stroke: var(--accent);
+              stroke-width: 2;
+              marker-end: url(#rec-arrow-hot);
+            }
+            .rec-world.is-hl .rec-port.is-hot { opacity: 0.9; fill: var(--accent); }
+            .rec-world.is-hl .rec-node { opacity: 0.25; }
+            .rec-world.is-hl .rec-node.is-hot { opacity: 1; }
+            .rec-node.is-pointer rect { stroke: color-mix(in srgb, var(--accent) 60%, transparent); }
+          `}
+        </style>
         <defs>
           <marker
             id="rec-arrow"
@@ -470,28 +489,25 @@ export function RecursionWebView({
           </marker>
         </defs>
 
-        <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
+        <g ref={worldRef} className="rec-world">
           {/* Edges under nodes */}
           {edges.map((edge) => {
             const from = layout.pos.get(edge.fromId);
             const to = layout.pos.get(edge.toId);
             if (!from || !to) return null;
-            const hot =
-              highlightId != null &&
-              (edge.fromId === highlightId || edge.toId === highlightId);
             const fromEntry = entryById.get(edge.fromId);
             const toEntry = entryById.get(edge.toId);
             if (!fromEntry || !toEntry) return null;
+            const edgeKey = `${edge.fromId}->${edge.toId}`;
             return (
               <path
-                key={`${edge.fromId}->${edge.toId}`}
-                d={edgePath(from, to, backEdgeMeta.get(`${edge.fromId}->${edge.toId}`))}
+                key={edgeKey}
+                data-e={edgeKey}
+                d={edgePath(from, to, backEdgeMeta.get(edgeKey))}
                 fill="none"
-                markerEnd={hot ? 'url(#rec-arrow-hot)' : 'url(#rec-arrow)'}
-                className={`transition-opacity ${
-                  hot ? 'stroke-accent' : 'stroke-border-strong'
-                } ${dimmed && !hot ? 'opacity-15' : 'opacity-70'}`}
-                strokeWidth={hot ? 2 : 1.25}
+                markerEnd="url(#rec-arrow)"
+                className="rec-edge stroke-border-strong opacity-70"
+                strokeWidth={1.25}
               >
                 <title>
                   {entryDisplayName(fromEntry, indexById.get(edge.fromId))} →{' '}
@@ -518,22 +534,24 @@ export function RecursionWebView({
           {entries.map((entry) => {
             const p = layout.pos.get(entry.id);
             if (!p) return null;
-            const isHovered = hoveredId === entry.id;
-             const isNeighbor = highlightedNeighborIds?.has(entry.id) ?? false;
-            const isDim = dimmed && !isNeighbor;
             const isInspected = inspectedId === entry.id;
             const isSelected = selectedIds.has(entry.id);
             return (
               <g
                 key={entry.id}
                 data-node
+                data-n={entry.id}
                 transform={`translate(${p.x},${p.y})`}
-                className={`cursor-pointer outline-none transition-opacity focus-visible:outline-none ${isDim ? 'opacity-25' : ''}`}
+                className="rec-node cursor-pointer outline-none focus-visible:outline-none"
                 onClick={(e) => handleNodeActivate(e, entry.id)}
-                onMouseEnter={() => setHoveredId(entry.id)}
-                onMouseLeave={() => setHoveredId((h) => (h === entry.id ? null : h))}
-                onFocus={() => setHoveredId(entry.id)}
-                onBlur={() => setHoveredId((h) => (h === entry.id ? null : h))}
+                onMouseEnter={() => hoverNode(entry.id)}
+                onMouseLeave={() => {
+                  if (hoveredRef.current === entry.id) hoverNode(null);
+                }}
+                onFocus={() => hoverNode(entry.id)}
+                onBlur={() => {
+                  if (hoveredRef.current === entry.id) hoverNode(null);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -556,11 +574,9 @@ export function RecursionWebView({
                       ? 'fill-accent-soft stroke-accent'
                       : isInspected
                         ? 'fill-accent-soft/40 stroke-accent/60'
-                        : isHovered
-                          ? 'fill-surface stroke-accent/60'
-                          : p.componentIndex === -1
-                            ? 'fill-muted/60 stroke-border'
-                            : 'fill-surface stroke-border'
+                        : p.componentIndex === -1
+                          ? 'fill-muted/60 stroke-border'
+                          : 'fill-surface stroke-border'
                   } ${!entry.enabled ? 'opacity-60' : ''}`}
                 />
                 <text
@@ -582,20 +598,17 @@ export function RecursionWebView({
             const from = layout.pos.get(edge.fromId);
             const to = layout.pos.get(edge.toId);
             if (!from || !to || to.x >= from.x) return null;
-            const meta = backEdgeMeta.get(`${edge.fromId}->${edge.toId}`);
+            const edgeKey = `${edge.fromId}->${edge.toId}`;
+            const meta = backEdgeMeta.get(edgeKey);
             const cx = from.x + NODE_W / 2 + (meta?.startDx ?? 0);
-            const hot =
-              highlightId != null &&
-              (edge.fromId === highlightId || edge.toId === highlightId);
             return (
               <circle
-                key={`port-${edge.fromId}->${edge.toId}`}
+                key={`port-${edgeKey}`}
+                data-e={edgeKey}
                 cx={cx}
                 cy={from.y}
                 r={3}
-                className={`transition-opacity ${
-                  hot ? 'fill-accent' : 'fill-border-strong'
-                } ${dimmed && !hot ? 'opacity-15' : 'opacity-90'}`}
+                className="rec-port fill-border-strong opacity-90"
               />
             );
           })}
@@ -628,7 +641,7 @@ export function RecursionWebView({
       </div>
     </div>
   );
-}
+});
 
 function flagsPresent(entry: LorebookEntry): boolean {
   return Boolean(
