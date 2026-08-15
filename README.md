@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Create, edit, and organize roleplay character cards in your browser</strong>
+  <strong>Create, edit, and organize roleplay character cards and lorebooks in your browser</strong>
 </p>
 
 <p align="center">
@@ -20,15 +20,17 @@
 
 ## Features
 
-- **Character Library** — Grid view of all your characters with search and quick actions
-- **Full Card Editor** — Edit every V2/V3 field: name, description, personality, scenario, greetings, lorebook, creator notes, and more
-- **AI Assistant Orion** — Built-in chat to help brainstorm and write character content
-- **AI Toolbar** — Enhance, rephrase, shorten, lengthen, or fix selected text inline
-- **Lorebook Editor** — Add entries with keyword triggers and AI-generated keys
-- **Creator Notes** — HTML/CSS support with live preview
-- **Import & Export** — PNG cards with embedded data or JSON files, compatible with SillyTavern and any frontend that accepts the same formats
-- **Snapshots & Rollback** — Save manual snapshots and restore the full card or individual sections
-- **Offline Storage** — All data stays in your browser via IndexedDB
+- **Character Library** - Grid view of all your characters with search and quick actions
+- **Lorebook Vault** - Standalone World Info library: create, search, import, export, duplicate, and link one book across characters
+- **Full Card Editor** - Edit every V2/V3 field: name, description, personality, scenario, greetings, lorebook, creator notes, and more
+- **AI Assistant Orion** - Built-in chat to help brainstorm and write character and lorebook content
+- **AI Toolbar** - Enhance, rephrase, shorten, lengthen, or fix selected text inline
+- **Lorebook Editor** - Shared editor for card books and vault books: ST fields, content-first layout, AI-generated keys
+- **Recursion Map** - Fullscreen web of unlock paths; inspect entries, edit keys in place, and bulk-edit flags
+- **Creator Notes** - HTML/CSS support with live preview
+- **Import & Export** - PNG cards with embedded data or JSON files, plus standalone lorebook JSON, compatible with SillyTavern and any frontend that accepts the same formats
+- **Snapshots & Rollback** - Save manual snapshots and restore a full card, individual sections, or a standalone lorebook
+- **Offline Storage** - All data stays in your browser via IndexedDB
 
 ---
 
@@ -59,6 +61,7 @@ Topics include:
 
 - Installation and setup
 - Creating and editing characters
+- Lorebook vault, linking, and the recursion map
 - AI configuration (Orion, toolbar, prompts)
 - Import and export options
 - Snapshot and rollback guide
@@ -77,11 +80,11 @@ Topics include:
 
 ## Privacy
 
-Character cards stay in your browser. See the [Privacy](https://spaceman2408.github.io/CharacterVault/docs/privacy) notice for hosting and optional AI details.
+Character cards and lorebooks stay in your browser. See the [Privacy](https://spaceman2408.github.io/CharacterVault/docs/privacy) notice for hosting and optional AI details.
 
 ## License
 
-GNU General Public License v3.0 — See [LICENSE](LICENSE)
+GNU General Public License v3.0. See [LICENSE](LICENSE)
 
 ---
 
