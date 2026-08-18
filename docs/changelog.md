@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.3.0 (unreleased)
+## 1.3.0 (2026-08-17)
 
 Standalone lorebook vault, richer World Info editing, and recursion map. Full notes: [v1.3.0 release notes](/releases/v1.3.0).
 
