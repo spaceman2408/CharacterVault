@@ -35,11 +35,17 @@ export {
   resolveProvider,
   NanoGPTProvider,
   OpenAICompatProvider,
+  SyntheticProvider,
   type IProviderAdapter,
   type ModelProvider,
   type ModelProviderInfo,
   type ExtendedAIModelInfo,
   type FetchModelsOptions,
+  type SyntheticQuotas,
+  type SyntheticQuotaWindow,
+  type SyntheticRollingFiveHourLimit,
+  type SyntheticSubscriptionQuota,
+  type SyntheticWeeklyTokenLimit,
 } from './providers';
 
 // CharacterVault services

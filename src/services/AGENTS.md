@@ -18,6 +18,7 @@ Settings UI: `components/settings/` (see that folder’s `AGENTS.md`). Types and
 | `providers/types.ts` | `IProviderAdapter` contract. |
 | `providers/OpenAICompatProvider.ts` | Generic OpenAI-compatible fallback (last in the resolve list). |
 | `providers/NanoGPTProvider.ts` | NanoGPT models, provider selection, subscription and balance. |
+| `providers/SyntheticProvider.ts` | Synthetic models (syn: aliases first), embedding filter, subscription quotas. |
 | `providers/NanoGPTAuth.ts` | NanoGPT OAuth helpers. |
 | `index.ts` | Public barrel for services. |
 
@@ -73,6 +74,7 @@ Every chunk: structured JSON fields first, then think tags in content. Model-id 
 | Host-specific chat headers | `getChatHeaders` on the adapter |
 | `/models` or catalog shape | `fetchModels` on the adapter |
 | Provider selection / billing (NanoGPT) | Dedicated adapter + `maySupportProviderSelection` |
+| Synthetic catalog / quotas | Dedicated adapter + `fetchQuotas` |
 | Generic OpenAI-compatible hosts | Fallback adapter |
 
 URL detection, catalog quirks, and NanoGPT subscription/balance stay in `providers/`, not in `AIService`.

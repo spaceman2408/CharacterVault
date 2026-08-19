@@ -5,6 +5,13 @@
 
 export { NanoGPTProvider } from './NanoGPTProvider';
 export { OpenAICompatProvider } from './OpenAICompatProvider';
+export {
+  SyntheticProvider,
+  isSyntheticBaseUrl,
+  mapSyntheticCatalog,
+  normalizeSyntheticQuotas,
+  syntheticQuotasUrl,
+} from './SyntheticProvider';
 export type {
   IProviderAdapter,
   ModelProvider,
@@ -15,16 +22,23 @@ export type {
   NanoGPTQuotaWindow,
   NanoGPTSubscriptionUsage,
   NanoGPTBalance,
+  SyntheticQuotas,
+  SyntheticQuotaWindow,
+  SyntheticRollingFiveHourLimit,
+  SyntheticSubscriptionQuota,
+  SyntheticWeeklyTokenLimit,
 } from './types';
 
 import { NanoGPTProvider } from './NanoGPTProvider';
 import { OpenAICompatProvider } from './OpenAICompatProvider';
+import { SyntheticProvider } from './SyntheticProvider';
 import type { IProviderAdapter } from './types';
 import type { AIConfig } from '../../db/characterTypes';
 
 // Ordered list: more specific providers first, fallback last
 const providers: IProviderAdapter[] = [
   new NanoGPTProvider(),
+  new SyntheticProvider(),
   new OpenAICompatProvider(), // fallback — must be last
 ];
 

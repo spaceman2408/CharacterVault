@@ -110,3 +110,45 @@ export interface NanoGPTBalance {
   usdBalance: string;
   nanoBalance: string;
 }
+
+/** Request-count window (subscription pack, hourly search, free tool calls) */
+export interface SyntheticQuotaWindow {
+  limit: number;
+  requests: number;
+  renewsAt: string | null;
+}
+
+/** @deprecated Use SyntheticQuotaWindow */
+export type SyntheticSubscriptionQuota = SyntheticQuotaWindow;
+
+/** Weekly credit budget from GET https://api.synthetic.new/v2/quotas */
+export interface SyntheticWeeklyTokenLimit {
+  percentRemaining: number | null;
+  maxCredits: string | null;
+  remainingCredits: string | null;
+  maxCreditsAmount: number | null;
+  remainingCreditsAmount: number | null;
+  nextRegenAt: string | null;
+  nextRegenCredits: string | null;
+}
+
+/**
+ * Rolling five-hour request allowance.
+ * `remaining` can be fractional — cheaper models cost a fraction of one request.
+ */
+export interface SyntheticRollingFiveHourLimit {
+  remaining: number;
+  max: number;
+  nextTickAt: string | null;
+  tickPercent: number | null;
+  limited: boolean;
+}
+
+/** Normalized quota payload from Synthetic */
+export interface SyntheticQuotas {
+  subscription: SyntheticQuotaWindow | null;
+  searchHourly: SyntheticQuotaWindow | null;
+  freeToolCalls: SyntheticQuotaWindow | null;
+  weeklyTokenLimit: SyntheticWeeklyTokenLimit | null;
+  rollingFiveHourLimit: SyntheticRollingFiveHourLimit | null;
+}
