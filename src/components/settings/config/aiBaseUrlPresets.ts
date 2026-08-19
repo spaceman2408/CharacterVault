@@ -28,6 +28,14 @@ export const AI_BASE_URL_PRESETS: AIBaseUrlPreset[] = [
     keyUrl: 'https://nano-gpt.com/api',
   },
   {
+    id: 'synthetic',
+    label: 'Synthetic',
+    baseUrl: 'https://api.synthetic.new/v1',
+    helper:
+      'OpenAI-compatible endpoint. Prefer syn: aliases so you always get the latest recommended model.',
+    keyUrl: 'https://dev.synthetic.new/docs/api/getting-started',
+  },
+  {
     id: 'openrouter',
     label: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',

@@ -10,7 +10,7 @@
 | `hooks/useModelCatalog.ts` | Model fetch/cache (AI tab only). |
 | `hooks/useNanoGPTSignIn.ts` | NanoGPT OAuth (AI tab only). |
 | `tabs/*.tsx` | One file per tab. UI only. |
-| `components/*` | Shared controls (`SettingsToggle`, `SliderControl`, `SettingsCard`, `NanoGPTAccountOverview`, …). |
+| `components/*` | Shared controls (`SettingsToggle`, `SliderControl`, `SettingsCard`, `NanoGPTAccountOverview`, `SyntheticAccountOverview`, …). |
 | `config/aiBaseUrlPresets.ts` | Base URL presets + URL helpers. |
 | `CharacterSettingsPanel.tsx` | Shell only. Do not dump tab UI here. |
 

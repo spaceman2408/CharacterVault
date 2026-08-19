@@ -1,0 +1,413 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertCircle, KeyRound, Loader2, RefreshCw, Wallet } from 'lucide-react';
+import {
+  SyntheticProvider,
+  type SyntheticQuotas,
+  type SyntheticRollingFiveHourLimit,
+  type SyntheticWeeklyTokenLimit,
+} from '../../../services/providers';
+import { SettingsCard } from './SettingsCard';
+
+const syntheticProvider = new SyntheticProvider();
+
+const MANUAL_REFRESH_COOLDOWN_MS = 30_000;
+const AUTO_CACHE_TTL_MS = 60_000;
+
+interface AccountSessionCache {
+  cacheKey: string;
+  fetchedAt: number;
+  cooldownUntil: number;
+  quotas: SyntheticQuotas | null;
+  error: string | null;
+  status: LoadStatus;
+}
+
+let accountSessionCache: AccountSessionCache | null = null;
+
+type LoadStatus = 'idle' | 'loading' | 'success' | 'error';
+
+interface SyntheticAccountOverviewProps {
+  baseUrl: string;
+  apiKey: string;
+  enabled: boolean;
+}
+
+function makeCacheKey(baseUrl: string, apiKey: string): string {
+  return `${baseUrl.trim().replace(/\/+$/, '').toLowerCase()}|${apiKey.trim()}`;
+}
+
+function readFreshCache(baseUrl: string, apiKey: string): AccountSessionCache | null {
+  if (!apiKey.trim() || !accountSessionCache) return null;
+  if (accountSessionCache.cacheKey !== makeCacheKey(baseUrl, apiKey)) return null;
+  if (Date.now() - accountSessionCache.fetchedAt >= AUTO_CACHE_TTL_MS) return null;
+  return accountSessionCache;
+}
+
+function getCooldownRemainingSec(baseUrl: string, apiKey: string): number {
+  if (!apiKey.trim() || !accountSessionCache) return 0;
+  if (accountSessionCache.cacheKey !== makeCacheKey(baseUrl, apiKey)) return 0;
+  const ms = accountSessionCache.cooldownUntil - Date.now();
+  return ms > 0 ? Math.ceil(ms / 1000) : 0;
+}
+
+function formatRenewsAt(iso: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const diff = date.getTime() - Date.now();
+  if (diff > 0 && diff < 48 * 60 * 60 * 1000) {
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    const mins = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+    if (hours >= 1) return `in ${hours}h ${mins}m`;
+    if (mins >= 1) return `in ${mins}m`;
+    return 'soon';
+  }
+
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+}
+
+type BarStatus = 'good' | 'warning' | 'danger';
+
+function barStatus(percentUsed: number): BarStatus {
+  const pct = percentUsed * 100;
+  if (pct > 80) return 'danger';
+  if (pct > 50) return 'warning';
+  return 'good';
+}
+
+const barFillStyles: Record<BarStatus, string> = {
+  good: 'bg-success',
+  warning: 'bg-yellow-500',
+  danger: 'bg-danger',
+};
+
+const barTextStyles: Record<BarStatus, string> = {
+  good: 'text-success',
+  warning: 'text-warning',
+  danger: 'text-danger',
+};
+
+function formatQuotaCount(n: number): string {
+  const abs = Math.abs(n);
+  const digits = Number.isInteger(n) || abs >= 10 ? 0 : abs >= 1 ? 1 : 2;
+  return n.toLocaleString(undefined, {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: 0,
+  });
+}
+
+function formatMoney(amount: number, fallback: string | null): string {
+  if (!Number.isFinite(amount)) return fallback ?? '—';
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+const UsageBar: React.FC<{
+  label: string;
+  usedLabel: string;
+  remainingLabel: string;
+  percentUsed: number;
+  footnote?: string | null;
+}> = ({ label, usedLabel, remainingLabel, percentUsed, footnote }) => {
+  const status = barStatus(percentUsed);
+  const pct = Math.min(100, Math.max(0, percentUsed * 100));
+
+  return (
+    <div className="p-3 rounded-lg bg-bg/40 border border-border">
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <span className="text-xs font-medium text-fg-muted">{label}</span>
+        <span className={`text-xs font-semibold tabular-nums ${barTextStyles[status]}`}>
+          {pct.toFixed(0)}%
+        </span>
+      </div>
+      <div className="h-2 bg-hover rounded-full overflow-hidden mb-2">
+        <div
+          className={`h-full transition-all duration-300 ${barFillStyles[status]}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs text-fg-muted">
+        <span>
+          <span className="font-medium text-fg-muted">{usedLabel}</span>
+          <span className="text-fg-subtle">
+            {' · '}
+            {remainingLabel}
+          </span>
+        </span>
+        {footnote && <span className="shrink-0">{footnote}</span>}
+      </div>
+    </div>
+  );
+};
+
+const FiveHourBar: React.FC<{ window: SyntheticRollingFiveHourLimit }> = ({ window }) => {
+  const used = Math.max(0, window.max - window.remaining);
+  const percentUsed = window.max > 0 ? Math.min(1, used / window.max) : 0;
+  const tick = formatRenewsAt(window.nextTickAt);
+  return (
+    <UsageBar
+      label="Five-hour requests"
+      usedLabel={`${formatQuotaCount(used)} / ${formatQuotaCount(window.max)} used`}
+      remainingLabel={`${formatQuotaCount(Math.max(0, window.remaining))} left`}
+      percentUsed={percentUsed}
+      footnote={tick ? `Next tick ${tick}` : null}
+    />
+  );
+};
+
+const WeeklyCreditBar: React.FC<{ weekly: SyntheticWeeklyTokenLimit }> = ({ weekly }) => {
+  const max = weekly.maxCreditsAmount;
+  const remaining = weekly.remainingCreditsAmount;
+  const used =
+    max !== null && remaining !== null ? Math.max(0, max - remaining) : null;
+  const percentUsed =
+    weekly.percentRemaining !== null
+      ? Math.min(1, Math.max(0, 1 - weekly.percentRemaining / 100))
+      : max && max > 0 && used !== null
+        ? Math.min(1, used / max)
+        : 0;
+  const usedLabel =
+    used !== null && max !== null
+      ? `${formatMoney(used, null)} / ${formatMoney(max, weekly.maxCredits)} used`
+      : weekly.maxCredits
+        ? `${weekly.remainingCredits ?? '—'} of ${weekly.maxCredits} left`
+        : 'Weekly credits';
+  const remainingLabel =
+    remaining !== null
+      ? `${formatMoney(remaining, weekly.remainingCredits)} left`
+      : weekly.remainingCredits
+        ? `${weekly.remainingCredits} left`
+        : '—';
+  const regen = formatRenewsAt(weekly.nextRegenAt);
+
+  return (
+    <UsageBar
+      label="Weekly credits"
+      usedLabel={usedLabel}
+      remainingLabel={remainingLabel}
+      percentUsed={percentUsed}
+      footnote={regen ? `Regenerates ${regen}` : null}
+    />
+  );
+};
+
+export const SyntheticAccountOverview: React.FC<SyntheticAccountOverviewProps> = ({
+  baseUrl,
+  apiKey,
+  enabled,
+}) => {
+  const cachedOnMount = readFreshCache(baseUrl, apiKey);
+  const [quotas, setQuotas] = useState<SyntheticQuotas | null>(
+    () => cachedOnMount?.quotas ?? null
+  );
+  const [error, setError] = useState<string | null>(() => cachedOnMount?.error ?? null);
+  const [status, setStatus] = useState<LoadStatus>(() => cachedOnMount?.status ?? 'idle');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [cooldownSec, setCooldownSec] = useState(() => getCooldownRemainingSec(baseUrl, apiKey));
+  const requestIdRef = useRef(0);
+
+  const fetchAccount = useCallback(
+    async (options?: { manual?: boolean }) => {
+      if (!apiKey.trim()) return;
+
+      const requestId = ++requestIdRef.current;
+      const manual = options?.manual === true;
+      if (manual) setIsRefreshing(true);
+      else setStatus('loading');
+
+      try {
+        const next = await syntheticProvider.fetchQuotas(baseUrl, apiKey);
+        if (requestId !== requestIdRef.current) return;
+        const entry: AccountSessionCache = {
+          cacheKey: makeCacheKey(baseUrl, apiKey),
+          fetchedAt: Date.now(),
+          cooldownUntil: Date.now() + MANUAL_REFRESH_COOLDOWN_MS,
+          quotas: next,
+          error: null,
+          status: 'success',
+        };
+        accountSessionCache = entry;
+        setQuotas(next);
+        setError(null);
+        setStatus('success');
+        setCooldownSec(Math.ceil(MANUAL_REFRESH_COOLDOWN_MS / 1000));
+      } catch (err) {
+        if (requestId !== requestIdRef.current) return;
+        const message = err instanceof Error ? err.message : 'Failed to fetch quotas';
+        const entry: AccountSessionCache = {
+          cacheKey: makeCacheKey(baseUrl, apiKey),
+          fetchedAt: Date.now(),
+          cooldownUntil: Date.now() + MANUAL_REFRESH_COOLDOWN_MS,
+          quotas: null,
+          error: message,
+          status: 'error',
+        };
+        accountSessionCache = entry;
+        setQuotas(null);
+        setError(message);
+        setStatus('error');
+        setCooldownSec(Math.ceil(MANUAL_REFRESH_COOLDOWN_MS / 1000));
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [apiKey, baseUrl]
+  );
+
+  useEffect(() => {
+    if (!enabled || !apiKey.trim()) return;
+    const cached = readFreshCache(baseUrl, apiKey);
+    if (cached) {
+      setQuotas(cached.quotas);
+      setError(cached.error);
+      setStatus(cached.status);
+      setCooldownSec(getCooldownRemainingSec(baseUrl, apiKey));
+      return;
+    }
+    void fetchAccount();
+  }, [apiKey, baseUrl, enabled, fetchAccount]);
+
+  useEffect(() => {
+    if (cooldownSec <= 0) return;
+    const timer = window.setInterval(() => {
+      setCooldownSec(getCooldownRemainingSec(baseUrl, apiKey));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [apiKey, baseUrl, cooldownSec]);
+
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, []);
+
+  if (!enabled) return null;
+
+  const refreshDisabled =
+    status === 'loading' || isRefreshing || cooldownSec > 0 || !apiKey.trim();
+  const showContent = status === 'success' || quotas !== null;
+  const fiveHour = quotas?.rollingFiveHourLimit ?? null;
+  const weekly = quotas?.weeklyTokenLimit ?? null;
+  const hasUsageBars = Boolean(fiveHour || weekly);
+
+  return (
+    <SettingsCard>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <h3 className="text-sm font-semibold text-fg flex items-center gap-2">
+          <Wallet className="w-4 h-4 text-fg-muted" />
+          Synthetic Usage
+        </h3>
+        {apiKey.trim() && (
+          <button
+            type="button"
+            onClick={() => void fetchAccount({ manual: true })}
+            disabled={refreshDisabled}
+            title={
+              cooldownSec > 0
+                ? `Wait ${cooldownSec}s before refreshing again`
+                : 'Refresh subscription usage'
+            }
+            className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-fg-muted hover:bg-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent/50"
+            aria-label={
+              cooldownSec > 0
+                ? `Refresh available in ${cooldownSec} seconds`
+                : 'Refresh Synthetic usage'
+            }
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isRefreshing || status === 'loading' ? 'animate-spin' : ''}`}
+            />
+            {cooldownSec > 0 ? `Refresh (${cooldownSec}s)` : 'Refresh'}
+          </button>
+        )}
+      </div>
+
+      {!apiKey.trim() && (
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-bg/40 border border-border">
+          <KeyRound className="w-4 h-4 text-fg-muted shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-fg">Add your API key to view usage</p>
+            <p className="text-xs text-fg-muted mt-0.5">
+              Paste a Synthetic API key above to see remaining subscription requests.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {apiKey.trim() && status === 'error' && !quotas && (
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-danger-soft border border-danger/30">
+          <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-danger-soft-fg">Could not load usage</p>
+            <p className="text-xs text-danger mt-0.5">{error || 'Unknown error'}</p>
+            <button
+              type="button"
+              onClick={() => void fetchAccount({ manual: true })}
+              className="mt-2 text-xs font-medium text-danger-soft-fg hover:underline"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      )}
+
+      {apiKey.trim() && !(status === 'error' && !quotas) && (
+        <div className="space-y-3" aria-busy={status === 'loading' && !showContent} aria-live="polite">
+          {showContent && fiveHour?.limited && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-soft border border-warning/30">
+              <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+              <p className="text-xs text-warning-soft-fg">
+                Five-hour request limit reached. Quota regenerates on the next tick
+                {fiveHour.nextTickAt ? ` (${formatRenewsAt(fiveHour.nextTickAt)})` : ''}.
+              </p>
+            </div>
+          )}
+          {showContent && fiveHour && <FiveHourBar window={fiveHour} />}
+          {showContent && weekly && <WeeklyCreditBar weekly={weekly} />}
+          {showContent && !hasUsageBars && (
+            <p className="text-xs text-fg-muted">No subscription quota reported for this account.</p>
+          )}
+          {!showContent && (
+            <div className="p-3 rounded-lg bg-bg/40 border border-border animate-pulse" aria-hidden>
+              <div className="flex items-center justify-between mb-2">
+                <div className="h-3 w-32 rounded bg-hover" />
+                <div className="h-3 w-8 rounded bg-hover" />
+              </div>
+              <div className="h-2 rounded-full bg-hover mb-2" />
+              <div className="h-3 w-48 rounded bg-hover/80" />
+              <div className="mt-3 flex items-center gap-2 text-xs text-fg-muted">
+                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                Loading usage…
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-fg-muted">
+            Five-hour requests and weekly credits are the live limits. Cheaper models spend a
+            fraction of one request.{' '}
+            <a
+              href="https://synthetic.new/billing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-info hover:underline"
+            >
+              View billing ↗
+            </a>
+          </p>
+        </div>
+      )}
+    </SettingsCard>
+  );
+};

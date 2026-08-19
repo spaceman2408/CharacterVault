@@ -23,6 +23,7 @@ import {
 } from '../config/aiBaseUrlPresets';
 import { ModelSelect } from '../components/ModelSelect';
 import { NanoGPTAccountOverview } from '../components/NanoGPTAccountOverview';
+import { SyntheticAccountOverview } from '../components/SyntheticAccountOverview';
 import { ProviderSelect } from '../components/ProviderSelect';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
@@ -312,6 +313,14 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
 
       {selectedBaseUrlPreset === 'nano-gpt' && (
         <NanoGPTAccountOverview
+          baseUrl={localAIConfig.baseUrl}
+          apiKey={localAIConfig.apiKey}
+          enabled
+        />
+      )}
+
+      {selectedBaseUrlPreset === 'synthetic' && (
+        <SyntheticAccountOverview
           baseUrl={localAIConfig.baseUrl}
           apiKey={localAIConfig.apiKey}
           enabled
