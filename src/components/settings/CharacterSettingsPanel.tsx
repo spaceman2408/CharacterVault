@@ -221,6 +221,10 @@ export function CharacterSettingsPanel({
           role="dialog"
           aria-modal="true"
           aria-labelledby="settings-title"
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-bwignore="true"
+          data-form-type="other"
         >
           <div className="flex items-center justify-between gap-2 px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-surface shrink-0">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -240,6 +244,7 @@ export function CharacterSettingsPanel({
               </div>
             </div>
             <button
+              type="button"
               onClick={onClose}
               className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
               aria-label="Close settings panel"
@@ -295,12 +300,14 @@ export function CharacterSettingsPanel({
 
           <div className="flex shrink-0 items-center justify-stretch gap-2 border-t border-border bg-surface px-4 py-3 sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
             <button
+              type="button"
               onClick={onClose}
               className="min-h-11 flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong sm:flex-none"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={() => void save()}
               disabled={isSaving}
               className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"

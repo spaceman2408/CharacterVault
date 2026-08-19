@@ -3,7 +3,7 @@
  * @module components/settings/tabs/AIConfigTab
  */
 
-import React, { useId } from 'react';
+import React from 'react';
 import {
   AlertCircle,
   Brain,
@@ -27,15 +27,13 @@ import { OpenRouterAccountOverview } from '../components/OpenRouterAccountOvervi
 import { SyntheticAccountOverview } from '../components/SyntheticAccountOverview';
 import { ProviderSelect } from '../components/ProviderSelect';
 import { SettingsCard } from '../components/SettingsCard';
+import { PASSWORD_MANAGER_IGNORE_PROPS, SecretInput } from '../components/SecretInput';
 import { SettingsToggle } from '../components/SettingsToggle';
 import type { ReasoningEffort } from '../../../db/characterTypes';
 import { getHiddenChainOfThoughtNote } from '../../../services/reasoning/hiddenChainOfThought';
 import type { SettingsTabProps } from '../types';
 
 export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpers }) => {
-  // Stable unique name — avoids password-manager heuristics without Math.random in render
-  const apiKeyFieldName = useId();
-
   if (!helpers) return null;
 
   const {
@@ -183,16 +181,9 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
               </select>
               <input
                 type="text"
-                name="ai-base-url"
                 value={localAIConfig.baseUrl}
                 onChange={(e) => handleCustomUrlChange(e.target.value)}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                data-lpignore="true"
-                data-1p-ignore="true"
-                data-form-type="other"
+                {...PASSWORD_MANAGER_IGNORE_PROPS}
                 className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
                 placeholder="https://nano-gpt.com/api/v1"
               />
@@ -228,21 +219,9 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                 ) : null;
               })()}
             </label>
-            <input
-              type="password"
-              name={`vault-ai-key-${apiKeyFieldName}`}
+            <SecretInput
               value={localAIConfig.apiKey}
               onChange={(e) => handleApiKeyChange(e.target.value)}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              data-lpignore="true"
-              data-1p-ignore="true"
-              data-form-type="other"
-              readOnly={false}
-              onFocus={(e) => e.currentTarget.removeAttribute('readonly')}
-              style={{ WebkitTextSecurity: 'disc' } as React.CSSProperties}
               className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
               placeholder={
                 selectedBaseUrlPreset === 'lmstudio'

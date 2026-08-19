@@ -10,7 +10,7 @@
 | `hooks/useModelCatalog.ts` | Model fetch/cache (AI tab only). |
 | `hooks/useNanoGPTSignIn.ts` | NanoGPT OAuth (AI tab only). |
 | `tabs/*.tsx` | One file per tab. UI only. |
-| `components/*` | Shared controls (`SettingsToggle`, `SliderControl`, `SettingsCard`, `NanoGPTAccountOverview`, `OpenRouterAccountOverview`, `SyntheticAccountOverview`, …). |
+| `components/*` | Shared controls (`SettingsToggle`, `SliderControl`, `SettingsCard`, `SecretInput`, `NanoGPTAccountOverview`, `OpenRouterAccountOverview`, `SyntheticAccountOverview`, …). |
 | `config/aiBaseUrlPresets.ts` | Base URL presets + URL helpers. |
 | `CharacterSettingsPanel.tsx` | Shell only. Do not dump tab UI here. |
 
@@ -36,6 +36,7 @@ Consumers (unchanged API): `CharacterWorkspace`, `AICreationStudio` — `isOpen`
 ## Rules
 
 - Draft state only until Save. Do not write IndexedDB from tabs.
+- Secret fields (API keys) use `SecretInput` — never `type="password"`.
 - AI-only side effects (models, OAuth, clear) live in helpers / AI hooks — not in other tabs.
 - Defaults: `DEFAULT_SETTINGS` / `DEFAULT_*` in `characterTypes` — no duplicate hardcodes.
 - No schema form engine. Complex UI stays custom tab components.
