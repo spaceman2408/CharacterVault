@@ -166,20 +166,31 @@ describe('stripAllNonStandardParams', () => {
 });
 
 describe('sanitizeSamplerParams / strict hosts', () => {
-  it('detects synthetic.new and openai as strict', () => {
-    expect(shouldOmitNonStandardSamplers('https://api.synthetic.new/v1')).toBe(true);
+  it('detects openai as strict and leaves Synthetic on the standard path', () => {
     expect(shouldOmitNonStandardSamplers('https://api.openai.com/v1')).toBe(true);
+    expect(shouldOmitNonStandardSamplers('https://api.synthetic.new/v1')).toBe(false);
     expect(shouldOmitNonStandardSamplers('https://nano-gpt.com/api/v1')).toBe(false);
   });
 
   it('omits non-standard samplers on strict hosts', () => {
     const cleaned = sanitizeSamplerParams(
       { min_p: 0.05, top_k: 40, repetition_penalty: 1.1, temperature: 0.7 },
-      'https://api.synthetic.new/v1'
+      'https://api.openai.com/v1'
     );
     expect(cleaned.min_p).toBeUndefined();
     expect(cleaned.top_k).toBeUndefined();
     expect(cleaned.repetition_penalty).toBeUndefined();
+    expect(cleaned.temperature).toBe(0.7);
+  });
+
+  it('keeps Synthetic-supported extras (top_k, repetition_penalty) and drops no-op min_p', () => {
+    const cleaned = sanitizeSamplerParams(
+      { min_p: 0, top_k: 40, repetition_penalty: 1.1, temperature: 0.7 },
+      'https://api.synthetic.new/v1'
+    );
+    expect(cleaned.min_p).toBeUndefined();
+    expect(cleaned.top_k).toBe(40);
+    expect(cleaned.repetition_penalty).toBe(1.1);
     expect(cleaned.temperature).toBe(0.7);
   });
 

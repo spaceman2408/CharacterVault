@@ -50,11 +50,7 @@ const EFFORT_PEER: Partial<Record<ReasoningEffortValue, ReasoningEffortValue>> =
 };
 
 /** Hosts known to reject non-standard sampler extras up front. */
-const STRICT_OPENAI_HOST_SNIPPETS = [
-  'api.openai.com',
-  'api.synthetic.new',
-  'synthetic.new',
-] as const;
+const STRICT_OPENAI_HOST_SNIPPETS = ['api.openai.com'] as const;
 
 export interface ChatRequestLike {
   model?: string;
