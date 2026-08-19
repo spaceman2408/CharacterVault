@@ -23,6 +23,7 @@ import {
 } from '../config/aiBaseUrlPresets';
 import { ModelSelect } from '../components/ModelSelect';
 import { NanoGPTAccountOverview } from '../components/NanoGPTAccountOverview';
+import { OpenRouterAccountOverview } from '../components/OpenRouterAccountOverview';
 import { SyntheticAccountOverview } from '../components/SyntheticAccountOverview';
 import { ProviderSelect } from '../components/ProviderSelect';
 import { SettingsCard } from '../components/SettingsCard';
@@ -321,6 +322,14 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
 
       {selectedBaseUrlPreset === 'synthetic' && (
         <SyntheticAccountOverview
+          baseUrl={localAIConfig.baseUrl}
+          apiKey={localAIConfig.apiKey}
+          enabled
+        />
+      )}
+
+      {selectedBaseUrlPreset === 'openrouter' && (
+        <OpenRouterAccountOverview
           baseUrl={localAIConfig.baseUrl}
           apiKey={localAIConfig.apiKey}
           enabled

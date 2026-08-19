@@ -39,7 +39,8 @@ export const AI_BASE_URL_PRESETS: AIBaseUrlPreset[] = [
     id: 'openrouter',
     label: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
-    helper: 'Use the /api/v1 path for OpenRouter.',
+    helper:
+      'OpenAI-compatible gateway. Use org/model slugs such as openai/gpt-4o.',
     keyUrl: 'https://openrouter.ai/workspaces/default/keys',
   },
   {
