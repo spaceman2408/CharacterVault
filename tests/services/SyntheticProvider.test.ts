@@ -240,4 +240,26 @@ describe('SyntheticProvider network methods', () => {
     expect(quotas.subscription?.requests).toBe(0);
     expect(quotas.rollingFiveHourLimit).toBeNull();
   });
+
+  it('forwards an AbortSignal to /v2/quotas', async () => {
+    const controller = new AbortController();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        expect(init?.signal).toBe(controller.signal);
+        return {
+          ok: true,
+          json: async () => ({
+            subscription: { limit: 500, requests: 0 },
+          }),
+        };
+      })
+    );
+
+    await new SyntheticProvider().fetchQuotas(
+      'https://api.synthetic.new/v1',
+      'sk-test',
+      controller.signal
+    );
+  });
 });

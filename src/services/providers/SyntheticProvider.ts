@@ -327,7 +327,11 @@ export class SyntheticProvider implements IProviderAdapter {
     return {};
   }
 
-  async fetchQuotas(baseUrl: string, apiKey: string): Promise<SyntheticQuotas> {
+  async fetchQuotas(
+    baseUrl: string,
+    apiKey: string,
+    signal?: AbortSignal
+  ): Promise<SyntheticQuotas> {
     if (!apiKey.trim()) {
       throw new Error('API key required');
     }
@@ -337,6 +341,7 @@ export class SyntheticProvider implements IProviderAdapter {
       headers: {
         Authorization: `Bearer ${apiKey}`,
       },
+      signal,
     });
 
     if (!response.ok) {

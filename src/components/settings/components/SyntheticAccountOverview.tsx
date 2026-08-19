@@ -216,19 +216,24 @@ export const SyntheticAccountOverview: React.FC<SyntheticAccountOverviewProps> =
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cooldownSec, setCooldownSec] = useState(() => getCooldownRemainingSec(baseUrl, apiKey));
   const requestIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const cooldownActive = cooldownSec > 0;
 
   const fetchAccount = useCallback(
     async (options?: { manual?: boolean }) => {
       if (!apiKey.trim()) return;
 
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       const requestId = ++requestIdRef.current;
       const manual = options?.manual === true;
       if (manual) setIsRefreshing(true);
       else setStatus('loading');
 
       try {
-        const next = await syntheticProvider.fetchQuotas(baseUrl, apiKey);
-        if (requestId !== requestIdRef.current) return;
+        const next = await syntheticProvider.fetchQuotas(baseUrl, apiKey, controller.signal);
+        if (controller.signal.aborted || requestId !== requestIdRef.current) return;
         const entry: AccountSessionCache = {
           cacheKey: makeCacheKey(baseUrl, apiKey),
           fetchedAt: Date.now(),
@@ -243,7 +248,8 @@ export const SyntheticAccountOverview: React.FC<SyntheticAccountOverviewProps> =
         setStatus('success');
         setCooldownSec(Math.ceil(MANUAL_REFRESH_COOLDOWN_MS / 1000));
       } catch (err) {
-        if (requestId !== requestIdRef.current) return;
+        if (controller.signal.aborted || requestId !== requestIdRef.current) return;
+        if (err instanceof Error && err.name === 'AbortError') return;
         const message = err instanceof Error ? err.message : 'Failed to fetch quotas';
         const entry: AccountSessionCache = {
           cacheKey: makeCacheKey(baseUrl, apiKey),
@@ -259,7 +265,7 @@ export const SyntheticAccountOverview: React.FC<SyntheticAccountOverviewProps> =
         setStatus('error');
         setCooldownSec(Math.ceil(MANUAL_REFRESH_COOLDOWN_MS / 1000));
       } finally {
-        if (requestId === requestIdRef.current) {
+        if (requestId === requestIdRef.current && !controller.signal.aborted) {
           setIsRefreshing(false);
         }
       }
@@ -268,7 +274,17 @@ export const SyntheticAccountOverview: React.FC<SyntheticAccountOverviewProps> =
   );
 
   useEffect(() => {
-    if (!enabled || !apiKey.trim()) return;
+    if (!enabled) return;
+
+    if (!apiKey.trim()) {
+      abortRef.current?.abort();
+      setQuotas(null);
+      setError(null);
+      setStatus('idle');
+      setIsRefreshing(false);
+      return;
+    }
+
     const cached = readFreshCache(baseUrl, apiKey);
     if (cached) {
       setQuotas(cached.quotas);
@@ -277,22 +293,25 @@ export const SyntheticAccountOverview: React.FC<SyntheticAccountOverviewProps> =
       setCooldownSec(getCooldownRemainingSec(baseUrl, apiKey));
       return;
     }
-    void fetchAccount();
+
+    const timer = window.setTimeout(() => {
+      void fetchAccount();
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timer);
+      requestIdRef.current += 1;
+      abortRef.current?.abort();
+    };
   }, [apiKey, baseUrl, enabled, fetchAccount]);
 
   useEffect(() => {
-    if (cooldownSec <= 0) return;
+    if (!cooldownActive) return;
     const timer = window.setInterval(() => {
       setCooldownSec(getCooldownRemainingSec(baseUrl, apiKey));
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [apiKey, baseUrl, cooldownSec]);
-
-  useEffect(() => {
-    return () => {
-      requestIdRef.current += 1;
-    };
-  }, []);
+  }, [apiKey, baseUrl, cooldownActive]);
 
   if (!enabled) return null;
 
