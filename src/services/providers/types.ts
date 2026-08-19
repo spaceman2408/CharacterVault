@@ -152,3 +152,17 @@ export interface SyntheticQuotas {
   weeklyTokenLimit: SyntheticWeeklyTokenLimit | null;
   rollingFiveHourLimit: SyntheticRollingFiveHourLimit | null;
 }
+
+/** Normalized GET /api/v1/key payload from OpenRouter (regular inference keys). */
+export interface OpenRouterKeyInfo {
+  label: string | null;
+  limit: number | null;
+  limitRemaining: number | null;
+  limitReset: string | null;
+  usage: number;
+  usageDaily: number;
+  usageWeekly: number;
+  usageMonthly: number;
+  isFreeTier: boolean;
+  expiresAt: string | null;
+}

@@ -6,6 +6,15 @@
 export { NanoGPTProvider } from './NanoGPTProvider';
 export { OpenAICompatProvider } from './OpenAICompatProvider';
 export {
+  OpenRouterProvider,
+  isOpenRouterBaseUrl,
+  mapOpenRouterCatalog,
+  normalizeOpenRouterKey,
+  openRouterAppHeaders,
+  openRouterKeyUrl,
+  resolveOpenRouterNextUrl,
+} from './OpenRouterProvider';
+export {
   SyntheticProvider,
   isSyntheticBaseUrl,
   mapSyntheticCatalog,
@@ -22,6 +31,7 @@ export type {
   NanoGPTQuotaWindow,
   NanoGPTSubscriptionUsage,
   NanoGPTBalance,
+  OpenRouterKeyInfo,
   SyntheticQuotas,
   SyntheticQuotaWindow,
   SyntheticRollingFiveHourLimit,
@@ -31,6 +41,7 @@ export type {
 
 import { NanoGPTProvider } from './NanoGPTProvider';
 import { OpenAICompatProvider } from './OpenAICompatProvider';
+import { OpenRouterProvider } from './OpenRouterProvider';
 import { SyntheticProvider } from './SyntheticProvider';
 import type { IProviderAdapter } from './types';
 import type { AIConfig } from '../../db/characterTypes';
@@ -39,6 +50,7 @@ import type { AIConfig } from '../../db/characterTypes';
 const providers: IProviderAdapter[] = [
   new NanoGPTProvider(),
   new SyntheticProvider(),
+  new OpenRouterProvider(),
   new OpenAICompatProvider(), // fallback — must be last
 ];
 

@@ -25,7 +25,7 @@ interface ModelsResponse {
 
 /**
  * Generic OpenAI-compatible provider adapter.
- * Works with LM Studio, OpenRouter, and any standard OpenAI API.
+ * Works with LM Studio and any standard OpenAI-compatible API.
  * Provider selection is not supported.
  */
 export class OpenAICompatProvider implements IProviderAdapter {

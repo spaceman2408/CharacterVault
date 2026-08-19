@@ -4,7 +4,7 @@ import {
   getCapabilityCache,
 } from '../../src/services/chatRequestRepair';
 import {
-  OpenAICompatProvider,
+  OpenRouterProvider,
   SyntheticProvider,
   isSyntheticBaseUrl,
   mapSyntheticCatalog,
@@ -60,7 +60,7 @@ describe('isSyntheticBaseUrl / resolveProvider', () => {
 
   it('resolves Synthetic before the OpenAI-compat fallback', () => {
     expect(resolveProvider('https://api.synthetic.new/v1')).toBeInstanceOf(SyntheticProvider);
-    expect(resolveProvider('https://openrouter.ai/api/v1')).toBeInstanceOf(OpenAICompatProvider);
+    expect(resolveProvider('https://openrouter.ai/api/v1')).toBeInstanceOf(OpenRouterProvider);
   });
 });
 
