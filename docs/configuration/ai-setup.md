@@ -24,7 +24,8 @@ Choose a provider preset from the dropdown, or select **Custom URL** to type in 
 | Preset | Base URL | When to Use |
 | :--- | :--- | :--- |
 | **Nano-GPT** | `https://nano-gpt.com/api/v1` | NanoGPT hosted endpoint. Supports provider selection and subscription billing. |
-| **OpenRouter** | `https://openrouter.ai/api/v1` | OpenRouter multi-model gateway. |
+| **Synthetic** | `https://api.synthetic.new/v1` | OpenAI-compatible endpoint. Prefer `syn:` aliases so you always get the latest recommended model. |
+| **OpenRouter** | `https://openrouter.ai/api/v1` | OpenRouter multi-model gateway. Use `org/model` slugs such as `openai/gpt-4o`. |
 | **Minimax** | `https://api.minimax.io/v1` | OpenAI-compatible endpoint. API keys start with `sk-cp`. |
 | **LM Studio / localhost** | `http://127.0.0.1:1234/v1` | Local inference with LM Studio. |
 | **Custom URL** | Any URL | Any OpenAI-compatible endpoint (e.g., a self-hosted API). |
@@ -35,7 +36,7 @@ The helper text below the URL field changes based on the selected preset. For cu
 
 ### API Key
 
-Enter your API key in the password field. The key is saved per base URL — if you switch providers and come back, your key is restored.
+Enter your API key in the masked field. It looks like a password, but it is a normal text field so browsers do not treat **Save Settings** as a login. The key is saved per base URL — if you switch providers and come back, your key is restored.
 
 Some presets include a link to the provider's key management page — click **Get your key ↗** next to the API Key label.
 
@@ -84,6 +85,8 @@ Model selections are saved per base URL, so switching providers remembers your l
 
 This is your **global default** model — used by Orion chat, AI Creation Studio, and any toolbar prompt that is still set to **Default** on the [Prompts tab](#prompts-tab).
 
+On **Synthetic**, `syn:` aliases (Large text, Small text, and vision variants) are listed first; embedding-only models are omitted. On **OpenRouter**, the picker uses display names and drops non-text models. Both adapters seed reasoning-effort allowlists when the catalog reports them.
+
 ### Provider (NanoGPT Only)
 
 Some NanoGPT models support **provider selection** — choosing which backend serves the request. When available, a **Provider** control appears below the model selector. It uses the same sheet pattern as the model picker. Each provider shows its per-1k-token pricing for input and output.
@@ -103,6 +106,28 @@ When the Nano-GPT preset is selected, a **NanoGPT Account** card shows:
 Refresh is rate-limited (about 30 seconds). Closing and reopening Settings within about a minute reuses the last result so the APIs are not hit again.
 
 **Subscription status and weekly tokens:** On the **official hosted app** and on **localhost** (`npm run dev`), this works with no extra setup. You only need a small proxy if you **self-host a production build** of CharacterVault. Full walkthrough: [NanoGPT Usage Proxy (Self-Hosted Production)](/configuration/nanogpt-usage-proxy).
+
+### Synthetic Usage
+
+When the **Synthetic** preset is selected, a **Synthetic Usage** card shows live subscription limits from Synthetic’s `/v2/quotas` API:
+
+- **Five-hour requests** — rolling request count, remaining, and next tick
+- **Weekly credits** — remaining credit amount and next regeneration time when Synthetic reports them
+
+Refresh is rate-limited (about 30 seconds). Closing and reopening Settings within about a minute reuses the last result. Cheaper models spend a fraction of one request. The card stays a stable size while loading so the rest of the settings panel doesn’t jump.
+
+Paste a Synthetic API key to load usage. Billing details live on [synthetic.new/billing](https://synthetic.new/billing).
+
+### OpenRouter Usage
+
+When the **OpenRouter** preset is selected, an **OpenRouter Usage** card reads `GET /api/v1/key` for the current inference key:
+
+- **Spend** — today, this week, this month, and all time (USD)
+- **Key spending limit** — used / remaining and whether the cap resets, when the key has one
+- **Free-tier notice** — if OpenRouter reports a free-tier key, models ending in `:free` are limited to 20 requests per minute and 50 per day until you buy credits
+- **Expiry** — shown when the key has an expiration date
+
+Refresh is rate-limited (about 30 seconds). Closing and reopening Settings within about a minute reuses the last result. Spend is this **API key’s** OpenRouter credit usage — a normal inference key does not return account balance. Manage credits at [openrouter.ai/settings/credits](https://openrouter.ai/settings/credits).
 
 ### NanoGPT Options
 
@@ -154,7 +179,7 @@ Under each expanded prompt, **Model for this prompt** controls which API endpoin
 
 | Control | What it does |
 | :--- | :--- |
-| **Endpoint** | **Default (AI Config)** uses your global base URL + model. Or pick Nano-GPT, OpenRouter, Minimax, LM Studio / localhost, or a custom URL you already configured. |
+| **Endpoint** | **Default (AI Config)** uses your global base URL + model. Or pick Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio / localhost, or a custom URL you already configured. |
 | **Model** | When not on Default: open the same style of model sheet as AI Config, **Fetch models** for that endpoint, or type a model ID manually. |
 
 **Examples**

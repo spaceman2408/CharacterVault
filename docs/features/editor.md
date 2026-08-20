@@ -271,7 +271,7 @@ The empty-editor prompt is currently hardcoded and cannot be edited in the Promp
 By default every toolbar op uses the model from **Settings → AI Config**. You can override that per prompt:
 
 1. Expand a prompt (e.g. **Fix**).
-2. Under **Model for this prompt**, change **Endpoint** from **Default (AI Config)** to Nano-GPT, OpenRouter, Minimax, LM Studio, or a custom URL that already has a key on AI Config.
+2. Under **Model for this prompt**, change **Endpoint** from **Default (AI Config)** to Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio, or a custom URL that already has a key on AI Config.
 3. Choose a model from the sheet, **Fetch models** for that endpoint, or type a model ID.
 4. Save settings.
 

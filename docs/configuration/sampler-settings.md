@@ -136,7 +136,7 @@ Max Tokens is capped at 8,192 on save. Context Length is clamped to 2,048–1,00
 - **High Temperature + Min P**: Pair creative temperatures (≈1.1+) with Min P ≈0.05 so coherence holds while variety stays high.
 - **Prefer Min P over Top K**: Top K is a fixed hard cutoff; Min P adapts to model confidence and is the modern primary truncation sampler.
 - **Repetition Penalty**: Keep it light (≈1.05). Values above 1.15 can start to produce awkward phrasing.
-- **Non-standard parameters**: Some models don't support `min_p`, `top_k`, `repetition_penalty`, or reasoning parameters. If a model rejects these, Character Vault automatically strips them and retries the request (up to 3 attempts).
+- **Non-standard parameters**: Some models don't support `min_p`, `top_k`, `repetition_penalty`, or reasoning parameters. If a model rejects these, Character Vault automatically strips them and retries the request (up to 3 attempts). Synthetic keeps `top_k` and `repetition_penalty` because that host lists them as supported; `min_p` is still dropped when it is a no-op.
 
 ## Next Steps
 

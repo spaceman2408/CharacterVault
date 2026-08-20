@@ -71,7 +71,8 @@ For step-by-step instructions, see [AI Setup](/configuration/ai-setup).
 Character Vault works with any OpenAI-compatible endpoint. Presets are available for:
 
 - **Nano-GPT** — hosted endpoint with provider selection
-- **OpenRouter** — multi-model gateway
+- **Synthetic** — hosted endpoint with `syn:` aliases and a live usage card
+- **OpenRouter** — multi-model gateway with key spend and optional spending cap
 - **Minimax** — OpenAI-compatible endpoint
 - **LM Studio / localhost** — local inference
 - **Custom URL** — any compatible endpoint
@@ -278,7 +279,7 @@ Each prompt must include `${text}` as a placeholder (the selected or full editor
 :::
 
 ::: details Can each toolbar button use a different model?
-Yes. On **Settings → Prompts**, expand any operation and set **Model for this prompt**. You can keep **Default (AI Config)** or point that op at another endpoint (Nano-GPT, OpenRouter, Minimax, LM Studio, custom) and model. Keys are configured on the **AI Config** tab first.
+Yes. On **Settings → Prompts**, expand any operation and set **Model for this prompt**. You can keep **Default (AI Config)** or point that op at another endpoint (Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio, custom) and model. Keys are configured on the **AI Config** tab first.
 
 Orion chat and AI Creation Studio always use the global AI Config model. Lorebook ✨ key generation follows the **Custom** prompt mapping when set.
 

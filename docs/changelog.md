@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.1 (2026-08-20)
+
+Synthetic and OpenRouter get dedicated adapters and live usage cards. Full notes: [v1.3.1 release notes](/releases/v1.3.1).
+
+### Highlights
+
+- **Synthetic** preset: `syn:` aliases first, embedding models filtered, **Synthetic Usage** card (five-hour requests + weekly credits)
+- **OpenRouter** adapter: display names, text-only catalog, reasoning efforts, **OpenRouter Usage** card (key spend, optional cap, free-tier `:free` limits)
+- API key field is masked without being `type=password`, so Save Settings is less likely to trigger a browser password save
+- Synthetic keeps `top_k` and `repetition_penalty` on the OpenAI-compat path
+
+Details: [AI Setup](/configuration/ai-setup) · [Synthetic Usage](/configuration/ai-setup#synthetic-usage) · [OpenRouter Usage](/configuration/ai-setup#openrouter-usage)
+
+---
+
 ## 1.3.0 (2026-08-17)
 
 Standalone lorebook vault, richer World Info editing, and recursion map. Full notes: [v1.3.0 release notes](/releases/v1.3.0).

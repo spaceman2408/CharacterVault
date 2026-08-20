@@ -6,6 +6,14 @@ Quick overview of recent updates to CharacterVault.
 
 ## August 2026
 
+### Provider usage cards (1.3.1)
+
+- **Synthetic** — new preset. Model list prefers `syn:` aliases; **Synthetic Usage** shows five-hour request and weekly credit quotas
+- **OpenRouter** — dedicated adapter plus **OpenRouter Usage**: this key’s spend (today / week / month / all time), optional spending cap, and free-tier `:free` rate limits
+- **API key field** — masked text, not a password input, so browsers are less likely to offer to save Settings as a login
+
+[Release 1.3.1 →](/releases/v1.3.1) · [AI Setup](/configuration/ai-setup) · [Synthetic Usage](/configuration/ai-setup#synthetic-usage) · [OpenRouter Usage](/configuration/ai-setup#openrouter-usage)
+
 ### Lorebook Vault & recursion map (1.3.0)
 
 - **Lorebook library** on the home vault: create, search, import, export, duplicate, delete standalone World Info books
@@ -64,7 +72,7 @@ Paste free-text notes for the **current character** and include them in AI work 
 Each AI toolbar prompt can use its **own endpoint and model**, not only the global AI Config choice.
 
 - **Settings → Prompts** — Expand Enhance, Fix, Rephrase, etc., and set **Model for this prompt**
-- **Any preset** — Nano-GPT, OpenRouter, Minimax, LM Studio, or a custom URL you already saved a key for
+- **Any preset** — Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio, or a custom URL you already saved a key for
 - **Default stays simple** — Leave an op on **Default (AI Config)** to keep using your global model
 - **Examples** — Fast model for Fix, a stronger model for Rephrase, local LM Studio for experiments
 - **Lorebook ✨ keys** — Follow the **Custom** prompt mapping when set
