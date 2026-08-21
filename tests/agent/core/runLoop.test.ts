@@ -86,11 +86,13 @@ Docks
       ]),
     );
     const events: AgentEvent[] = [];
+    const onPrompt = vi.fn();
     const result = await runLoop({
       host,
       complete,
       userMessage: 'build it',
       onEvent: collect(events).push,
+      onPrompt,
     });
     expect(result.reason).toBe('complete');
     expect(calls.map((action) => action.headers.name)).toEqual(['Keep', 'Harbor']);
@@ -101,6 +103,13 @@ Docks
     const toolFollowUp = secondMessages[secondMessages.length - 1];
     expect(toolFollowUp.role).toBe('user');
     expect(toolFollowUp.content).toContain('[add_entry] ok add_entry');
+    const promptedWithTools = onPrompt.mock.calls.some(([prompt]) =>
+      prompt.some(
+        (message) =>
+          typeof message.content === 'string' && message.content.includes('[add_entry] ok add_entry'),
+      ),
+    );
+    expect(promptedWithTools).toBe(true);
   });
 
   it('stops at the max turn cap', async () => {

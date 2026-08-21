@@ -6,6 +6,7 @@ import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '.
 import { computeAgentContextUsage } from '../hosts/lorebook/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
 import { LiveThinking } from './LiveThinking';
+import { withLivePromptTokens } from './promptUsage';
 import { messageNotices, shouldRenderAgentMessage, visibleToolEvents } from './notices';
 import { useLorebookAgent } from './useLorebookAgent';
 
@@ -68,19 +69,23 @@ export function LorebookAgentChat({
 
   const contextUsage = useMemo(
     () =>
-      computeAgentContextUsage({
-        book: getBook(),
-        customContextCharLength,
-        customContextIncluded,
-        history: session.chatHistory,
-        contextLength: samplerSettings.contextLength,
-      }),
+      withLivePromptTokens(
+        computeAgentContextUsage({
+          book: getBook(),
+          customContextCharLength,
+          customContextIncluded,
+          history: session.chatHistory,
+          contextLength: samplerSettings.contextLength,
+        }),
+        session.livePromptTokens,
+      ),
     [
       customContextCharLength,
       customContextIncluded,
       getBook,
       samplerSettings.contextLength,
       session.chatHistory,
+      session.livePromptTokens,
     ],
   );
 

@@ -96,6 +96,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
     history = [],
     onEvent,
     onChunk,
+    onPrompt,
     isAborted = () => false,
     maxTurns = DEFAULT_MAX_TURNS,
     maxActionsPerTurn = DEFAULT_MAX_ACTIONS_PER_TURN,
@@ -109,6 +110,9 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
     ...history.filter((message) => message.role !== 'system'),
     { role: 'user', content: userMessage },
   ];
+  const notifyPrompt = (prompt: AgentMessage[] = messages) => {
+    onPrompt?.(prompt);
+  };
 
   const finish = async (reason: RunLoopResult['reason']): Promise<RunLoopResult> => {
     await host.flush?.();
@@ -126,6 +130,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
     let finishReason: string | null | undefined;
     let toolCalls: NativeToolCall[] = [];
     try {
+      notifyPrompt();
       const result = await complete(messages, onChunk);
       content = result.content ?? '';
       reasoning = result.reasoning;
@@ -166,12 +171,14 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
           return finish('abort');
         }
         try {
+          const continuationMessages: AgentMessage[] = [
+            ...messages,
+            { role: 'assistant', content },
+            { role: 'user', content: CONTINUE_NUDGE },
+          ];
+          notifyPrompt(continuationMessages);
           const continuation = await complete(
-            [
-              ...messages,
-              { role: 'assistant', content },
-              { role: 'user', content: CONTINUE_NUDGE },
-            ],
+            continuationMessages,
             onChunk,
           );
           content += continuation.content ?? '';
@@ -275,6 +282,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
       messages.push({ role: 'assistant', content });
       messages.push({ role: 'user', content: formatToolResults(results) });
     }
+    notifyPrompt();
   }
 
   return finish('max_turns');

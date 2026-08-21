@@ -9,6 +9,7 @@ import { stripFences } from '../core/stripFences';
 import type { AgentHost, AgentMessage } from '../core/types';
 import { clipLiveReasoning, LIVE_REASONING_FLUSH_MS } from './liveReasoning';
 import { compactToolResultMessage, isLookupOnlyTurn } from './notices';
+import { estimatePromptTokens } from './promptUsage';
 import type { AgentToolEvent } from './types';
 
 export interface UseAgentSessionOptions {
@@ -51,6 +52,7 @@ export interface UseAgentSessionReturn {
   isStreaming: boolean;
   streamingContent: string;
   streamingReasoning: string;
+  livePromptTokens: number | null;
   handleAsk: (question: string) => Promise<void>;
   handleRegenerate: () => Promise<void>;
   handleNewChat: () => void;
@@ -81,6 +83,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingReasoning, setStreamingReasoning] = useState('');
+  const [livePromptTokens, setLivePromptTokens] = useState<number | null>(null);
 
   const aiServiceRef = useRef<AIService | null>(null);
   const abortedRef = useRef(false);
@@ -220,6 +223,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     setIsProcessing(false);
     isProcessingRef.current = false;
     setIsStreaming(false);
+    setLivePromptTokens(null);
     onRunningChangeRef.current?.(false);
   }, [clearStreamDraft]);
 
@@ -248,6 +252,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       return next;
     });
     setError(null);
+    setLivePromptTokens(null);
   }, []);
 
   const startRun = useCallback(
@@ -299,6 +304,10 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
           userMessage: question,
           history: historyForLoop,
           isAborted: () => abortedRef.current || !isCurrent(),
+          onPrompt: (prompt) => {
+            if (!isCurrent() || abortedRef.current) return;
+            setLivePromptTokens(estimatePromptTokens(prompt));
+          },
           onChunk: streaming
             ? (chunk) => {
                 if (!isCurrent() || abortedRef.current) return;
@@ -503,6 +512,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     isStreaming,
     streamingContent: '',
     streamingReasoning,
+    livePromptTokens,
     handleAsk,
     handleRegenerate,
     handleNewChat,

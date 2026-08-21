@@ -7,6 +7,7 @@ import type { CharacterHostPersist } from '../hosts/character/createHost';
 import { computeCharacterAgentContextUsage } from '../hosts/character/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
 import { LiveThinking } from './LiveThinking';
+import { withLivePromptTokens } from './promptUsage';
 import {
   CHARACTER_LOOKUP_TOOLS,
   messageNotices,
@@ -69,14 +70,17 @@ export function CharacterAgentChat({
 
   const contextUsage = useMemo(
     () =>
-      computeCharacterAgentContextUsage({
-        spec: getSpec(),
-        book: getBook(),
-        customContextCharLength,
-        customContextIncluded,
-        history: session.chatHistory,
-        contextLength: samplerSettings.contextLength,
-      }),
+      withLivePromptTokens(
+        computeCharacterAgentContextUsage({
+          spec: getSpec(),
+          book: getBook(),
+          customContextCharLength,
+          customContextIncluded,
+          history: session.chatHistory,
+          contextLength: samplerSettings.contextLength,
+        }),
+        session.livePromptTokens,
+      ),
     [
       customContextCharLength,
       customContextIncluded,
@@ -84,6 +88,7 @@ export function CharacterAgentChat({
       getSpec,
       samplerSettings.contextLength,
       session.chatHistory,
+      session.livePromptTokens,
     ],
   );
 

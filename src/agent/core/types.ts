@@ -81,6 +81,8 @@ export interface RunLoopOptions {
   history?: AgentMessage[];
   onEvent?: (event: AgentEvent) => void;
   onChunk?: (chunk: CompleterChunk) => void;
+  /** Live prompt for the next (or just-updated) completion. Do not retain the array. */
+  onPrompt?: (messages: readonly AgentMessage[]) => void;
   isAborted?: () => boolean;
   maxTurns?: number;
   maxActionsPerTurn?: number;
