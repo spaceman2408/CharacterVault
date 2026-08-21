@@ -70,7 +70,7 @@ export class LorebookSnapshotService {
       const existing = await characterDb.getLorebookSnapshotMetadata(lorebook.id);
       const openSnapshots = existing.filter((meta) => meta.source === 'open');
       if (openSnapshots.length > 0) {
-        // Metadata is newest-first; keep the oldest baseline and drop leftover duplicates.
+        // Open snapshots stay newest-first among themselves; keep the oldest baseline.
         if (openSnapshots.length > 1) {
           const oldestId = openSnapshots[openSnapshots.length - 1].id;
           for (const meta of openSnapshots) {

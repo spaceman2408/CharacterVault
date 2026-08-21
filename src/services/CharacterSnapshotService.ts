@@ -15,6 +15,7 @@ import type {
   SnapshotMetadata,
 } from '../db/characterTypes';
 import { CHARACTER_SECTIONS, characterDb } from '../db';
+import { compareSnapshotTimeline } from '../utils/snapshotTimeline';
 
 export type SnapshotRestoreAction =
   | { kind: 'image'; value: string }
@@ -192,7 +193,7 @@ class CharacterSnapshotService {
       const openSnapshots = existingMetadata.filter(m => m.source === 'open');
 
       if (openSnapshots.length > 0) {
-        // Metadata is sorted newest-first; keep the oldest (last element), delete the rest.
+        // Open snapshots stay newest-first among themselves; keep the oldest (last element).
         // Use deleteSnapshotById (no per-deletion cleanup) to avoid race conditions from
         // parallel cleanOrphanedImages calls. Cleanup runs once after all deletions.
         if (openSnapshots.length > 1) {
@@ -253,7 +254,7 @@ class CharacterSnapshotService {
 
   async listSnapshots(characterId: string): Promise<CharacterSnapshot[]> {
     const snapshots = await characterDb.getSnapshotsForCharacter(characterId);
-    return [...snapshots].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    return [...snapshots].sort(compareSnapshotTimeline);
   }
 
   /**

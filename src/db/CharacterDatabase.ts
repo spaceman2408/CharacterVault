@@ -32,6 +32,7 @@ import type {
 } from './characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS, createEmptyCharacterBook } from './characterTypes';
 import { estimateCharacterCardTokens, estimateTokens } from '../services/AIService';
+import { compareSnapshotTimeline } from '../utils/snapshotTimeline';
 import { v4 as uuidv4 } from 'uuid';
 
 function stableSerialize(value: unknown): string {
@@ -788,11 +789,14 @@ export class CharacterDatabase extends Dexie {
       .equals(characterId)
       .sortBy('createdAt');
 
-    if (snapshots.length <= limit) {
+    const prunable = snapshots.filter((snapshot) => snapshot.source !== 'open');
+    const reserved = snapshots.length - prunable.length;
+    const keep = Math.max(0, limit - reserved);
+    if (prunable.length <= keep) {
       return;
     }
 
-    const snapshotsToDelete = snapshots.slice(0, snapshots.length - limit);
+    const snapshotsToDelete = prunable.slice(0, prunable.length - keep);
     await this.transaction('rw', this.snapshots, this.storedImages, async () => {
       await Promise.all(snapshotsToDelete.map(snapshot => this.snapshots.delete(snapshot.id)));
       await this.cleanOrphanedImages(characterId);
@@ -803,21 +807,23 @@ export class CharacterDatabase extends Dexie {
    * Get lightweight snapshot metadata for a character (excludes heavy payload)
    * Use this for timeline lists; load full payload only when needed
    * @param {string} characterId - Character ID
-   * @returns {Promise<SnapshotMetadata[]>} Array of snapshot metadata, sorted newest first
+   * @returns {Promise<SnapshotMetadata[]>} Array of snapshot metadata, newest first, opened baseline last
    */
   async getSnapshotMetadataForCharacter(characterId: string): Promise<SnapshotMetadata[]> {
     const snapshots = await this.snapshots
       .where('characterId')
       .equals(characterId)
-      .sortBy('createdAt');
-    return snapshots.reverse().map(({ id, characterId: cId, source, createdAt, payloadHash, imageHash }) => ({
-      id,
-      characterId: cId,
-      source,
-      createdAt,
-      payloadHash,
-      imageHash,
-    }));
+      .toArray();
+    return snapshots
+      .map(({ id, characterId: cId, source, createdAt, payloadHash, imageHash }) => ({
+        id,
+        characterId: cId,
+        source,
+        createdAt,
+        payloadHash,
+        imageHash,
+      }))
+      .sort(compareSnapshotTimeline);
   }
 
   /**
@@ -1202,14 +1208,16 @@ export class CharacterDatabase extends Dexie {
     const snapshots = await this.lorebookSnapshots
       .where('lorebookId')
       .equals(lorebookId)
-      .sortBy('createdAt');
-    return snapshots.reverse().map(({ id, lorebookId: bookId, source, createdAt, payloadHash }) => ({
-      id,
-      lorebookId: bookId,
-      source,
-      createdAt,
-      payloadHash,
-    }));
+      .toArray();
+    return snapshots
+      .map(({ id, lorebookId: bookId, source, createdAt, payloadHash }) => ({
+        id,
+        lorebookId: bookId,
+        source,
+        createdAt,
+        payloadHash,
+      }))
+      .sort(compareSnapshotTimeline);
   }
 
   async getLorebookSnapshotById(snapshotId: string): Promise<LorebookSnapshot | undefined> {
