@@ -1,0 +1,14 @@
+import { describe, expect, it } from 'vitest';
+import { buildLorebookAgentSystemPrompt } from '../../../../src/agent/hosts/lorebook/prompt';
+
+describe('buildLorebookAgentSystemPrompt', () => {
+  it('teaches XML tool_call and does not mention custom fences', () => {
+    const prompt = buildLorebookAgentSystemPrompt([]);
+    expect(prompt).toContain('<tool_call>');
+    expect(prompt).toContain('</tool_call>');
+    expect(prompt).toContain('list_entries');
+    expect(prompt).toContain('add_entry');
+    expect(prompt).not.toContain('<<<');
+    expect(prompt).not.toContain('>>>');
+  });
+});
