@@ -33,6 +33,7 @@ Live site: GitHub Pages. License: GPL-3.0-only.
 ```
 src/
   App.tsx                 # Vault library + routing shell
+  agent/                  # Browser tool-loop package (lorebook host first). Public API: index.ts
   components/             # UI: workspace, editor, AI chat, settings, history
   context/                # React context + hooks for character / editor state
   db/                     # Dexie schema, character types, defaults

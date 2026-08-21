@@ -25,6 +25,8 @@ Settings UI: `components/settings/` (see that folder’s `AGENTS.md`). Types and
 
 Call sites: `hooks/useAIEditor.ts` (toolbar), `components/ai/hooks/useAIChat.ts` (Orion), editor toolbar and payload preview.
 
+The lorebook tool-loop agent lives in `src/agent/` (not this folder). `AIService.chat()` is transport only.
+
 ## Request pipeline
 
 1. Build messages (`PromptBuilder`, `buildOperationMessages`, or chat history + context).

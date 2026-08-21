@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type {
   AIConfig,
   CharacterBook,
@@ -39,6 +40,7 @@ export interface LorebookEditorProps {
   customContext?: LorebookCustomContextControls;
   /** Character workspace only — compact attach control in the entry header */
   attachment?: LorebookAttachmentControls;
+  statusBanner?: ReactNode;
 }
 
 export interface LorebookAttachmentControls {

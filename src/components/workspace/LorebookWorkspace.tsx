@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   Book,
+  Bot,
   Download,
   History,
   Loader2,
@@ -14,6 +15,7 @@ import {
   PanelRight,
   Settings,
 } from 'lucide-react';
+import { LorebookAgentChat } from '../../agent';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { LorebookEditor } from '../editor/LorebookEditor';
 import { LorebookHistoryModal } from '../history/LorebookHistoryModal';
@@ -28,13 +30,14 @@ import type {
   CustomContextMeta,
   VaultLorebook,
 } from '../../db/characterTypes';
-import { DEFAULT_SETTINGS, EMPTY_CUSTOM_CONTEXT_META } from '../../db/characterTypes';
+import { createEmptyCharacterBook, DEFAULT_SETTINGS, EMPTY_CUSTOM_CONTEXT_META } from '../../db/characterTypes';
 import { estimateTokens } from '../../services/AIService';
 import {
   customContextService,
   formatCustomContextChunk,
 } from '../../services/CustomContextService';
 import { lorebookAttachmentService } from '../../services/LorebookAttachmentService';
+import { lorebookSnapshotService } from '../../services/LorebookSnapshotService';
 import { showEphemeralToast } from '../../utils/ephemeralToast';
 
 const LINKED_CHARACTER_SYNC_MS = 400;
@@ -67,6 +70,8 @@ export function LorebookWorkspace(): React.ReactElement {
   const [titleDraft, setTitleDraft] = useState(currentLorebook?.name ?? '');
   const [isMobile, setIsMobile] = useState(getIsMobileViewport);
   const [isChatOpen, setIsChatOpen] = useState(() => !getIsMobileViewport());
+  const [agentMode, setAgentMode] = useState(false);
+  const [agentRunning, setAgentRunning] = useState(false);
   const [customContextMeta, setCustomContextMeta] = useState<CustomContextMeta>({
     ...EMPTY_CUSTOM_CONTEXT_META,
   });
@@ -337,6 +342,32 @@ export function LorebookWorkspace(): React.ReactElement {
     [updateLorebookBook, updateLorebook, scheduleLinkedSync],
   );
 
+  const getAgentBook = useCallback((): CharacterBook => {
+    return currentLorebookRef.current?.book ?? createEmptyCharacterBook();
+  }, []);
+
+  const setAgentBook = useCallback(async (book: CharacterBook) => {
+    await pendingSaveRef.current;
+    await handleBookChange(book);
+  }, [handleBookChange]);
+
+  const getAgentCustomContext = useCallback(async (): Promise<string | null> => {
+    const lorebookId = currentLorebookIdRef.current;
+    if (!lorebookId) return null;
+    return customContextService.getEnabledContent(lorebookId, 'lorebook');
+  }, []);
+
+  const flushAgentDraft = useCallback(() => {
+    flushLorebookDraft();
+  }, []);
+
+  const takeAgentSnapshot = useCallback(async () => {
+    await pendingSaveRef.current;
+    const lorebook = currentLorebookRef.current;
+    if (!lorebook) return;
+    await lorebookSnapshotService.createFromLorebook(lorebook, 'auto');
+  }, []);
+
   const handleTitleBlur = useCallback(async () => {
     const lorebook = currentLorebookRef.current;
     if (!lorebook) return;
@@ -535,6 +566,11 @@ export function LorebookWorkspace(): React.ReactElement {
               onSave: saveCustomContext,
               onClear: clearCustomContext,
             }}
+            statusBanner={
+              agentRunning
+                ? 'Agent is writing. New entries appear when the run finishes. Use Snapshots to roll back.'
+                : undefined
+            }
           />
         </main>
 
@@ -570,21 +606,66 @@ export function LorebookWorkspace(): React.ReactElement {
 
           {isChatOpen && (
             <div className="flex h-full min-h-0 w-full flex-col">
-              <AIChatPanel
-                selectedText={selectedText}
-                contextEntryIds={['lorebook']}
-                customContextIncluded={
-                  customContextMeta.enabled && customContextMeta.charLength > 0
-                }
-                aiConfig={aiConfig}
-                samplerSettings={samplerSettings}
-                promptSettings={promptSettings}
-                getContextContent={getChatContextContent}
-                onComplete={() => {}}
-                activeSection="lorebook"
-                onClose={() => setIsChatOpen(false)}
-                isMobile={isMobile}
-              />
+              {agentMode ? (
+                <LorebookAgentChat
+                  aiConfig={aiConfig}
+                  samplerSettings={samplerSettings}
+                  promptSettings={promptSettings}
+                  getBook={getAgentBook}
+                  setBook={setAgentBook}
+                  getCustomContext={getAgentCustomContext}
+                  flushDraft={flushAgentDraft}
+                  takeSnapshot={takeAgentSnapshot}
+                  customContextIncluded={
+                    customContextMeta.enabled && customContextMeta.charLength > 0
+                  }
+                  customContextCharLength={
+                    customContextMeta.enabled ? customContextMeta.charLength : 0
+                  }
+                  headerActions={
+                    <button
+                      type="button"
+                      onClick={() => setAgentMode(false)}
+                      className="inline-flex items-center gap-1 text-xs text-accent px-2 py-1 rounded-lg bg-accent-soft"
+                      title="Switch to Orion chat"
+                      aria-pressed
+                    >
+                      <Bot className="w-3.5 h-3.5" />
+                      Agent
+                    </button>
+                  }
+                  onClose={() => setIsChatOpen(false)}
+                  onRunningChange={setAgentRunning}
+                />
+              ) : (
+                <AIChatPanel
+                  selectedText={selectedText}
+                  contextEntryIds={['lorebook']}
+                  customContextIncluded={
+                    customContextMeta.enabled && customContextMeta.charLength > 0
+                  }
+                  aiConfig={aiConfig}
+                  samplerSettings={samplerSettings}
+                  promptSettings={promptSettings}
+                  getContextContent={getChatContextContent}
+                  onComplete={() => {}}
+                  activeSection="lorebook"
+                  onClose={() => setIsChatOpen(false)}
+                  isMobile={isMobile}
+                  headerActions={
+                    <button
+                      type="button"
+                      onClick={() => setAgentMode(true)}
+                      className="inline-flex items-center gap-1 text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors"
+                      title="Switch to Agent mode"
+                      aria-pressed={false}
+                    >
+                      <Bot className="w-3.5 h-3.5" />
+                      Agent
+                    </button>
+                  }
+                />
+              )}
             </div>
           )}
         </aside>
