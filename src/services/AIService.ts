@@ -29,6 +29,12 @@ import {
   stripAllNonStandardParams,
   type ChatRequestLike,
 } from './chatRequestRepair';
+import {
+  applyToolCallDeltas,
+  finalizeToolCalls,
+  normalizeMessageToolCalls,
+  type NativeToolCall,
+} from './toolCallStream';
 
 /**
  * Bytes per token ratio for token estimation.
@@ -280,12 +286,36 @@ export class AIError extends Error {
   }
 }
 
+export interface ChatToolCall {
+  id: string;
+  type?: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
+export interface ChatToolDefinition {
+  name: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+}
+
+export interface ChatCompletionOptions {
+  tools?: ChatToolDefinition[];
+  /** Sets request max_tokens without changing input-budget math. */
+  maxTokens?: number;
+}
+
 /**
  * OpenAI-compatible chat message
  */
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | null;
+  tool_calls?: ChatToolCall[];
+  tool_call_id?: string;
+  name?: string;
 }
 
 /**
@@ -348,6 +378,8 @@ interface ChatCompletionResponse {
 interface AIResponse {
   content: string;
   reasoning?: string;
+  finishReason?: string | null;
+  toolCalls?: NativeToolCall[];
 }
 
 /**
@@ -370,6 +402,12 @@ interface ChatCompletionChunk {
       reasoning?: string;
       /** Minimax uses 'reasoning_details' array with reasoning_split enabled */
       reasoning_details?: Array<{ type?: string; text?: string }>;
+      tool_calls?: Array<{
+        index?: number;
+        id?: string;
+        type?: string;
+        function?: { name?: string; arguments?: string };
+      }>;
     };
     finish_reason: string | null;
     /** OpenRouter returns reasoning at choice level */
@@ -419,9 +457,17 @@ export class AIService {
     return Math.max(0, sampler.contextLength - sampler.maxTokens - AIService.SAFETY_MARGIN);
   }
 
+  private messageTokenText(message: ChatMessage): string {
+    const parts: string[] = [];
+    if (message.content) parts.push(message.content);
+    if (message.tool_calls?.length) parts.push(JSON.stringify(message.tool_calls));
+    if (message.tool_call_id) parts.push(message.tool_call_id);
+    return parts.join('\n');
+  }
+
   private estimateMessagesTokens(messages: ChatMessage[]): number {
     return messages.reduce(
-      (sum, m) => sum + estimateTokens(m.content) + AIService.MESSAGE_OVERHEAD_TOKENS,
+      (sum, m) => sum + estimateTokens(this.messageTokenText(m)) + AIService.MESSAGE_OVERHEAD_TOKENS,
       0
     );
   }
@@ -442,7 +488,7 @@ export class AIService {
    * 1) assistant history, 2) older user turns, 3) system/context, 4) latest user.
    */
   private enforceInputBudget(messages: ChatMessage[], maxInput: number): ChatMessage[] {
-    const result = messages.map((m) => ({ ...m, content: m.content }));
+    const result = messages.map((m) => ({ ...m }));
 
     const totalTokens = () => this.estimateMessagesTokens(result);
     if (totalTokens() <= maxInput) return result;
@@ -458,7 +504,7 @@ export class AIService {
     const indicesByPriority: number[] = [];
     // Oldest assistant first (drop early history before recent)
     for (let i = 0; i < result.length; i++) {
-      if (result[i].role === 'assistant') indicesByPriority.push(i);
+      if (result[i].role === 'assistant' || result[i].role === 'tool') indicesByPriority.push(i);
     }
     // Older user turns (not the latest)
     for (let i = 0; i < result.length; i++) {
@@ -475,13 +521,14 @@ export class AIService {
       const over = totalTokens() - maxInput;
       if (over <= 0) break;
 
-      const contentTokens = estimateTokens(result[i].content);
+      const text = result[i].content ?? '';
+      const contentTokens = estimateTokens(text);
       if (contentTokens <= 0) continue;
 
       const keepTokens = Math.max(0, contentTokens - over);
       result[i] = {
         ...result[i],
-        content: this.truncateTextToLimit(result[i].content, keepTokens),
+        content: this.truncateTextToLimit(text, keepTokens),
       };
     }
 
@@ -710,7 +757,8 @@ Provide only the generated text without any additional commentary.`;
   private buildChatCompletionBody(
     messages: ChatMessage[],
     customSampler?: Partial<SamplerSettings>,
-    stream = false
+    stream = false,
+    options?: ChatCompletionOptions
   ): ChatCompletionRequestBody {
     const sampler = { ...this.sampler, ...customSampler };
     const maxInput = this.getMaxInputTokens(sampler);
@@ -730,7 +778,7 @@ Provide only the generated text without any additional commentary.`;
       top_k: sampler.topK,
       repetition_penalty: sampler.repetitionPenalty,
       stream: !!stream,
-      max_tokens: sampler.maxTokens,
+      max_tokens: options?.maxTokens ?? sampler.maxTokens,
       include_reasoning: enableReasoning ? true : undefined,
       reasoning: enableReasoning
         ? { enabled: true, effort }
@@ -739,8 +787,24 @@ Provide only the generated text without any additional commentary.`;
       reasoning_split: enableReasoning && this.isMinimaxBaseUrl() ? true : undefined,
     };
 
+    if (options?.tools?.length && !cache.rejectedParams.has('tools')) {
+      request.tools = options.tools.map((tool) => ({
+        type: 'function',
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters ?? { type: 'object', properties: {} },
+        },
+      }));
+      request.tool_choice = 'auto';
+    }
+
     request = sanitizeSamplerParams(request, baseUrl) as ChatCompletionRequestBody;
     request = applyCapabilityCache(request, cache) as ChatCompletionRequestBody;
+    if (cache.rejectedParams.has('tools')) {
+      delete request.tools;
+      delete request.tool_choice;
+    }
     return request;
   }
 
@@ -834,10 +898,11 @@ Provide only the generated text without any additional commentary.`;
   private async chatCompletion(
     messages: ChatMessage[],
     customSampler?: Partial<SamplerSettings>,
-    onChunk?: (chunk: { content?: string; reasoning?: string }) => void
+    onChunk?: (chunk: { content?: string; reasoning?: string }) => void,
+    options?: ChatCompletionOptions
   ): Promise<AIResponse> {
     const useStreaming = this.config.enableStreaming && onChunk;
-    const request = this.buildChatCompletionBody(messages, customSampler, !!useStreaming);
+    const request = this.buildChatCompletionBody(messages, customSampler, !!useStreaming, options);
     const cache = getCapabilityCache(this.getBaseUrl(), this.config.modelId);
 
     this.aborted = false;
@@ -1003,7 +1068,7 @@ Provide only the generated text without any additional commentary.`;
     const message = choice.message;
 
     return {
-      content: message.content,
+      content: message.content ?? '',
       reasoning: extractMessageReasoning(
         message as {
           content?: string;
@@ -1012,6 +1077,8 @@ Provide only the generated text without any additional commentary.`;
           reasoning_details?: Array<{ type?: string; text?: string }>;
         }
       ),
+      finishReason: choice.finish_reason ?? null,
+      toolCalls: normalizeMessageToolCalls(message.tool_calls),
     };
   }
 
@@ -1028,6 +1095,8 @@ Provide only the generated text without any additional commentary.`;
     let contentLen = 0;
     let reasoningLen = 0;
     const parser = new ReasoningParser();
+    const toolCallAcc: NativeToolCall[] = [];
+    let finishReason: string | null = null;
 
     const emitDeltas = (content: string, reasoning: string) => {
       if (content.length === contentLen && reasoning.length === reasoningLen) return;
@@ -1074,6 +1143,11 @@ Provide only the generated text without any additional commentary.`;
               const parsedChunk = JSON.parse(data) as ChatCompletionChunk;
               const parsed = parser.parseChunk(parsedChunk, this.config.modelId);
               emitDeltas(parsed.content, parsed.reasoning);
+              const choice = parsedChunk.choices?.[0];
+              if (choice?.delta?.tool_calls?.length) {
+                applyToolCallDeltas(toolCallAcc, choice.delta.tool_calls);
+              }
+              if (choice?.finish_reason) finishReason = choice.finish_reason;
             } catch (e) {
               console.warn('[AIService] Failed to parse streaming chunk:', e);
               console.warn('[AIService] Problematic line:', line.slice(0, 200));
@@ -1088,6 +1162,8 @@ Provide only the generated text without any additional commentary.`;
       return {
         content: flushed.content,
         reasoning: flushed.reasoning || undefined,
+        finishReason,
+        toolCalls: finalizeToolCalls(toolCallAcc),
       };
     } finally {
       try {
@@ -1306,9 +1382,10 @@ Provide only the generated text without any additional commentary.`;
   async chat(
     messages: ChatMessage[],
     customSampler?: Partial<SamplerSettings>,
-    onChunk?: (chunk: { content?: string; reasoning?: string }) => void
+    onChunk?: (chunk: { content?: string; reasoning?: string }) => void,
+    options?: ChatCompletionOptions
   ): Promise<AIResponse> {
-    return this.chatCompletion(messages, customSampler, onChunk);
+    return this.chatCompletion(messages, customSampler, onChunk, options);
   }
 
   /**

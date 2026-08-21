@@ -31,6 +31,7 @@ const STRIPPABLE_PARAMS = [
   'logit_bias',
   'temperature',
   'top_p',
+  'tool_choice',
 ] as const;
 
 /** Effort rank high → low. max and xhigh are adjacent peers. */
@@ -221,6 +222,20 @@ export function matchRejectedParams(
     }
   }
 
+  if (present.has('tools')) {
+    const rejectsTools =
+      param === 'tools' ||
+      found.includes('tool_choice') ||
+      (/\btools\b/.test(lowerMsg) &&
+        /unknown|unsupported|invalid|not (?:supported|allowed)|unexpected|unrecognized/.test(lowerMsg)) ||
+      (/function[- ]?call/.test(lowerMsg) &&
+        /unknown|unsupported|invalid|not (?:supported|allowed)/.test(lowerMsg));
+    if (rejectsTools) {
+      add('tools');
+      if (present.has('tool_choice')) add('tool_choice');
+    }
+  }
+
   return found;
 }
 
@@ -346,6 +361,10 @@ export function applyCapabilityCache(
     if (cleaned[param] !== undefined) {
       delete cleaned[param];
     }
+  }
+  if (cache.rejectedParams.has('tools')) {
+    delete cleaned.tools;
+    delete cleaned.tool_choice;
   }
 
   if (cache.effortAllowlist && cache.effortAllowlist.length > 0) {

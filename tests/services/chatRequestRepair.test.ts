@@ -143,6 +143,21 @@ describe('repairChatRequest', () => {
     );
     expect(result).toBeNull();
   });
+
+  it('strips tools and tool_choice when the provider rejects function calling', () => {
+    const result = repairChatRequest(
+      {
+        model: 'x',
+        tools: [{ type: 'function', function: { name: 'add_entry' } }],
+        tool_choice: 'auto',
+      },
+      { error: { message: 'Unknown parameter: tools is not supported on this model' } },
+    );
+    expect(result).not.toBeNull();
+    expect(result!.removed).toEqual(expect.arrayContaining(['tools', 'tool_choice']));
+    expect(result!.request.tools).toBeUndefined();
+    expect(result!.request.tool_choice).toBeUndefined();
+  });
 });
 
 describe('stripAllNonStandardParams', () => {
