@@ -95,7 +95,7 @@ export function CharacterAgentChat({
   const renderMessage = useCallback(
     (message: ChatMessage, index: number) => {
       const events = session.toolEventsByMessageId[message.id] ?? [];
-      const notices = messageNotices(session.errorByMessageId[message.id], events);
+      const notices = messageNotices(session.errorByMessageId[message.id]);
       const toolEvents = visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS);
       const hideSpeech = events.length > 0;
       const speech = hideSpeech ? '' : message.content;

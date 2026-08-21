@@ -1,44 +1,32 @@
 import React from 'react';
+import { Check, X } from 'lucide-react';
+import { formatToolEvent } from './formatToolEvent';
 import type { AgentToolEvent } from './types';
-
-function formatToolEvent(event: AgentToolEvent): string {
-  if (
-    (event.toolName === 'add_entry' ||
-      event.toolName === 'update_entry' ||
-      event.toolName === 'delete_entry') &&
-    event.ok
-  ) {
-    const match = /^ok #(\d+)\s+(.*)$/.exec(event.message);
-    if (match) {
-      const verb =
-        event.toolName === 'update_entry'
-          ? 'Updated'
-          : event.toolName === 'delete_entry'
-            ? 'Deleted'
-            : 'Added';
-      return `${verb} “${match[2]}” (#${match[1]})`;
-    }
-  }
-  if (event.toolName === 'list_entries' && event.ok) {
-    const match = /^(\d+)\s/.exec(event.message);
-    if (match) {
-      const count = match[1];
-      return `Listed ${count} ${count === '1' ? 'entry' : 'entries'}`;
-    }
-    return 'Listed entries';
-  }
-  return event.message;
-}
 
 export function ToolEventList({ events }: { events: AgentToolEvent[] }): React.ReactElement | null {
   if (events.length === 0) return null;
   return (
-    <ul className="space-y-0.5">
-      {events.map((event, index) => (
-        <li key={`${event.toolName}-${index}`} className="text-xs text-fg-muted">
-          {formatToolEvent(event)}
-        </li>
-      ))}
+    <ul className="space-y-1">
+      {events.map((event, index) => {
+        const ok = event.ok;
+        return (
+          <li
+            key={`${event.toolName}-${index}`}
+            className={`flex items-start gap-1.5 rounded-md px-2 py-1 text-xs leading-5 ${
+              ok
+                ? 'bg-success-soft text-success-soft-fg'
+                : 'bg-danger-soft text-danger-soft-fg'
+            }`}
+          >
+            {ok ? (
+              <Check className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+            ) : (
+              <X className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+            )}
+            <span>{formatToolEvent(event)}</span>
+          </li>
+        );
+      })}
     </ul>
   );
 }

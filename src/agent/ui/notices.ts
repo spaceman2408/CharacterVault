@@ -35,8 +35,7 @@ export function visibleToolEvents(
   const addIndexById = new Map<string, number>();
 
   for (const event of events) {
-    if (!event.ok) continue;
-    if (lookupTools.has(event.toolName)) continue;
+    if (event.ok && lookupTools.has(event.toolName)) continue;
 
     const id = writeEntryId(event, writeTools);
     if (id && addIndexById.has(id)) {
@@ -50,16 +49,8 @@ export function visibleToolEvents(
   return visible;
 }
 
-export function messageNotices(
-  runError: string | undefined,
-  events: AgentToolEvent[],
-): string[] {
-  const notices: string[] = [];
-  if (runError) notices.push(runError);
-  for (const event of events) {
-    if (!event.ok) notices.push(event.message);
-  }
-  return notices;
+export function messageNotices(runError: string | undefined): string[] {
+  return runError ? [runError] : [];
 }
 
 export function shouldRenderAgentMessage(

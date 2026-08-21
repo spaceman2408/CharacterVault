@@ -33,8 +33,17 @@ const failed: AgentToolEvent = {
 };
 
 describe('visibleToolEvents', () => {
-  it('hides lookup rows and failed rows', () => {
-    expect(visibleToolEvents([okList, okRead, failed, okAdd])).toEqual([okAdd]);
+  it('hides successful lookups and keeps failed rows', () => {
+    expect(visibleToolEvents([okList, okRead, failed, okAdd])).toEqual([failed, okAdd]);
+  });
+
+  it('keeps a failed lookup so the error is visible', () => {
+    const failedRead: AgentToolEvent = {
+      toolName: 'read_entry',
+      ok: false,
+      message: 'error: no entry #9',
+    };
+    expect(visibleToolEvents([okList, failedRead])).toEqual([failedRead]);
   });
 
   it('keeps writes to different ids', () => {
@@ -63,18 +72,24 @@ describe('visibleToolEvents', () => {
     };
     expect(visibleToolEvents([okAdd, replaced])).toEqual([replaced]);
   });
+
+  it('does not hide a failed replace behind an earlier write to the same id', () => {
+    const failedReplace: AgentToolEvent = {
+      toolName: 'replace_in_entry',
+      ok: false,
+      message: 'error: old not found (copy the exact text from read)',
+    };
+    expect(visibleToolEvents([okAdd, failedReplace])).toEqual([okAdd, failedReplace]);
+  });
 });
 
 describe('messageNotices', () => {
-  it('collects the run error and failed tool messages', () => {
-    expect(messageNotices('Agent request failed', [okList, failed])).toEqual([
-      'Agent request failed',
-      failed.message,
-    ]);
+  it('returns the run error when present', () => {
+    expect(messageNotices('Agent request failed')).toEqual(['Agent request failed']);
   });
 
   it('returns an empty list when there is nothing to report', () => {
-    expect(messageNotices(undefined, [okList])).toEqual([]);
+    expect(messageNotices(undefined)).toEqual([]);
   });
 });
 
@@ -124,5 +139,6 @@ describe('shouldRenderAgentMessage', () => {
     expect(shouldRenderAgentMessage('user', '', [], [])).toBe(true);
     expect(shouldRenderAgentMessage('assistant', 'Done.', [], [])).toBe(true);
     expect(shouldRenderAgentMessage('assistant', '', [okAdd], [])).toBe(true);
+    expect(shouldRenderAgentMessage('assistant', '', [failed], [])).toBe(true);
   });
 });

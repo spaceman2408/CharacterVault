@@ -75,24 +75,26 @@ export const AgentChatMessage = memo(function AgentChatMessage({
         </FoldedText>
       ) : null}
 
-      {speech || notices.length > 0 ? (
-        <div className="flex items-start gap-1">
-          {speech ? (
-            <div className="prose prose-sm dark:prose-invert min-w-0 flex-1 text-sm text-fg">
-              <LazyMarkdown content={message.content} />
-            </div>
-          ) : null}
-          {notices.length > 0 ? (
-            <HoverInfoTip label="Message notes">
-              {notices.map((notice, noticeIndex) => (
-                <div key={`${noticeIndex}-${notice}`}>{notice}</div>
-              ))}
-            </HoverInfoTip>
-          ) : null}
+      {speech ? (
+        <div className="prose prose-sm dark:prose-invert min-w-0 text-sm text-fg">
+          <LazyMarkdown content={message.content} />
         </div>
       ) : null}
 
       <ToolEventList events={toolEvents} />
+
+      {notices.length > 0 ? (
+        <ul className="space-y-1">
+          {notices.map((notice, noticeIndex) => (
+            <li
+              key={`${noticeIndex}-${notice}`}
+              className="rounded-md bg-danger-soft px-2 py-1 text-xs leading-5 text-danger-soft-fg"
+            >
+              {notice}
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <div className="flex items-center gap-1 text-[11px] text-fg-muted">
         <span>{formatTime(message.timestamp)}</span>
