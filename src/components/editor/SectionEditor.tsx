@@ -4,7 +4,7 @@
  * @module components/editor/SectionEditor
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, type ReactNode } from 'react';
 import { useCharacterEditorContext } from '../../context';
 import type { CharacterSection } from '../../db/characterTypes';
 import { CHARACTER_SECTIONS } from '../../db/characterTypes';
@@ -19,6 +19,7 @@ import type { Extension } from '@codemirror/state';
 
 interface SectionEditorProps {
   section: CharacterSection;
+  statusBanner?: ReactNode;
 }
 
 interface MinimalSectionHeaderProps {
@@ -239,7 +240,7 @@ function getSectionValue(character: { data: { spec: { name: string; description:
  * Section Editor with CodeMirror and AI integration
  * Uses fixed AI toolbar panel at top of editor - no floating elements, no drag needed
  */
-export function SectionEditor({ section }: SectionEditorProps): React.ReactElement {
+export function SectionEditor({ section, statusBanner }: SectionEditorProps): React.ReactElement {
   const {
     currentCharacter,
     updateCharacter,
@@ -476,6 +477,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
                   }
                 : undefined
             }
+            statusBanner={statusBanner}
           />
         </div>
       </div>

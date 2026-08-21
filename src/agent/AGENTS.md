@@ -11,13 +11,14 @@ Browser-side tool loop. The rest of the app imports **only** `src/agent/index.ts
 | `core/parseActions.ts` | XML / fence lexer. Salvages a truncated last call when name + payload are already there. |
 | `core/toolCalls.ts` | Native `tool_calls` JSON → `ParsedAction`, including truncated-JSON repair. |
 | `core/runLoop.ts` | complete → native tools or XML parse → `host.execute` → feed results. |
-| `hosts/lorebook/` | First host: `list_entries`, `read_entry`, `add_entry`, `update_entry`, `delete_entry`. |
-| `ui/` | React wire-in (`useLorebookAgent`, `LorebookAgentChat`). |
+| `hosts/lorebook/` | Lorebook host: `list_entries`, `read_entry`, `add_entry`, `update_entry`, `delete_entry`. |
+| `hosts/character/` | Card host: spec fields, greetings, and (composed) embedded lorebook tools. |
+| `ui/` | Shared session (`useAgentSession`) plus host wrappers (`useLorebookAgent`, `useCharacterAgent`) and chat mounts. |
 
 ## Public API
 
-- `LorebookAgentChat` — mount this from `LorebookWorkspace`
-- `useLorebookAgent` — same session, if a caller needs the hook directly
+- `LorebookAgentChat` / `useLorebookAgent` — standalone vault lorebook workspace
+- `CharacterAgentChat` / `useCharacterAgent` — character workspace (spec, greetings, embedded lorebook)
 - `AgentToolEvent`
 
 Do not export the parser, loop, or host from the barrel. Tests import those files directly.
@@ -31,6 +32,15 @@ Do not export the parser, loop, or host from the barrel. Tests import those file
 
 Do not mention the tool in `core/`.
 
+## Adding a character tool
+
+1. Handle it in `hosts/character/tools.ts`.
+2. Add the name to `CHARACTER_TOOL_NAMES`.
+3. Add an OpenAI function schema in `hosts/character/schemas.ts` and document the tool in `hosts/character/prompt.ts`.
+4. Tests under `tests/agent/hosts/character/`.
+
+Do not mention the tool in `core/`. Lorebook entry tools are composed from `hosts/lorebook/` inside `createCharacterHost`; do not copy those implementations.
+
 ## Adding a host
 
 New folder `hosts/<name>/` plus a new hook/wrapper under `ui/`. Export the wrapper from `index.ts` if the app needs to mount it.
@@ -39,13 +49,15 @@ Do not add `if (host === 'lorebook')` in `core/`.
 
 ## Wiring
 
-`LorebookWorkspace` imports from `../../agent`. `AIChatPanel` / `useAIChat` must not import this package. Shared chrome is `AIChatView` in `components/ai`.
+`LorebookWorkspace` and `CharacterWorkspace` import from `../../agent`. `AIChatPanel` / `useAIChat` must not import this package. Shared chrome is `AIChatView` in `components/ai`.
+
+On the character workspace, Agent mode always mounts `CharacterAgentChat` (tab changes do not remount the chat). Standalone lorebook workspace still mounts `LorebookAgentChat`. Orion stays the non-agent panel.
 
 ## Renderer / persist
 
 - Build the system prompt once per run (custom context is cached; catalog updates ride tool results).
-- `flush()` persists the book once at the end of the run (and on abort), not after every turn.
-- While a run is in progress, the chat shows a spinner plus throttled live thinking (reasoning only; speech/tool JSON stays out of the DOM). Live thinking is capped and flushed on an interval so token-by-token setState does not blow memory. Committed turns use a collapsed `<details>` fold for thinking, flat tool lines, and hoverable info tips for errors. `list_entries` / `read_entry` turns stay off the transcript (and are dropped from chat state so catalogs, entry bodies, and reasoning are not retained). Speech on a turn that also has tool calls is hidden (models often dump planning there). Tool results stored in the UI keep lookup headers only, not catalog or entry bodies.
+- `flush()` persists once at the end of the run (and on abort), not after every turn. Lorebook host writes the vault book. Character host persists spec and/or embedded book in one write (`persist({ spec, book })`) so a book write cannot clobber a spec write. Snapshot once before that write.
+- While a run is in progress, the chat shows a spinner plus throttled live thinking (reasoning only; speech/tool JSON stays out of the DOM). Live thinking is capped and flushed on an interval so token-by-token setState does not blow memory. Committed turns use a collapsed `<details>` fold for thinking, flat tool lines, and hoverable info tips for errors. Lookup turns (`list_entries` / `read_entry`, `list_fields` / `read_field` / `list_greetings` / `read_greeting`) stay off the transcript (and are dropped from chat state so catalogs, bodies, and reasoning are not retained). Speech on a turn that also has tool calls is hidden (models often dump planning there). Tool results stored in the UI keep lookup headers only, not catalog or field/entry bodies.
 - Same-name `add_entry` in one run revises the new entry (keeps the longer body). Names that already existed in the book are rejected; use `read_entry` then `update_entry` to change them.
 - The host keeps an in-run copy of the book and caches formatted `read_entry` payloads by id. `update_entry` writes that cache so the next read returns the new body. `delete_entry` drops the id from the book and the read cache. `flush()` persists once at the end of the run.
 - Agent `add_entry` sets `extensions.context_enabled: false` so new entries are not pinned into AI context.

@@ -6,16 +6,21 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { CharacterAgentChat } from '../../agent';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
-import type { CharacterSection, SectionMeta } from '../../db/characterTypes';
+import type { CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
+import { createEmptyCharacterBook } from '../../db/characterTypes';
 import { generateThumbnail } from '../../utils/thumbnail';
 import { SectionEditor } from '../editor/SectionEditor';
+import { flushLorebookDraft } from '../editor/lorebook/draftFlush';
 import { ContextPanel } from '../ai/ContextPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
 import { usePersistedPanelWidth } from '../ai/hooks';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { CharacterHistoryModal } from '../history/CharacterHistoryModal';
 import { characterExportService } from '../../services/CharacterExportService';
+import { characterSnapshotService } from '../../services/CharacterSnapshotService';
+import { customContextService } from '../../services/CustomContextService';
 import {
   ArrowLeft,
   Check,
@@ -43,6 +48,7 @@ import {
   PanelRight,
   Sparkles,
   MessageSquare,
+  Bot,
   ChevronDown,
   Book,
   AlertCircle,
@@ -760,6 +766,7 @@ function CharacterWorkspaceInner({
   isMobile,
 }: CharacterWorkspaceInnerProps): React.ReactElement {
   const { 
+    currentCharacter,
     activeSection,
     setActiveSection,
     selectedText,
@@ -775,7 +782,92 @@ function CharacterWorkspaceInner({
     handleAIOperation,
     resolveContextForAI,
     visibleSections,
+    updateCharacter,
+    flushPendingSaves,
   } = useCharacterEditorContext();
+
+  const [agentMode, setAgentMode] = useState(false);
+  const [agentRunning, setAgentRunning] = useState(false);
+
+  const customContextIncluded =
+    customContextMeta.enabled && customContextMeta.charLength > 0;
+  const customContextCharLength = customContextIncluded
+    ? customContextMeta.charLength
+    : 0;
+
+  const getAgentSpec = useCallback((): CharacterSpec => {
+    return currentCharacter?.data.spec ?? {
+      name: '',
+      description: '',
+      personality: '',
+      scenario: '',
+      first_mes: '',
+      mes_example: '',
+      system_prompt: '',
+      post_history_instructions: '',
+      alternate_greetings: [],
+      physical_description: '',
+    };
+  }, [currentCharacter]);
+
+  const getAgentBook = useCallback((): CharacterBook => {
+    return currentCharacter?.data.characterBook
+      ?? createEmptyCharacterBook(currentCharacter?.name ?? '');
+  }, [currentCharacter]);
+
+  const persistAgentCard = useCallback(async (update: {
+    spec?: CharacterSpec;
+    book?: CharacterBook;
+  }) => {
+    const latest = await flushPendingSaves();
+    flushLorebookDraft();
+    const character = latest ?? currentCharacter;
+    if (!character) return;
+    const spec = update.spec ?? character.data.spec;
+    await updateCharacter({
+      name: spec.name,
+      data: {
+        spec,
+        characterBook: update.book ?? character.data.characterBook,
+        extensions: character.data.extensions,
+      },
+    });
+  }, [currentCharacter, flushPendingSaves, updateCharacter]);
+
+  const getAgentCustomContext = useCallback(async (): Promise<string | null> => {
+    const characterId = currentCharacter?.id;
+    if (!characterId) return null;
+    return customContextService.getEnabledContent(characterId);
+  }, [currentCharacter?.id]);
+
+  const flushAgentCardDraft = useCallback(async () => {
+    await flushPendingSaves();
+    flushLorebookDraft();
+  }, [flushPendingSaves]);
+
+  const takeAgentSnapshot = useCallback(async () => {
+    const latest = await flushPendingSaves();
+    const character = latest ?? currentCharacter;
+    if (!character) return;
+    await characterSnapshotService.createSnapshot(character, 'auto');
+  }, [currentCharacter, flushPendingSaves]);
+
+  const agentToggle = (
+    <button
+      type="button"
+      onClick={() => setAgentMode((mode) => !mode)}
+      className={
+        agentMode
+          ? 'inline-flex items-center gap-1 text-xs text-accent px-2 py-1 rounded-lg bg-accent-soft'
+          : 'inline-flex items-center gap-1 text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors'
+      }
+      title={agentMode ? 'Switch to Orion chat' : 'Switch to Agent'}
+      aria-pressed={agentMode}
+    >
+      <Bot className="w-3.5 h-3.5" />
+      Agent
+    </button>
+  );
 
   const stableGetContextContent = useCallback(
     async (ids: string[]) => resolveContextForAI(ids as CharacterSection[]),
@@ -889,7 +981,7 @@ function CharacterWorkspaceInner({
         <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden">
           <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'} pb-[max(env(safe-area-inset-bottom),0px)]`}>
             <div className={`h-full w-full bg-surface/60 backdrop-blur-xl
-              border border-border/60 shadow-lg overflow-hidden relative
+              border border-border/60 shadow-lg overflow-hidden relative flex flex-col
               ${
                 isTightLayout
                   ? 'rounded-none p-2 md:p-3 border-l-0 border-r-0'
@@ -898,11 +990,18 @@ function CharacterWorkspaceInner({
                   : 'rounded-2xl p-4 md:p-6'
               }`}
               data-section-editor-container>
-              {activeSection === 'image' ? (
-                <ImageEditor />
-              ) : (
-                <SectionEditor section={activeSection} />
-              )}
+              {agentRunning ? (
+                <div className="mb-2 shrink-0 rounded-lg border border-border bg-accent-soft px-3 py-1.5 text-xs text-accent">
+                  Agent is writing. Changes appear when the run finishes. Use Snapshots to roll back.
+                </div>
+              ) : null}
+              <div className="relative min-h-0 flex-1">
+                {activeSection === 'image' ? (
+                  <ImageEditor />
+                ) : (
+                  <SectionEditor section={activeSection} />
+                )}
+              </div>
             </div>
           </div>
         </main>
@@ -941,21 +1040,39 @@ function CharacterWorkspaceInner({
               <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-transparent group-hover:bg-accent/60 group-active:bg-accent transition-colors" />
             </div>
           )}
-          <AIChatPanel
-            selectedText={selectedText}
-            contextEntryIds={contextSectionIds}
-            customContextIncluded={
-              customContextMeta.enabled && customContextMeta.charLength > 0
-            }
-            aiConfig={aiConfig}
-            samplerSettings={samplerSettings}
-            promptSettings={promptSettings}
-            onComplete={(result) => handleAIOperation(result, 'ask', selectedText)}
-            getContextContent={stableGetContextContent}
-            activeSection={activeSection}
-            onClose={() => setIsChatOpen(false)}
-            isMobile={isMobile}
-          />
+          {agentMode ? (
+            <CharacterAgentChat
+              aiConfig={aiConfig}
+              samplerSettings={samplerSettings}
+              promptSettings={promptSettings}
+              getSpec={getAgentSpec}
+              getBook={getAgentBook}
+              persist={persistAgentCard}
+              getCustomContext={getAgentCustomContext}
+              flushDraft={flushAgentCardDraft}
+              takeSnapshot={takeAgentSnapshot}
+              customContextIncluded={customContextIncluded}
+              customContextCharLength={customContextCharLength}
+              headerActions={agentToggle}
+              onClose={() => setIsChatOpen(false)}
+              onRunningChange={setAgentRunning}
+            />
+          ) : (
+            <AIChatPanel
+              selectedText={selectedText}
+              contextEntryIds={contextSectionIds}
+              customContextIncluded={customContextIncluded}
+              aiConfig={aiConfig}
+              samplerSettings={samplerSettings}
+              promptSettings={promptSettings}
+              onComplete={(result) => handleAIOperation(result, 'ask', selectedText)}
+              getContextContent={stableGetContextContent}
+              activeSection={activeSection}
+              onClose={() => setIsChatOpen(false)}
+              isMobile={isMobile}
+              headerActions={agentToggle}
+            />
+          )}
         </aside>
       </div>
 
