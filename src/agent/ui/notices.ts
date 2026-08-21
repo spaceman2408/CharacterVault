@@ -1,7 +1,10 @@
 import type { AgentToolEvent } from './types';
 
-function addEntryId(event: AgentToolEvent): string | null {
-  if (event.toolName !== 'add_entry' || !event.ok) return null;
+const LOOKUP_TOOLS = new Set(['list_entries', 'read_entry']);
+const WRITE_TOOLS = new Set(['add_entry', 'update_entry', 'delete_entry']);
+
+function writeEntryId(event: AgentToolEvent): string | null {
+  if (!event.ok || !WRITE_TOOLS.has(event.toolName)) return null;
   const match = /^ok #(\d+)\s/.exec(event.message);
   return match?.[1] ?? null;
 }
@@ -12,9 +15,9 @@ export function visibleToolEvents(events: AgentToolEvent[]): AgentToolEvent[] {
 
   for (const event of events) {
     if (!event.ok) continue;
-    if (event.toolName === 'list_entries') continue;
+    if (LOOKUP_TOOLS.has(event.toolName)) continue;
 
-    const id = addEntryId(event);
+    const id = writeEntryId(event);
     if (id && addIndexById.has(id)) {
       visible[addIndexById.get(id)!] = event;
       continue;
@@ -49,11 +52,11 @@ export function shouldRenderAgentMessage(
 }
 
 export function compactToolResultMessage(toolName: string, message: string): string {
-  if (toolName !== 'list_entries') return message;
+  if (!LOOKUP_TOOLS.has(toolName)) return message;
   const line = message.split('\n', 1)[0]?.trim();
-  return line || 'listed entries';
+  return line || (toolName === 'read_entry' ? 'read entry' : 'listed entries');
 }
 
 export function isLookupOnlyTurn(events: AgentToolEvent[]): boolean {
-  return events.length > 0 && events.every((event) => event.ok && event.toolName === 'list_entries');
+  return events.length > 0 && events.every((event) => event.ok && LOOKUP_TOOLS.has(event.toolName));
 }

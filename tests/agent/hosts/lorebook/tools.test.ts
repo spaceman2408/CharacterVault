@@ -3,8 +3,12 @@ import { createEmptyCharacterBook } from '../../../../src/db/characterTypes';
 import { createLorebookHost } from '../../../../src/agent/hosts/lorebook/createHost';
 import {
   addEntry,
+  deleteEntry,
   listEntries,
   parseCommaList,
+  parseEntryId,
+  readEntry,
+  updateEntry,
 } from '../../../../src/agent/hosts/lorebook/tools';
 
 function action(
@@ -18,6 +22,21 @@ function action(
 describe('parseCommaList', () => {
   it('splits, trims, and drops empties', () => {
     expect(parseCommaList('a, b,, c')).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('parseEntryId', () => {
+  it('accepts plain and hashed ids', () => {
+    expect(parseEntryId('4')).toBe(4);
+    expect(parseEntryId('#12')).toBe(12);
+    expect(parseEntryId('  0 ')).toBe(0);
+  });
+
+  it('rejects non-integers', () => {
+    expect(parseEntryId('')).toBeNull();
+    expect(parseEntryId('1.5')).toBeNull();
+    expect(parseEntryId('-1')).toBeNull();
+    expect(parseEntryId('id:4')).toBeNull();
   });
 });
 
@@ -38,6 +57,142 @@ describe('listEntries', () => {
     expect(result.ok).toBe(true);
     expect(result.message).toContain('#4 The Red Keep — keys: keep');
     expect(result.message).not.toContain('SECRET BODY');
+  });
+});
+
+describe('readEntry', () => {
+  it('returns only that entry\'s name, keys, and content', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'SECRET BODY',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+      {
+        id: 5,
+        keys: ['other'],
+        content: 'OTHER SECRET',
+        extensions: {},
+        enabled: true,
+        name: 'Elsewhere',
+      },
+    ];
+    const result = readEntry(book, action('read_entry', { id: '4' }));
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('#4 The Red Keep');
+    expect(result.message).toContain('keys: keep');
+    expect(result.message).toContain('SECRET BODY');
+    expect(result.message).not.toContain('OTHER SECRET');
+    expect(result.message).not.toContain('Elsewhere');
+  });
+
+  it('rejects a missing entry', () => {
+    const book = createEmptyCharacterBook('World');
+    const result = readEntry(book, action('read_entry', { id: '9' }));
+    expect(result.ok).toBe(false);
+    expect(result.message).toBe('error: no entry #9');
+  });
+});
+
+describe('updateEntry', () => {
+  it('replaces content for an existing entry', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'short stub',
+        extensions: { context_enabled: false },
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    const { book: next, result, changed } = updateEntry(
+      book,
+      action('update_entry', { id: '4' }, 'The Red Keep is the royal castle in King\'s Landing.'),
+    );
+    expect(result.ok).toBe(true);
+    expect(changed).toBe(true);
+    expect(result.message).toBe('ok #4 The Red Keep');
+    expect(next.entries).toHaveLength(1);
+    expect(next.entries[0].content).toContain('royal castle');
+    expect(next.entries[0].keys).toEqual(['keep']);
+    expect(next.entries[0].extensions.context_enabled).toBe(false);
+  });
+
+  it('rejects a name that belongs to another entry', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 1,
+        keys: ['a'],
+        content: 'A',
+        extensions: {},
+        enabled: true,
+        name: 'Alpha',
+      },
+      {
+        id: 2,
+        keys: ['b'],
+        content: 'B',
+        extensions: {},
+        enabled: true,
+        name: 'Beta',
+      },
+    ];
+    const { result, changed } = updateEntry(
+      book,
+      action('update_entry', { id: '2', name: 'Alpha' }, 'Renamed badly.'),
+    );
+    expect(result.ok).toBe(false);
+    expect(changed).toBe(false);
+    expect(result.message).toMatch(/^exists: #1/);
+  });
+});
+
+describe('deleteEntry', () => {
+  it('removes only that entry', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'SECRET BODY',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+      {
+        id: 5,
+        keys: ['other'],
+        content: 'OTHER SECRET',
+        extensions: {},
+        enabled: true,
+        name: 'Elsewhere',
+      },
+    ];
+    const { book: next, result, changed, entryId } = deleteEntry(
+      book,
+      action('delete_entry', { id: '4' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(changed).toBe(true);
+    expect(entryId).toBe(4);
+    expect(result.message).toBe('ok #4 The Red Keep');
+    expect(next.entries).toHaveLength(1);
+    expect(next.entries[0].id).toBe(5);
+  });
+
+  it('rejects a missing entry', () => {
+    const book = createEmptyCharacterBook('World');
+    const { result, changed } = deleteEntry(book, action('delete_entry', { id: '9' }));
+    expect(result.ok).toBe(false);
+    expect(changed).toBe(false);
+    expect(result.message).toBe('error: no entry #9');
   });
 });
 
@@ -224,5 +379,80 @@ describe('createLorebookHost', () => {
     await host.flush?.();
     expect(book.entries).toHaveLength(1);
     expect(book.entries[0].content).toContain('five-day period');
+  });
+
+  it('reads one entry and serves the cached body after update', async () => {
+    let book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'short stub',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    const host = createLorebookHost({
+      getBook: () => book,
+      setBook: async (next) => {
+        book = next;
+      },
+      getCustomContext: async () => null,
+    });
+
+    const firstRead = await host.execute(action('read_entry', { id: '4' }));
+    expect(firstRead.ok).toBe(true);
+    expect(firstRead.message).toContain('short stub');
+
+    book.entries[0].content = 'MUTATED LIVE BOOK';
+    const cachedRead = await host.execute(action('read_entry', { id: '4' }));
+    expect(cachedRead.message).toContain('short stub');
+    expect(cachedRead.message).not.toContain('MUTATED LIVE BOOK');
+
+    const updated = await host.execute(
+      action('update_entry', { id: '4' }, 'The Red Keep is the royal castle.'),
+    );
+    expect(updated.ok).toBe(true);
+    const afterUpdate = await host.execute(action('read_entry', { id: '4' }));
+    expect(afterUpdate.message).toContain('royal castle');
+    expect(afterUpdate.message).not.toContain('short stub');
+
+    expect(book.entries[0].content).toBe('MUTATED LIVE BOOK');
+    await host.flush?.();
+    expect(book.entries[0].content).toContain('royal castle');
+  });
+
+  it('deletes an entry, drops the read cache, and persists on flush', async () => {
+    let book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'short stub',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    const host = createLorebookHost({
+      getBook: () => book,
+      setBook: async (next) => {
+        book = next;
+      },
+      getCustomContext: async () => null,
+    });
+
+    const read = await host.execute(action('read_entry', { id: '4' }));
+    expect(read.ok).toBe(true);
+    const deleted = await host.execute(action('delete_entry', { id: '4' }));
+    expect(deleted.ok).toBe(true);
+    const afterDelete = await host.execute(action('read_entry', { id: '4' }));
+    expect(afterDelete.ok).toBe(false);
+    expect(afterDelete.message).toBe('error: no entry #4');
+
+    expect(book.entries).toHaveLength(1);
+    await host.flush?.();
+    expect(book.entries).toHaveLength(0);
   });
 });

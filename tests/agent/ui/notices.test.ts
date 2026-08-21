@@ -9,7 +9,17 @@ import {
 import type { AgentToolEvent } from '../../../src/agent/ui/types';
 
 const okList: AgentToolEvent = { toolName: 'list_entries', ok: true, message: '24 entries' };
+const okRead: AgentToolEvent = {
+  toolName: 'read_entry',
+  ok: true,
+  message: '#4 The Red Keep\nkeys: keep\n---\nSECRET BODY',
+};
 const okAdd: AgentToolEvent = { toolName: 'add_entry', ok: true, message: 'ok #24 Prime Days' };
+const okUpdate: AgentToolEvent = {
+  toolName: 'update_entry',
+  ok: true,
+  message: 'ok #4 The Red Keep',
+};
 const okAddAgain: AgentToolEvent = {
   toolName: 'add_entry',
   ok: true,
@@ -22,12 +32,26 @@ const failed: AgentToolEvent = {
 };
 
 describe('visibleToolEvents', () => {
-  it('hides list_entries and failed rows', () => {
-    expect(visibleToolEvents([okList, failed, okAdd])).toEqual([okAdd]);
+  it('hides lookup rows and failed rows', () => {
+    expect(visibleToolEvents([okList, okRead, failed, okAdd])).toEqual([okAdd]);
   });
 
-  it('keeps one add_entry row per id', () => {
-    expect(visibleToolEvents([okAdd, okAddAgain])).toEqual([okAddAgain]);
+  it('keeps writes to different ids', () => {
+    const okDelete: AgentToolEvent = {
+      toolName: 'delete_entry',
+      ok: true,
+      message: 'ok #5 Elsewhere',
+    };
+    expect(visibleToolEvents([okAdd, okUpdate, okDelete])).toEqual([okAdd, okUpdate, okDelete]);
+  });
+
+  it('keeps the latest write per id', () => {
+    const laterUpdate: AgentToolEvent = {
+      toolName: 'update_entry',
+      ok: true,
+      message: 'ok #24 Prime Days',
+    };
+    expect(visibleToolEvents([okAdd, okAddAgain, laterUpdate])).toEqual([laterUpdate]);
   });
 });
 
@@ -54,11 +78,17 @@ describe('compactToolResultMessage', () => {
   it('leaves write results unchanged', () => {
     expect(compactToolResultMessage('add_entry', 'ok #24 Prime Days')).toBe('ok #24 Prime Days');
   });
+
+  it('keeps only the read_entry header so the body is not stored in chat state', () => {
+    expect(compactToolResultMessage('read_entry', okRead.message)).toBe('#4 The Red Keep');
+  });
 });
 
 describe('isLookupOnlyTurn', () => {
-  it('is true when every event is a successful list_entries', () => {
+  it('is true when every event is a successful lookup', () => {
     expect(isLookupOnlyTurn([okList])).toBe(true);
+    expect(isLookupOnlyTurn([okRead])).toBe(true);
+    expect(isLookupOnlyTurn([okList, okRead])).toBe(true);
     expect(isLookupOnlyTurn([okList, okAdd])).toBe(false);
     expect(isLookupOnlyTurn([])).toBe(false);
   });

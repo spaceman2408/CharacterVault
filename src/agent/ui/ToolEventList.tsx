@@ -2,9 +2,22 @@ import React from 'react';
 import type { AgentToolEvent } from './types';
 
 function formatToolEvent(event: AgentToolEvent): string {
-  if (event.toolName === 'add_entry' && event.ok) {
+  if (
+    (event.toolName === 'add_entry' ||
+      event.toolName === 'update_entry' ||
+      event.toolName === 'delete_entry') &&
+    event.ok
+  ) {
     const match = /^ok #(\d+)\s+(.*)$/.exec(event.message);
-    if (match) return `Added “${match[2]}” (#${match[1]})`;
+    if (match) {
+      const verb =
+        event.toolName === 'update_entry'
+          ? 'Updated'
+          : event.toolName === 'delete_entry'
+            ? 'Deleted'
+            : 'Added';
+      return `${verb} “${match[2]}” (#${match[1]})`;
+    }
   }
   if (event.toolName === 'list_entries' && event.ok) {
     const match = /^(\d+)\s/.exec(event.message);
