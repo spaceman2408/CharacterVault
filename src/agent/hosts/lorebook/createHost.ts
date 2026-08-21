@@ -5,6 +5,8 @@ import { formatEntryCatalog } from './catalog';
 import { buildLorebookAgentSystemPrompt } from './prompt';
 import {
   addEntry,
+  entryDisplayName,
+  findEntryByName,
   listEntries,
   LOREBOOK_TOOL_NAMES,
   MAX_NEW_ENTRIES_PER_RUN,
@@ -23,6 +25,7 @@ export function createLorebookHost(io: LorebookHostIO): AgentHost {
   let book = io.getBook();
   let dirty = false;
   let addedThisRun = 0;
+  const revisableIds = new Set<number>();
   let snapshotTaken = false;
   let cachedCustomChunk: string | null | undefined;
 
@@ -49,18 +52,23 @@ export function createLorebookHost(io: LorebookHostIO): AgentHost {
         return listEntries(book);
       }
       if (action.name === 'add_entry') {
-        if (addedThisRun >= maxNewEntries) {
+        const existing = findEntryByName(book.entries ?? [], entryDisplayName(action));
+        const revisable = existing != null && revisableIds.has(existing.id);
+        if (!revisable && addedThisRun >= maxNewEntries) {
           return {
             ok: false,
             toolName: 'add_entry',
             message: `limit: max ${maxNewEntries} new entries per run`,
           };
         }
-        const applied = addEntry(book, action);
+        const applied = addEntry(book, action, revisableIds);
         if (!applied.result.ok) return applied.result;
-        book = applied.book;
-        dirty = true;
-        addedThisRun += 1;
+        if (applied.entryId != null) revisableIds.add(applied.entryId);
+        if (applied.created) addedThisRun += 1;
+        if (applied.changed) {
+          book = applied.book;
+          dirty = true;
+        }
         return applied.result;
       }
       return {

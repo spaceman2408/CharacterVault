@@ -27,6 +27,22 @@ export function nextAvailableEntryId(entries: LorebookEntry[]): number {
   return id;
 }
 
+export function entryDisplayName(action: ParsedAction): string {
+  return (action.headers.name ?? '').trim() || parseCommaList(action.headers.keys)[0] || '';
+}
+
+export function findEntryByName(
+  entries: LorebookEntry[],
+  name: string,
+): LorebookEntry | undefined {
+  const needle = name.trim().toLowerCase();
+  if (!needle) return undefined;
+  return entries.find((entry) => {
+    const label = (entry.name?.trim() || entry.keys?.[0] || '').toLowerCase();
+    return label === needle;
+  });
+}
+
 export function createBlankLorebookEntry(id: number): LorebookEntry {
   return {
     id,
@@ -52,54 +68,105 @@ export function listEntries(book: CharacterBook): ActionResult {
   };
 }
 
+export interface AddEntryResult {
+  book: CharacterBook;
+  result: ActionResult;
+  created: boolean;
+  changed: boolean;
+  entryId?: number;
+}
+
+function addEntryError(book: CharacterBook, message: string): AddEntryResult {
+  return {
+    book,
+    result: { ok: false, toolName: 'add_entry', message },
+    created: false,
+    changed: false,
+  };
+}
+
 export function addEntry(
   book: CharacterBook,
   action: ParsedAction,
-): { book: CharacterBook; result: ActionResult } {
+  revisableIds: ReadonlySet<number> = new Set(),
+): AddEntryResult {
   const content = action.body.trim();
   const constant = parseConstantFlag(action.headers.constant);
   const keys = parseCommaList(action.headers.keys);
-  const name = (action.headers.name ?? '').trim() || keys[0] || '';
+  const name = entryDisplayName(action);
 
   if (!content) {
-    return {
-      book,
-      result: {
-        ok: false,
-        toolName: 'add_entry',
-        message: 'error: content is empty',
-      },
-    };
+    return addEntryError(book, 'error: content is empty');
   }
   if (!constant && keys.length === 0) {
-    return {
-      book,
-      result: {
-        ok: false,
-        toolName: 'add_entry',
-        message: 'error: non-constant entries need at least one key',
-      },
-    };
+    return addEntryError(book, 'error: non-constant entries need at least one key');
   }
 
   const entries = book.entries ?? [];
+  const existing = findEntryByName(entries, name);
+
+  if (existing) {
+    if (!revisableIds.has(existing.id)) {
+      return addEntryError(
+        book,
+        `exists: #${existing.id} ${existing.name || name} — will not update existing entries`,
+      );
+    }
+
+    const okResult = {
+      ok: true,
+      toolName: 'add_entry' as const,
+      message: `ok #${existing.id} ${existing.name || name || '(unnamed)'}`,
+    };
+
+    if (content.length <= existing.content.trim().length) {
+      return {
+        book,
+        result: okResult,
+        created: false,
+        changed: false,
+        entryId: existing.id,
+      };
+    }
+
+    const nextEntry: LorebookEntry = {
+      ...existing,
+      name: name || existing.name,
+      keys: keys.length > 0 ? keys : existing.keys,
+      content,
+    };
+    if (constant) nextEntry.constant = true;
+
+    return {
+      book: {
+        ...book,
+        entries: entries.map((entry) => (entry.id === existing.id ? nextEntry : entry)),
+      },
+      result: okResult,
+      created: false,
+      changed: true,
+      entryId: existing.id,
+    };
+  }
+
   const entry = createBlankLorebookEntry(nextAvailableEntryId(entries));
   entry.name = name;
   entry.keys = keys;
   entry.content = content;
   if (constant) entry.constant = true;
 
-  const nextBook: CharacterBook = {
-    ...book,
-    entries: [...entries, entry],
-  };
-
   return {
-    book: nextBook,
+    book: {
+      ...book,
+      entries: [...entries, entry],
+    },
     result: {
       ok: true,
       toolName: 'add_entry',
       message: `ok #${entry.id} ${name || '(unnamed)'}`,
     },
+    created: true,
+    changed: true,
+    entryId: entry.id,
   };
 }

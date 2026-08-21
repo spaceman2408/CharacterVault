@@ -8,6 +8,8 @@ describe('buildLorebookAgentSystemPrompt', () => {
     expect(prompt).toContain('</tool_call>');
     expect(prompt).toContain('list_entries');
     expect(prompt).toContain('add_entry');
+    expect(prompt).toContain('already in context');
+    expect(prompt).not.toContain('Call list_entries before adding');
     expect(prompt).not.toContain('<<<');
     expect(prompt).not.toContain('>>>');
   });
