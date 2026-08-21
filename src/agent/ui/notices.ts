@@ -58,9 +58,15 @@ export function shouldRenderAgentMessage(
   speech: string,
   visible: AgentToolEvent[],
   notices: string[],
+  reasoning = '',
 ): boolean {
   if (role !== 'assistant') return true;
-  return speech.trim().length > 0 || visible.length > 0 || notices.length > 0;
+  return (
+    speech.trim().length > 0 ||
+    reasoning.trim().length > 0 ||
+    visible.length > 0 ||
+    notices.length > 0
+  );
 }
 
 export function compactToolResultMessage(

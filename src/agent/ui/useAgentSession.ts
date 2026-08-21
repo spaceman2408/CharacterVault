@@ -204,6 +204,13 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const handleAbort = useCallback(() => {
     abortedRef.current = true;
     aiServiceRef.current?.abort();
+    isProcessingRef.current = false;
+    if (isMountedRef.current) {
+      setIsProcessing(false);
+      setIsStreaming(false);
+      setBusyLabel(null);
+    }
+    onRunningChangeRef.current?.(false);
   }, []);
 
   const handleNewChat = useCallback(() => {
@@ -316,12 +323,12 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
             : undefined,
           complete: async (messages, onChunk) => {
             if (!isCurrent() || abortedRef.current) {
-              return { content: '' };
+              throw new AIError('Request was cancelled', 'unknown');
             }
             if (isMountedRef.current) setIsStreaming(streaming);
             clearStreamDraft();
             if (!isCurrent() || abortedRef.current) {
-              return { content: '' };
+              throw new AIError('Request was cancelled', 'unknown');
             }
             return aiService.chat(toServiceMessages(messages), undefined, onChunk, {
               maxTokens: AGENT_MAX_OUTPUT_TOKENS,

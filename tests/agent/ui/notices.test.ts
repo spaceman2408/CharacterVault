@@ -140,5 +140,6 @@ describe('shouldRenderAgentMessage', () => {
     expect(shouldRenderAgentMessage('assistant', 'Done.', [], [])).toBe(true);
     expect(shouldRenderAgentMessage('assistant', '', [okAdd], [])).toBe(true);
     expect(shouldRenderAgentMessage('assistant', '', [failed], [])).toBe(true);
+    expect(shouldRenderAgentMessage('assistant', '', [], [], 'planning the cut')).toBe(true);
   });
 });

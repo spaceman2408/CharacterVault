@@ -96,7 +96,16 @@ export function LorebookAgentChat({
       const toolEvents = visibleToolEvents(events);
       const hideSpeech = events.length > 0;
       const speech = hideSpeech ? '' : message.content;
-      if (!shouldRenderAgentMessage(message.role, speech, toolEvents, notices)) {
+      const showReasoning = aiConfig.showReasoning ?? true;
+      if (
+        !shouldRenderAgentMessage(
+          message.role,
+          speech,
+          toolEvents,
+          notices,
+          showReasoning ? message.reasoning ?? '' : '',
+        )
+      ) {
         return null;
       }
       return (
@@ -105,7 +114,7 @@ export function LorebookAgentChat({
           messageIndex={index}
           chatHistoryLength={session.chatHistory.length}
           isProcessing={session.isProcessing}
-          showReasoning={aiConfig.showReasoning ?? true}
+          showReasoning={showReasoning}
           showRegenerate
           notices={notices}
           toolEvents={toolEvents}

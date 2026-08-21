@@ -427,6 +427,7 @@ export class AIService {
   private abortController: AbortController | null = null;
   // Survives abort() nulling the controller so stream loops still observe cancel.
   private aborted = false;
+  private streamReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   /**
    * Safety margin reserved for tokenizer variance, message framing, and
    * prompt wrappers not fully accounted for in the pre-budget step.
@@ -544,6 +545,11 @@ export class AIService {
       this.abortController.abort();
       console.log('[AIService] Request aborted by user');
       this.abortController = null;
+    }
+    const reader = this.streamReader;
+    this.streamReader = null;
+    if (reader) {
+      void reader.cancel().catch(() => undefined);
     }
   }
 
@@ -905,13 +911,15 @@ Provide only the generated text without any additional commentary.`;
     const request = this.buildChatCompletionBody(messages, customSampler, !!useStreaming, options);
     const cache = getCapabilityCache(this.getBaseUrl(), this.config.modelId);
 
-    this.aborted = false;
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
     console.log('[AIService] Sending request with model:', this.config.modelId);
 
     try {
+      if (this.aborted) {
+        throw new AIError('Request was cancelled', 'unknown');
+      }
       let currentRequest = request;
       let response = await this.sendRequest(currentRequest, signal);
 
@@ -1090,6 +1098,7 @@ Provide only the generated text without any additional commentary.`;
     onChunk: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
     const reader = body.getReader();
+    this.streamReader = reader;
     const decoder = new TextDecoder();
     // Track lengths only — full strings live in ReasoningParser until return.
     let contentLen = 0;
@@ -1165,7 +1174,15 @@ Provide only the generated text without any additional commentary.`;
         finishReason,
         toolCalls: finalizeToolCalls(toolCallAcc),
       };
+    } catch (error) {
+      if (this.isAborted() || (error instanceof Error && error.name === 'AbortError')) {
+        throw new AIError('Request was cancelled', 'unknown');
+      }
+      throw error;
     } finally {
+      if (this.streamReader === reader) {
+        this.streamReader = null;
+      }
       try {
         await reader.cancel();
       } catch {

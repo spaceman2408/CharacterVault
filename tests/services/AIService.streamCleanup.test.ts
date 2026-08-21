@@ -63,6 +63,18 @@ describe('AIService stream cleanup', () => {
     vi.restoreAllMocks();
   });
 
+  it('does not start a request after abort()', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const service = new AIService(baseConfig(), baseSampler());
+    service.abort();
+
+    await expect(
+      service.chat([{ role: 'user', content: 'hi' }]),
+    ).rejects.toMatchObject({ message: 'Request was cancelled' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('dispose aborts the in-flight controller and keeps sticky aborted state', () => {
     const service = new AIService(baseConfig(), baseSampler());
     const controller = new AbortController();

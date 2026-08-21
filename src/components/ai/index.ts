@@ -23,7 +23,7 @@ export type {
 export type { AIOperation } from '../../db/characterTypes';
 
 // Utils
-export { formatTime, generateMessageId } from './utils';
+export { formatTime, generateMessageId, canRetryEmptySend } from './utils';
 
 // Config
 export { markdownComponents } from './config/markdownComponents';

@@ -13,6 +13,7 @@ import { StreamingText } from './StreamingText';
 import type { ChatMessage } from './types';
 import { ChatMessage as ChatMessageComponent, ReasoningSection } from './components';
 import { useAutoScroll } from './hooks';
+import { canRetryEmptySend } from './utils';
 
 export interface AIChatViewProps {
   title: string;
@@ -101,10 +102,8 @@ export function AIChatView({
 
   const handleSubmit = async () => {
     if (!askQuestion.trim()) {
-      const lastMessage = chatHistory[chatHistory.length - 1];
-      if (lastMessage?.role === 'user' && showRegenerate) {
+      if (canRetryEmptySend(chatHistory, showRegenerate)) {
         await handleRegenerate();
-        return;
       }
       return;
     }
@@ -118,9 +117,7 @@ export function AIChatView({
   const canSend =
     isProcessing ||
     !!askQuestion.trim() ||
-    (showRegenerate &&
-      chatHistory.length > 0 &&
-      chatHistory[chatHistory.length - 1]?.role === 'user');
+    canRetryEmptySend(chatHistory, showRegenerate);
 
   const onComposerInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;

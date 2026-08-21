@@ -22,3 +22,13 @@ export function formatTime(timestamp: number): string {
 export function generateMessageId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
+
+export function canRetryEmptySend(
+  chatHistory: ReadonlyArray<{ role: string; content?: string }>,
+  showRegenerate: boolean,
+): boolean {
+  if (!showRegenerate || chatHistory.length === 0) return false;
+  const last = chatHistory[chatHistory.length - 1];
+  if (last.role === 'user') return true;
+  return last.role === 'assistant' && !(last.content ?? '').trim();
+}

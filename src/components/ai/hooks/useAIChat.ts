@@ -271,6 +271,11 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     if (aiServiceRef.current) {
       aiServiceRef.current.abort();
     }
+    isProcessingRef.current = false;
+    if (isMountedRef.current) {
+      setIsProcessing(false);
+      setIsStreaming(false);
+    }
   }, []);
 
   const handleNewChat = useCallback(() => {
@@ -518,7 +523,10 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
       if (!question.trim()) {
         const lastMessage = chatHistoryRef.current[chatHistoryRef.current.length - 1];
-        if (lastMessage?.role === 'user') {
+        if (
+          lastMessage?.role === 'user' ||
+          (lastMessage?.role === 'assistant' && !lastMessage.content.trim())
+        ) {
           await handleRegenerate();
           return;
         }
