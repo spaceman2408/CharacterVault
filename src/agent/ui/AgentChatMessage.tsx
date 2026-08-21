@@ -76,7 +76,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
       ) : null}
 
       {speech ? (
-        <div className="prose prose-sm dark:prose-invert min-w-0 text-sm text-fg">
+        <div className="prose prose-sm dark:prose-invert min-w-0 max-w-none text-sm text-fg">
           <LazyMarkdown content={message.content} />
         </div>
       ) : null}

@@ -498,6 +498,19 @@ textarea:focus:not(:focus-visible) {
   animation: pulse-soft 1.5s ease-in-out infinite;
 }
 
+@keyframes message-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.message-animate {
+  animation: message-appear 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

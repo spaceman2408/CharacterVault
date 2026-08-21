@@ -130,22 +130,6 @@ export function AIChatView({
 
   return (
     <div className="h-full flex flex-col bg-bg border-l border-border animate-fade-in-slow">
-      <style>{`
-        @keyframes message-appear {
-          0% {
-            opacity: 0;
-            transform: translateY(8px) scale(0.98);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        .message-animate {
-          animation: message-appear 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-      `}</style>
-
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-muted/50 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <MessageSquare className="w-4 h-4 text-fg-muted shrink-0" />
@@ -265,7 +249,7 @@ export function AIChatView({
       <div
         ref={chatContainerRef}
         data-chat-scroll
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3"
+        className="flex flex-1 min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto px-3 py-3"
       >
         {chatHistory.length === 0 && (
           <div className="flex flex-col items-center text-center px-4 py-10 text-fg-subtle">
