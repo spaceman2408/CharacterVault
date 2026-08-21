@@ -7,6 +7,7 @@ import { runLoop } from '../core/runLoop';
 import { stripFences } from '../core/stripFences';
 import type { AgentMessage } from '../core/types';
 import { createLorebookHost } from '../hosts/lorebook/createHost';
+import { compactToolResultMessage, isLookupOnlyTurn } from './notices';
 import type { AgentToolEvent } from './types';
 
 export interface UseLorebookAgentOptions {
@@ -31,8 +32,10 @@ export function lastUserMessageIndex(history: Array<{ role: string }>): number {
 export interface UseLorebookAgentReturn {
   chatHistory: ChatMessage[];
   toolEventsByMessageId: Record<string, AgentToolEvent[]>;
+  errorByMessageId: Record<string, string>;
   isProcessing: boolean;
   error: string | null;
+  busyLabel: string | null;
   isStreaming: boolean;
   streamingContent: string;
   streamingReasoning: string;
@@ -62,11 +65,11 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
   const [toolEventsByMessageId, setToolEventsByMessageId] = useState<
     Record<string, AgentToolEvent[]>
   >({});
+  const [errorByMessageId, setErrorByMessageId] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingContent, setStreamingContent] = useState('');
-  const [streamingReasoning, setStreamingReasoning] = useState('');
 
   const aiServiceRef = useRef<AIService | null>(null);
   const abortedRef = useRef(false);
@@ -75,10 +78,9 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
   const requestIdRef = useRef(0);
   const lastAssistantIdRef = useRef<string | null>(null);
   const chatHistoryRef = useRef(chatHistory);
+  const toolEventsRef = useRef(toolEventsByMessageId);
   const streamContentRef = useRef('');
   const streamReasoningRef = useRef('');
-  const streamRafRef = useRef<number | null>(null);
-  const streamDirtyRef = useRef(false);
 
   const getBookRef = useRef(getBook);
   const setBookRef = useRef(setBook);
@@ -90,7 +92,6 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
   const samplerSettingsRef = useRef(samplerSettings);
   const promptSettingsRef = useRef(promptSettings);
 
-  chatHistoryRef.current = chatHistory;
   getBookRef.current = getBook;
   setBookRef.current = setBook;
   getCustomContextRef.current = getCustomContext;
@@ -105,52 +106,45 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
   }, [aiConfig.modelId]);
 
-  const cancelStreamRaf = useCallback(() => {
-    if (streamRafRef.current !== null) {
-      cancelAnimationFrame(streamRafRef.current);
-      streamRafRef.current = null;
-    }
-    streamDirtyRef.current = false;
-  }, []);
-
-  const flushStreamToState = useCallback(() => {
-    streamRafRef.current = null;
-    if (!streamDirtyRef.current) return;
-    streamDirtyRef.current = false;
-    if (!isMountedRef.current) return;
-    setStreamingContent(stripFences(streamContentRef.current));
-    setStreamingReasoning(streamReasoningRef.current);
-  }, []);
-
   const clearStreamDraft = useCallback(() => {
-    cancelStreamRaf();
     streamContentRef.current = '';
     streamReasoningRef.current = '';
-    if (isMountedRef.current) {
-      setStreamingContent('');
-      setStreamingReasoning('');
-    }
-  }, [cancelStreamRaf]);
+  }, []);
 
-  const appendStreamChunk = useCallback(
-    (chunk: { content?: string; reasoning?: string }) => {
-      let changed = false;
-      if (chunk.reasoning) {
-        streamReasoningRef.current += chunk.reasoning;
-        changed = true;
-      }
-      if (chunk.content) {
-        streamContentRef.current += chunk.content;
-        changed = true;
-      }
-      if (!changed) return;
-      streamDirtyRef.current = true;
-      if (streamRafRef.current === null) {
-        streamRafRef.current = requestAnimationFrame(flushStreamToState);
-      }
-    },
-    [flushStreamToState],
-  );
+  const appendStreamChunk = useCallback((chunk: { content?: string; reasoning?: string }) => {
+    if (chunk.reasoning) streamReasoningRef.current += chunk.reasoning;
+    if (chunk.content) streamContentRef.current += chunk.content;
+  }, []);
+
+  const attachError = useCallback((message: string) => {
+    setError(message);
+    const targetId = lastAssistantIdRef.current ?? chatHistoryRef.current.at(-1)?.id;
+    if (targetId) {
+      setErrorByMessageId((prev) => ({ ...prev, [targetId]: message }));
+    }
+  }, []);
+
+  const dropLookupOnlyMessage = useCallback((messageId: string | null) => {
+    if (!messageId) return;
+    const events = toolEventsRef.current[messageId] ?? [];
+    if (!isLookupOnlyTurn(events)) return;
+
+    const nextHistory = chatHistoryRef.current.filter((message) => message.id !== messageId);
+    chatHistoryRef.current = nextHistory;
+    setChatHistory(nextHistory);
+
+    const nextEvents = { ...toolEventsRef.current };
+    delete nextEvents[messageId];
+    toolEventsRef.current = nextEvents;
+    setToolEventsByMessageId(nextEvents);
+
+    setErrorByMessageId((prev) => {
+      if (!(messageId in prev)) return prev;
+      const next = { ...prev };
+      delete next[messageId];
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -158,12 +152,13 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
       isMountedRef.current = false;
       requestIdRef.current += 1;
       abortedRef.current = true;
-      cancelStreamRaf();
+      streamContentRef.current = '';
+      streamReasoningRef.current = '';
       aiServiceRef.current?.abort();
       aiServiceRef.current = null;
       onRunningChangeRef.current?.(false);
     };
-  }, [cancelStreamRaf]);
+  }, []);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -181,9 +176,13 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     aiServiceRef.current = null;
     clearStreamDraft();
     lastAssistantIdRef.current = null;
+    chatHistoryRef.current = [];
     setChatHistory([]);
+    toolEventsRef.current = {};
     setToolEventsByMessageId({});
+    setErrorByMessageId({});
     setError(null);
+    setBusyLabel(null);
     setIsProcessing(false);
     isProcessingRef.current = false;
     setIsStreaming(false);
@@ -192,19 +191,40 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
 
   const handleDeleteMessage = useCallback((messageId: string) => {
     if (isProcessingRef.current) return;
-    setChatHistory((prev) => {
-      const index = prev.findIndex((message) => message.id === messageId);
-      if (index === -1) return prev;
-      return prev.slice(0, index);
+    const history = chatHistoryRef.current;
+    const index = history.findIndex((message) => message.id === messageId);
+    if (index === -1) return;
+    const nextHistory = history.slice(0, index);
+    const keepIds = new Set(nextHistory.map((message) => message.id));
+    chatHistoryRef.current = nextHistory;
+    setChatHistory(nextHistory);
+
+    const nextEvents: Record<string, AgentToolEvent[]> = {};
+    for (const [id, events] of Object.entries(toolEventsRef.current)) {
+      if (keepIds.has(id)) nextEvents[id] = events;
+    }
+    toolEventsRef.current = nextEvents;
+    setToolEventsByMessageId(nextEvents);
+
+    setErrorByMessageId((prev) => {
+      const next: Record<string, string> = {};
+      for (const [id, message] of Object.entries(prev)) {
+        if (keepIds.has(id)) next[id] = message;
+      }
+      return next;
     });
-    setToolEventsByMessageId({});
     setError(null);
   }, []);
 
   const startRun = useCallback(
     async (question: string, priorHistory: ChatMessage[]) => {
       if (!isAIConfigured) {
-        setError('Please configure AI settings first');
+        const message = 'Please configure AI settings first';
+        setError(message);
+        const targetId = chatHistoryRef.current.at(-1)?.id;
+        if (targetId) {
+          setErrorByMessageId((prev) => ({ ...prev, [targetId]: message }));
+        }
         return;
       }
 
@@ -212,6 +232,7 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
       abortedRef.current = false;
       isProcessingRef.current = true;
       setIsProcessing(true);
+      setBusyLabel(null);
       setError(null);
       clearStreamDraft();
       lastAssistantIdRef.current = null;
@@ -260,8 +281,14 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
           },
           onEvent: (event) => {
             if (!isCurrent()) return;
+            if (event.type === 'tool_start') {
+              setBusyLabel(event.toolName);
+              return;
+            }
             if (event.type === 'assistant_text') {
+              dropLookupOnlyMessage(lastAssistantIdRef.current);
               clearStreamDraft();
+              setBusyLabel(null);
               if (isMountedRef.current) setIsStreaming(false);
               const id = generateMessageId();
               lastAssistantIdRef.current = id;
@@ -273,7 +300,9 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
                 timestamp: Date.now(),
                 suppressInitialAnimation: streaming,
               };
-              setChatHistory((prev) => [...prev, assistantMessage]);
+              const nextHistory = [...chatHistoryRef.current, assistantMessage];
+              chatHistoryRef.current = nextHistory;
+              setChatHistory(nextHistory);
               return;
             }
             if (event.type === 'tool_result') {
@@ -281,51 +310,56 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
               if (!targetId) {
                 targetId = generateMessageId();
                 lastAssistantIdRef.current = targetId;
-                setChatHistory((prev) => [
-                  ...prev,
-                  {
-                    id: targetId!,
-                    role: 'assistant',
-                    content: '',
-                    timestamp: Date.now(),
-                    suppressInitialAnimation: true,
-                  },
-                ]);
+                const placeholder: ChatMessage = {
+                  id: targetId,
+                  role: 'assistant',
+                  content: '',
+                  timestamp: Date.now(),
+                  suppressInitialAnimation: true,
+                };
+                const nextHistory = [...chatHistoryRef.current, placeholder];
+                chatHistoryRef.current = nextHistory;
+                setChatHistory(nextHistory);
               }
               const eventRow: AgentToolEvent = {
                 toolName: event.result.toolName,
                 ok: event.result.ok,
-                message: event.result.message,
+                message: compactToolResultMessage(event.result.toolName, event.result.message),
               };
-              setToolEventsByMessageId((prev) => ({
-                ...prev,
-                [targetId]: [...(prev[targetId] ?? []), eventRow],
-              }));
+              const nextEvents = {
+                ...toolEventsRef.current,
+                [targetId]: [...(toolEventsRef.current[targetId] ?? []), eventRow],
+              };
+              toolEventsRef.current = nextEvents;
+              setToolEventsByMessageId(nextEvents);
               return;
             }
             if (event.type === 'error') {
-              setError(event.message);
+              attachError(event.message);
             }
           },
         });
 
         if (result.reason === 'abort' && isCurrent()) {
+          dropLookupOnlyMessage(lastAssistantIdRef.current);
           const speech = stripFences(streamContentRef.current);
           const reasoning = streamReasoningRef.current;
           if (speech || reasoning) {
             const id = generateMessageId();
             lastAssistantIdRef.current = id;
-            setChatHistory((prev) => [
-              ...prev,
+            const nextHistory = [
+              ...chatHistoryRef.current,
               {
                 id,
-                role: 'assistant',
+                role: 'assistant' as const,
                 content: speech,
                 reasoning: reasoning || undefined,
                 timestamp: Date.now(),
                 suppressInitialAnimation: true,
               },
-            ]);
+            ];
+            chatHistoryRef.current = nextHistory;
+            setChatHistory(nextHistory);
           }
         }
       } catch (err) {
@@ -333,21 +367,24 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
         if (err instanceof AIError && err.message === 'Request was cancelled') {
           return;
         }
-        setError(err instanceof Error ? err.message : 'Agent request failed');
+        attachError(err instanceof Error ? err.message : 'Agent request failed');
       } finally {
         if (requestId === requestIdRef.current) {
+          dropLookupOnlyMessage(lastAssistantIdRef.current);
           aiServiceRef.current = null;
           isProcessingRef.current = false;
+          streamContentRef.current = '';
+          streamReasoningRef.current = '';
           if (isMountedRef.current) {
             setIsProcessing(false);
             setIsStreaming(false);
-            clearStreamDraft();
+            setBusyLabel(null);
           }
           onRunningChangeRef.current?.(false);
         }
       }
     },
-    [appendStreamChunk, clearStreamDraft, isAIConfigured],
+    [appendStreamChunk, attachError, clearStreamDraft, dropLookupOnlyMessage, isAIConfigured],
   );
 
   const handleRegenerate = useCallback(async () => {
@@ -358,11 +395,18 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     const lastUser = history[lastUserIndex];
     const historyToKeep = history.slice(0, lastUserIndex + 1);
     const keepIds = new Set(historyToKeep.map((message) => message.id));
+    chatHistoryRef.current = historyToKeep;
     setChatHistory(historyToKeep);
-    setToolEventsByMessageId((prev) => {
-      const next: Record<string, AgentToolEvent[]> = {};
-      for (const [id, events] of Object.entries(prev)) {
-        if (keepIds.has(id)) next[id] = events;
+    const nextEvents: Record<string, AgentToolEvent[]> = {};
+    for (const [id, events] of Object.entries(toolEventsRef.current)) {
+      if (keepIds.has(id)) nextEvents[id] = events;
+    }
+    toolEventsRef.current = nextEvents;
+    setToolEventsByMessageId(nextEvents);
+    setErrorByMessageId((prev) => {
+      const next: Record<string, string> = {};
+      for (const [id, message] of Object.entries(prev)) {
+        if (keepIds.has(id)) next[id] = message;
       }
       return next;
     });
@@ -385,7 +429,9 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
         timestamp: Date.now(),
       };
       const priorHistory = chatHistoryRef.current;
-      setChatHistory((prev) => [...prev, userMessage]);
+      const nextHistory = [...priorHistory, userMessage];
+      chatHistoryRef.current = nextHistory;
+      setChatHistory(nextHistory);
       await startRun(trimmed, priorHistory);
     },
     [handleRegenerate, startRun],
@@ -394,11 +440,13 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
   return {
     chatHistory,
     toolEventsByMessageId,
+    errorByMessageId,
     isProcessing,
     error,
+    busyLabel,
     isStreaming,
-    streamingContent,
-    streamingReasoning,
+    streamingContent: '',
+    streamingReasoning: '',
     handleAsk,
     handleRegenerate,
     handleNewChat,

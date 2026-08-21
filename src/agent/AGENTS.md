@@ -44,5 +44,6 @@ Do not add `if (host === 'lorebook')` in `core/`.
 
 - Build the system prompt once per run (custom context is cached; catalog updates ride tool results).
 - `flush()` persists the book once at the end of the run (and on abort), not after every turn.
-- The chat stream shows speech only — tool bodies never go into the live DOM.
+- While a run is in progress, the chat shows a spinner — not a live thinking/speech draft. Committed turns use a collapsed `<details>` fold for thinking, flat tool lines, and hoverable info tips for errors. `list_entries` and other lookup-only turns stay off the transcript (and are dropped from chat state so catalogs/reasoning are not retained). Speech on a turn that also has tool calls is hidden (models often dump planning there). Tool results stored in the UI keep the list_entries header only, not the catalog body.
+- Same-name `add_entry` in one run revises the new entry (keeps the longer body). Names that already existed in the book are rejected.
 - Agent `add_entry` sets `extensions.context_enabled: false` so new entries are not pinned into AI context.

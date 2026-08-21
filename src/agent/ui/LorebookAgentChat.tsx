@@ -1,8 +1,11 @@
 import React, { useCallback, useMemo, type ReactNode } from 'react';
+import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
+import type { ChatMessage } from '../../components/ai/types';
 import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '../../db/characterTypes';
 import { computeAgentContextUsage } from '../hosts/lorebook/contextUsage';
-import { ToolEventList } from './ToolEventList';
+import { AgentChatMessage } from './AgentChatMessage';
+import { messageNotices, shouldRenderAgentMessage, visibleToolEvents } from './notices';
 import { useLorebookAgent } from './useLorebookAgent';
 
 export interface LorebookAgentChatProps {
@@ -54,21 +57,58 @@ export function LorebookAgentChat({
     return labels;
   }, [customContextIncluded]);
 
-  const contextUsage = computeAgentContextUsage({
-    book: getBook(),
-    customContextCharLength,
-    customContextIncluded,
-    history: session.chatHistory,
-    contextLength: samplerSettings.contextLength,
-  });
+  const contextUsage = useMemo(
+    () =>
+      computeAgentContextUsage({
+        book: getBook(),
+        customContextCharLength,
+        customContextIncluded,
+        history: session.chatHistory,
+        contextLength: samplerSettings.contextLength,
+      }),
+    [
+      customContextCharLength,
+      customContextIncluded,
+      getBook,
+      samplerSettings.contextLength,
+      session.chatHistory,
+    ],
+  );
 
-  const renderAfterMessage = useCallback(
-    (message: { id: string }) => {
-      const events = session.toolEventsByMessageId[message.id];
-      if (!events?.length) return null;
-      return <ToolEventList events={events} />;
+  const renderMessage = useCallback(
+    (message: ChatMessage, index: number) => {
+      const events = session.toolEventsByMessageId[message.id] ?? [];
+      const notices = messageNotices(session.errorByMessageId[message.id], events);
+      const toolEvents = visibleToolEvents(events);
+      const hideSpeech = events.length > 0;
+      const speech = hideSpeech ? '' : message.content;
+      if (!shouldRenderAgentMessage(message.role, speech, toolEvents, notices)) {
+        return null;
+      }
+      return (
+        <AgentChatMessage
+          message={hideSpeech ? { ...message, content: '' } : message}
+          messageIndex={index}
+          chatHistoryLength={session.chatHistory.length}
+          isProcessing={session.isProcessing}
+          showReasoning={aiConfig.showReasoning ?? true}
+          showRegenerate
+          notices={notices}
+          toolEvents={toolEvents}
+          onRegenerate={session.handleRegenerate}
+          onDelete={session.handleDeleteMessage}
+        />
+      );
     },
-    [session.toolEventsByMessageId],
+    [
+      aiConfig.showReasoning,
+      session.chatHistory.length,
+      session.errorByMessageId,
+      session.handleDeleteMessage,
+      session.handleRegenerate,
+      session.isProcessing,
+      session.toolEventsByMessageId,
+    ],
   );
 
   return (
@@ -81,15 +121,16 @@ export function LorebookAgentChat({
       contextEmptyHint="Custom context is optional. Enable it in the lorebook sidebar to give the agent source notes."
       composerHint="Stop, then Send to retry · Writes go into this book"
       headerActions={headerActions}
-      showReasoning={aiConfig.showReasoning ?? true}
+      showReasoning={false}
       showRegenerate
+      showStreamDraft={false}
       contextUsage={contextUsage}
       chatHistory={session.chatHistory}
       isProcessing={session.isProcessing}
-      error={session.error}
+      error={session.chatHistory.length === 0 ? session.error : null}
       isStreaming={session.isStreaming}
-      streamingContent={session.streamingContent}
-      streamingReasoning={session.streamingReasoning}
+      streamingContent=""
+      streamingReasoning=""
       handleAsk={session.handleAsk}
       handleRegenerate={session.handleRegenerate}
       handleNewChat={session.handleNewChat}
@@ -97,7 +138,15 @@ export function LorebookAgentChat({
       handleAbort={session.handleAbort}
       clearError={session.clearError}
       onClose={onClose}
-      renderAfterMessage={renderAfterMessage}
+      renderMessage={renderMessage}
+      processingIndicator={
+        <div className="flex items-center gap-2 py-1 text-fg-muted">
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+          <span className="text-xs">
+            {session.busyLabel ? `Running ${session.busyLabel}` : 'Working…'}
+          </span>
+        </div>
+      }
     />
   );
 }

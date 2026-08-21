@@ -1,5 +1,4 @@
 import React from 'react';
-import { Check, List, AlertCircle } from 'lucide-react';
 import type { AgentToolEvent } from './types';
 
 function formatToolEvent(event: AgentToolEvent): string {
@@ -21,21 +20,12 @@ function formatToolEvent(event: AgentToolEvent): string {
 export function ToolEventList({ events }: { events: AgentToolEvent[] }): React.ReactElement | null {
   if (events.length === 0) return null;
   return (
-    <ul className="ml-1 space-y-1">
-      {events.map((event, index) => {
-        const Icon = !event.ok ? AlertCircle : event.toolName === 'list_entries' ? List : Check;
-        return (
-          <li
-            key={`${event.toolName}-${index}`}
-            className={`flex items-start gap-1.5 text-[11px] ${
-              event.ok ? 'text-fg-muted' : 'text-danger'
-            }`}
-          >
-            <Icon className="mt-0.5 h-3 w-3 shrink-0" />
-            <span>{formatToolEvent(event)}</span>
-          </li>
-        );
-      })}
+    <ul className="space-y-0.5">
+      {events.map((event, index) => (
+        <li key={`${event.toolName}-${index}`} className="text-xs text-fg-muted">
+          {formatToolEvent(event)}
+        </li>
+      ))}
     </ul>
   );
 }
