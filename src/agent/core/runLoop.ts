@@ -7,8 +7,8 @@ import type {
   RunLoopResult,
 } from './types';
 
-export const DEFAULT_MAX_TURNS = 16;
-export const DEFAULT_MAX_ACTIONS_PER_TURN = 3;
+export const DEFAULT_MAX_TURNS = 32;
+export const DEFAULT_MAX_ACTIONS_PER_TURN = 12;
 
 export function formatToolResults(results: ActionResult[]): string {
   const lines = results.map((result) => `[${result.toolName}] ${result.message}`);

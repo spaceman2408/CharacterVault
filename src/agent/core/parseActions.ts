@@ -45,6 +45,18 @@ function isValidToolName(name: string): boolean {
   return true;
 }
 
+function isPlaceholderName(name: string): boolean {
+  return name.toLowerCase() === 'tool_name';
+}
+
+function isUsableToolName(name: string): boolean {
+  return isValidToolName(name) && !isPlaceholderName(name);
+}
+
+function lineToolToken(line: string): string {
+  return line.trim().replace(/\(\s*\)\s*$/, '');
+}
+
 function findToolCallOpen(text: string, from: number): number {
   let start = from;
   while (start < text.length) {
@@ -151,17 +163,22 @@ function actionFromInner(nameHint: string | null, inner: string): ParsedAction |
   }
 
   const lines = inner.replace(/\r\n/g, '\n').split('\n');
-  let name = nameHint;
+  let name = nameHint && isUsableToolName(nameHint) ? nameHint : null;
   let start = 0;
   while (start < lines.length && lines[start].trim() === '') start += 1;
+  while (start < lines.length && isPlaceholderName(lineToolToken(lines[start]))) {
+    start += 1;
+    while (start < lines.length && lines[start].trim() === '') start += 1;
+  }
   if (!name) {
     if (start >= lines.length) return null;
-    const first = lines[start].trim().replace(/\(\s*\)\s*$/, '');
-    if (!isValidToolName(first)) return null;
+    const first = lineToolToken(lines[start]);
+    if (!isUsableToolName(first)) return null;
     name = first;
     start += 1;
-  } else if (start < lines.length && lines[start].trim().replace(/\(\s*\)\s*$/, '') === name) {
-    start += 1;
+  } else if (start < lines.length) {
+    const first = lineToolToken(lines[start]);
+    if (first === name || isPlaceholderName(first)) start += 1;
   }
   const { headers, body } = parseHeadersAndBody(lines.slice(start));
   return { name, headers, body };
@@ -289,7 +306,7 @@ function parseOneToolCall(
       i = eq + 1;
       continue;
     }
-    if (key === 'name' && isValidToolName(quoted.value)) nameAttr = quoted.value;
+    if (key === 'name' && isUsableToolName(quoted.value)) nameAttr = quoted.value;
     i = quoted.end;
   }
 

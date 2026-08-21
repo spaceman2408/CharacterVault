@@ -188,6 +188,47 @@ A busy harbor.
     expect(result.actions).toEqual([]);
     expect(result.incomplete).toBe(false);
   });
+
+  it('recovers when a copied tool_name placeholder sits under a real name attribute', () => {
+    const result = parseActions(`<tool_call name="add_entry">
+tool_name
+name: Frostholm
+keys: Frostholm, Eira
+---
+An Eiran city.
+</tool_call>`);
+    expect(result.actions).toEqual([
+      {
+        name: 'add_entry',
+        headers: { name: 'Frostholm', keys: 'Frostholm, Eira' },
+        body: 'An Eiran city.',
+      },
+    ]);
+  });
+
+  it('recovers when tool_name is the name attribute and the inner line is the real tool', () => {
+    const result = parseActions(`<tool_call name="tool_name">
+add_entry
+name: Harbor
+keys: harbor
+---
+A busy harbor.
+</tool_call>`);
+    expect(result.actions[0].name).toBe('add_entry');
+    expect(result.actions[0].headers.name).toBe('Harbor');
+  });
+
+  it('does not emit unknown_action for a bare tool_name placeholder', () => {
+    const result = parseActions(`<tool_call>
+tool_name
+name: Frostholm
+keys: Frostholm
+---
+City.
+</tool_call>`);
+    expect(result.actions).toEqual([]);
+    expect(result.incomplete).toBe(false);
+  });
 });
 
 describe('stripFences', () => {
