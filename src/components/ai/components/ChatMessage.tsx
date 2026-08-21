@@ -19,6 +19,7 @@ export interface ChatMessageProps {
   messageIndex: number;
   chatHistoryLength: number;
   showReasoning?: boolean;
+  showRegenerate?: boolean;
   isProcessing: boolean;
   onRegenerate: () => void;
   onDelete: (messageId: string) => void;
@@ -195,6 +196,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(
     messageIndex,
     chatHistoryLength,
     showReasoning = true,
+    showRegenerate = true,
     isProcessing,
     onRegenerate,
     onDelete,
@@ -235,12 +237,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(
               />
               <div className="absolute bottom-2 right-2 flex gap-0.5">
                 <CopyButton content={message.content} />
-                <RegenerateButton
-                  messageIndex={messageIndex}
-                  chatHistoryLength={chatHistoryLength}
-                  onRegenerate={onRegenerate}
-                  isProcessing={isProcessing}
-                />
+                {showRegenerate && (
+                  <RegenerateButton
+                    messageIndex={messageIndex}
+                    chatHistoryLength={chatHistoryLength}
+                    onRegenerate={onRegenerate}
+                    isProcessing={isProcessing}
+                  />
+                )}
                 <DeleteMessageButton onDelete={handleDelete} disabled={isProcessing} />
               </div>
             </div>

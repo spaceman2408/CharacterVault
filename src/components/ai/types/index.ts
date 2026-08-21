@@ -3,6 +3,7 @@
  * @module components/ai/types
  */
 
+import type { ReactNode } from 'react';
 import type { SamplerSettings, AIConfig, PromptSettings } from '../../../db/characterTypes';
 
 export interface ResponseStats {
@@ -43,6 +44,7 @@ export interface AIChatPanelProps {
   activeSection?: string | null;
   onClose?: () => void;
   isMobile?: boolean;
+  headerActions?: ReactNode;
 }
 
 export interface StreamingChunk {
