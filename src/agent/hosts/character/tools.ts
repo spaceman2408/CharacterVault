@@ -1,6 +1,6 @@
 import type { CharacterSpec } from '../../../db/characterTypes';
 import type { ActionResult, ParsedAction } from '../../core/types';
-import { parseReplaceAll, replaceText, replacementText } from '../replaceText';
+import { parseReplaceAll, replaceText, replacementText, searchText } from '../replaceText';
 import { formatFieldCatalog, formatFieldRead, formatGreetingCatalog, formatGreetingRead } from './catalog';
 import {
   fieldLabel,
@@ -105,7 +105,7 @@ export function replaceInField(
   const current = getFieldValue(spec, rawId);
   const applied = replaceText(
     current,
-    action.headers.old ?? '',
+    searchText(action),
     replacementText(action),
     parseReplaceAll(action.headers.replace_all),
   );
@@ -192,7 +192,7 @@ export function replaceInGreeting(
   const current = greetings[index] ?? '';
   const applied = replaceText(
     current,
-    action.headers.old ?? '',
+    searchText(action),
     replacementText(action),
     parseReplaceAll(action.headers.replace_all),
   );

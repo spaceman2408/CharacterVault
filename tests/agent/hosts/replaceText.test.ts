@@ -3,6 +3,7 @@ import {
   countOccurrences,
   replaceText,
   replacementText,
+  searchText,
 } from '../../../src/agent/hosts/replaceText';
 
 describe('countOccurrences', () => {
@@ -45,6 +46,77 @@ describe('replaceText', () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.text).toBe('cost is $100');
   });
+
+  it('matches curly quotes and dashes in the source against straight old text', () => {
+    const source =
+      "1. Keep characters\u2019 heights in mind\n2. Weave attire naturally when needed\u2014full motion";
+    const result = replaceText(
+      source,
+      "1. Keep characters' heights in mind",
+      '1. Keep height in mind',
+      false,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.text).toBe(
+        '1. Keep height in mind\n2. Weave attire naturally when needed\u2014full motion',
+      );
+    }
+  });
+
+  it('refuses to delete a markdown heading alone', () => {
+    const source =
+      '## Commands for generating response\n1. Keep characters\' heights in mind\n2. Emphasize motion';
+    const result = replaceText(source, '## Commands for generating response', '', false);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toContain('deleting a heading leaves the section body');
+  });
+
+  it('deletes a section from a unique first line through a unique last line', () => {
+    const source = [
+      '## Core Rules',
+      '12. NPCs cannot control {{user}} or know their unspoken thoughts',
+      '',
+      '## Commands for generating response',
+      "1. Keep characters' heights and stature in mind when generating responses",
+      '2. Emphasize how present characters act, talk, and move',
+      '11. Last command with "quotes" and an em dash \u2014 here',
+    ].join('\n');
+    const result = replaceText(
+      source,
+      [
+        '## Commands for generating response',
+        'WRONG MIDDLE WITH STRAIGHT QUOTES',
+        '11. Last command with "quotes" and an em dash - here',
+      ].join('\n'),
+      '',
+      false,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.text).toBe(
+        '## Core Rules\n12. NPCs cannot control {{user}} or know their unspoken thoughts\n\n',
+      );
+      expect(result.text).not.toContain('Commands for generating response');
+      expect(result.text).not.toContain('Keep characters');
+    }
+  });
+
+  it('hints when only the first line of a multiline old matches', () => {
+    const source = [
+      '## Commands for generating response',
+      '1. Keep characters\' heights in mind',
+      '2. Emphasize motion',
+    ].join('\n');
+    const result = replaceText(
+      source,
+      ['## Commands for generating response', 'this last line is not in the field'].join('\n'),
+      '',
+      false,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toContain('first line matched once');
+  });
 });
 
 describe('replacementText', () => {
@@ -53,5 +125,16 @@ describe('replacementText', () => {
       'from-header',
     );
     expect(replacementText({ name: 'replace_in_field', headers: {}, body: 'from-body' })).toBe('from-body');
+  });
+});
+
+describe('searchText', () => {
+  it('uses the old header when present, otherwise the body if new is set', () => {
+    expect(searchText({ name: 'replace_in_field', headers: { old: 'from-header' }, body: 'from-body' })).toBe(
+      'from-header',
+    );
+    expect(searchText({ name: 'replace_in_field', headers: { new: '' }, body: 'from-body' })).toBe(
+      'from-body',
+    );
   });
 });

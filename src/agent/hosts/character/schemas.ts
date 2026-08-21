@@ -41,12 +41,16 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
     name: 'replace_in_field',
     description:
-      'Replace an exact snippet in one field. old must match once unless replace_all is true. Prefer this over update_field for a small edit. Copy old from read_field. Do not use this for alternate greetings.',
+      'Replace a unique snippet. Quotes and dashes are matched flexibly. For a section delete, old can be the first line through the last unique line; empty new deletes that span. After a replace, read_field before another. Prefer update_field if a large delete fails. Copy old from the latest read. Do not use this for alternate greetings.',
     parameters: {
       type: 'object',
       properties: {
         id: { type: 'string', description: 'Field id' },
-        old: { type: 'string', description: 'Exact text to find' },
+        old: {
+          type: 'string',
+          description:
+            'Unique snippet to find. For a section delete, first line through last unique line is enough.',
+        },
         new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
         content: {
           type: 'string',
@@ -106,12 +110,15 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
     name: 'replace_in_greeting',
     description:
-      'Replace an exact snippet in one alternate greeting. old must match once unless replace_all is true. Copy old from read_greeting.',
+      'Replace a unique snippet in one alternate greeting. Quotes and dashes are matched flexibly. Copy old from the latest read_greeting.',
     parameters: {
       type: 'object',
       properties: {
         index: { type: 'integer', description: '1-based greeting index. Greeting 1 is the first alternate.' },
-        old: { type: 'string', description: 'Exact text to find' },
+        old: {
+          type: 'string',
+          description: 'Unique snippet to find. Quotes and dashes need not match exactly.',
+        },
         new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
         content: {
           type: 'string',

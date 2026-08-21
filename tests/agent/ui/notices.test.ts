@@ -77,7 +77,7 @@ describe('visibleToolEvents', () => {
     const failedReplace: AgentToolEvent = {
       toolName: 'replace_in_entry',
       ok: false,
-      message: 'error: old not found (copy the exact text from read)',
+      message: 'error: old not found (re-read and copy a unique snippet, or rewrite the whole value)',
     };
     expect(visibleToolEvents([okAdd, failedReplace])).toEqual([okAdd, failedReplace]);
   });

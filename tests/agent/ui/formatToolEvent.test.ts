@@ -77,9 +77,15 @@ describe('formatToolEvent', () => {
   it('formats failures with a clear prefix and stripped error tag', () => {
     expect(
       formatToolEvent(
-        event('replace_in_field', 'error: old not found (copy the exact text from read)', false),
+        event(
+          'replace_in_field',
+          'error: old not found (re-read and copy a unique snippet, or rewrite the whole value)',
+          false,
+        ),
       ),
-    ).toBe("Couldn't replace in field — old not found (copy the exact text from read)");
+    ).toBe(
+      "Couldn't replace in field — old not found (re-read and copy a unique snippet, or rewrite the whole value)",
+    );
     expect(
       formatToolEvent(
         event('replace_in_entry', 'error: old matches 2 times; pass replace_all true or a longer unique snippet', false),

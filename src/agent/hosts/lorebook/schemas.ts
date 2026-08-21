@@ -58,12 +58,16 @@ export const LOREBOOK_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
     name: 'replace_in_entry',
     description:
-      'Replace an exact snippet in one entry body. old must match once unless replace_all is true. Prefer this over update_entry for a small edit. Copy old from read_entry.',
+      'Replace a unique snippet in one entry body. Quotes and dashes are matched flexibly. For a section delete, old can be the first line through the last unique line; empty new deletes that span. After a replace, read_entry before another. Prefer update_entry if a large delete fails. Copy old from the latest read.',
     parameters: {
       type: 'object',
       properties: {
         id: { type: 'integer', description: 'Entry id' },
-        old: { type: 'string', description: 'Exact text to find' },
+        old: {
+          type: 'string',
+          description:
+            'Unique snippet to find. For a section delete, first line through last unique line is enough.',
+        },
         new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
         content: {
           type: 'string',

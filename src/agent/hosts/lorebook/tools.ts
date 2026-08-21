@@ -1,6 +1,6 @@
 import type { CharacterBook, LorebookEntry } from '../../../db/characterTypes';
 import type { ActionResult, ParsedAction } from '../../core/types';
-import { parseReplaceAll, replaceText, replacementText } from '../replaceText';
+import { parseReplaceAll, replaceText, replacementText, searchText } from '../replaceText';
 import { formatEntryCatalog } from './catalog';
 
 export const LOREBOOK_TOOL_NAMES = [
@@ -234,10 +234,9 @@ export function replaceInEntry(book: CharacterBook, action: ParsedAction): Updat
     return updateEntryError(book, `error: no entry #${id}`, 'replace_in_entry');
   }
 
-  const oldText = action.headers.old ?? '';
   const applied = replaceText(
     existing.content ?? '',
-    oldText,
+    searchText(action),
     replacementText(action),
     parseReplaceAll(action.headers.replace_all),
   );
