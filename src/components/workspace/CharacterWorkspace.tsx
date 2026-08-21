@@ -974,6 +974,7 @@ function CharacterWorkspaceInner({
           <ContextPanel
             onClose={() => setIsContextOpen(false)}
             isMobile={isMobile}
+            agentMode={agentMode}
           />
         </aside>
 

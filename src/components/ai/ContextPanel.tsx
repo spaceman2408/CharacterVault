@@ -34,6 +34,8 @@ export interface ContextPanelProps {
   onClose?: () => void;
   /** Whether this is mobile view (shows close button) */
   isMobile?: boolean;
+  /** Agent reads the card via tools; hide section pins and keep custom context. */
+  agentMode?: boolean;
 }
 
 /**
@@ -42,6 +44,7 @@ export interface ContextPanelProps {
 export function ContextPanel({
   onClose,
   isMobile = false,
+  agentMode = false,
 }: ContextPanelProps): React.ReactElement {
   const {
     currentCharacter,
@@ -136,7 +139,8 @@ export function ContextPanel({
   const calculateTokenCount = useCallback((): number => {
     if (!currentCharacterData) return 0;
 
-    let totalTokens = 0;
+    let totalTokens = customContextTokens;
+    if (agentMode) return totalTokens;
 
     contextSectionIds.forEach(sectionId => {
       const spec = currentCharacterData.spec;
@@ -196,9 +200,8 @@ export function ContextPanel({
       }
     });
 
-    totalTokens += customContextTokens;
     return totalTokens;
-  }, [currentCharacterData, contextSectionIds, customContextTokens]);
+  }, [agentMode, currentCharacterData, contextSectionIds, customContextTokens]);
 
   const usageData = useMemo(() => {
     const tokenCount = calculateTokenCount();
@@ -252,9 +255,9 @@ export function ContextPanel({
         <div className="flex items-center gap-2 min-w-0">
           <Sparkles className="w-4 h-4 text-fg-muted shrink-0" />
           <h2 className="font-semibold text-fg truncate">AI Context</h2>
-          {(contextSections.length > 0 || customContextEnabled) && (
+          {((!agentMode && contextSections.length > 0) || customContextEnabled) && (
             <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-accent-soft text-accent shrink-0">
-              {contextSections.length + (customContextEnabled ? 1 : 0)}
+              {(agentMode ? 0 : contextSections.length) + (customContextEnabled ? 1 : 0)}
             </span>
           )}
         </div>
@@ -273,7 +276,7 @@ export function ContextPanel({
       {/* Compact usage meter */}
       <div className="px-4 py-2.5 border-b border-border shrink-0 space-y-1.5">
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span className="text-fg-muted">Usage</span>
+          <span className="text-fg-muted">{agentMode ? 'Custom' : 'Usage'}</span>
           <div className="flex items-center gap-1.5">
             <span className={`font-medium tabular-nums ${usageColorClass}`}>
               {usageData.tokenCount.toLocaleString()} / {contextLimit.toLocaleString()}
@@ -317,7 +320,15 @@ export function ContextPanel({
         </div>
       )}
 
-      {/* Selected chips + include-current affordance */}
+      {agentMode ? (
+        <div className="flex-1 min-h-0 overflow-y-auto p-4">
+          <div className="rounded-xl border border-border bg-muted/40 px-3 py-3 text-xs leading-relaxed text-fg-muted">
+            The agent reads this card itself. Section pins are for Orion and the
+            AI toolbar. They come back when you switch off Agent.
+          </div>
+        </div>
+      ) : (
+        <>
       <div className="px-4 py-3 border-b border-border shrink-0 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-medium text-fg-muted uppercase tracking-wide">
@@ -464,6 +475,8 @@ export function ContextPanel({
           </ul>
         )}
       </div>
+        </>
+      )}
 
     </div>
   );
