@@ -11,7 +11,7 @@ Browser-side tool loop. The rest of the app imports **only** `src/agent/index.ts
 | `core/parseActions.ts` | XML / fence lexer. Salvages a truncated last call when name + payload are already there. |
 | `core/toolCalls.ts` | Native `tool_calls` JSON → `ParsedAction`, including truncated-JSON repair. |
 | `core/runLoop.ts` | complete → native tools or XML parse → `host.execute` → feed results. |
-| `hosts/lorebook/` | Lorebook host: `list_entries`, `read_entry`, `add_entry`, `update_entry`, `delete_entry`. |
+| `hosts/lorebook/` | Lorebook host: `list_entries`, `read_entry`, `add_entry`, `update_entry`, `replace_in_entry`, `delete_entry`. |
 | `hosts/character/` | Card host: spec fields, greetings, and (composed) embedded lorebook tools. |
 | `ui/` | Shared session (`useAgentSession`) plus host wrappers (`useLorebookAgent`, `useCharacterAgent`) and chat mounts. |
 
@@ -59,7 +59,8 @@ On the character workspace, Agent mode always mounts `CharacterAgentChat` (tab c
 - `flush()` persists once at the end of the run (and on abort), not after every turn. Lorebook host writes the vault book. Character host persists spec and/or embedded book in one write (`persist({ spec, book })`) so a book write cannot clobber a spec write. Snapshot once before that write.
 - While a run is in progress, the chat shows a spinner plus throttled live thinking (reasoning only; speech/tool JSON stays out of the DOM). Live thinking is capped and flushed on an interval so token-by-token setState does not blow memory. Committed turns use a collapsed `<details>` fold for thinking, flat tool lines, and hoverable info tips for errors. Lookup turns (`list_entries` / `read_entry`, `list_fields` / `read_field` / `list_greetings` / `read_greeting`) stay off the transcript (and are dropped from chat state so catalogs, bodies, and reasoning are not retained). Speech on a turn that also has tool calls is hidden (models often dump planning there). Tool results stored in the UI keep lookup headers only, not catalog or field/entry bodies.
 - The context meter is catalogs + custom context + retained transcript while idle. During a run it tracks the live prompt, including tool-result bodies (`read_entry` and friends) and native `tool_calls`. That last prompt size stays on the meter until New chat, a truncated delete, or the next send.
-- Same-name `add_entry` in one run revises the new entry (keeps the longer body). Names that already existed in the book are rejected; use `read_entry` then `update_entry` to change them.
+- Same-name `add_entry` in one run revises the new entry (keeps the longer body). Names that already existed in the book are rejected; use `read_entry` then `update_entry` or `replace_in_entry` to change them.
+- `replace_in_field` / `replace_in_greeting` / `replace_in_entry` do an exact unique-match substring replace (or `replace_all`). They fail if `old` is missing or matches more than once. Full `update_*` still replaces the whole value. These writes do not go through CodeMirror.
 - The host keeps an in-run copy of the book and caches formatted `read_entry` payloads by id. `update_entry` writes that cache so the next read returns the new body. `delete_entry` drops the id from the book and the read cache. `flush()` persists once at the end of the run.
 - Agent `add_entry` sets `extensions.context_enabled: false` so new entries are not pinned into AI context.
 - Agent completions send `max_tokens: 16384` without changing the sampler input budget. Prefer `message.tool_calls` when the API returns them; otherwise parse XML and salvage a cut last call. One continuation on `finish_reason: length` if the tail is still unusable. Native turns echo `role: tool` results; XML turns keep the user-text result blob.

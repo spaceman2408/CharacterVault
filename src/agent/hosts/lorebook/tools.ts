@@ -1,5 +1,6 @@
 import type { CharacterBook, LorebookEntry } from '../../../db/characterTypes';
 import type { ActionResult, ParsedAction } from '../../core/types';
+import { parseReplaceAll, replaceText, replacementText } from '../replaceText';
 import { formatEntryCatalog } from './catalog';
 
 export const LOREBOOK_TOOL_NAMES = [
@@ -7,6 +8,7 @@ export const LOREBOOK_TOOL_NAMES = [
   'read_entry',
   'add_entry',
   'update_entry',
+  'replace_in_entry',
   'delete_entry',
 ] as const;
 export type LorebookToolName = (typeof LOREBOOK_TOOL_NAMES)[number];
@@ -124,10 +126,14 @@ export interface UpdateEntryResult {
   entry?: LorebookEntry;
 }
 
-function updateEntryError(book: CharacterBook, message: string): UpdateEntryResult {
+function updateEntryError(
+  book: CharacterBook,
+  message: string,
+  toolName: 'update_entry' | 'replace_in_entry' = 'update_entry',
+): UpdateEntryResult {
   return {
     book,
-    result: { ok: false, toolName: 'update_entry', message },
+    result: { ok: false, toolName, message },
     changed: false,
   };
 }
@@ -210,6 +216,59 @@ export function updateEntry(book: CharacterBook, action: ParsedAction): UpdateEn
       ok: true,
       toolName: 'update_entry',
       message: `ok #${existing.id} ${nextEntry.name?.trim() || displayName || '(unnamed)'}`,
+    },
+    changed: true,
+    entry: nextEntry,
+  };
+}
+
+export function replaceInEntry(book: CharacterBook, action: ParsedAction): UpdateEntryResult {
+  const id = parseEntryId(action.headers.id);
+  if (id == null) {
+    return updateEntryError(book, 'error: id must be a non-negative integer', 'replace_in_entry');
+  }
+
+  const entries = book.entries ?? [];
+  const existing = findEntryById(entries, id);
+  if (!existing) {
+    return updateEntryError(book, `error: no entry #${id}`, 'replace_in_entry');
+  }
+
+  const oldText = action.headers.old ?? '';
+  const applied = replaceText(
+    existing.content ?? '',
+    oldText,
+    replacementText(action),
+    parseReplaceAll(action.headers.replace_all),
+  );
+  if (!applied.ok) {
+    return updateEntryError(book, applied.message, 'replace_in_entry');
+  }
+
+  const displayName = existing.name?.trim() || existing.keys?.[0] || '(unnamed)';
+  if (applied.text === (existing.content ?? '')) {
+    return {
+      book,
+      result: {
+        ok: true,
+        toolName: 'replace_in_entry',
+        message: `ok #${existing.id} ${displayName} — replaced ${applied.count}`,
+      },
+      changed: false,
+      entry: existing,
+    };
+  }
+
+  const nextEntry: LorebookEntry = { ...existing, content: applied.text };
+  return {
+    book: {
+      ...book,
+      entries: entries.map((entry) => (entry.id === existing.id ? nextEntry : entry)),
+    },
+    result: {
+      ok: true,
+      toolName: 'replace_in_entry',
+      message: `ok #${existing.id} ${nextEntry.name?.trim() || displayName} — replaced ${applied.count}`,
     },
     changed: true,
     entry: nextEntry,

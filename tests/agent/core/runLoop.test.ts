@@ -4,6 +4,7 @@ import type {
   ActionResult,
   AgentEvent,
   AgentHost,
+  AgentMessage,
   Completer,
   CompleterResult,
   ParsedAction,
@@ -103,12 +104,13 @@ Docks
     const toolFollowUp = secondMessages[secondMessages.length - 1];
     expect(toolFollowUp.role).toBe('user');
     expect(toolFollowUp.content).toContain('[add_entry] ok add_entry');
-    const promptedWithTools = onPrompt.mock.calls.some(([prompt]) =>
-      prompt.some(
+    const promptedWithTools = onPrompt.mock.calls.some((call) => {
+      const prompt = call[0] as AgentMessage[];
+      return prompt.some(
         (message) =>
           typeof message.content === 'string' && message.content.includes('[add_entry] ok add_entry'),
-      ),
-    );
+      );
+    });
     expect(promptedWithTools).toBe(true);
   });
 

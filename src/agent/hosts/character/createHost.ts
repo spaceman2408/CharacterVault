@@ -18,6 +18,8 @@ import {
   MAX_GREETING_MUTATIONS_PER_RUN,
   readField,
   readGreeting,
+  replaceInField,
+  replaceInGreeting,
   updateField,
   updateGreeting,
 } from './tools';
@@ -130,6 +132,27 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
         }
         return applied.result;
       }
+      if (action.name === 'replace_in_field') {
+        if (fieldUpdatesThisRun >= maxFieldUpdates) {
+          return {
+            ok: false,
+            toolName: 'replace_in_field',
+            message: `limit: max ${maxFieldUpdates} field updates per run`,
+          };
+        }
+        const applied = replaceInField(spec, action);
+        if (!applied.result.ok) return applied.result;
+        if (applied.changed) {
+          spec = applied.spec;
+          specDirty = true;
+          fieldUpdatesThisRun += 1;
+          const rawId = (action.headers.id ?? '').trim();
+          if (isCharacterAgentFieldId(rawId)) {
+            cacheFieldRead(rawId, formatFieldRead(spec, rawId));
+          }
+        }
+        return applied.result;
+      }
       if (action.name === 'list_greetings') {
         return listGreetings(spec);
       }
@@ -177,6 +200,26 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
         const greetings = spec.alternate_greetings ?? [];
         const index = parseGreetingIndex(action.headers.index, greetings.length);
         if (index != null) cacheGreetingRead(index, formatGreetingRead(greetings, index));
+        return applied.result;
+      }
+      if (action.name === 'replace_in_greeting') {
+        if (greetingMutationsThisRun >= maxGreetingMutations) {
+          return {
+            ok: false,
+            toolName: 'replace_in_greeting',
+            message: `limit: max ${maxGreetingMutations} greeting changes per run`,
+          };
+        }
+        const applied = replaceInGreeting(spec, action);
+        if (!applied.result.ok) return applied.result;
+        if (applied.changed) {
+          spec = applied.spec;
+          specDirty = true;
+          greetingMutationsThisRun += 1;
+          const greetings = spec.alternate_greetings ?? [];
+          const index = parseGreetingIndex(action.headers.index, greetings.length);
+          if (index != null) cacheGreetingRead(index, formatGreetingRead(greetings, index));
+        }
         return applied.result;
       }
       if (action.name === 'delete_greeting') {

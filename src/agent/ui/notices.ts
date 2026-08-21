@@ -1,7 +1,12 @@
 import type { AgentToolEvent } from './types';
 
 export const LOREBOOK_LOOKUP_TOOLS = new Set(['list_entries', 'read_entry']);
-export const LOREBOOK_WRITE_TOOLS = new Set(['add_entry', 'update_entry', 'delete_entry']);
+export const LOREBOOK_WRITE_TOOLS = new Set([
+  'add_entry',
+  'update_entry',
+  'replace_in_entry',
+  'delete_entry',
+]);
 
 export const CHARACTER_LOOKUP_TOOLS = new Set([
   'list_fields',

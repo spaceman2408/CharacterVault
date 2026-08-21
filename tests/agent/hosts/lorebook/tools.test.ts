@@ -8,6 +8,7 @@ import {
   parseCommaList,
   parseEntryId,
   readEntry,
+  replaceInEntry,
   updateEntry,
 } from '../../../../src/agent/hosts/lorebook/tools';
 
@@ -151,6 +152,71 @@ describe('updateEntry', () => {
     expect(result.ok).toBe(false);
     expect(changed).toBe(false);
     expect(result.message).toMatch(/^exists: #1/);
+  });
+});
+
+describe('replaceInEntry', () => {
+  function keepBook(content = 'The Red Keep is a castle.') {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content,
+        extensions: { context_enabled: false },
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    return book;
+  }
+
+  it('replaces a unique snippet and leaves name and keys', () => {
+    const { book: next, result, changed } = replaceInEntry(
+      keepBook(),
+      action('replace_in_entry', { id: '4', old: 'a castle', new: 'the royal castle' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(changed).toBe(true);
+    expect(result.message).toBe('ok #4 The Red Keep — replaced 1');
+    expect(next.entries[0].content).toBe('The Red Keep is the royal castle.');
+    expect(next.entries[0].keys).toEqual(['keep']);
+  });
+
+  it('uses the body as replacement when new is omitted', () => {
+    const { book: next, result } = replaceInEntry(
+      keepBook(),
+      action('replace_in_entry', { id: '4', old: 'castle' }, 'fortress'),
+    );
+    expect(result.ok).toBe(true);
+    expect(next.entries[0].content).toBe('The Red Keep is a fortress.');
+  });
+
+  it('rejects a missing or non-unique snippet', () => {
+    const missing = replaceInEntry(
+      keepBook(),
+      action('replace_in_entry', { id: '4', old: 'dragon', new: 'wyrm' }),
+    );
+    expect(missing.result.ok).toBe(false);
+    expect(missing.result.toolName).toBe('replace_in_entry');
+    expect(missing.result.message).toContain('old not found');
+
+    const dup = replaceInEntry(
+      keepBook('keep keep'),
+      action('replace_in_entry', { id: '4', old: 'keep', new: 'Keep' }),
+    );
+    expect(dup.result.ok).toBe(false);
+    expect(dup.result.message).toContain('matches 2 times');
+  });
+
+  it('replace_all replaces every match', () => {
+    const { book: next, result } = replaceInEntry(
+      keepBook('keep keep'),
+      action('replace_in_entry', { id: '4', old: 'keep', new: 'Keep', replace_all: 'true' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('replaced 2');
+    expect(next.entries[0].content).toBe('Keep Keep');
   });
 });
 
@@ -351,6 +417,35 @@ describe('createLorebookHost', () => {
     expect(setBook).toHaveBeenCalledTimes(1);
     expect(book.entries).toHaveLength(2);
     expect(book.entries.every((entry) => entry.extensions.context_enabled === false)).toBe(true);
+  });
+
+  it('persists a snippet replace on flush', async () => {
+    let book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'The Red Keep is a castle.',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    const host = createLorebookHost({
+      getBook: () => book,
+      setBook: async (next) => {
+        book = next;
+      },
+      getCustomContext: async () => null,
+    });
+
+    const result = await host.execute(
+      action('replace_in_entry', { id: '4', old: 'a castle', new: 'the royal castle' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(book.entries[0].content).toBe('The Red Keep is a castle.');
+    await host.flush?.();
+    expect(book.entries[0].content).toBe('The Red Keep is the royal castle.');
   });
 
   it('collapses two same-name add_entry calls into one longer entry', async () => {

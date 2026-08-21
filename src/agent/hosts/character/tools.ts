@@ -1,5 +1,6 @@
 import type { CharacterSpec } from '../../../db/characterTypes';
 import type { ActionResult, ParsedAction } from '../../core/types';
+import { parseReplaceAll, replaceText, replacementText } from '../replaceText';
 import { formatFieldCatalog, formatFieldRead, formatGreetingCatalog, formatGreetingRead } from './catalog';
 import {
   fieldLabel,
@@ -14,10 +15,12 @@ export const CHARACTER_TOOL_NAMES = [
   'list_fields',
   'read_field',
   'update_field',
+  'replace_in_field',
   'list_greetings',
   'read_greeting',
   'add_greeting',
   'update_greeting',
+  'replace_in_greeting',
   'delete_greeting',
 ] as const;
 export type CharacterToolName = (typeof CHARACTER_TOOL_NAMES)[number];
@@ -75,6 +78,43 @@ export function updateField(
   };
 }
 
+export function replaceInField(
+  spec: CharacterSpec,
+  action: ParsedAction,
+): { spec: CharacterSpec; result: ActionResult; changed: boolean } {
+  const rawId = (action.headers.id ?? '').trim();
+  if (!isCharacterAgentFieldId(rawId)) {
+    return {
+      spec,
+      changed: false,
+      result: fail(
+        'replace_in_field',
+        `error: unknown field "${rawId || '(missing)'}". Valid: ${validFieldIdsList()}`,
+      ),
+    };
+  }
+  const current = getFieldValue(spec, rawId);
+  const applied = replaceText(
+    current,
+    action.headers.old ?? '',
+    replacementText(action),
+    parseReplaceAll(action.headers.replace_all),
+  );
+  if (!applied.ok) {
+    return { spec, changed: false, result: fail('replace_in_field', applied.message) };
+  }
+  const next = setFieldValue(spec, rawId, applied.text);
+  const value = getFieldValue(next, rawId);
+  return {
+    spec: next,
+    changed: applied.text !== current,
+    result: ok(
+      'replace_in_field',
+      `ok ${rawId} (${fieldLabel(rawId)}) — replaced ${applied.count} (${value.length} chars)`,
+    ),
+  };
+}
+
 export function listGreetings(spec: CharacterSpec): ActionResult {
   return ok('list_greetings', formatGreetingCatalog(spec));
 }
@@ -127,6 +167,43 @@ export function updateGreeting(
     spec: { ...spec, alternate_greetings: greetings },
     changed: true,
     result: ok('update_greeting', `ok greeting ${index}/${greetings.length}`),
+  };
+}
+
+export function replaceInGreeting(
+  spec: CharacterSpec,
+  action: ParsedAction,
+): { spec: CharacterSpec; result: ActionResult; changed: boolean } {
+  const greetings = [...(spec.alternate_greetings ?? [])];
+  const index = parseGreetingIndex(action.headers.index, greetings.length);
+  if (index == null) {
+    return {
+      spec,
+      changed: false,
+      result: fail(
+        'replace_in_greeting',
+        `error: no greeting ${action.headers.index ?? '(missing)'} (${greetings.length} greetings)`,
+      ),
+    };
+  }
+  const current = greetings[index] ?? '';
+  const applied = replaceText(
+    current,
+    action.headers.old ?? '',
+    replacementText(action),
+    parseReplaceAll(action.headers.replace_all),
+  );
+  if (!applied.ok) {
+    return { spec, changed: false, result: fail('replace_in_greeting', applied.message) };
+  }
+  greetings[index] = applied.text;
+  return {
+    spec: { ...spec, alternate_greetings: greetings },
+    changed: applied.text !== current,
+    result: ok(
+      'replace_in_greeting',
+      `ok greeting ${index}/${greetings.length} — replaced ${applied.count}`,
+    ),
   };
 }
 

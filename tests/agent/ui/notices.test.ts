@@ -54,6 +54,15 @@ describe('visibleToolEvents', () => {
     };
     expect(visibleToolEvents([okAdd, okAddAgain, laterUpdate])).toEqual([laterUpdate]);
   });
+
+  it('collapses replace_in_entry onto the same id', () => {
+    const replaced: AgentToolEvent = {
+      toolName: 'replace_in_entry',
+      ok: true,
+      message: 'ok #24 Prime Days — replaced 1',
+    };
+    expect(visibleToolEvents([okAdd, replaced])).toEqual([replaced]);
+  });
 });
 
 describe('messageNotices', () => {

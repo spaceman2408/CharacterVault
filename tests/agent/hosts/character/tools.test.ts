@@ -8,6 +8,8 @@ import {
   listGreetings,
   readField,
   readGreeting,
+  replaceInField,
+  replaceInGreeting,
   updateField,
   updateGreeting,
 } from '../../../../src/agent/hosts/character/tools';
@@ -109,6 +111,51 @@ describe('updateField', () => {
   });
 });
 
+describe('replaceInField', () => {
+  it('replaces a unique snippet and leaves other fields', () => {
+    const { spec: next, result, changed } = replaceInField(
+      spec({ description: 'A quiet cartographer.', personality: 'Quiet.' }),
+      action('replace_in_field', { id: 'description', old: 'quiet', new: 'careful' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(changed).toBe(true);
+    expect(next.description).toBe('A careful cartographer.');
+    expect(next.personality).toBe('Quiet.');
+    expect(result.message).toContain('replaced 1');
+  });
+
+  it('rejects a missing or non-unique snippet', () => {
+    const missing = replaceInField(
+      spec({ description: 'A cartographer.' }),
+      action('replace_in_field', { id: 'description', old: 'knight', new: 'mage' }),
+    );
+    expect(missing.result.ok).toBe(false);
+    expect(missing.result.message).toContain('old not found');
+
+    const dup = replaceInField(
+      spec({ description: 'red red fox' }),
+      action('replace_in_field', { id: 'description', old: 'red', new: 'blue' }),
+    );
+    expect(dup.result.ok).toBe(false);
+    expect(dup.result.message).toContain('matches 2 times');
+  });
+
+  it('replace_all rewrites every match', () => {
+    const { spec: next, result } = replaceInField(
+      spec({ description: 'red red fox' }),
+      action('replace_in_field', {
+        id: 'description',
+        old: 'red',
+        new: 'blue',
+        replace_all: 'true',
+      }),
+    );
+    expect(result.ok).toBe(true);
+    expect(next.description).toBe('blue blue fox');
+    expect(result.message).toContain('replaced 2');
+  });
+});
+
 describe('greetings', () => {
   it('lists indexes without bodies', () => {
     const result = listGreetings(
@@ -137,6 +184,16 @@ describe('greetings', () => {
     const deleted = deleteGreeting(card, action('delete_greeting', { index: '0' }));
     expect(deleted.spec.alternate_greetings).toEqual(['second']);
     expect(deleted.result.message).toContain('1 remaining');
+  });
+
+  it('replaces a unique snippet in one greeting', () => {
+    const { spec: next, result } = replaceInGreeting(
+      spec({ alternate_greetings: ['Hello there.', 'Other'] }),
+      action('replace_in_greeting', { index: '0', old: 'there', new: 'friend' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(next.alternate_greetings).toEqual(['Hello friend.', 'Other']);
+    expect(result.message).toContain('replaced 1');
   });
 
   it('rejects an out-of-range index', () => {
@@ -177,6 +234,19 @@ describe('createCharacterHost', () => {
     expect(update.spec?.personality).toBe('Calm and exact.');
     expect(update.spec?.alternate_greetings).toEqual(['A second greeting.']);
     expect(update.book).toBeUndefined();
+  });
+
+  it('persists a field snippet replace on flush', async () => {
+    const state = hostState(spec({ description: 'A quiet cartographer.' }));
+    const host = createCharacterHost(state.io);
+    const result = await host.execute(
+      action('replace_in_field', { id: 'description', old: 'quiet', new: 'careful' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(state.persist).not.toHaveBeenCalled();
+    await host.flush?.();
+    expect(state.persist).toHaveBeenCalledTimes(1);
+    expect(state.persist.mock.calls[0][0].spec?.description).toBe('A careful cartographer.');
   });
 
   it('persists spec and embedded book together after mixed writes', async () => {

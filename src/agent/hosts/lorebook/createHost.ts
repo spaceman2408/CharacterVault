@@ -18,6 +18,7 @@ import {
   MAX_UPDATES_PER_RUN,
   parseEntryId,
   readEntry,
+  replaceInEntry,
   updateEntry,
 } from './tools';
 
@@ -115,6 +116,24 @@ export function createLorebookHost(io: LorebookHostIO): AgentHost {
           };
         }
         const applied = updateEntry(book, action);
+        if (!applied.result.ok) return applied.result;
+        if (applied.changed) {
+          book = applied.book;
+          dirty = true;
+          updatedThisRun += 1;
+        }
+        if (applied.entry) cacheEntryRead(applied.entry.id, formatEntryRead(applied.entry));
+        return applied.result;
+      }
+      if (action.name === 'replace_in_entry') {
+        if (updatedThisRun >= MAX_UPDATES_PER_RUN) {
+          return {
+            ok: false,
+            toolName: 'replace_in_entry',
+            message: `limit: max ${MAX_UPDATES_PER_RUN} updates per run`,
+          };
+        }
+        const applied = replaceInEntry(book, action);
         if (!applied.result.ok) return applied.result;
         if (applied.changed) {
           book = applied.book;

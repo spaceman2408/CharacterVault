@@ -39,6 +39,28 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
     },
   },
   {
+    name: 'replace_in_field',
+    description:
+      'Replace an exact snippet in one field. old must match once unless replace_all is true. Prefer this over update_field for a small edit. Copy old from read_field. Do not use this for alternate greetings.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Field id' },
+        old: { type: 'string', description: 'Exact text to find' },
+        new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
+        content: {
+          type: 'string',
+          description: 'Replacement text if new is omitted (XML body).',
+        },
+        replace_all: {
+          type: 'boolean',
+          description: 'Replace every match. Default false (fail if old is not unique).',
+        },
+      },
+      required: ['id', 'old'],
+    },
+  },
+  {
     name: 'list_greetings',
     description:
       'Return index and length for each alternate greeting. first_mes is a separate field.',
@@ -79,6 +101,28 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
         content: { type: 'string', description: 'Full new greeting body' },
       },
       required: ['index', 'content'],
+    },
+  },
+  {
+    name: 'replace_in_greeting',
+    description:
+      'Replace an exact snippet in one alternate greeting. old must match once unless replace_all is true. Copy old from read_greeting.',
+    parameters: {
+      type: 'object',
+      properties: {
+        index: { type: 'integer', description: '0-based greeting index' },
+        old: { type: 'string', description: 'Exact text to find' },
+        new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
+        content: {
+          type: 'string',
+          description: 'Replacement text if new is omitted (XML body).',
+        },
+        replace_all: {
+          type: 'boolean',
+          description: 'Replace every match. Default false (fail if old is not unique).',
+        },
+      },
+      required: ['index', 'old'],
     },
   },
   {

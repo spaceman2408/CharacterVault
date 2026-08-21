@@ -10,6 +10,7 @@ describe('buildLorebookAgentSystemPrompt', () => {
     expect(prompt).toContain('read_entry');
     expect(prompt).toContain('add_entry');
     expect(prompt).toContain('update_entry');
+    expect(prompt).toContain('replace_in_entry');
     expect(prompt).toContain('delete_entry');
     expect(prompt).toContain('already in context');
     expect(prompt).not.toContain('Do not update or delete existing entries');
