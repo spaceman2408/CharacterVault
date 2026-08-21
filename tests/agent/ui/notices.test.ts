@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHARACTER_LOOKUP_TOOLS,
   compactToolResultMessage,
   isLookupOnlyTurn,
   messageNotices,
@@ -91,6 +92,17 @@ describe('isLookupOnlyTurn', () => {
     expect(isLookupOnlyTurn([okList, okRead])).toBe(true);
     expect(isLookupOnlyTurn([okList, okAdd])).toBe(false);
     expect(isLookupOnlyTurn([])).toBe(false);
+  });
+
+  it('uses the lookup set so character field reads are silent', () => {
+    const okReadField: AgentToolEvent = {
+      toolName: 'read_field',
+      ok: true,
+      message: 'description (Description) — 12 chars\n---\nSECRET',
+    };
+    expect(isLookupOnlyTurn([okReadField], CHARACTER_LOOKUP_TOOLS)).toBe(true);
+    expect(isLookupOnlyTurn([okList], CHARACTER_LOOKUP_TOOLS)).toBe(true);
+    expect(isLookupOnlyTurn([okReadField])).toBe(false);
   });
 });
 

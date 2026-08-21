@@ -1,23 +1,39 @@
 import type { AgentToolEvent } from './types';
 
-const LOOKUP_TOOLS = new Set(['list_entries', 'read_entry']);
-const WRITE_TOOLS = new Set(['add_entry', 'update_entry', 'delete_entry']);
+export const LOREBOOK_LOOKUP_TOOLS = new Set(['list_entries', 'read_entry']);
+export const LOREBOOK_WRITE_TOOLS = new Set(['add_entry', 'update_entry', 'delete_entry']);
 
-function writeEntryId(event: AgentToolEvent): string | null {
-  if (!event.ok || !WRITE_TOOLS.has(event.toolName)) return null;
+export const CHARACTER_LOOKUP_TOOLS = new Set([
+  'list_fields',
+  'read_field',
+  'list_greetings',
+  'read_greeting',
+  'list_entries',
+  'read_entry',
+]);
+
+function writeEntryId(
+  event: AgentToolEvent,
+  writeTools: ReadonlySet<string>,
+): string | null {
+  if (!event.ok || !writeTools.has(event.toolName)) return null;
   const match = /^ok #(\d+)\s/.exec(event.message);
   return match?.[1] ?? null;
 }
 
-export function visibleToolEvents(events: AgentToolEvent[]): AgentToolEvent[] {
+export function visibleToolEvents(
+  events: AgentToolEvent[],
+  lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
+  writeTools: ReadonlySet<string> = LOREBOOK_WRITE_TOOLS,
+): AgentToolEvent[] {
   const visible: AgentToolEvent[] = [];
   const addIndexById = new Map<string, number>();
 
   for (const event of events) {
     if (!event.ok) continue;
-    if (LOOKUP_TOOLS.has(event.toolName)) continue;
+    if (lookupTools.has(event.toolName)) continue;
 
-    const id = writeEntryId(event);
+    const id = writeEntryId(event, writeTools);
     if (id && addIndexById.has(id)) {
       visible[addIndexById.get(id)!] = event;
       continue;
@@ -51,12 +67,19 @@ export function shouldRenderAgentMessage(
   return speech.trim().length > 0 || visible.length > 0 || notices.length > 0;
 }
 
-export function compactToolResultMessage(toolName: string, message: string): string {
-  if (!LOOKUP_TOOLS.has(toolName)) return message;
+export function compactToolResultMessage(
+  toolName: string,
+  message: string,
+  lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
+): string {
+  if (!lookupTools.has(toolName)) return message;
   const line = message.split('\n', 1)[0]?.trim();
-  return line || (toolName === 'read_entry' ? 'read entry' : 'listed entries');
+  return line || toolName;
 }
 
-export function isLookupOnlyTurn(events: AgentToolEvent[]): boolean {
-  return events.length > 0 && events.every((event) => event.ok && LOOKUP_TOOLS.has(event.toolName));
+export function isLookupOnlyTurn(
+  events: AgentToolEvent[],
+  lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
+): boolean {
+  return events.length > 0 && events.every((event) => event.ok && lookupTools.has(event.toolName));
 }

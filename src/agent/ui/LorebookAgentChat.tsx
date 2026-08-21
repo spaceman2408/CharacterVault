@@ -16,13 +16,17 @@ export interface LorebookAgentChatProps {
   getBook: () => CharacterBook;
   setBook: (book: CharacterBook) => Promise<void>;
   getCustomContext: () => Promise<string | null>;
-  flushDraft: () => void;
+  flushDraft: () => void | Promise<void>;
   takeSnapshot: () => Promise<void>;
   customContextIncluded: boolean;
   customContextCharLength?: number;
   headerActions?: ReactNode;
   onClose?: () => void;
   onRunningChange?: (running: boolean) => void;
+  title?: string;
+  emptyBody?: string;
+  contextEmptyHint?: string;
+  composerHint?: string;
 }
 
 export function LorebookAgentChat({
@@ -39,6 +43,10 @@ export function LorebookAgentChat({
   headerActions,
   onClose,
   onRunningChange,
+  title = 'Lorebook agent',
+  emptyBody = 'Ask it to build or extend this book from custom context. It can add entries directly. Use Snapshots if you need to roll back.',
+  contextEmptyHint = 'Custom context is optional. Enable it in the lorebook sidebar to give the agent source notes.',
+  composerHint = 'Stop, then Send to retry · Writes go into this book',
 }: LorebookAgentChatProps): React.ReactElement {
   const session = useLorebookAgent({
     aiConfig,
@@ -114,13 +122,13 @@ export function LorebookAgentChat({
 
   return (
     <AIChatView
-      title="Lorebook agent"
-      emptyTitle="Lorebook agent"
-      emptyBody="Ask it to build or extend this book from custom context. It can add entries directly. Use Snapshots if you need to roll back."
+      title={title}
+      emptyTitle={title}
+      emptyBody={emptyBody}
       placeholder="Tell the agent what to add…"
       contextLabels={contextLabels}
-      contextEmptyHint="Custom context is optional. Enable it in the lorebook sidebar to give the agent source notes."
-      composerHint="Stop, then Send to retry · Writes go into this book"
+      contextEmptyHint={contextEmptyHint}
+      composerHint={composerHint}
       headerActions={headerActions}
       showReasoning={false}
       showRegenerate
