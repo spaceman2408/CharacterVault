@@ -16,6 +16,7 @@ import type {
   SamplerSettings,
   AIConfig,
   PromptSettings,
+  PromptModelBinding,
   PromptModelMap,
   SectionMeta,
   SpellcheckSettings,
@@ -83,6 +84,10 @@ export interface CharacterEditorContextValue {
   promptSettings: PromptSettings;
   /** Per-operation model routing for toolbar AI prompts */
   promptModels: PromptModelMap;
+  /** Per-agent endpoint + model override. Missing uses global AIConfig */
+  agentModel: PromptModelBinding | undefined;
+  /** AI config with the agent model binding applied */
+  agentAiConfig: AIConfig;
   /** Whether the history modal is open */
   isHistoryOpen: boolean;
   /** Persisted snapshot metadata for the current character (lightweight, no payloads) */

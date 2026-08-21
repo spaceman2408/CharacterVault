@@ -9,6 +9,7 @@ import type {
   AIModelInfo,
   SamplerSettings,
   PromptSettings,
+  PromptModelBinding,
   PromptModelMap,
   CharacterSection,
 } from '../../db/characterTypes';
@@ -28,6 +29,7 @@ export interface SettingsDraft {
   sampler: SamplerSettings;
   prompts: PromptSettings;
   promptModels: PromptModelMap;
+  agentModel: PromptModelBinding | undefined;
   showLuckyVortex: boolean;
   markdownImageOpenLinks: boolean;
   spellcheckEnabled: boolean;

@@ -774,6 +774,7 @@ function CharacterWorkspaceInner({
     contextSectionIds,
     customContextMeta,
     aiConfig,
+    agentAiConfig,
     samplerSettings,
     promptSettings,
     isHistoryOpen,
@@ -1055,7 +1056,7 @@ function CharacterWorkspaceInner({
           )}
           {agentMode ? (
             <CharacterAgentChat
-              aiConfig={aiConfig}
+              aiConfig={agentAiConfig}
               samplerSettings={samplerSettings}
               promptSettings={promptSettings}
               getSpec={getAgentSpec}

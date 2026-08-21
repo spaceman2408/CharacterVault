@@ -8,6 +8,7 @@ import type {
   AIConfig,
   SamplerSettings,
   PromptSettings,
+  PromptModelBinding,
   PromptModelMap,
   SpellcheckSettings,
 } from '../db/characterTypes';
@@ -20,7 +21,7 @@ import {
 } from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
 import type { CharacterSection } from '../db/characterTypes';
-import { normalizePromptModelMap } from './resolveOperationConfig';
+import { normalizeModelBinding, normalizePromptModelMap } from './resolveOperationConfig';
 
 /**
  * Settings Service class for managing application settings in CharacterVault
@@ -276,6 +277,11 @@ export class CharacterSettingsService {
     return normalizePromptModelMap(settings.promptModels);
   }
 
+  async getAgentModel(): Promise<PromptModelBinding | undefined> {
+    const settings = await this.getSettings();
+    return normalizeModelBinding(settings.agentModel);
+  }
+
   /**
    * Save AI prompt settings
    */
@@ -312,7 +318,8 @@ export class CharacterSettingsService {
     aiConfig: AIConfig,
     sampler: SamplerSettings,
     prompts: PromptSettings,
-    promptModels?: PromptModelMap
+    promptModels?: PromptModelMap,
+    agentModel?: PromptModelBinding | null,
   ): Promise<void> {
     const settings = await this.getSettings();
     
@@ -334,6 +341,10 @@ export class CharacterSettingsService {
         promptModels !== undefined
           ? normalizePromptModelMap(promptModels)
           : normalizePromptModelMap(settings.promptModels),
+      agentModel:
+        agentModel !== undefined
+          ? normalizeModelBinding(agentModel)
+          : normalizeModelBinding(settings.agentModel),
     };
     
     await characterDb.settings.put(updatedSettings);
@@ -445,6 +456,7 @@ export class CharacterSettingsService {
       prompts: settings.prompts ?? DEFAULT_SETTINGS.prompts,
       // Keep prompt→model routing (not sensitive; keys live under ai)
       promptModels: normalizePromptModelMap(settings.promptModels),
+      agentModel: normalizeModelBinding(settings.agentModel),
     };
     
     await characterDb.settings.put(updatedSettings);

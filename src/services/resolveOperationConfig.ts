@@ -5,20 +5,29 @@
 import type {
   AIConfig,
   AIOperation,
+  PromptModelBinding,
   PromptModelMap,
 } from '../db/characterTypes';
 import { getStoredApiKey, normalizeBaseUrl } from '../utils/aiBaseUrl';
 
+export function normalizeModelBinding(
+  binding: PromptModelBinding | null | undefined,
+): PromptModelBinding | undefined {
+  if (!binding || typeof binding !== 'object') return undefined;
+  const modelId = typeof binding.modelId === 'string' ? binding.modelId.trim() : '';
+  const baseUrl = typeof binding.baseUrl === 'string' ? normalizeBaseUrl(binding.baseUrl) : '';
+  if (!modelId || !baseUrl) return undefined;
+  return { baseUrl, modelId };
+}
+
 /**
- * Apply a per-operation endpoint/model binding to the global AI config.
+ * Apply an endpoint/model binding to the global AI config.
  * Missing or incomplete bindings leave the original config unchanged.
  */
-export function resolveConfigForOperation(
+export function applyModelBinding(
   config: AIConfig,
-  operation: AIOperation,
-  promptModels?: PromptModelMap | null
+  binding?: PromptModelBinding | null,
 ): AIConfig {
-  const binding = promptModels?.[operation];
   if (!binding?.modelId?.trim()) {
     return config;
   }
@@ -46,6 +55,18 @@ export function resolveConfigForOperation(
   };
 }
 
+/**
+ * Apply a per-operation endpoint/model binding to the global AI config.
+ * Missing or incomplete bindings leave the original config unchanged.
+ */
+export function resolveConfigForOperation(
+  config: AIConfig,
+  operation: AIOperation,
+  promptModels?: PromptModelMap | null
+): AIConfig {
+  return applyModelBinding(config, promptModels?.[operation]);
+}
+
 /** Normalize and filter a persisted prompt model map. */
 export function normalizePromptModelMap(
   map: PromptModelMap | null | undefined
@@ -56,11 +77,9 @@ export function normalizePromptModelMap(
 
   const result: PromptModelMap = {};
   for (const [key, binding] of Object.entries(map)) {
-    if (!binding || typeof binding !== 'object') continue;
-    const modelId = typeof binding.modelId === 'string' ? binding.modelId.trim() : '';
-    const baseUrl = typeof binding.baseUrl === 'string' ? normalizeBaseUrl(binding.baseUrl) : '';
-    if (!modelId || !baseUrl) continue;
-    result[key as keyof PromptModelMap] = { baseUrl, modelId };
+    const normalized = normalizeModelBinding(binding);
+    if (!normalized) continue;
+    result[key as keyof PromptModelMap] = normalized;
   }
   return result;
 }

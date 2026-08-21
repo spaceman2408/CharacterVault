@@ -33,6 +33,8 @@ interface PromptModelBindingSelectProps {
   onChange: (binding: PromptModelBinding | undefined) => void;
   onFetch: (baseUrl: string) => Promise<void>;
   isFetching: boolean;
+  heading?: string;
+  bare?: boolean;
 }
 
 function endpointLabel(baseUrl: string): string {
@@ -64,6 +66,8 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
   onChange,
   onFetch,
   isFetching,
+  heading = 'Model for this prompt',
+  bare = false,
 }) => {
   const [isModelOpen, setIsModelOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -315,10 +319,10 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
     );
 
   return (
-    <div className="mt-3 pt-3 border-t border-border space-y-3">
+    <div className={bare ? 'space-y-3' : 'mt-3 pt-3 border-t border-border space-y-3'}>
       <div className="flex items-center gap-2 text-xs font-semibold text-fg-muted uppercase tracking-wide">
         <Brain className="w-3.5 h-3.5 shrink-0" />
-        Model for this prompt
+        {heading}
       </div>
 
       <div className="space-y-1.5">
@@ -419,7 +423,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
           )}
           {hasKeyForEndpoint && !selectedModelId && (
             <p className="text-xs text-warning">
-              Select or enter a model ID for this prompt.
+              Select or enter a model ID.
             </p>
           )}
         </div>

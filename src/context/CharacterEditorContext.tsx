@@ -3,12 +3,13 @@
  * @module context/CharacterEditorContext
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry, CustomContextMeta } from '../db/characterTypes';
 import type {
   SamplerSettings,
   AIConfig,
   PromptSettings,
+  PromptModelBinding,
   PromptModelMap,
   SpellcheckSettings,
 } from '../db/characterTypes';
@@ -20,7 +21,7 @@ import {
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   EMPTY_CUSTOM_CONTEXT_META,
 } from '../db/characterTypes';
-import { normalizePromptModelMap } from '../services/resolveOperationConfig';
+import { applyModelBinding, normalizePromptModelMap } from '../services/resolveOperationConfig';
 import type { SectionMeta } from '../db/characterTypes';
 import { bindSpellcheckCallbacks } from '../editor/extensions/spellcheck';
 import { useCharacterContext } from './useCharacterContext';
@@ -81,6 +82,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [samplerSettings, setSamplerSettings] = useState<SamplerSettings>(DEFAULT_SETTINGS.sampler);
   const [promptSettings, setPromptSettings] = useState<PromptSettings>(DEFAULT_SETTINGS.prompts);
   const [promptModels, setPromptModels] = useState<PromptModelMap>({});
+  const [agentModel, setAgentModel] = useState<PromptModelBinding | undefined>(undefined);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isOpeningHistory, setIsOpeningHistory] = useState(false);
   const isOpeningHistoryRef = useRef(false);
@@ -276,11 +278,12 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   // Function to reload settings from database
   const reloadSettings = useCallback(async () => {
     try {
-      const [config, sampler, prompts, models, settings, secOrder, secHidden, spell, contextIds] = await Promise.all([
+      const [config, sampler, prompts, models, agentBinding, settings, secOrder, secHidden, spell, contextIds] = await Promise.all([
         characterSettingsService.getAISettings(),
         characterSettingsService.getSamplerSettings(),
         characterSettingsService.getPromptSettings(),
         characterSettingsService.getPromptModels(),
+        characterSettingsService.getAgentModel(),
         characterSettingsService.getSettings(),
         characterSettingsService.getSectionOrder(),
         characterSettingsService.getHiddenSections(),
@@ -291,6 +294,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setSamplerSettings(sampler);
       setPromptSettings(prompts);
       setPromptModels(models);
+      setAgentModel(agentBinding);
       setFontSizeState(settings.ui.editorFontSize);
       setSectionOrder(secOrder);
       setHiddenSections(secHidden);
@@ -641,6 +645,11 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     setPromptModels(normalized);
     void characterSettingsService.savePromptModels(normalized);
   }, []);
+
+  const agentAiConfig = useMemo(
+    () => applyModelBinding(aiConfig, agentModel),
+    [aiConfig, agentModel],
+  );
 
   const createManualSnapshot = useCallback(async (): Promise<ManualSnapshotResult> => {
     const character = currentCharacterRef.current;
@@ -1128,6 +1137,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     samplerSettings,
     promptSettings,
     promptModels,
+    agentModel,
+    agentAiConfig,
     isHistoryOpen,
     isOpeningHistory,
     snapshotMetadata,

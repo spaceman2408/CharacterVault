@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { AIConfig } from '../../src/db/characterTypes';
 import { DEFAULT_SETTINGS } from '../../src/db/characterTypes';
 import {
+  applyModelBinding,
+  normalizeModelBinding,
   normalizePromptModelMap,
   resolveConfigForOperation,
 } from '../../src/services/resolveOperationConfig';
@@ -117,6 +119,59 @@ describe('resolveConfigForOperation', () => {
     });
 
     expect(result.selectedProvider).toBe('provider-a');
+  });
+});
+
+describe('applyModelBinding', () => {
+  it('returns the original config when the binding is missing', () => {
+    const config = baseConfig();
+    expect(applyModelBinding(config)).toBe(config);
+    expect(applyModelBinding(config, null)).toBe(config);
+    expect(applyModelBinding(config, { baseUrl: 'https://nano-gpt.com/api/v1', modelId: '  ' })).toBe(
+      config,
+    );
+  });
+
+  it('overrides model on the same endpoint and keeps the active key', () => {
+    const config = baseConfig();
+    const result = applyModelBinding(config, {
+      baseUrl: 'https://nano-gpt.com/api/v1/',
+      modelId: ' gpt-oss-120b ',
+    });
+    expect(result.modelId).toBe('gpt-oss-120b');
+    expect(result.apiKey).toBe('nano-key');
+    expect(result.selectedProvider).toBe('provider-a');
+  });
+
+  it('switches endpoint and uses the stored key for that URL', () => {
+    const config = baseConfig();
+    const result = applyModelBinding(config, {
+      baseUrl: 'https://openrouter.ai/api/v1',
+      modelId: 'deepseek/deepseek-v4-pro',
+    });
+    expect(result.baseUrl).toBe('https://openrouter.ai/api/v1');
+    expect(result.modelId).toBe('deepseek/deepseek-v4-pro');
+    expect(result.apiKey).toBe('or-key');
+  });
+});
+
+describe('normalizeModelBinding', () => {
+  it('returns undefined for incomplete bindings', () => {
+    expect(normalizeModelBinding(null)).toBeUndefined();
+    expect(normalizeModelBinding({ baseUrl: '', modelId: 'a' })).toBeUndefined();
+    expect(normalizeModelBinding({ baseUrl: 'https://x.com/v1', modelId: '  ' })).toBeUndefined();
+  });
+
+  it('trims modelId and normalizes baseUrl', () => {
+    expect(
+      normalizeModelBinding({
+        baseUrl: 'https://nano-gpt.com/api/v1/',
+        modelId: '  a  ',
+      }),
+    ).toEqual({
+      baseUrl: 'https://nano-gpt.com/api/v1',
+      modelId: 'a',
+    });
   });
 });
 

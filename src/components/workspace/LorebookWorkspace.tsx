@@ -32,6 +32,7 @@ import type {
 } from '../../db/characterTypes';
 import { createEmptyCharacterBook, DEFAULT_SETTINGS, EMPTY_CUSTOM_CONTEXT_META } from '../../db/characterTypes';
 import { estimateTokens } from '../../services/AIService';
+import { applyModelBinding } from '../../services/resolveOperationConfig';
 import {
   customContextService,
   formatCustomContextChunk,
@@ -138,6 +139,10 @@ export function LorebookWorkspace(): React.ReactElement {
   const samplerSettings = settings?.sampler ?? DEFAULT_SETTINGS.sampler;
   const promptSettings = settings?.prompts ?? DEFAULT_SETTINGS.prompts;
   const promptModels = settings?.promptModels;
+  const agentAiConfig = useMemo(
+    () => applyModelBinding(aiConfig, settings?.agentModel),
+    [aiConfig, settings?.agentModel],
+  );
   const spellcheck = settings?.ui?.spellcheck;
   const markdownImageOpenLinks = settings?.ui?.markdownImageOpenLinks;
 
@@ -608,7 +613,7 @@ export function LorebookWorkspace(): React.ReactElement {
             <div className="flex h-full min-h-0 w-full flex-col">
               {agentMode ? (
                 <LorebookAgentChat
-                  aiConfig={aiConfig}
+                  aiConfig={agentAiConfig}
                   samplerSettings={samplerSettings}
                   promptSettings={promptSettings}
                   getBook={getAgentBook}

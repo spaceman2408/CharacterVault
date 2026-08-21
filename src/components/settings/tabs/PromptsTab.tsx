@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { AlertCircle, ChevronDown, ChevronUp, MessageSquare, Sparkles, Target } from 'lucide-react';
+import { AlertCircle, Bot, ChevronDown, ChevronUp, MessageSquare, Sparkles, Target } from 'lucide-react';
 import type { PromptModelBinding, PromptSettings } from '../../../db/characterTypes';
 import { SettingsCard } from '../components/SettingsCard';
 import { PromptModelBindingSelect } from '../components/PromptModelBindingSelect';
@@ -151,6 +151,35 @@ export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helper
 
   return (
     <div className="space-y-4">
+      <SettingsCard>
+        <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Bot className="w-4 h-4" />
+          Agent
+        </h3>
+        <p className="text-xs text-fg-muted mb-3">
+          Uses the default AI Config model unless you pick another endpoint and model. Keys stay on
+          the AI Config tab.
+        </p>
+        {helpers && (
+          <PromptModelBindingSelect
+            heading="Model for Agent"
+            bare
+            binding={draft.agentModel}
+            globalAi={draft.ai}
+            modelsByBaseUrl={helpers.modelsByBaseUrl}
+            onChange={(binding) =>
+              setDraft((prev) => ({ ...prev, agentModel: binding }))
+            }
+            onFetch={helpers.fetchModelsForUrl}
+            isFetching={
+              draft.agentModel?.baseUrl
+                ? helpers.isFetchingModelsForUrl(draft.agentModel.baseUrl)
+                : false
+            }
+          />
+        )}
+      </SettingsCard>
+
       <SettingsCard>
         <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
           <Target className="w-4 h-4" />

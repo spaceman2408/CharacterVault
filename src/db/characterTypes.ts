@@ -455,6 +455,8 @@ export interface CharacterVaultSettings {
   sampler?: SamplerSettings;
   prompts?: PromptSettings;
   promptModels?: PromptModelMap;
+  /** Per-agent endpoint + model override. Missing = use global AIConfig */
+  agentModel?: PromptModelBinding;
   contextSectionIds?: CharacterSection[];
   /** Undefined = default order */
   sectionOrder?: CharacterSection[];
@@ -679,6 +681,7 @@ export const DEFAULT_SETTINGS = {
     grammar: 'Please fix any grammar, spelling, and punctuation errors in the following text while preserving the original meaning and style:\n\n"""\n${text}\n"""\n\nProvide only the corrected text without any additional commentary.',
   } satisfies PromptSettings,
   promptModels: {} as PromptModelMap,
+  agentModel: undefined as PromptModelBinding | undefined,
 };
 
 export function clampContextLength(value: number): number {
