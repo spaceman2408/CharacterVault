@@ -43,7 +43,7 @@ function parseOkGreeting(
 }
 
 function greetingSlot(index: number, total: number): string {
-  return `greeting ${index + 1} of ${total}`;
+  return `greeting ${index} of ${total}`;
 }
 
 function failedToolLabel(toolName: string): string {
@@ -124,7 +124,7 @@ export function formatToolEvent(event: AgentToolEvent): string {
     if (match) {
       const index = Number(match[1]);
       const remaining = match[2];
-      return `Deleted greeting ${index + 1} (${remaining} remaining)`;
+      return `Deleted greeting ${index} (${remaining} remaining)`;
     }
   }
 

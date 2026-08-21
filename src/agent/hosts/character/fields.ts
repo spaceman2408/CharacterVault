@@ -94,11 +94,15 @@ export function setFieldValue(
   return next;
 }
 
+export function greetingNumber(index: number): number {
+  return index + 1;
+}
+
 export function parseGreetingIndex(raw: string | undefined, length: number): number | null {
   if (!raw) return null;
   const trimmed = raw.trim().replace(/^#/, '');
   if (!/^\d+$/.test(trimmed)) return null;
-  const index = Number(trimmed);
-  if (!Number.isInteger(index) || index < 0 || index >= length) return null;
-  return index;
+  const slot = Number(trimmed);
+  if (!Number.isInteger(slot) || slot < 1 || slot > length) return null;
+  return slot - 1;
 }

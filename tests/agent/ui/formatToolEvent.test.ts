@@ -62,14 +62,14 @@ describe('formatToolEvent', () => {
     expect(
       formatToolEvent(event('update_field', 'ok description (Description) — 3849 chars')),
     ).toBe('Updated Description (3849 chars)');
-    expect(formatToolEvent(event('add_greeting', 'ok greeting 2/3'))).toBe(
+    expect(formatToolEvent(event('add_greeting', 'ok greeting 3/3'))).toBe(
       'Added greeting 3 of 3',
     );
     expect(
-      formatToolEvent(event('replace_in_greeting', 'ok greeting 0/3 — replaced 1')),
+      formatToolEvent(event('replace_in_greeting', 'ok greeting 1/3 — replaced 1')),
     ).toBe('Replaced 1 in greeting 1 of 3');
     expect(
-      formatToolEvent(event('delete_greeting', 'ok deleted greeting 0; 2 remaining')),
+      formatToolEvent(event('delete_greeting', 'ok deleted greeting 1; 2 remaining')),
     ).toBe('Deleted greeting 1 (2 remaining)');
     expect(formatToolEvent(event('list_entries', '24 entries'))).toBe('Listed 24 entries');
   });

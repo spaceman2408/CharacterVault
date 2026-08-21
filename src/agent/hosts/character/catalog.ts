@@ -3,6 +3,7 @@ import {
   CHARACTER_AGENT_FIELD_IDS,
   fieldLabel,
   getFieldValue,
+  greetingNumber,
   type CharacterAgentFieldId,
 } from './fields';
 
@@ -34,7 +35,7 @@ export function formatGreetingCatalog(spec: CharacterSpec): string {
     return 'Alternate greetings:\n(none)';
   }
   const lines = greetings.map(
-    (greeting, index) => `${index} — ${greeting.length} chars`,
+    (greeting, index) => `${greetingNumber(index)} — ${greeting.length} chars`,
   );
   return `Alternate greetings (${greetings.length}):\n${lines.join('\n')}`;
 }
@@ -49,5 +50,5 @@ export function formatGreetingRead(
   index: number,
 ): string {
   const body = greetings[index] ?? '';
-  return `greeting ${index}/${greetings.length}\n---\n${body}`;
+  return `greeting ${greetingNumber(index)}/${greetings.length}\n---\n${body}`;
 }

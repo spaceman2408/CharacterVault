@@ -5,6 +5,7 @@ import { formatFieldCatalog, formatFieldRead, formatGreetingCatalog, formatGreet
 import {
   fieldLabel,
   getFieldValue,
+  greetingNumber,
   isCharacterAgentFieldId,
   parseGreetingIndex,
   setFieldValue,
@@ -34,6 +35,14 @@ function ok(toolName: string, message: string): ActionResult {
 
 function fail(toolName: string, message: string): ActionResult {
   return { ok: false, toolName, message };
+}
+
+function noGreetingMessage(raw: string | undefined, length: number): string {
+  const shown = raw ?? '(missing)';
+  if (shown.trim() === '0') {
+    return `error: no greeting 0 (${length} greetings; indexes start at 1)`;
+  }
+  return `error: no greeting ${shown} (${length} greetings)`;
 }
 
 export function listFields(spec: CharacterSpec): ActionResult {
@@ -123,10 +132,7 @@ export function readGreeting(spec: CharacterSpec, action: ParsedAction): ActionR
   const greetings = spec.alternate_greetings ?? [];
   const index = parseGreetingIndex(action.headers.index, greetings.length);
   if (index == null) {
-    return fail(
-      'read_greeting',
-      `error: no greeting ${action.headers.index ?? '(missing)'} (${greetings.length} greetings)`,
-    );
+    return fail('read_greeting', noGreetingMessage(action.headers.index, greetings.length));
   }
   return ok('read_greeting', formatGreetingRead(greetings, index));
 }
@@ -142,7 +148,7 @@ export function addGreeting(
   return {
     spec: next,
     changed: true,
-    result: ok('add_greeting', `ok greeting ${index}/${greetings.length}`),
+    result: ok('add_greeting', `ok greeting ${greetingNumber(index)}/${greetings.length}`),
   };
 }
 
@@ -156,17 +162,14 @@ export function updateGreeting(
     return {
       spec,
       changed: false,
-      result: fail(
-        'update_greeting',
-        `error: no greeting ${action.headers.index ?? '(missing)'} (${greetings.length} greetings)`,
-      ),
+      result: fail('update_greeting', noGreetingMessage(action.headers.index, greetings.length)),
     };
   }
   greetings[index] = action.body;
   return {
     spec: { ...spec, alternate_greetings: greetings },
     changed: true,
-    result: ok('update_greeting', `ok greeting ${index}/${greetings.length}`),
+    result: ok('update_greeting', `ok greeting ${greetingNumber(index)}/${greetings.length}`),
   };
 }
 
@@ -182,7 +185,7 @@ export function replaceInGreeting(
       changed: false,
       result: fail(
         'replace_in_greeting',
-        `error: no greeting ${action.headers.index ?? '(missing)'} (${greetings.length} greetings)`,
+        noGreetingMessage(action.headers.index, greetings.length),
       ),
     };
   }
@@ -202,7 +205,7 @@ export function replaceInGreeting(
     changed: applied.text !== current,
     result: ok(
       'replace_in_greeting',
-      `ok greeting ${index}/${greetings.length} — replaced ${applied.count}`,
+      `ok greeting ${greetingNumber(index)}/${greetings.length} — replaced ${applied.count}`,
     ),
   };
 }
@@ -217,10 +220,7 @@ export function deleteGreeting(
     return {
       spec,
       changed: false,
-      result: fail(
-        'delete_greeting',
-        `error: no greeting ${action.headers.index ?? '(missing)'} (${greetings.length} greetings)`,
-      ),
+      result: fail('delete_greeting', noGreetingMessage(action.headers.index, greetings.length)),
     };
   }
   greetings.splice(index, 1);
@@ -229,7 +229,7 @@ export function deleteGreeting(
     changed: true,
     result: ok(
       'delete_greeting',
-      `ok deleted greeting ${index}; ${greetings.length} remaining`,
+      `ok deleted greeting ${greetingNumber(index)}; ${greetings.length} remaining`,
     ),
   };
 }

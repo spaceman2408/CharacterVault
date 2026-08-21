@@ -157,49 +157,59 @@ describe('replaceInField', () => {
 });
 
 describe('greetings', () => {
-  it('lists indexes without bodies', () => {
+  it('lists 1-based indexes without bodies', () => {
     const result = listGreetings(
       spec({ alternate_greetings: ['SECRET HELLO', 'OTHER'] }),
     );
-    expect(result.message).toContain('0 — 12 chars');
+    expect(result.message).toContain('1 — 12 chars');
+    expect(result.message).toContain('2 — 5 chars');
     expect(result.message).not.toContain('SECRET HELLO');
   });
 
-  it('reads, adds, updates, and deletes by index', () => {
+  it('reads, adds, updates, and deletes by 1-based index', () => {
     let card = spec({ alternate_greetings: ['first'] });
-    const read = readGreeting(card, action('read_greeting', { index: '0' }));
+    const read = readGreeting(card, action('read_greeting', { index: '1' }));
+    expect(read.ok).toBe(true);
+    expect(read.message).toContain('greeting 1/1');
     expect(read.message).toContain('first');
 
     const added = addGreeting(card, action('add_greeting', {}, 'second'));
-    expect(added.result.message).toBe('ok greeting 1/2');
+    expect(added.result.message).toBe('ok greeting 2/2');
     card = added.spec;
 
     const updated = updateGreeting(
       card,
-      action('update_greeting', { index: '0' }, 'revised first'),
+      action('update_greeting', { index: '1' }, 'revised first'),
     );
     expect(updated.spec.alternate_greetings[0]).toBe('revised first');
     card = updated.spec;
 
-    const deleted = deleteGreeting(card, action('delete_greeting', { index: '0' }));
+    const deleted = deleteGreeting(card, action('delete_greeting', { index: '1' }));
     expect(deleted.spec.alternate_greetings).toEqual(['second']);
-    expect(deleted.result.message).toContain('1 remaining');
+    expect(deleted.result.message).toBe('ok deleted greeting 1; 1 remaining');
   });
 
   it('replaces a unique snippet in one greeting', () => {
     const { spec: next, result } = replaceInGreeting(
       spec({ alternate_greetings: ['Hello there.', 'Other'] }),
-      action('replace_in_greeting', { index: '0', old: 'there', new: 'friend' }),
+      action('replace_in_greeting', { index: '1', old: 'there', new: 'friend' }),
     );
     expect(result.ok).toBe(true);
     expect(next.alternate_greetings).toEqual(['Hello friend.', 'Other']);
-    expect(result.message).toContain('replaced 1');
+    expect(result.message).toBe('ok greeting 1/2 — replaced 1');
   });
 
-  it('rejects an out-of-range index', () => {
-    const result = readGreeting(spec(), action('read_greeting', { index: '0' }));
-    expect(result.ok).toBe(false);
-    expect(result.message).toContain('0 greetings');
+  it('rejects 0 and out-of-range indexes', () => {
+    const empty = readGreeting(spec(), action('read_greeting', { index: '1' }));
+    expect(empty.ok).toBe(false);
+    expect(empty.message).toContain('0 greetings');
+
+    const zero = readGreeting(
+      spec({ alternate_greetings: ['first'] }),
+      action('read_greeting', { index: '0' }),
+    );
+    expect(zero.ok).toBe(false);
+    expect(zero.message).toContain('indexes start at 1');
   });
 });
 
@@ -300,9 +310,9 @@ describe('createCharacterHost', () => {
     const state = hostState(spec({ alternate_greetings: ['one', 'two', 'three'] }));
     const host = createCharacterHost(state.io);
 
-    await host.execute(action('read_greeting', { index: '1' }));
-    await host.execute(action('delete_greeting', { index: '0' }));
-    const after = await host.execute(action('read_greeting', { index: '1' }));
+    await host.execute(action('read_greeting', { index: '2' }));
+    await host.execute(action('delete_greeting', { index: '1' }));
+    const after = await host.execute(action('read_greeting', { index: '2' }));
     expect(after.ok).toBe(true);
     expect(after.message).toContain('three');
     expect(after.message).not.toContain('two');

@@ -63,7 +63,7 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
     name: 'list_greetings',
     description:
-      'Return index and length for each alternate greeting. first_mes is a separate field.',
+      'Return 1-based index and length for each alternate greeting. Greeting 1 is the first alternate. first_mes is a separate field.',
     parameters: {
       type: 'object',
       properties: {},
@@ -71,11 +71,11 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   },
   {
     name: 'read_greeting',
-    description: 'Return one alternate greeting by 0-based index.',
+    description: 'Return one alternate greeting by 1-based index. Greeting 1 is the first alternate.',
     parameters: {
       type: 'object',
       properties: {
-        index: { type: 'integer', description: '0-based greeting index' },
+        index: { type: 'integer', description: '1-based greeting index. Greeting 1 is the first alternate.' },
       },
       required: ['index'],
     },
@@ -97,7 +97,7 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
     parameters: {
       type: 'object',
       properties: {
-        index: { type: 'integer', description: '0-based greeting index' },
+        index: { type: 'integer', description: '1-based greeting index. Greeting 1 is the first alternate.' },
         content: { type: 'string', description: 'Full new greeting body' },
       },
       required: ['index', 'content'],
@@ -110,7 +110,7 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
     parameters: {
       type: 'object',
       properties: {
-        index: { type: 'integer', description: '0-based greeting index' },
+        index: { type: 'integer', description: '1-based greeting index. Greeting 1 is the first alternate.' },
         old: { type: 'string', description: 'Exact text to find' },
         new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
         content: {
@@ -127,11 +127,12 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   },
   {
     name: 'delete_greeting',
-    description: 'Remove one alternate greeting by 0-based index. Later indexes shift down.',
+    description:
+      'Remove one alternate greeting by 1-based index. Greeting 1 is the first alternate. Later indexes shift down.',
     parameters: {
       type: 'object',
       properties: {
-        index: { type: 'integer', description: '0-based greeting index' },
+        index: { type: 'integer', description: '1-based greeting index. Greeting 1 is the first alternate.' },
       },
       required: ['index'],
     },
