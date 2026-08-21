@@ -215,11 +215,12 @@ export function LorebookAttachmentProvider({
           lorebookId,
           book,
           fallbackVaultName(book),
+          characterId,
         );
       }
       await openLorebook(lorebookId);
     },
-    [embeddedBook, fallbackVaultName, flushPendingSaves, openLorebook],
+    [characterId, embeddedBook, fallbackVaultName, flushPendingSaves, openLorebook],
   );
 
   const handleOpen = useCallback(

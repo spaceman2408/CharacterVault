@@ -138,6 +138,23 @@ export class LorebookAttachmentService {
   }
 
   /**
+   * If this character has a vault lorebook attached, overwrite that vault book
+   * and every other linked character. Does not rewrite the source character.
+   */
+  async syncEmbeddedIfAttached(
+    characterId: string,
+    embedded: CharacterBook,
+    fallbackName: string,
+  ): Promise<boolean> {
+    const { lorebookIds } = await this.getAttachments(characterId);
+    const lorebookId = lorebookIds.length > 0 ? lorebookIds[lorebookIds.length - 1] : undefined;
+    if (!lorebookId) return false;
+    if (!(await characterDb.hasLorebook(lorebookId))) return false;
+    await this.writeEmbeddedToVault(lorebookId, embedded, fallbackName, characterId);
+    return true;
+  }
+
+  /**
    * Overwrite a vault book with the character's current embedded lorebook.
    * Used when opening the attached book from the character editor.
    * Also pushes the new vault book to every other linked character.
@@ -146,6 +163,7 @@ export class LorebookAttachmentService {
     lorebookId: string,
     embedded: CharacterBook,
     fallbackName: string,
+    exceptCharacterId?: string,
   ): Promise<VaultLorebook> {
     const book = cloneEmbeddedBook(embedded, fallbackName);
     const updated = await characterDb.updateLorebook(lorebookId, {
@@ -153,7 +171,7 @@ export class LorebookAttachmentService {
       name: book.name?.trim() || undefined,
       description: book.description,
     });
-    await this.writeVaultToLinkedCharacters(lorebookId, updated);
+    await this.writeVaultToLinkedCharacters(lorebookId, updated, exceptCharacterId);
     return updated;
   }
 
@@ -164,10 +182,12 @@ export class LorebookAttachmentService {
   async writeVaultToLinkedCharacters(
     lorebookId: string,
     vault: VaultLorebook,
+    exceptCharacterId?: string,
   ): Promise<number> {
     const characterIds = await characterDb.getCharacterIdsLinkedToLorebook(lorebookId);
     let written = 0;
     for (const characterId of characterIds) {
+      if (characterId === exceptCharacterId) continue;
       const book = cloneBookForEmbed(vault);
       const exists = await characterDb.updateCharacterEmbeddedBook(characterId, book);
       if (exists) written += 1;

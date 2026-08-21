@@ -980,6 +980,12 @@ export class CharacterDatabase extends Dexie {
     return this.lorebooks.get(id);
   }
 
+  /** True if a vault lorebook id exists. Uses the list index, not the full book. */
+  async hasLorebook(id: string): Promise<boolean> {
+    const item = await this.lorebookListIndex.get(id);
+    return item != null;
+  }
+
   async createLorebook(input: CreateVaultLorebookInput): Promise<VaultLorebook> {
     const timestamp = new Date().toISOString();
     const id = uuidv4();

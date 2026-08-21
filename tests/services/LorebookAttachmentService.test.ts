@@ -1,19 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CharacterBook, VaultLorebook } from '../../src/db/characterTypes';
 
-const { updateLorebook, getCharacterIdsLinkedToLorebook, updateCharacterEmbeddedBook } = vi.hoisted(
-  () => ({
-    updateLorebook: vi.fn(),
-    getCharacterIdsLinkedToLorebook: vi.fn(),
-    updateCharacterEmbeddedBook: vi.fn(),
-  }),
-);
+const {
+  updateLorebook,
+  getCharacterIdsLinkedToLorebook,
+  updateCharacterEmbeddedBook,
+  getCharacterLorebookAttachments,
+  hasLorebook,
+} = vi.hoisted(() => ({
+  updateLorebook: vi.fn(),
+  getCharacterIdsLinkedToLorebook: vi.fn(),
+  updateCharacterEmbeddedBook: vi.fn(),
+  getCharacterLorebookAttachments: vi.fn(),
+  hasLorebook: vi.fn(),
+}));
 
 vi.mock('../../src/db/CharacterDatabase', () => ({
   characterDb: {
     updateLorebook,
     getCharacterIdsLinkedToLorebook,
     updateCharacterEmbeddedBook,
+    getCharacterLorebookAttachments,
+    hasLorebook,
   },
 }));
 
@@ -224,5 +232,95 @@ describe('LorebookAttachmentService.writeVaultToLinkedCharacters', () => {
     );
 
     expect(written).toBe(1);
+  });
+});
+
+describe('LorebookAttachmentService.syncEmbeddedIfAttached', () => {
+  const embedded: CharacterBook = {
+    name: 'Agent book',
+    description: '',
+    entries: [makeEntry(3, 'new agent entry')],
+    extensions: {},
+  };
+
+  beforeEach(() => {
+    updateLorebook.mockReset();
+    getCharacterIdsLinkedToLorebook.mockReset();
+    updateCharacterEmbeddedBook.mockReset();
+    getCharacterLorebookAttachments.mockReset();
+    hasLorebook.mockReset();
+    getCharacterIdsLinkedToLorebook.mockResolvedValue([]);
+    updateCharacterEmbeddedBook.mockResolvedValue(true);
+    hasLorebook.mockResolvedValue(true);
+    updateLorebook.mockImplementation(async (id: string, input: { book: CharacterBook; name?: string }) => ({
+      ...makeVaultBook({ id }),
+      name: input.name ?? 'Vault Bible',
+      book: input.book,
+    }));
+  });
+
+  it('writes the embedded book to the attached vault lorebook', async () => {
+    getCharacterLorebookAttachments.mockResolvedValue({
+      characterId: 'char-1',
+      lorebookIds: ['vault-1'],
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    });
+
+    const synced = await lorebookAttachmentService.syncEmbeddedIfAttached(
+      'char-1',
+      embedded,
+      'Fallback',
+    );
+
+    expect(synced).toBe(true);
+    expect(updateLorebook).toHaveBeenCalledTimes(1);
+    const written = (updateLorebook.mock.calls[0] as [string, { book: CharacterBook }])[1].book;
+    expect(written.entries[0].content).toBe('new agent entry');
+  });
+
+  it('does not rewrite the character that was just saved', async () => {
+    getCharacterLorebookAttachments.mockResolvedValue({
+      characterId: 'char-1',
+      lorebookIds: ['vault-1'],
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    });
+    getCharacterIdsLinkedToLorebook.mockResolvedValue(['char-1', 'char-2']);
+
+    await lorebookAttachmentService.syncEmbeddedIfAttached('char-1', embedded, 'Fallback');
+
+    expect(updateCharacterEmbeddedBook).toHaveBeenCalledTimes(1);
+    expect(updateCharacterEmbeddedBook.mock.calls[0][0]).toBe('char-2');
+  });
+
+  it('is a no-op when the character has no attached vault book', async () => {
+    getCharacterLorebookAttachments.mockResolvedValue(undefined);
+
+    const synced = await lorebookAttachmentService.syncEmbeddedIfAttached(
+      'char-1',
+      embedded,
+      'Fallback',
+    );
+
+    expect(synced).toBe(false);
+    expect(hasLorebook).not.toHaveBeenCalled();
+    expect(updateLorebook).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when the attached vault book is missing', async () => {
+    getCharacterLorebookAttachments.mockResolvedValue({
+      characterId: 'char-1',
+      lorebookIds: ['missing-vault'],
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    });
+    hasLorebook.mockResolvedValue(false);
+
+    const synced = await lorebookAttachmentService.syncEmbeddedIfAttached(
+      'char-1',
+      embedded,
+      'Fallback',
+    );
+
+    expect(synced).toBe(false);
+    expect(updateLorebook).not.toHaveBeenCalled();
   });
 });
