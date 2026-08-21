@@ -8,6 +8,7 @@ import { AGENT_MAX_OUTPUT_TOKENS, runLoop } from '../core/runLoop';
 import { stripFences } from '../core/stripFences';
 import type { AgentMessage } from '../core/types';
 import { createLorebookHost } from '../hosts/lorebook/createHost';
+import { clipLiveReasoning, LIVE_REASONING_FLUSH_MS } from './liveReasoning';
 import { compactToolResultMessage, isLookupOnlyTurn } from './notices';
 import type { AgentToolEvent } from './types';
 
@@ -84,6 +85,7 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
   const [error, setError] = useState<string | null>(null);
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingReasoning, setStreamingReasoning] = useState('');
 
   const aiServiceRef = useRef<AIService | null>(null);
   const abortedRef = useRef(false);
@@ -95,6 +97,7 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
   const toolEventsRef = useRef(toolEventsByMessageId);
   const streamContentRef = useRef('');
   const streamReasoningRef = useRef('');
+  const reasoningFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getBookRef = useRef(getBook);
   const setBookRef = useRef(setBook);
@@ -120,15 +123,37 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
   }, [aiConfig.modelId]);
 
+  const cancelReasoningFlush = useCallback(() => {
+    if (reasoningFlushTimerRef.current != null) {
+      clearTimeout(reasoningFlushTimerRef.current);
+      reasoningFlushTimerRef.current = null;
+    }
+  }, []);
+
   const clearStreamDraft = useCallback(() => {
     streamContentRef.current = '';
     streamReasoningRef.current = '';
+    cancelReasoningFlush();
+    setStreamingReasoning('');
+  }, [cancelReasoningFlush]);
+
+  const scheduleReasoningFlush = useCallback(() => {
+    if (reasoningFlushTimerRef.current != null) return;
+    reasoningFlushTimerRef.current = setTimeout(() => {
+      reasoningFlushTimerRef.current = null;
+      if (!isMountedRef.current) return;
+      if (!(aiConfigRef.current.showReasoning ?? true)) return;
+      setStreamingReasoning(clipLiveReasoning(streamReasoningRef.current));
+    }, LIVE_REASONING_FLUSH_MS);
   }, []);
 
   const appendStreamChunk = useCallback((chunk: { content?: string; reasoning?: string }) => {
-    if (chunk.reasoning) streamReasoningRef.current += chunk.reasoning;
+    if (chunk.reasoning) {
+      streamReasoningRef.current += chunk.reasoning;
+      if (aiConfigRef.current.showReasoning ?? true) scheduleReasoningFlush();
+    }
     if (chunk.content) streamContentRef.current += chunk.content;
-  }, []);
+  }, [scheduleReasoningFlush]);
 
   const attachError = useCallback((message: string) => {
     setError(message);
@@ -168,6 +193,10 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
       abortedRef.current = true;
       streamContentRef.current = '';
       streamReasoningRef.current = '';
+      if (reasoningFlushTimerRef.current != null) {
+        clearTimeout(reasoningFlushTimerRef.current);
+        reasoningFlushTimerRef.current = null;
+      }
       aiServiceRef.current?.abort();
       aiServiceRef.current = null;
       onRunningChangeRef.current?.(false);
@@ -396,8 +425,7 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
           dropLookupOnlyMessage(lastAssistantIdRef.current);
           aiServiceRef.current = null;
           isProcessingRef.current = false;
-          streamContentRef.current = '';
-          streamReasoningRef.current = '';
+          clearStreamDraft();
           if (isMountedRef.current) {
             setIsProcessing(false);
             setIsStreaming(false);
@@ -469,7 +497,7 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     busyLabel,
     isStreaming,
     streamingContent: '',
-    streamingReasoning: '',
+    streamingReasoning,
     handleAsk,
     handleRegenerate,
     handleNewChat,

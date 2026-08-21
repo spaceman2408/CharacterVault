@@ -5,6 +5,7 @@ import type { ChatMessage } from '../../components/ai/types';
 import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '../../db/characterTypes';
 import { computeAgentContextUsage } from '../hosts/lorebook/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
+import { LiveThinking } from './LiveThinking';
 import { messageNotices, shouldRenderAgentMessage, visibleToolEvents } from './notices';
 import { useLorebookAgent } from './useLorebookAgent';
 
@@ -130,7 +131,7 @@ export function LorebookAgentChat({
       error={session.chatHistory.length === 0 ? session.error : null}
       isStreaming={session.isStreaming}
       streamingContent=""
-      streamingReasoning=""
+      streamingReasoning={session.streamingReasoning}
       handleAsk={session.handleAsk}
       handleRegenerate={session.handleRegenerate}
       handleNewChat={session.handleNewChat}
@@ -140,11 +141,16 @@ export function LorebookAgentChat({
       onClose={onClose}
       renderMessage={renderMessage}
       processingIndicator={
-        <div className="flex items-center gap-2 py-1 text-fg-muted">
-          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-          <span className="text-xs">
-            {session.busyLabel ? `Running ${session.busyLabel}` : 'Working…'}
-          </span>
+        <div className="py-1 text-fg-muted">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+            <span className="text-xs">
+              {session.busyLabel ? `Running ${session.busyLabel}` : 'Working…'}
+            </span>
+          </div>
+          {aiConfig.showReasoning !== false ? (
+            <LiveThinking text={session.streamingReasoning} />
+          ) : null}
         </div>
       }
     />

@@ -4,7 +4,6 @@ import type { LorebookEntryListItemProps } from './types';
 
 function LorebookEntryListItem({
   entry,
-  index,
   tokenCount,
   isSelected,
   isContextEnabled,
@@ -21,6 +20,8 @@ function LorebookEntryListItem({
     onToggleContext();
   };
 
+  const label = (entry.comment || entry.name || '').trim();
+
   return (
     <div
       onClick={onSelect}
@@ -34,8 +35,18 @@ function LorebookEntryListItem({
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-fg">
-            {entry.comment || entry.name || `Entry ${index}`}
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <span
+              className={`shrink-0 tabular-nums ${
+                label ? 'text-xs font-medium text-fg-muted' : 'text-sm font-medium text-fg'
+              }`}
+              title={`#${entry.id}`}
+            >
+              #{entry.id}
+            </span>
+            {label ? (
+              <span className="truncate text-sm font-medium text-fg">{label}</span>
+            ) : null}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-muted">
             <span>
