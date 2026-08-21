@@ -71,12 +71,24 @@ Foo body
     expect(result.speech).toBe('Before.\n\nAfter.');
   });
 
-  it('marks an incomplete fence and does not emit an action', () => {
+  it('salvages an unclosed fence when name, keys, and body are already present', () => {
     const result = parseActions(`<<<add_entry
 name: Foo
 keys: foo
 ---
 unterminated`);
+    expect(result.incomplete).toBe(false);
+    expect(result.actions).toEqual([
+      {
+        name: 'add_entry',
+        headers: { name: 'Foo', keys: 'foo' },
+        body: 'unterminated',
+      },
+    ]);
+  });
+
+  it('marks a name-only unclosed fence as incomplete', () => {
+    const result = parseActions('<<<add_entry');
     expect(result.incomplete).toBe(true);
     expect(result.actions).toEqual([]);
     expect(result.segments.some((segment) => segment.kind === 'incomplete')).toBe(true);
@@ -177,10 +189,27 @@ A busy harbor.
     expect(result.actions).toEqual([{ name: 'list_entries', headers: {}, body: '' }]);
   });
 
-  it('marks an unclosed <tool_call> as incomplete', () => {
-    const result = parseActions('<tool_call> list_entries');
+  it('marks a name-only unclosed <tool_call> as incomplete', () => {
+    const result = parseActions('<tool_call> add_entry');
     expect(result.incomplete).toBe(true);
     expect(result.actions).toEqual([]);
+  });
+
+  it('salvages an unclosed <tool_call> when headers and body are present', () => {
+    const result = parseActions(`<tool_call>
+add_entry
+name: Harbor
+keys: harbor
+---
+A busy harbor.`);
+    expect(result.incomplete).toBe(false);
+    expect(result.actions).toEqual([
+      {
+        name: 'add_entry',
+        headers: { name: 'Harbor', keys: 'harbor' },
+        body: 'A busy harbor.',
+      },
+    ]);
   });
 
   it('does not treat <tool_calls> alone as an action', () => {

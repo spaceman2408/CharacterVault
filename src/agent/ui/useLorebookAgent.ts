@@ -3,7 +3,8 @@ import type { ChatMessage } from '../../components/ai/types';
 import { generateMessageId } from '../../components/ai/utils';
 import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '../../db/characterTypes';
 import { AIError, AIService } from '../../services/AIService';
-import { runLoop } from '../core/runLoop';
+import type { ChatMessage as ServiceChatMessage } from '../../services/AIService';
+import { AGENT_MAX_OUTPUT_TOKENS, runLoop } from '../core/runLoop';
 import { stripFences } from '../core/stripFences';
 import type { AgentMessage } from '../core/types';
 import { createLorebookHost } from '../hosts/lorebook/createHost';
@@ -20,6 +21,19 @@ export interface UseLorebookAgentOptions {
   flushDraft: () => void;
   takeSnapshot: () => Promise<void>;
   onRunningChange?: (running: boolean) => void;
+}
+
+function toServiceMessages(messages: AgentMessage[]): ServiceChatMessage[] {
+  return messages.map((message) => ({
+    role: message.role,
+    content: message.content,
+    tool_call_id: message.tool_call_id,
+    tool_calls: message.tool_calls?.map((call) => ({
+      id: call.id,
+      type: 'function' as const,
+      function: { name: call.name, arguments: call.arguments },
+    })),
+  }));
 }
 
 export function lastUserMessageIndex(history: Array<{ role: string }>): number {
@@ -277,7 +291,16 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
             }
             if (isMountedRef.current) setIsStreaming(streaming);
             clearStreamDraft();
-            return aiService.chat(messages, undefined, onChunk);
+            return aiService.chat(toServiceMessages(messages), undefined, onChunk, {
+              maxTokens: AGENT_MAX_OUTPUT_TOKENS,
+              tools: host.tools
+                ? host.tools.map((tool) => ({
+                    name: tool.name,
+                    description: tool.description,
+                    parameters: tool.parameters,
+                  }))
+                : undefined,
+            });
           },
           onEvent: (event) => {
             if (!isCurrent()) return;

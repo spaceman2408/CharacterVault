@@ -8,8 +8,9 @@ Browser-side tool loop. The rest of the app imports **only** `src/agent/index.ts
 |------|------|
 | `index.ts` | Public API. Keep this list short. |
 | `core/` | Host-agnostic runtime. No `CharacterBook`, Dexie, or React. |
-| `core/parseActions.ts` | Fence lexer. Tool names are opaque strings. |
-| `core/runLoop.ts` | complete → parse → `host.execute` → feed results. |
+| `core/parseActions.ts` | XML / fence lexer. Salvages a truncated last call when name + payload are already there. |
+| `core/toolCalls.ts` | Native `tool_calls` JSON → `ParsedAction`, including truncated-JSON repair. |
+| `core/runLoop.ts` | complete → native tools or XML parse → `host.execute` → feed results. |
 | `hosts/lorebook/` | First host: `list_entries`, `read_entry`, `add_entry`, `update_entry`, `delete_entry`. |
 | `ui/` | React wire-in (`useLorebookAgent`, `LorebookAgentChat`). |
 
@@ -25,7 +26,7 @@ Do not export the parser, loop, or host from the barrel. Tests import those file
 
 1. Handle it in `hosts/lorebook/tools.ts`.
 2. Add the name to `LOREBOOK_TOOL_NAMES`.
-3. Document the XML `<tool_call>` in `hosts/lorebook/prompt.ts`. The parser still accepts `<<<>>>` fences as a fallback; do not teach that format in prompts.
+3. Add an OpenAI function schema in `hosts/lorebook/schemas.ts` and document the tool in `hosts/lorebook/prompt.ts`. Native `tools` / `tool_calls` are the primary control plane. XML `<tool_call>` is the fallback (including when a provider 400s on `tools`). The parser still accepts `<<<>>>` fences; do not teach that format.
 4. Tests under `tests/agent/hosts/lorebook/`.
 
 Do not mention the tool in `core/`.
@@ -48,3 +49,4 @@ Do not add `if (host === 'lorebook')` in `core/`.
 - Same-name `add_entry` in one run revises the new entry (keeps the longer body). Names that already existed in the book are rejected; use `read_entry` then `update_entry` to change them.
 - The host keeps an in-run copy of the book and caches formatted `read_entry` payloads by id. `update_entry` writes that cache so the next read returns the new body. `delete_entry` drops the id from the book and the read cache. `flush()` persists once at the end of the run.
 - Agent `add_entry` sets `extensions.context_enabled: false` so new entries are not pinned into AI context.
+- Agent completions send `max_tokens: 16384` without changing the sampler input budget. Prefer `message.tool_calls` when the API returns them; otherwise parse XML and salvage a cut last call. One continuation on `finish_reason: length` if the tail is still unusable. Native turns echo `role: tool` results; XML turns keep the user-text result blob.

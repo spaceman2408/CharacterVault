@@ -22,9 +22,23 @@ export interface ActionResult {
   message: string;
 }
 
+export interface NativeToolCall {
+  id: string;
+  name: string;
+  arguments: string;
+}
+
+export interface AgentToolSpec {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
 export interface AgentMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string | null;
+  tool_calls?: NativeToolCall[];
+  tool_call_id?: string;
 }
 
 export type AgentDoneReason = 'complete' | 'max_turns' | 'abort' | 'error';
@@ -38,13 +52,21 @@ export type AgentEvent =
 
 export type CompleterChunk = { content?: string; reasoning?: string };
 
+export interface CompleterResult {
+  content: string;
+  reasoning?: string;
+  finishReason?: string | null;
+  toolCalls?: NativeToolCall[];
+}
+
 export type Completer = (
   messages: AgentMessage[],
   onChunk?: (chunk: CompleterChunk) => void,
-) => Promise<{ content: string; reasoning?: string }>;
+) => Promise<CompleterResult>;
 
 export interface AgentHost {
   readonly toolNames: readonly string[];
+  readonly tools?: readonly AgentToolSpec[];
   buildSystemPrompt(input: { extraChunks: string[] }): string;
   extraContextChunks(): Promise<string[]>;
   execute(action: ParsedAction): Promise<ActionResult>;

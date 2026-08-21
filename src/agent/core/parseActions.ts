@@ -192,6 +192,23 @@ function readLine(text: string, start: number): { line: string; next: number } {
   return { line, next: newline === -1 ? text.length : newline + 1 };
 }
 
+function isSalvageableAction(action: ParsedAction): boolean {
+  if (!isUsableToolName(action.name)) return false;
+  if (action.body.trim().length > 0) return true;
+  for (const _key in action.headers) return true;
+  return false;
+}
+
+function salvageOrIncomplete(
+  action: ParsedAction | null,
+  end: number,
+): { kind: 'action'; action: ParsedAction; end: number } | { kind: 'incomplete' } {
+  if (action && isSalvageableAction(action)) {
+    return { kind: 'action', action, end };
+  }
+  return { kind: 'incomplete' };
+}
+
 function parseOneFence(
   text: string,
   openAt: number,
@@ -217,7 +234,7 @@ function parseOneFence(
   if (i < text.length && text[i] === '\n') {
     i += 1;
   } else if (i >= text.length) {
-    return { kind: 'incomplete' };
+    return salvageOrIncomplete({ name, headers: {}, body: '' }, text.length);
   } else {
     return { kind: 'incomplete' };
   }
@@ -265,7 +282,14 @@ function parseOneFence(
     i = next;
   }
 
-  return { kind: 'incomplete' };
+  return salvageOrIncomplete(
+    {
+      name,
+      headers,
+      body: bodyLines.join('\n').replace(/\n+$/, ''),
+    },
+    text.length,
+  );
 }
 
 function parseOneToolCall(
@@ -318,7 +342,11 @@ function parseOneToolCall(
   }
 
   const closeAt = indexOfIgnoreCase(text, TOOL_CALL_CLOSE, i);
-  if (closeAt === -1) return { kind: 'incomplete' };
+  if (closeAt === -1) {
+    const salvaged = salvageOrIncomplete(actionFromInner(nameAttr, text.slice(i)), text.length);
+    if (salvaged.kind === 'action') return salvaged;
+    return { kind: 'incomplete' };
+  }
   const inner = text.slice(i, closeAt);
   const end = closeAt + TOOL_CALL_CLOSE.length;
   const action = actionFromInner(nameAttr, inner);

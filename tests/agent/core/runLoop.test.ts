@@ -5,6 +5,7 @@ import type {
   AgentEvent,
   AgentHost,
   Completer,
+  CompleterResult,
   ParsedAction,
 } from '../../../src/agent/core/types';
 
@@ -29,7 +30,7 @@ function fakeHost(execute?: (action: ParsedAction) => Promise<ActionResult>): {
   return { host, persist, calls };
 }
 
-function scriptedComplete(replies: Array<string | { content: string; reasoning?: string }>): Completer {
+function scriptedComplete(replies: Array<string | CompleterResult>): Completer {
   let index = 0;
   return async () => {
     const reply = replies[index] ?? 'done';
@@ -135,15 +136,15 @@ Docks
     expect(persist).toHaveBeenCalledTimes(1);
   });
 
-  it('feeds incomplete fences back and continues', async () => {
-    const { host } = fakeHost();
+  it('salvages an unclosed add_entry that already has headers and a body', async () => {
+    const { host, calls } = fakeHost();
     const complete = vi.fn(
       scriptedComplete([
         `<<<add_entry
 name: Keep
 keys: keep
 ---
-unterminated`,
+Castle`,
         'Stopped.',
       ]),
     );
@@ -155,10 +156,97 @@ unterminated`,
       onEvent: collect(events).push,
     });
     expect(result.reason).toBe('complete');
+    expect(calls[0]?.headers.name).toBe('Keep');
+    expect(calls[0]?.body).toBe('Castle');
     expect(events.some((event) => event.type === 'tool_result' && event.result.toolName === 'incomplete_action')).toBe(
-      true,
+      false,
     );
+  });
+
+  it('feeds a name-only incomplete call back with applied names', async () => {
+    const { host } = fakeHost();
+    const complete = vi.fn(
+      scriptedComplete([
+        `<tool_call>
+add_entry
+name: Keep
+keys: keep
+---
+Castle
+</tool_call>
+<tool_call>
+add_entry`,
+        'Stopped.',
+      ]),
+    );
+    const events: AgentEvent[] = [];
+    const result = await runLoop({
+      host,
+      complete,
+      userMessage: 'go',
+      onEvent: collect(events).push,
+    });
+    expect(result.reason).toBe('complete');
+    const incomplete = events.find(
+      (event) => event.type === 'tool_result' && event.result.toolName === 'incomplete_action',
+    );
+    expect(incomplete?.type === 'tool_result' && incomplete.result.message).toContain('Applied:');
+    expect(incomplete?.type === 'tool_result' && incomplete.result.message).toContain('Re-emit ONLY');
     const followUp = complete.mock.calls[1][0].at(-1);
     expect(followUp?.content).toContain('incomplete_action');
+  });
+
+  it('continues once when finish_reason is length and the tail is not salvageable', async () => {
+    const { host, calls } = fakeHost();
+    const complete = vi.fn(
+      scriptedComplete([
+        { content: '<tool_call>\nadd_entry\n', finishReason: 'length' },
+        `name: Keep
+keys: keep
+---
+Castle
+</tool_call>`,
+        'Stopped.',
+      ]),
+    );
+    const result = await runLoop({
+      host,
+      complete,
+      userMessage: 'go',
+    });
+    expect(result.reason).toBe('complete');
+    expect(complete).toHaveBeenCalledTimes(3);
+    expect(calls[0]?.headers.name).toBe('Keep');
+    const continueMessages = complete.mock.calls[1][0];
+    expect(continueMessages.at(-1)?.content).toContain('cut off');
+  });
+
+  it('prefers native tool_calls and echoes role=tool results', async () => {
+    const { host, calls } = fakeHost();
+    const complete = vi.fn(
+      scriptedComplete([
+        {
+          content: '',
+          toolCalls: [
+            {
+              id: 'call_keep',
+              name: 'add_entry',
+              arguments: '{"name":"Keep","keys":"keep","content":"Castle"}',
+            },
+          ],
+        },
+        'Stopped.',
+      ]),
+    );
+    const result = await runLoop({
+      host,
+      complete,
+      userMessage: 'go',
+    });
+    expect(result.reason).toBe('complete');
+    expect(calls[0]?.headers.name).toBe('Keep');
+    const followUp = complete.mock.calls[1][0];
+    expect(followUp.some((message) => message.role === 'assistant' && message.tool_calls?.length)).toBe(true);
+    expect(followUp.some((message) => message.role === 'tool' && message.tool_call_id === 'call_keep')).toBe(true);
   });
 });

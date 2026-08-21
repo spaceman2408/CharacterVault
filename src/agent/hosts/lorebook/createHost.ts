@@ -3,6 +3,7 @@ import { formatCustomContextChunk } from '../../../services/CustomContextService
 import type { ActionResult, AgentHost, ParsedAction } from '../../core/types';
 import { formatEntryCatalog } from './catalog';
 import { buildLorebookAgentSystemPrompt } from './prompt';
+import { LOREBOOK_TOOL_SPECS } from './schemas';
 import {
   addEntry,
   deleteEntry,
@@ -51,6 +52,7 @@ export function createLorebookHost(io: LorebookHostIO): AgentHost {
 
   return {
     toolNames: LOREBOOK_TOOL_NAMES,
+    tools: LOREBOOK_TOOL_SPECS,
 
     buildSystemPrompt(input: { extraChunks: string[] }): string {
       return buildLorebookAgentSystemPrompt(input.extraChunks);

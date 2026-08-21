@@ -17,5 +17,7 @@ describe('buildLorebookAgentSystemPrompt', () => {
     expect(prompt).not.toContain('<<<');
     expect(prompt).not.toContain('>>>');
     expect(prompt).toContain('Never write the word tool_name');
+    expect(prompt).not.toContain('never JSON');
+    expect(prompt).toContain('native');
   });
 });
