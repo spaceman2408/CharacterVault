@@ -87,7 +87,21 @@ Details: [AI Context → Custom Context](/features/ai-context#custom-context).
 
 Until that write, the editor keeps the previous text. The banner **Agent is writing. Changes appear when the run finishes** is the cue.
 
+Snippet edits match a unique stretch of existing text instead of rewriting the whole field or entry. Matching tolerates quote styles and multi-section spans. If the snippet is not unique, ask it to re-read and copy a longer stretch.
+
+Providers that accept OpenAI-style `tools` use native function calling. If a provider rejects that, the Agent falls back to XML tool calls in the message. You do not turn this on separately.
+
 Catalogs in the prompt are built at the **start** of the run. After names or keys change, the Agent can list again in that same run. The **next** Send rebuilds catalogs from the saved card.
+
+### What you see in chat
+
+- **Tool lines** — color-coded list / read / write results, including lorebook entry ids
+- **Thinking** — streams in an expanded **Thinking** fold while it is live; after the reply it collapses
+- **Live token count** — catalogs, custom context, and the current prompt (including tool results)
+- **TTFT / t/s** — on the assistant message info tooltip when the reply finishes, same as Orion
+- Lookup-only reads do not add extra assistant turns; those bodies count in the live meter, then drop out of the transcript
+
+Long threads keep the last **100** messages in the panel so the tab stays light.
 
 ### Chat controls
 

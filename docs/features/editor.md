@@ -50,7 +50,7 @@ AI suggestions appear **in the editor** as glowing ghost text at the exact place
 
 - Ghost text streams into place (calm, dim styling while tokens arrive).
 - The editor is **read-only for typing** so the preview stays a clean undo step — you can still scroll and move the caret to read context.
-- A **⏹ Stop** control replaces the main action buttons. Click it (or press `Escape`) to cancel.
+- A **⏹ Stop** control replaces the main action buttons. Click it (or press `Escape`) to cancel. There is no extra ✕ while it is running.
 
 **When the suggestion is ready**
 
@@ -71,7 +71,9 @@ When text is selected (before you run an operation), the right side of the toolb
 
 **Reasoning**
 
-If the AI model produces reasoning (thinking) output, a collapsible **"✨ Thinking process"** section appears in the compact result strip. It stays **collapsed by default** — expand it only if you want to read the thinking.
+If the AI model produces reasoning (thinking) output, a collapsible **Thinking** fold appears in the compact result strip (same control as Orion and the Agent). It stays **collapsed by default** — expand it only if you want to read the thinking.
+
+If the operation **errors**, a **✕** appears on the result strip to dismiss it (`Escape` also dismisses).
 
 ## Search & Replace
 

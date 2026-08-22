@@ -55,7 +55,7 @@ Standalone books have their own snapshot history (similar to character snapshots
 
 | Source | When |
 | :--- | :--- |
-| **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. |
+| **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. It stays last in the list. |
 | **Manual** | **Snapshot now** in the History modal (only if something changed) |
 | **Rollback** | After restoring a previous snapshot |
 

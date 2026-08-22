@@ -58,9 +58,12 @@ See [AI Setup → How Truncation Works](/configuration/ai-setup#how-truncation-w
 
 ## Reasoning
 
-Orion works with models that output reasoning/thinking content (DeepSeek R1, Qwen/QwQ, OpenAI o1/o3/o4-mini, Gemma 4, etc.). Reasoning is displayed in a collapsible section before the main response.
+Orion works with models that output reasoning/thinking content (DeepSeek R1, Qwen/QwQ, OpenAI o1/o3/o4-mini, Gemma 4, etc.). Reasoning uses the same **Thinking** fold as the [Agent](/features/ai-agent) and the editor toolbar.
 
-To enable and configure reasoning, see [AI Setup → Advanced Options](/configuration/ai-setup#advanced-options).
+- While a reply is streaming, **Thinking** starts **expanded**
+- After the reply, it is collapsed; expand it if you want to read the committed thinking
+
+To enable and configure reasoning, see [AI Setup → Advanced Options](/configuration/ai-setup#advanced-options). Completed replies also show **TTFT** (time to first token) and **T/S** (tokens per second) on the message info tooltip.
 
 ## Next Steps
 

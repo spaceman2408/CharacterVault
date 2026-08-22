@@ -153,6 +153,7 @@ Your NanoGPT password is never seen by CharacterVault, and no client secret is s
 
 ::: warning Browser popups must be allowed
 The flow opens a new window or tab. If your browser blocks popups for this site, the button will appear to do nothing. Allow popups for your CharacterVault origin and try again.
+
 ::: warning Mobile browser support
 Works on **Chrome for Android**. Other mobile browsers may not relay the authorization code back to the app correctly. If sign-in doesn't complete on your phone, paste your NanoGPT API key into the API Key field manually.
 See [AI Setup → Sign in with NanoGPT](/configuration/ai-setup#sign-in-with-nanogpt-pkce) for the full walkthrough.
@@ -212,7 +213,7 @@ You can restore the entire card or restore individual sections. Each restore aut
 
 | Badge | When It's Created |
 | :--- | :--- |
-| **Opened card** | Automatically the first time you open a character card. Only one baseline exists per character; it is protected from deletion. |
+| **Opened card** | Automatically the first time you open a character card. Only one baseline exists per character; it is protected from deletion. It stays last in the list. |
 | **Manual save point** | When you click **Save snapshot** in the Snapshots modal. |
 | **Post-restore save point** | Automatically after a restore (full card or section) completes. This records the state right after the rollback is applied. |
 

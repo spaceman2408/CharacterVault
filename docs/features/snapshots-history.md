@@ -26,12 +26,14 @@ On mobile, the timeline appears as a horizontal scrolling strip at the top inste
 
 ## Timeline Sidebar
 
-The left sidebar lists every snapshot for the character, ordered newest-first:
+The left sidebar lists every snapshot for the character, ordered newest-first, with the **Opened card** baseline pinned last:
 
 - **Badge** — Shows the snapshot type (Opened card, Manual save point, Post-restore save point).
 - **Timestamp** — The time the snapshot was created.
 - **Changed indicator** — An amber dot appears when the snapshot's content differs from your current draft.
 - **Delete button** — Non-baseline snapshots can be deleted individually (the trash icon on the right). Baseline snapshots are protected and cannot be removed.
+
+Opening History reads a lightweight metadata index. Full snapshot payloads load only when you select a revision, so large cards do not pull every save into memory at once.
 
 New snapshots are briefly highlighted with a green ring when they first appear in the timeline.
 
@@ -105,7 +107,7 @@ Books in the [Lorebook Vault](/features/lorebook-vault) have a separate history 
 
 | Source | Meaning |
 | :--- | :--- |
-| **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. |
+| **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. It stays last in the list. |
 | **Manual** | **Snapshot now** in the History modal (only if something changed) |
 | **Rollback** | Created after a restore |
 

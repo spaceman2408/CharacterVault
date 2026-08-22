@@ -64,3 +64,4 @@ Character Vault also supports clipboard-based import from SillyTavern:
 
 - [Create your first character](/getting-started/creating-characters)
 - [Configure the AI assistant](/configuration/ai-setup)
+- [AI Agent](/features/ai-agent)

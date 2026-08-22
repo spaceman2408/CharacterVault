@@ -6,17 +6,19 @@ Quick overview of recent updates to CharacterVault.
 
 ## August 2026
 
-### Agent (writes the card)
+### Agent (1.4.0)
 
 A second chat next to Orion that **fills and revises** the open character or standalone lorebook.
 
-- Toggle **Agent** in the Ask AI header (character workspace or lorebook vault)
+- Toggle **Agent** in the Ask AI header (character workspace or lorebook vault), or set **Settings → Studio → Chat panel** to open there
 - Optional [custom context](/features/ai-context#custom-context) as source notes; it reads fields and entries with tools
+- Snippet edits match existing text; tool calls show as short color-coded lines
 - Writes once when the run finishes (snapshot first). **Stop**, then empty **Send**, retries
 - Own model on **Settings → Prompts → Agent** (Default follows AI Config)
 - Greeting 1 is the first alternate, same as the editor
+- History stays lighter (metadata index, opened-card snapshot last); long chats keep the last 100 messages
 
-[AI Agent →](/features/ai-agent) · [AI Setup → Prompts](/configuration/ai-setup#prompts-tab) · [Snapshots](/features/snapshots-history)
+[Release 1.4.0 →](/releases/v1.4.0) · [AI Agent →](/features/ai-agent) · [AI Setup → Prompts](/configuration/ai-setup#prompts-tab) · [Snapshots](/features/snapshots-history)
 
 ### Provider usage cards (1.3.1)
 

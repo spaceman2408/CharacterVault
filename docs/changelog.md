@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.0 (2026-08-22)
+
+The Agent: a chat that reads and edits the open character or lorebook through tools. Full notes: [v1.4.0 release notes](/releases/v1.4.0).
+
+### Highlights
+
+- **Agent** in the character workspace and standalone lorebook vault: list, read, add, snippet-edit, update, and delete through tools
+- One character-agent session across workspace tabs; writes land when the run finishes (snapshot first)
+- Own model on **Settings → Prompts → Agent**; **Settings → Studio → Chat panel** can default Ask AI to Orion or Agent
+- Native function calling when the provider supports it (XML fallback otherwise); live prompt token count; TTFT / t/s on replies
+- History opens from a metadata index instead of loading every snapshot payload; opened-card snapshot stays last in the list
+- Leaner long sessions: chunked token streams, 100-message agent transcript cap, clipped thinking buffers
+
+Details: [AI Agent](/features/ai-agent) · [AI Setup → Prompts](/configuration/ai-setup#prompts-tab) · [Snapshots](/features/snapshots-history)
+
+---
+
 ## 1.3.1 (2026-08-20)
 
 Synthetic and OpenRouter get dedicated adapters and live usage cards. Full notes: [v1.3.1 release notes](/releases/v1.3.1).
