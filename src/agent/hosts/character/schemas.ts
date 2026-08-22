@@ -65,6 +65,19 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
     },
   },
   {
+    name: 'append_to_field',
+    description:
+      'Append content to one field. Adds a blank line before the new text when the field is not empty. tags are merged as a comma-separated list. Do not use this for alternate greetings.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Field id' },
+        content: { type: 'string', description: 'Text to append' },
+      },
+      required: ['id', 'content'],
+    },
+  },
+  {
     name: 'list_greetings',
     description:
       'Return 1-based index and length for each alternate greeting. Greeting 1 is the first alternate. first_mes is a separate field.',
@@ -142,6 +155,61 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
         index: { type: 'integer', description: '1-based greeting index. Greeting 1 is the first alternate.' },
       },
       required: ['index'],
+    },
+  },
+  {
+    name: 'move_greeting',
+    description:
+      'Move one alternate greeting to a new 1-based index. Greeting 1 is the first alternate. Other indexes shift.',
+    parameters: {
+      type: 'object',
+      properties: {
+        index: { type: 'integer', description: '1-based index to move' },
+        to: { type: 'integer', description: '1-based destination index' },
+      },
+      required: ['index', 'to'],
+    },
+  },
+  {
+    name: 'search',
+    description:
+      'Find text in spec fields, alternate greetings, and the embedded lorebook (names, keys, content). Case-insensitive. Returns locations and short snippets, not full bodies.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Text to find' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'replace_across',
+    description:
+      'Replace a snippet in every matching spec field, greeting, and lorebook name/keys/content. Same unique-match rules as replace_in_field. Fails if any one place matches more than once unless replace_all is true. Copy old from a search or read.',
+    parameters: {
+      type: 'object',
+      properties: {
+        old: { type: 'string', description: 'Snippet to find. Quotes and dashes need not match exactly.' },
+        new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
+        content: {
+          type: 'string',
+          description: 'Replacement text if new is omitted (XML body).',
+        },
+        replace_all: {
+          type: 'boolean',
+          description: 'Replace every match in each place. Default false (fail if a place is not unique).',
+        },
+      },
+      required: ['old'],
+    },
+  },
+  {
+    name: 'audit_card',
+    description:
+      'Read-only report: filled vs empty fields, greeting count, token estimates, lorebook size, duplicate keys, recursion, and {{char}}/{{user}} locations. No bodies.',
+    parameters: {
+      type: 'object',
+      properties: {},
     },
   },
 ];

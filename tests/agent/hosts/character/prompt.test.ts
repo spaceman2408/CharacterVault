@@ -15,6 +15,15 @@ describe('buildCharacterAgentSystemPrompt', () => {
     expect(prompt).toContain('add_entry');
     expect(prompt).toContain('read_entry');
     expect(prompt).toContain('replace_in_entry');
+    expect(prompt).toContain('search');
+    expect(prompt).toContain('replace_across');
+    expect(prompt).toContain('append_to_field');
+    expect(prompt).toContain('audit_card');
+    expect(prompt).toContain('move_greeting');
+    expect(prompt).toContain('update_book_settings');
+    expect(prompt).toContain('read_recursion');
+    expect(prompt).toContain('excludeRecursion');
+    expect(prompt).toContain('insertion_order');
     expect(prompt).not.toContain('Lorebook tab');
     expect(prompt).not.toContain('<<<');
     expect(prompt).not.toContain('>>>');

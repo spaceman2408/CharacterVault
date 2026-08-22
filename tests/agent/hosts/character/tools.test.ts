@@ -3,13 +3,18 @@ import { createCharacterHost } from '../../../../src/agent/hosts/character/creat
 import type { CharacterHostPersist } from '../../../../src/agent/hosts/character/createHost';
 import {
   addGreeting,
+  appendToField,
+  auditCard,
   deleteGreeting,
   listFields,
   listGreetings,
+  moveGreeting,
   readField,
   readGreeting,
+  replaceAcrossCard,
   replaceInField,
   replaceInGreeting,
+  searchCard,
   updateField,
   updateGreeting,
 } from '../../../../src/agent/hosts/character/tools';
@@ -343,6 +348,39 @@ describe('createCharacterHost', () => {
     expect(addAgain.message).toContain('limit');
   });
 
+  it('searches fields and in-run lorebook entries', async () => {
+    const state = hostState(spec({ description: 'She keeps maps of the harbor.' }));
+    const host = createCharacterHost(state.io);
+    await host.execute(action('add_entry', { name: 'Harbor', keys: 'harbor' }, 'A busy harbor.'));
+    const found = await host.execute(action('search', { query: 'harbor' }));
+    expect(found.ok).toBe(true);
+    expect(found.message).toContain('description');
+    expect(found.message).toContain('Harbor');
+  });
+
+  it('persists replace_across across spec and book on flush', async () => {
+    const state = hostState(
+      spec({
+        description: 'Aria the cartographer.',
+        alternate_greetings: ['Hello, Aria.'],
+      }),
+    );
+    const host = createCharacterHost(state.io);
+    await host.execute(action('add_entry', { name: 'Aria', keys: 'Aria' }, 'Aria lives at the docks.'));
+    const replaced = await host.execute(
+      action('replace_across', { old: 'Aria', new: 'Lyra', replace_all: 'true' }),
+    );
+    expect(replaced.ok).toBe(true);
+    expect(state.persist).not.toHaveBeenCalled();
+    await host.flush?.();
+    expect(state.persist).toHaveBeenCalledTimes(1);
+    const update = state.persist.mock.calls[0][0];
+    expect(update.spec?.description).toBe('Lyra the cartographer.');
+    expect(update.spec?.alternate_greetings).toEqual(['Hello, Lyra.']);
+    expect(update.book?.entries[0].content).toContain('Lyra');
+    expect(update.book?.entries[0].keys).toEqual(['Lyra']);
+  });
+
   it('does not persist when nothing changed', async () => {
     const state = hostState();
     const takeSnapshot = vi.fn(async () => undefined);
@@ -354,5 +392,100 @@ describe('createCharacterHost', () => {
     await host.flush?.();
     expect(state.persist).not.toHaveBeenCalled();
     expect(takeSnapshot).not.toHaveBeenCalled();
+  });
+});
+
+describe('appendToField', () => {
+  it('appends with a blank line when the field is not empty', () => {
+    const { spec: next, result } = appendToField(
+      spec({ personality: 'Quiet.' }),
+      action('append_to_field', { id: 'personality' }, 'Keeps a ledger.'),
+    );
+    expect(result.ok).toBe(true);
+    expect(next.personality).toBe('Quiet.\n\nKeeps a ledger.');
+  });
+
+  it('merges tags without duplicating', () => {
+    const { spec: next } = appendToField(
+      spec({ tags: ['map', 'quiet'] }),
+      action('append_to_field', { id: 'tags' }, 'quiet, fantasy'),
+    );
+    expect(next.tags).toEqual(['map', 'quiet', 'fantasy']);
+  });
+});
+
+describe('moveGreeting', () => {
+  it('reorders by 1-based indexes', () => {
+    const { spec: next, result } = moveGreeting(
+      spec({ alternate_greetings: ['one', 'two', 'three'] }),
+      action('move_greeting', { index: '3', to: '1' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(next.alternate_greetings).toEqual(['three', 'one', 'two']);
+    expect(result.message).toContain('moved greeting 3 → 1');
+  });
+});
+
+describe('searchCard', () => {
+  it('finds a term in a field and an entry without dumping bodies', () => {
+    const card = spec({ description: 'A cartographer of the long southern coast.' });
+    const book = createEmptyCharacterBook('Aria');
+    book.entries = [
+      {
+        id: 1,
+        keys: ['coast'],
+        content:
+          'Far from the city, the long southern coast is mapped in charcoal and kept in a locked case.',
+        extensions: {},
+        enabled: true,
+        name: 'Coast',
+      },
+    ];
+    const result = searchCard(card, book, action('search', { query: 'coast' }));
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('description');
+    expect(result.message).toContain('#1 Coast');
+    expect(result.message).not.toContain('\n---\n');
+  });
+});
+
+describe('replaceAcrossCard', () => {
+  it('rewrites spec, greetings, and lore in one call', () => {
+    const card = spec({
+      description: 'Aria draws maps.',
+      alternate_greetings: ['Hi Aria.'],
+    });
+    const book = createEmptyCharacterBook('Aria');
+    book.entries = [
+      {
+        id: 1,
+        keys: ['Aria'],
+        content: 'Aria lives here.',
+        extensions: {},
+        enabled: true,
+        name: 'Aria',
+      },
+    ];
+    const applied = replaceAcrossCard(
+      card,
+      book,
+      action('replace_across', { old: 'Aria', new: 'Lyra', replace_all: 'true' }),
+    );
+    expect(applied.result.ok).toBe(true);
+    expect(applied.spec.description).toBe('Lyra draws maps.');
+    expect(applied.spec.alternate_greetings).toEqual(['Hi Lyra.']);
+    expect(applied.book.entries[0].content).toBe('Lyra lives here.');
+    expect(applied.book.entries[0].keys).toEqual(['Lyra']);
+    expect(applied.book.entries[0].name).toBe('Lyra');
+  });
+});
+
+describe('auditCard', () => {
+  it('summarizes empty fields and omits bodies', () => {
+    const result = auditCard(spec({ description: 'SECRET BODY' }), createEmptyCharacterBook('Aria'));
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('Card audit');
+    expect(result.message).toContain('Empty fields');
+    expect(result.message).not.toContain('SECRET BODY');
   });
 });
