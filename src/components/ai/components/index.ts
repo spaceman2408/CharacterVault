@@ -3,8 +3,8 @@
  * @module components/ai/components
  */
 
-export { ReasoningSection } from './ReasoningSection';
-export type { ReasoningSectionProps } from './ReasoningSection';
+export { FoldedText } from './FoldedText';
+export { StatsInfoButton } from './StatsInfoButton';
 
 export { CopyButton } from './CopyButton';
 export type { CopyButtonProps } from './CopyButton';

@@ -151,7 +151,6 @@
   --ai-toolbar-text-muted: var(--fg-subtle);
   --ai-toolbar-btn-hover: var(--hover);
   --ai-toolbar-result-bg: var(--surface);
-  --ai-toolbar-reasoning-bg: var(--muted);
   --ai-toolbar-error-bg: var(--danger-soft);
   --ai-toolbar-error-border: rgba(220, 38, 38, 0.35);
   --ai-toolbar-error-text: var(--danger);
@@ -284,7 +283,6 @@
   --ai-toolbar-text-muted: var(--fg-subtle);
   --ai-toolbar-btn-hover: var(--hover);
   --ai-toolbar-result-bg: var(--surface);
-  --ai-toolbar-reasoning-bg: var(--muted);
   --ai-toolbar-error-bg: var(--danger-soft);
   --ai-toolbar-error-border: rgba(244, 135, 113, 0.4);
   --ai-toolbar-error-text: var(--danger);

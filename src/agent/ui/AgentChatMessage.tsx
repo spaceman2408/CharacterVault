@@ -5,7 +5,8 @@ import { LazyMarkdown } from '../../components/ai/components/LazyMarkdown';
 import { RegenerateButton } from '../../components/ai/components/RegenerateButton';
 import type { ChatMessage } from '../../components/ai/types';
 import { formatTime } from '../../components/ai/utils';
-import { FoldedText } from './FoldedText';
+import { FoldedText } from '../../components/ai/components/FoldedText';
+import { StatsInfoButton } from '../../components/ai/components/StatsInfoButton';
 import { HoverInfoTip } from './HoverInfoTip';
 import { ToolEventList } from './ToolEventList';
 import type { AgentToolEvent } from './types';
@@ -98,6 +99,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
 
       <div className="flex items-center gap-1 text-[11px] text-fg-muted">
         <span>{formatTime(message.timestamp)}</span>
+        {message.stats ? <StatsInfoButton stats={message.stats} /> : null}
         <span className="ml-auto flex gap-0.5">
           {speech ? <CopyButton content={message.content} /> : null}
           {showRegenerate ? (

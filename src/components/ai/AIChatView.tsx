@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { StreamingText } from './StreamingText';
 import type { ChatMessage } from './types';
-import { ChatMessage as ChatMessageComponent, ReasoningSection } from './components';
+import { ChatMessage as ChatMessageComponent, FoldedText } from './components';
 import { useAutoScroll } from './hooks';
 import { canRetryEmptySend } from './utils';
 
@@ -287,7 +287,9 @@ export function AIChatView({
           <div className="flex justify-start">
             <div className="max-w-[90%] bg-surface border border-border rounded-xl rounded-bl-md px-3 py-2 message-animate shadow-sm">
               {streamingReasoning && showReasoning && (
-                <ReasoningSection reasoning={streamingReasoning} />
+                <FoldedText label="Thinking" defaultOpen>
+                  {streamingReasoning}
+                </FoldedText>
               )}
               {streamingContent && (
                 <div className="text-sm text-fg">

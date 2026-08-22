@@ -11,6 +11,7 @@ import { SelectionRange, StateEffect } from '@codemirror/state';
 import type { AIOperation } from '../../db/characterTypes';
 import { toggleToolbarSearch, searchPanelOpen, closeToolbarSearch } from './toolbarSearch';
 import { createFontSizeControl } from './fontSizeControl';
+import { clipLiveReasoning } from '../../components/ai/utils';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings } from '../../db/characterTypes';
 
@@ -89,7 +90,6 @@ interface AIPanelState {
   aiReasoning: string;
   currentOperation: AIOperation | null;
   error: string | null;
-  showReasoning: boolean;
   instructPrompt: string | null;
   stats: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string } | null;
 }
@@ -129,7 +129,6 @@ function createToolbarPanel(
     aiReasoning: '',
     currentOperation: null,
     error: null,
-    showReasoning: false,
     instructPrompt: null,
     stats: null,
   };
@@ -773,71 +772,68 @@ function createToolbarPanel(
   `;
   resultContainer.appendChild(processingIndicator);
 
-  // Reasoning section (collapsible)
-  const reasoningSection = document.createElement('div');
-  reasoningSection.style.cssText = `
+  const reasoningFold = document.createElement('details');
+  reasoningFold.className = 'ai-thinking-fold';
+  reasoningFold.style.cssText = `
     display: none;
     margin-bottom: 8px;
-    border: 1px solid var(--ai-toolbar-border);
-    border-radius: 6px;
-    overflow: hidden;
     flex-shrink: 0;
-  `;
-  resultContainer.appendChild(reasoningSection);
-
-  const reasoningHeader = document.createElement('button');
-  reasoningHeader.style.cssText = `
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding: 8px 12px;
-    background: var(--ai-toolbar-reasoning-bg);
-    border: none;
     color: var(--ai-toolbar-text-muted);
     font-size: 12px;
+  `;
+  resultContainer.appendChild(reasoningFold);
+
+  const reasoningStyle = document.createElement('style');
+  reasoningStyle.textContent = `
+    .ai-thinking-fold > summary { list-style: none; }
+    .ai-thinking-fold > summary::-webkit-details-marker { display: none; }
+    .ai-thinking-fold[open] > summary .thinking-chevron { transform: rotate(90deg); }
+  `;
+  reasoningFold.appendChild(reasoningStyle);
+
+  const reasoningSummary = document.createElement('summary');
+  reasoningSummary.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 4px;
     cursor: pointer;
-    text-align: left;
+    color: var(--ai-toolbar-text-muted);
   `;
-  reasoningHeader.innerHTML = `
-    <span style="display: flex; align-items: center; gap: 4px;">
-      <span>✨</span> Thinking process
-    </span>
-    <span class="reasoning-toggle">Show</span>
-  `;
-  reasoningSection.appendChild(reasoningHeader);
+  const reasoningChevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  reasoningChevron.setAttribute('viewBox', '0 0 24 24');
+  reasoningChevron.setAttribute('fill', 'none');
+  reasoningChevron.setAttribute('stroke', 'currentColor');
+  reasoningChevron.setAttribute('stroke-width', '2');
+  reasoningChevron.setAttribute('stroke-linecap', 'round');
+  reasoningChevron.setAttribute('stroke-linejoin', 'round');
+  reasoningChevron.setAttribute('aria-hidden', 'true');
+  reasoningChevron.classList.add('thinking-chevron');
+  reasoningChevron.style.cssText = 'width: 12px; height: 12px; flex-shrink: 0; transition: transform 0.15s;';
+  const reasoningChevronPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  reasoningChevronPath.setAttribute('d', 'm9 18 6-6-6-6');
+  reasoningChevron.appendChild(reasoningChevronPath);
+  reasoningSummary.appendChild(reasoningChevron);
+  const reasoningLabel = document.createElement('span');
+  reasoningLabel.textContent = 'Thinking';
+  reasoningSummary.appendChild(reasoningLabel);
+  reasoningFold.appendChild(reasoningSummary);
 
   const reasoningContent = document.createElement('div');
   reasoningContent.style.cssText = `
-    display: none;
-    max-height: 150px;
+    max-height: 160px;
     overflow-y: auto;
-    padding: 8px 12px;
-    background: var(--ai-toolbar-reasoning-bg);
-    border-top: 1px solid var(--ai-toolbar-border);
-  `;
-  reasoningSection.appendChild(reasoningContent);
-
-  const reasoningText = document.createElement('pre');
-  reasoningText.style.cssText = `
-    margin: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 11px;
-    color: var(--ai-toolbar-text-muted);
+    margin-top: 4px;
+    padding-left: 16px;
+    font-size: 12px;
+    line-height: 1.625;
     white-space: pre-wrap;
     word-break: break-word;
-    line-height: 1.5;
+    color: var(--ai-toolbar-text-muted);
   `;
-  reasoningContent.appendChild(reasoningText);
+  reasoningFold.appendChild(reasoningContent);
 
-  // Toggle reasoning visibility
-  reasoningHeader.addEventListener('click', () => {
-    const isVisible = reasoningContent.style.display === 'block';
-    reasoningContent.style.display = isVisible ? 'none' : 'block';
-    const toggle = reasoningHeader.querySelector('.reasoning-toggle');
-    if (toggle) toggle.textContent = isVisible ? 'Show' : 'Hide';
-    state.showReasoning = !isVisible;
-  });
+  const reasoningText = document.createElement('div');
+  reasoningContent.appendChild(reasoningText);
 
   // Action buttons container (AI body is previewed in-editor as a ghost)
   const actionButtons = document.createElement('div');
@@ -967,11 +963,33 @@ function createToolbarPanel(
   // Autoscroll only when the user has expanded thinking
   let prevReasoningLength = 0;
   let userScrolledReasoning = false;
+  let thinkingScrollRaf = 0;
+
+  function thinkingBodyText(): string {
+    if (state.isStreaming) return clipLiveReasoning(state.streamingReasoning);
+    return state.aiReasoning;
+  }
+
+  function syncThinkingDom() {
+    if (!reasoningFold.open) {
+      reasoningText.textContent = '';
+      return;
+    }
+    reasoningText.textContent = thinkingBodyText();
+  }
 
   reasoningContent.addEventListener('scroll', () => {
     const isAtBottom =
       reasoningContent.scrollTop + reasoningContent.clientHeight >= reasoningContent.scrollHeight - 5;
     userScrolledReasoning = !isAtBottom;
+  });
+
+  reasoningFold.addEventListener('toggle', () => {
+    syncThinkingDom();
+    if (reasoningFold.open) {
+      userScrolledReasoning = false;
+      reasoningContent.scrollTop = reasoningContent.scrollHeight;
+    }
   });
 
   // Update result chrome based on state (body text is an in-editor ghost)
@@ -1006,7 +1024,8 @@ function createToolbarPanel(
       errorDisplay.style.display = 'block';
       errorDisplay.textContent = state.error;
       processingIndicator.style.display = 'none';
-      reasoningSection.style.display = 'none';
+      reasoningFold.style.display = 'none';
+      reasoningText.textContent = '';
       actionButtons.style.display = 'none';
       return;
     } else {
@@ -1017,33 +1036,27 @@ function createToolbarPanel(
     processingIndicator.style.display =
       state.isProcessing && !state.isStreaming && !state.aiResult ? 'flex' : 'none';
 
-    // Reasoning section — collapsed by default (user expands if they want thinking)
     const hasReasoning =
       (state.streamingReasoning?.trim()?.length ?? 0) > 0 ||
       (state.aiReasoning?.trim()?.length ?? 0) > 0;
-    reasoningSection.style.display = hasReasoning ? 'block' : 'none';
+    reasoningFold.style.display = hasReasoning ? 'block' : 'none';
     if (hasReasoning) {
-      reasoningText.textContent = state.isStreaming ? state.streamingReasoning : state.aiReasoning;
+      syncThinkingDom();
 
-      if (state.showReasoning) {
-        reasoningContent.style.display = 'block';
-        const toggle = reasoningHeader.querySelector('.reasoning-toggle');
-        if (toggle) toggle.textContent = 'Hide';
-      } else {
-        reasoningContent.style.display = 'none';
-        const toggle = reasoningHeader.querySelector('.reasoning-toggle');
-        if (toggle) toggle.textContent = 'Show';
-      }
-
-      if (state.isStreaming && state.streamingReasoning && state.showReasoning) {
-        const currentLength = state.streamingReasoning.length;
+      if (state.isStreaming && state.streamingReasoning && reasoningFold.open) {
+        const currentLength = reasoningText.textContent?.length ?? 0;
         if (currentLength > prevReasoningLength && !userScrolledReasoning) {
-          requestAnimationFrame(() => {
+          if (thinkingScrollRaf) cancelAnimationFrame(thinkingScrollRaf);
+          thinkingScrollRaf = requestAnimationFrame(() => {
+            thinkingScrollRaf = 0;
+            if (panelDestroyed) return;
             reasoningContent.scrollTop = reasoningContent.scrollHeight;
           });
         }
         prevReasoningLength = currentLength;
       }
+    } else {
+      reasoningText.textContent = '';
     }
 
     // Stats display (only when complete and has result)
@@ -1208,13 +1221,10 @@ function createToolbarPanel(
     if (update.error !== undefined) state.error = update.error;
     if (update.instructPrompt !== undefined) state.instructPrompt = update.instructPrompt;
     if (update.stats !== undefined) state.stats = update.stats;
-    // Clear stats / collapse thinking when a new operation starts
     if (update.isProcessing === true) {
       state.stats = null;
-      state.showReasoning = false;
-      reasoningContent.style.display = 'none';
-      const toggle = reasoningHeader.querySelector('.reasoning-toggle');
-      if (toggle) toggle.textContent = 'Show';
+      reasoningFold.open = false;
+      reasoningText.textContent = '';
     }
 
     // If there's an error and we have a stored instruct prompt, restore instruct mode
@@ -1276,6 +1286,9 @@ function createToolbarPanel(
     },
     destroy: () => {
       panelDestroyed = true;
+      if (thinkingScrollRaf) cancelAnimationFrame(thinkingScrollRaf);
+      thinkingScrollRaf = 0;
+      reasoningText.textContent = '';
       for (const id of pendingFocusRafs) {
         cancelAnimationFrame(id);
       }

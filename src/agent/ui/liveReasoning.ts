@@ -1,7 +1,5 @@
-export const LIVE_REASONING_FLUSH_MS = 80;
-export const LIVE_REASONING_MAX_CHARS = 6000;
-
-export function clipLiveReasoning(text: string): string {
-  if (text.length <= LIVE_REASONING_MAX_CHARS) return text;
-  return `…${text.slice(-LIVE_REASONING_MAX_CHARS)}`;
-}
+export {
+  clipLiveReasoning,
+  LIVE_REASONING_FLUSH_MS,
+  LIVE_REASONING_MAX_CHARS,
+} from '../../components/ai/utils';
