@@ -1105,6 +1105,8 @@ Provide only the generated text without any additional commentary.`;
     const parser = new ReasoningParser();
     const toolCallAcc: NativeToolCall[] = [];
     let finishReason: string | null = null;
+    let doneSentinel = false;
+    let pendingLine = '';
 
     const emitDeltas = (contentDelta?: string, reasoningDelta?: string) => {
       if (contentDelta || reasoningDelta) {
@@ -1128,17 +1130,27 @@ Provide only the generated text without any additional commentary.`;
           break;
         }
 
-        const rawChunk = decoder.decode(value, { stream: true });
-        const lines = rawChunk.split('\n').filter(line => line.trim() !== '');
+        // A network chunk can split an SSE line, so keep the trailing fragment
+        // until the newline arrives; `[DONE]` must survive chunk boundaries.
+        pendingLine += decoder.decode(value, { stream: true });
+        const lines = pendingLine.split('\n');
+        pendingLine = lines.pop() ?? '';
 
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
+          if (line.trim() === '') {
+            continue;
+          }
 
           if (line.startsWith('data: ')) {
-            const data = line.slice(6);
+            const data = line.slice(6).trim();
 
+            // The sentinel ends the response even when the server keeps the
+            // socket open (keep-alive comments / half-close); break out so
+            // the in-flight closure and host caches can be released.
             if (data === '[DONE]') {
-              continue;
+              doneSentinel = true;
+              break;
             }
 
             try {
@@ -1155,6 +1167,10 @@ Provide only the generated text without any additional commentary.`;
               console.warn('[AIService] Problematic line:', line.slice(0, 200));
             }
           }
+        }
+
+        if (doneSentinel) {
+          break;
         }
       }
 

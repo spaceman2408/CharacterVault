@@ -154,6 +154,64 @@ describe('AIService stream cleanup', () => {
     expect(chunks.join('')).toContain('Hi');
   });
 
+  it('resolves on [DONE] even when the stream never closes', async () => {
+    const encoder = new TextEncoder();
+    const parts = [sseChunk({ content: 'Hi' }), 'data: [DONE]\n\n'];
+    let i = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (i < parts.length) {
+          controller.enqueue(encoder.encode(parts[i++]));
+          return;
+        }
+        return new Promise<void>(() => {});
+      },
+    });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        return new Response(body, {
+          status: 200,
+          headers: { 'Content-Type': 'text/event-stream' },
+        });
+      })
+    );
+
+    const service = new AIService(baseConfig(), baseSampler());
+    const chat = service.askAIWithConversation('hello', [], [], undefined, () => {});
+    const result = await Promise.race([
+      chat,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('stream did not end on [DONE]')), 2000)
+      ),
+    ]);
+
+    expect(result.content).toContain('Hi');
+  });
+
+  it('recognizes [DONE] split across network chunks', async () => {
+    const body = streamFromParts([
+      sseChunk({ content: 'Hi' }),
+      'data: [DON',
+      'E]\n\n',
+    ]);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        return new Response(body, {
+          status: 200,
+          headers: { 'Content-Type': 'text/event-stream' },
+        });
+      })
+    );
+
+    const service = new AIService(baseConfig(), baseSampler());
+    const result = await service.askAIWithConversation('hello', [], [], undefined, () => {});
+    expect(result.content).toContain('Hi');
+  });
+
   it('abort before stream starts rejects as cancelled', async () => {
     vi.stubGlobal(
       'fetch',
