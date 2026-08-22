@@ -10,6 +10,8 @@ import type { AIConfig, SamplerSettings, PromptSettings } from '../../../db/char
 import type { ChatMessage, ConversationMessage } from '../types';
 import {
   abortResponseStats,
+  clipCommitReasoning,
+  COMMIT_REASONING_MAX_CHARS,
   LIVE_REASONING_MAX_CHARS,
   computeResponseStats,
   generateMessageId,
@@ -100,7 +102,7 @@ function buildPartialAssistantMessage(
     id: generateMessageId(),
     role: 'assistant',
     content,
-    reasoning: reasoning || undefined,
+    reasoning: clipCommitReasoning(reasoning),
     timestamp: Date.now(),
     stats: abortResponseStats({
       requestStartTime: options.requestStartTime,
@@ -127,7 +129,7 @@ function buildAssistantMessage(
     id: generateMessageId(),
     role: 'assistant',
     content,
-    reasoning,
+    reasoning: clipCommitReasoning(reasoning),
     timestamp: Date.now(),
     stats: computeResponseStats({
       requestStartTime: options.requestStartTime,
@@ -242,6 +244,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       let changed = false;
       if (chunk.reasoning) {
         streamReasoningRef.current.append(chunk.reasoning);
+        if (streamReasoningRef.current.length > COMMIT_REASONING_MAX_CHARS * 2) {
+          streamReasoningRef.current.capToTail(COMMIT_REASONING_MAX_CHARS);
+        }
         changed = true;
       }
       if (chunk.content) {
