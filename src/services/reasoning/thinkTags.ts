@@ -6,6 +6,7 @@
  * 2. Add a fixture test for full and split-across-chunks streams.
  */
 
+import { ChunkString } from '../../utils/chunkString';
 import type { InlineTagParseResult } from './types';
 
 export interface ThinkTagPair {
@@ -102,16 +103,16 @@ export function parseInlineTags(text: string): InlineTagParseResult {
 export interface ThinkTagStreamState {
   buffer: string;
   isInThinkBlock: boolean;
-  mainContent: string;
-  reasoningContent: string;
+  mainContent: ChunkString;
+  reasoningContent: ChunkString;
 }
 
 export function createThinkTagStreamState(): ThinkTagStreamState {
   return {
     buffer: '',
     isInThinkBlock: false,
-    mainContent: '',
-    reasoningContent: '',
+    mainContent: new ChunkString(),
+    reasoningContent: new ChunkString(),
   };
 }
 
@@ -134,12 +135,12 @@ function processThinkTagBuffer(state: ThinkTagStreamState): void {
         const maxCloseTagLen = Math.max(...THINK_END_VARIATIONS.map((t) => t.length));
         const keepInBuffer = Math.min(state.buffer.length, maxCloseTagLen - 1);
         const processContent = state.buffer.slice(0, state.buffer.length - keepInBuffer);
-        state.reasoningContent += processContent;
+        state.reasoningContent.append(processContent);
         state.buffer = state.buffer.slice(state.buffer.length - keepInBuffer);
         break;
       }
 
-      state.reasoningContent += state.buffer.slice(0, closeMatch.index);
+      state.reasoningContent.append(state.buffer.slice(0, closeMatch.index));
       state.buffer = state.buffer.slice(closeMatch.index + closeMatch.tag.length);
       state.isInThinkBlock = false;
     } else {
@@ -149,12 +150,12 @@ function processThinkTagBuffer(state: ThinkTagStreamState): void {
         const maxOpenTagLen = Math.max(...THINK_START_VARIATIONS.map((t) => t.length));
         const keepInBuffer = Math.min(state.buffer.length, maxOpenTagLen - 1);
         const processContent = state.buffer.slice(0, state.buffer.length - keepInBuffer);
-        state.mainContent += processContent;
+        state.mainContent.append(processContent);
         state.buffer = state.buffer.slice(state.buffer.length - keepInBuffer);
         break;
       }
 
-      state.mainContent += state.buffer.slice(0, openMatch.index);
+      state.mainContent.append(state.buffer.slice(0, openMatch.index));
       state.buffer = state.buffer.slice(openMatch.index + openMatch.tag.length);
       state.isInThinkBlock = true;
     }
@@ -165,9 +166,9 @@ function processThinkTagBuffer(state: ThinkTagStreamState): void {
 export function flushThinkTagState(state: ThinkTagStreamState): void {
   if (state.buffer.length === 0) return;
   if (state.isInThinkBlock) {
-    state.reasoningContent += state.buffer;
+    state.reasoningContent.append(state.buffer);
   } else {
-    state.mainContent += state.buffer;
+    state.mainContent.append(state.buffer);
   }
   state.buffer = '';
 }
@@ -175,6 +176,6 @@ export function flushThinkTagState(state: ThinkTagStreamState): void {
 export function resetThinkTagState(state: ThinkTagStreamState): void {
   state.buffer = '';
   state.isInThinkBlock = false;
-  state.mainContent = '';
-  state.reasoningContent = '';
+  state.mainContent.clear();
+  state.reasoningContent.clear();
 }

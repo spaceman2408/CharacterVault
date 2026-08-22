@@ -1100,20 +1100,11 @@ Provide only the generated text without any additional commentary.`;
     const reader = body.getReader();
     this.streamReader = reader;
     const decoder = new TextDecoder();
-    // Track lengths only — full strings live in ReasoningParser until return.
-    let contentLen = 0;
-    let reasoningLen = 0;
     const parser = new ReasoningParser();
     const toolCallAcc: NativeToolCall[] = [];
     let finishReason: string | null = null;
 
-    const emitDeltas = (content: string, reasoning: string) => {
-      if (content.length === contentLen && reasoning.length === reasoningLen) return;
-      const contentDelta = content.length > contentLen ? content.slice(contentLen) : '';
-      const reasoningDelta =
-        reasoning.length > reasoningLen ? reasoning.slice(reasoningLen) : '';
-      contentLen = content.length;
-      reasoningLen = reasoning.length;
+    const emitDeltas = (contentDelta?: string, reasoningDelta?: string) => {
       if (contentDelta || reasoningDelta) {
         onChunk({
           content: contentDelta || undefined,
@@ -1151,7 +1142,7 @@ Provide only the generated text without any additional commentary.`;
             try {
               const parsedChunk = JSON.parse(data) as ChatCompletionChunk;
               const parsed = parser.parseChunk(parsedChunk, this.config.modelId);
-              emitDeltas(parsed.content, parsed.reasoning);
+              emitDeltas(parsed.contentDelta, parsed.reasoningDelta);
               const choice = parsedChunk.choices?.[0];
               if (choice?.delta?.tool_calls?.length) {
                 applyToolCallDeltas(toolCallAcc, choice.delta.tool_calls);
@@ -1166,7 +1157,7 @@ Provide only the generated text without any additional commentary.`;
       }
 
       const flushed = parser.flush();
-      emitDeltas(flushed.content, flushed.reasoning);
+      emitDeltas(flushed.contentDelta, flushed.reasoningDelta);
 
       return {
         content: flushed.content,

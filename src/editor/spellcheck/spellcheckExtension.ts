@@ -33,6 +33,7 @@ import {
   Compartment,
   StateEffect,
   StateField,
+  Transaction,
   type EditorState,
   type Extension,
 } from '@codemirror/state';
@@ -581,7 +582,10 @@ function makeSkipRangePredicate(
 }
 
 function viewDispatchMistakes(view: EditorView, next: readonly Mistake[]): void {
-  view.dispatch({ effects: setMistakesEffect.of(next) });
+  view.dispatch({
+    effects: setMistakesEffect.of(next),
+    annotations: [Transaction.addToHistory.of(false)],
+  });
 }
 
 /**
@@ -728,8 +732,14 @@ export function setSpellcheckSettings(
   mode: 'prose' | 'html' | 'json' = 'prose',
 ): void {
   if (!settings.enabled) {
-    view.dispatch({ effects: spellcheckCompartment.reconfigure([]) });
-    view.dispatch({ effects: setMistakesEffect.of([]) });
+    view.dispatch({
+      effects: spellcheckCompartment.reconfigure([]),
+      annotations: [Transaction.addToHistory.of(false)],
+    });
+    view.dispatch({
+      effects: setMistakesEffect.of([]),
+      annotations: [Transaction.addToHistory.of(false)],
+    });
     return;
   }
   view.dispatch({

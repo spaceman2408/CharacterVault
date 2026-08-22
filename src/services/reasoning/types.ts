@@ -14,6 +14,8 @@ export type ReasoningFormat = (typeof ReasoningFormat)[keyof typeof ReasoningFor
 export interface ReasoningParseResult {
   content: string;
   reasoning: string;
+  contentDelta?: string;
+  reasoningDelta?: string;
   isInThinkBlock: boolean;
 }
 

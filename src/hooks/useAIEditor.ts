@@ -6,7 +6,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { EditorView, drawSelection, keymap, ViewUpdate } from '@codemirror/view';
-import { Compartment, EditorState, Prec } from '@codemirror/state';
+import { Compartment, EditorState, Prec, Transaction } from '@codemirror/state';
 import type { Extension } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, insertTab, indentLess } from '@codemirror/commands';
 import { indentUnit } from '@codemirror/language';
@@ -43,6 +43,8 @@ import {
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
 } from '../db/characterTypes';
+import { LIVE_REASONING_MAX_CHARS } from '../components/ai/utils';
+import { ChunkString } from '../utils/chunkString';
 import { AIService, AIError, estimateTokens, type AIRequestPreview } from '../services/AIService';
 import { getProviderSelectionId } from '../services/providers';
 import { showEphemeralToast } from '../utils/ephemeralToast';
@@ -293,8 +295,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const [currentOperation, setCurrentOperation] = useState<AIOperation | null>(null);
   const [aiResult, setAiResult] = useState<string | null>(null);
   // Streaming buffers stored in refs to avoid re-render thrashing
-  const streamingContentRef = useRef('');
-  const streamingReasoningRef = useRef('');
+  const streamingContentRef = useRef(new ChunkString());
+  const streamingReasoningRef = useRef(new ChunkString());
+  const ghostRafRef = useRef<number | null>(null);
+  const pendingGhostRef = useRef<{ content: string; isStreaming: boolean } | null>(null);
   const aiReasoningRef = useRef('');
   const errorRef = useRef<string | null>(null);
   const lastInstructPromptRef = useRef<string | null>(null);
@@ -350,14 +354,27 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       effects: readOnlyCompartmentRef.current.reconfigure(
         EditorState.readOnly.of(readOnly),
       ),
+      annotations: [Transaction.addToHistory.of(false)],
     });
+  }, []);
+
+  const cancelGhostRaf = useCallback(() => {
+    if (ghostRafRef.current != null) {
+      cancelAnimationFrame(ghostRafRef.current);
+      ghostRafRef.current = null;
+    }
+    pendingGhostRef.current = null;
   }, []);
 
   const dispatchClearGhost = useCallback(() => {
     const view = viewRef.current;
     if (!view) return;
-    view.dispatch({ effects: clearAIGhostPreview.of(null) });
-  }, []);
+    cancelGhostRaf();
+    view.dispatch({
+      effects: clearAIGhostPreview.of(null),
+      annotations: [Transaction.addToHistory.of(false)],
+    });
+  }, [cancelGhostRaf]);
 
   const dispatchGhostPreview = useCallback((
     from: number,
@@ -367,19 +384,32 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   ) => {
     const view = viewRef.current;
     if (!view) return;
+    cancelGhostRaf();
     // Collapse the native selection so its mid-line bars don't paint under/over
     // the ghost card (especially ugly for multi-paragraph mid-line starts).
     view.dispatch({
       selection: { anchor: from, head: from },
       effects: setAIGhostPreview.of({ from, to, content, isStreaming }),
+      annotations: [Transaction.addToHistory.of(false)],
     });
-  }, []);
+  }, [cancelGhostRaf]);
 
   const dispatchGhostContent = useCallback((content: string, isStreaming: boolean) => {
-    const view = viewRef.current;
-    if (!view) return;
-    view.dispatch({
-      effects: updateAIGhostPreview.of({ content, isStreaming }),
+    pendingGhostRef.current = { content, isStreaming };
+    if (ghostRafRef.current != null) return;
+    ghostRafRef.current = requestAnimationFrame(() => {
+      ghostRafRef.current = null;
+      const view = viewRef.current;
+      if (!view) return;
+      const pending = pendingGhostRef.current;
+      pendingGhostRef.current = null;
+      view.dispatch({
+        effects: updateAIGhostPreview.of({
+          content: isStreaming ? streamingContentRef.current.toString() : (pending?.content ?? ''),
+          isStreaming,
+        }),
+        annotations: [Transaction.addToHistory.of(false)],
+      });
     });
   }, []);
 
@@ -389,13 +419,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
    */
   const abortInFlightRequest = useCallback((reason: 'unmount' | 'editor-teardown' | 'superseded') => {
     requestGenerationRef.current += 1;
+    cancelGhostRaf();
     const service = aiServiceRef.current;
     if (service) {
       console.log(`[useAIEditor] Aborting in-flight AI request (${reason})`);
       service.abort();
       aiServiceRef.current = null;
     }
-  }, []);
+  }, [cancelGhostRaf]);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -615,8 +646,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       isMountedRef.current && requestId === requestGenerationRef.current;
 
     // Reset streaming refs (not state, to avoid re-render thrashing)
-    streamingContentRef.current = '';
-    streamingReasoningRef.current = '';
+    streamingContentRef.current.clear();
+    streamingReasoningRef.current.clear();
     aiReasoningRef.current = '';
     errorRef.current = null;
     // Store the custom prompt for error recovery on instruct operations
@@ -687,13 +718,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           firstTokenTime = Date.now();
         }
         if (chunk.reasoning) {
-          streamingReasoningRef.current += chunk.reasoning;
-          panelUpdateRef.current?.({ streamingReasoning: streamingReasoningRef.current });
+          streamingReasoningRef.current.append(chunk.reasoning);
+          panelUpdateRef.current?.({
+            streamingReasoning: streamingReasoningRef.current.tail(LIVE_REASONING_MAX_CHARS),
+          });
         }
         if (chunk.content) {
-          streamingContentRef.current += chunk.content;
-          panelUpdateRef.current?.({ streamingContent: streamingContentRef.current });
-          dispatchGhostContent(streamingContentRef.current, true);
+          streamingContentRef.current.append(chunk.content);
+          dispatchGhostContent('', true);
         }
       } : undefined;
 
@@ -809,8 +841,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
       if (wasCancelled) {
         console.log('[useAIEditor] AI request cancelled by user');
-        streamingContentRef.current = '';
-        streamingReasoningRef.current = '';
+        streamingContentRef.current.clear();
+        streamingReasoningRef.current.clear();
         lastInstructPromptRef.current = null;
         clearSelectionLock();
         setIsProcessing(false);
@@ -922,8 +954,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     });
 
     // Clear AI state + release selection lock (ends session for persist gate)
-    streamingContentRef.current = '';
-    streamingReasoningRef.current = '';
+    streamingContentRef.current.clear();
+    streamingReasoningRef.current.clear();
     aiReasoningRef.current = '';
     errorRef.current = null;
     lastInstructPromptRef.current = null;
@@ -962,8 +994,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     const savedPrompt = isInstruct ? lastInstructPromptRef.current : null;
 
     // Clear streaming refs
-    streamingContentRef.current = '';
-    streamingReasoningRef.current = '';
+    streamingContentRef.current.clear();
+    streamingReasoningRef.current.clear();
     aiReasoningRef.current = '';
     errorRef.current = null;
     lastInstructPromptRef.current = null;
@@ -1212,6 +1244,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       }
     }, 100);
 
+    const contentBuf = streamingContentRef.current;
+    const reasoningBuf = streamingReasoningRef.current;
     return () => {
       window.clearTimeout(focusTimer);
       window.clearTimeout(panelHookTimer);
@@ -1224,8 +1258,9 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       // Stop network work for this editor instance (section switch / remount).
       // Generation bump makes any late chunk/result a no-op for the old panel.
       abortInFlightRequest('editor-teardown');
-      streamingContentRef.current = '';
-      streamingReasoningRef.current = '';
+      cancelGhostRaf();
+      contentBuf.clear();
+      reasoningBuf.clear();
       aiReasoningRef.current = '';
       errorRef.current = null;
       lastInstructPromptRef.current = null;
