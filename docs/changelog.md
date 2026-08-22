@@ -12,6 +12,7 @@ The Agent: a chat that reads and edits the open character or lorebook through to
 - Native function calling when the provider supports it (XML fallback otherwise); live prompt token count; TTFT / t/s on replies
 - History opens from a metadata index instead of loading every snapshot payload; opened-card snapshot stays last in the list
 - Leaner long sessions: chunked token streams, 100-message agent transcript cap, clipped thinking buffers
+- **NanoGPT cache routing** — **Cache-capable provider routing** toggle sends `caching: true`, routing to a cache-capable provider (sticky by default; fails if none serves the model)
 
 Details: [AI Agent](/features/ai-agent) · [AI Setup → Prompts](/configuration/ai-setup#prompts-tab) · [Snapshots](/features/snapshots-history)
 

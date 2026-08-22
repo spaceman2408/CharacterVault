@@ -17,8 +17,9 @@ A second chat next to Orion that **fills and revises** the open character or sta
 - Own model on **Settings → Prompts → Agent** (Default follows AI Config)
 - Greeting 1 is the first alternate, same as the editor
 - History stays lighter (metadata index, opened-card snapshot last); long chats keep the last 100 messages
+- **NanoGPT cache routing** — **Cache-capable provider routing** toggle (Settings → AI Config → NanoGPT Options) sends `caching: true` to route to a cache-capable provider for lower cost and latency (sticky by default; fails if none serves the model)
 
-[Release 1.4.0 →](/releases/v1.4.0) · [AI Agent →](/features/ai-agent) · [AI Setup → Prompts](/configuration/ai-setup#prompts-tab) · [Snapshots](/features/snapshots-history)
+[Release 1.4.0 →](/releases/v1.4.0) · [AI Agent →](/features/ai-agent) · [AI Setup → NanoGPT Options](/configuration/ai-setup#nanogpt-options) · [Snapshots](/features/snapshots-history)
 
 ### Provider usage cards (1.3.1)
 
