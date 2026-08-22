@@ -64,7 +64,7 @@ export function formatToolEvent(event: AgentToolEvent): string {
     const label = failedToolLabel(event.toolName);
     const detail = failedToolDetail(event.message, event.toolName);
     if (!detail || detail === label) return label;
-    return `${label} — ${detail}`;
+    return `${label}: ${detail}`;
   }
 
   if (event.toolName === 'replace_in_field') {
