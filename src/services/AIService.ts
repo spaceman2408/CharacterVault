@@ -48,6 +48,9 @@ import {
  */
 export const BYTES_PER_TOKEN = 4;
 
+/** Shared stateless encoder; encode() is safe to reuse across synchronous calls. */
+const byteEncoder = new TextEncoder();
+
 /**
  * Estimate token count for a string.
  * Uses heuristic: 1 token ≈ {@link BYTES_PER_TOKEN} UTF-8 bytes.
@@ -57,7 +60,7 @@ export const BYTES_PER_TOKEN = 4;
  */
 export function estimateTokens(text: string): number {
   if (!text) return 0;
-  const byteLength = new TextEncoder().encode(text).length;
+  const byteLength = byteEncoder.encode(text).length;
   return Math.ceil(byteLength / BYTES_PER_TOKEN);
 }
 
@@ -75,15 +78,14 @@ export function truncateTextToTokenLimit(text: string, availableTokens: number):
   if (availableTokens <= 0) return '...';
   if (estimateTokens(text) <= availableTokens) return text;
 
-  const encoder = new TextEncoder();
   const ellipsis = '...';
-  const maxBytes = Math.max(0, availableTokens * BYTES_PER_TOKEN - encoder.encode(ellipsis).length);
+  const maxBytes = Math.max(0, availableTokens * BYTES_PER_TOKEN - byteEncoder.encode(ellipsis).length);
 
   let lo = 0;
   let hi = text.length;
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
-    if (encoder.encode(text.slice(0, mid)).length <= maxBytes) {
+    if (byteEncoder.encode(text.slice(0, mid)).length <= maxBytes) {
       lo = mid;
     } else {
       hi = mid - 1;

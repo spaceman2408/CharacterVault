@@ -104,7 +104,7 @@ Remaps, strip lists, and host snippets live here with tests in `tests/services/c
 - Local-first: user API keys and base URLs in the browser; core AI does not require a backend.
 - Wire format is OpenAI-compatible (`/chat/completions`, SSE `data:` lines). Gateway differences go through repair, reasoning extractors, or provider adapters.
 - Settings persistence is draft-then-save via `CharacterSettingsService` and settings hooks; services do not write settings from tab UI.
-- Token estimates use a UTF-8 byte heuristic (`BYTES_PER_TOKEN`) for budgeting, not billing.
+- Token estimates use a UTF-8 byte heuristic (`BYTES_PER_TOKEN`) for budgeting, not billing. Estimates share one module-level `TextEncoder`; do not allocate a new encoder per call.
 - Edge cases prefer pure helpers plus tests under `tests/services/`.
 - Intentional public surface is exported from `services/index.ts`.
 
