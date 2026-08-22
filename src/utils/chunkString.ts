@@ -55,6 +55,14 @@ export class ChunkString {
     return `…${this.sliceFrom(this.length - maxChars)}`;
   }
 
+  /** Drop everything but the tail (with ellipsis marker) so the buffer stays bounded. */
+  capToTail(maxChars: number): void {
+    if (this.length <= maxChars) return;
+    this.head = `…${this.sliceFrom(this.length - maxChars)}`;
+    this.parts = [];
+    this.extraLen = 0;
+  }
+
   private compact(): void {
     if (this.parts.length === 0) return;
     this.head = this.head ? this.head + this.parts.join('') : this.parts.join('');

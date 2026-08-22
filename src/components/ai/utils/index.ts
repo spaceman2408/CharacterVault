@@ -29,9 +29,18 @@ export function generateMessageId(): string {
 export const LIVE_REASONING_FLUSH_MS = 80;
 export const LIVE_REASONING_MAX_CHARS = 6000;
 
+export const COMMIT_REASONING_MAX_CHARS = 20000;
+
 export function clipLiveReasoning(text: string): string {
   if (text.length <= LIVE_REASONING_MAX_CHARS) return text;
   return `…${text.slice(-LIVE_REASONING_MAX_CHARS)}`;
+}
+
+/** Committed thinking is display-only (never resent to the model); keep a generous tail. */
+export function clipCommitReasoning(text?: string): string | undefined {
+  if (!text) return undefined;
+  if (text.length <= COMMIT_REASONING_MAX_CHARS) return text;
+  return `…${text.slice(-COMMIT_REASONING_MAX_CHARS)}`;
 }
 
 export function canRetryEmptySend(

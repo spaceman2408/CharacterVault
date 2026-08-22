@@ -32,6 +32,27 @@ describe('ChunkString', () => {
     expect(buf.tail(40)).toBe('abcdefghij');
   });
 
+  it('capToTail keeps the tail in place and drops the head', () => {
+    const buf = new ChunkString();
+    buf.append('abcdefghij');
+    buf.append('klmnop');
+    buf.capToTail(6);
+    expect(buf.toString()).toBe('…klmnop');
+    expect(buf.length).toBe(buf.toString().length);
+    buf.append('qr');
+    expect(buf.toString()).toBe('…klmnopqr');
+  });
+
+  it('capToTail is a no-op at or under the cap', () => {
+    const buf = new ChunkString();
+    buf.append('abc');
+    buf.capToTail(3);
+    expect(buf.toString()).toBe('abc');
+    buf.append('def');
+    buf.capToTail(6);
+    expect(buf.toString()).toBe('abcdef');
+  });
+
   it('clears so the next run does not retain the previous body', () => {
     const buf = new ChunkString();
     buf.append('hello');
