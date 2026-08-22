@@ -1,3 +1,9 @@
+::: tip Our largest feature update is here
+CharacterVault 1.4.0 welcomes a new way to edit cards! Introducing the AI **Agent**. The Agent can read your open character or lorebook and edit it for real, through tools you can watch live. Describe the fill, rewrite, or cut and it does the work.
+
+[Try it today](https://spaceman2408.github.io/CharacterVault) · [Read about it here](/features/ai-agent)
+:::
+
 # CharacterVault
 
 Create, edit, and organize roleplay character cards in your browser. SillyTavern compatible, no server required.
