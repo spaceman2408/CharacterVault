@@ -29,6 +29,12 @@ export interface LorebookAgentChatProps {
   composerHint?: string;
 }
 
+const BOOK_SUGGESTIONS: readonly string[] = [
+  'Audit this book',
+  'List my constant entries',
+  'Summarize my longest entry',
+];
+
 export function LorebookAgentChat({
   aiConfig,
   samplerSettings,
@@ -167,6 +173,7 @@ export function LorebookAgentChat({
       handleAbort={session.handleAbort}
       clearError={session.clearError}
       onClose={onClose}
+      emptySuggestions={BOOK_SUGGESTIONS}
       renderMessage={renderMessage}
       processingIndicator={
         <div className="py-1 text-fg-muted">

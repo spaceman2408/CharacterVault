@@ -39,6 +39,8 @@ export interface AIChatViewProps {
   handleAbort: () => void;
   clearError: () => void;
   onClose?: () => void;
+  /** One-shot starter prompts in the empty state; clicking one sends it. */
+  emptySuggestions?: readonly string[];
   renderMessage?: (message: ChatMessage, index: number) => ReactNode;
   renderAfterMessage?: (message: ChatMessage) => ReactNode;
   showStreamDraft?: boolean;
@@ -75,6 +77,7 @@ export function AIChatView({
   handleAbort,
   clearError,
   onClose,
+  emptySuggestions,
   renderMessage,
   renderAfterMessage,
   showStreamDraft = true,
@@ -255,6 +258,21 @@ export function AIChatView({
             </div>
             <p className="text-sm font-medium text-fg">{emptyTitle}</p>
             <p className="text-xs mt-1.5 max-w-[16rem] leading-relaxed">{emptyBody}</p>
+            {emptySuggestions && emptySuggestions.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-1.5 mt-4 max-w-[20rem]">
+                {emptySuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => void handleAsk(suggestion)}
+                    className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium border border-border-strong text-fg-muted hover:border-accent hover:text-accent hover:bg-accent-soft disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

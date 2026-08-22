@@ -32,6 +32,12 @@ export interface CharacterAgentChatProps {
   onRunningChange?: (running: boolean) => void;
 }
 
+const AGENT_SUGGESTIONS: readonly string[] = [
+  'Audit this card',
+  'Summarize my lorebook',
+  'Write me one more alternate greeting',
+];
+
 export function CharacterAgentChat({
   aiConfig,
   samplerSettings,
@@ -170,6 +176,7 @@ export function CharacterAgentChat({
       handleAbort={session.handleAbort}
       clearError={session.clearError}
       onClose={onClose}
+      emptySuggestions={AGENT_SUGGESTIONS}
       renderMessage={renderMessage}
       processingIndicator={
         <div className="py-1 text-fg-muted">
