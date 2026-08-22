@@ -15,7 +15,7 @@ import type {
   AIOperation,
 } from '../db/characterTypes';
 import { ReasoningParser, extractMessageReasoning } from './ReasoningParser';
-import { resolveProvider } from './providers';
+import { resolveProvider, NanoGPTProvider } from './providers';
 import type { ModelProviderInfo, FetchModelsOptions } from './providers';
 import { EDITOR_PERSONA, buildSystemPrompt as buildSystemPromptParts, getStablePrefix as getStablePrefixParts } from './PromptBuilder';
 import {
@@ -794,6 +794,13 @@ Provide only the generated text without any additional commentary.`;
       reasoning_effort: enableReasoning ? effort : undefined,
       reasoning_split: enableReasoning && this.isMinimaxBaseUrl() ? true : undefined,
     };
+
+    if (
+      this.config.enableCacheProviderRouting &&
+      resolveProvider(baseUrl) instanceof NanoGPTProvider
+    ) {
+      request.caching = true;
+    }
 
     if (options?.tools?.length && !cache.rejectedParams.has('tools')) {
       request.tools = options.tools.map((tool) => ({

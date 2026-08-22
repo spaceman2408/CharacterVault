@@ -572,6 +572,8 @@ export interface AIConfig {
   subscriptionModelsOnly?: boolean;
   /** `sub` = subscription (default); `paygo` forces pay-as-you-go for provider selection */
   billingMode?: 'sub' | 'paygo';
+  /** NanoGPT: route requests to a cache-capable provider via top-level `caching: true` */
+  enableCacheProviderRouting?: boolean;
 }
 
 export interface SamplerPreset {
@@ -630,6 +632,7 @@ export const DEFAULT_SETTINGS = {
     providerByModelId: {},
     subscriptionModelsOnly: false,
     billingMode: 'sub',
+    enableCacheProviderRouting: false,
   } satisfies AIConfig,
   sampler: {
     temperature: 1.0,

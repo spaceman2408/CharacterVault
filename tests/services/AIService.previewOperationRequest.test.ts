@@ -114,6 +114,37 @@ describe('AIService.previewOperationRequest', () => {
     clearCapabilityCaches();
   });
 
+  it('adds caching: true for NanoGPT baseUrl when cache provider routing is enabled', () => {
+    const service = new AIService(
+      baseConfig({
+        baseUrl: 'https://nano-gpt.com/api/v1',
+        enableCacheProviderRouting: true,
+      }),
+      baseSampler()
+    );
+    const preview = service.previewOperationRequest('expand', 'Hello world', []);
+
+    expect(preview.body.caching).toBe(true);
+  });
+
+  it('omits caching for non-NanoGPT baseUrl or when routing is disabled', () => {
+    const offService = new AIService(
+      baseConfig({ baseUrl: 'https://nano-gpt.com/api/v1', enableCacheProviderRouting: false }),
+      baseSampler()
+    );
+    expect(
+      offService.previewOperationRequest('expand', 'Hello world', []).body.caching
+    ).toBeUndefined();
+
+    const otherHostService = new AIService(
+      baseConfig({ baseUrl: 'https://example.com/v1', enableCacheProviderRouting: true }),
+      baseSampler()
+    );
+    expect(
+      otherHostService.previewOperationRequest('expand', 'Hello world', []).body.caching
+    ).toBeUndefined();
+  });
+
   it('does not call fetch', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const service = new AIService(baseConfig(), baseSampler());

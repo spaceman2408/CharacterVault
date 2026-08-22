@@ -361,6 +361,24 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                 </>
               }
             />
+            <SettingsToggle
+              stacked
+              checked={localAIConfig.enableCacheProviderRouting ?? false}
+              onChange={(checked) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  ai: { ...prev.ai, enableCacheProviderRouting: checked },
+                }))
+              }
+              label="Cache-capable provider routing"
+              description={
+                <>
+                  Route requests to a provider that supports prompt caching for lower cost and
+                  latency. If no cache-capable provider is available for a model, the request will
+                  fail. Provider stickiness is on by default.
+                </>
+              }
+            />
           </div>
         </SettingsCard>
       )}
