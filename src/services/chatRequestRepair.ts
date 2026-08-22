@@ -81,17 +81,27 @@ export interface RepairResult {
 
 const capabilityCaches = new Map<string, ModelCapabilityCache>();
 
+/** FIFO eviction keeps one long session from growing per unique baseUrl::model. */
+const CAPABILITY_CACHE_LIMIT = 32;
+
 export function capabilityCacheKey(baseUrl: string, modelId: string): string {
   return `${baseUrl.replace(/\/$/, '')}::${modelId}`;
 }
 
 export function getCapabilityCache(baseUrl: string, modelId: string): ModelCapabilityCache {
   const key = capabilityCacheKey(baseUrl, modelId);
-  let entry = capabilityCaches.get(key);
-  if (!entry) {
-    entry = { rejectedParams: new Set() };
-    capabilityCaches.set(key, entry);
+  const existing = capabilityCaches.get(key);
+  if (existing) {
+    return existing;
   }
+  if (capabilityCaches.size >= CAPABILITY_CACHE_LIMIT) {
+    const oldest = capabilityCaches.keys().next().value;
+    if (oldest !== undefined) {
+      capabilityCaches.delete(oldest);
+    }
+  }
+  const entry: ModelCapabilityCache = { rejectedParams: new Set() };
+  capabilityCaches.set(key, entry);
   return entry;
 }
 

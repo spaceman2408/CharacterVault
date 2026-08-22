@@ -72,6 +72,9 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   const dropCharacterPayload = useCallback(() => {
     setCurrentCharacterId(null);
     setCharacters([]);
+    // Sequence entries guard stale writes for the open card only; drop them
+    // with the card so the map does not grow per opened character × field.
+    specUpdateSequenceRef.current.clear();
     const prefs = settingsRef.current;
     if (prefs?.lastActiveCharacterId !== undefined) {
       void characterDb.updateSettings({ lastActiveCharacterId: undefined });
