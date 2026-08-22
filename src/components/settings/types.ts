@@ -12,6 +12,7 @@ import type {
   PromptModelBinding,
   PromptModelMap,
   CharacterSection,
+  DefaultChatPanel,
 } from '../../db/characterTypes';
 import type { ModelProvider } from '../../services/providers';
 
@@ -32,6 +33,7 @@ export interface SettingsDraft {
   agentModel: PromptModelBinding | undefined;
   showLuckyVortex: boolean;
   markdownImageOpenLinks: boolean;
+  defaultChatPanel: DefaultChatPanel;
   spellcheckEnabled: boolean;
   spellcheckLanguage: string;
   sectionOrder: CharacterSection[];

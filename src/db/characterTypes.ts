@@ -449,6 +449,8 @@ export interface CharacterVaultSettings {
      * warning. Highlighting is always on. Default true when undefined.
      */
     markdownImageOpenLinks?: boolean;
+    /** Ask AI opens on this chat. Missing = Orion. */
+    defaultChatPanel?: DefaultChatPanel;
     spellcheck?: SpellcheckSettings;
   };
   ai?: AIConfig;
@@ -472,6 +474,7 @@ export const DEFAULT_CHARACTER_VAULT_SETTINGS: Omit<CharacterVaultSettings, 'id'
     editorFontSize: 16,
     sidebarWidth: 280,
     markdownImageOpenLinks: true,
+    defaultChatPanel: 'orion',
     spellcheck: {
       enabled: true,
       language: 'en',
@@ -484,6 +487,14 @@ export const DEFAULT_CHARACTER_VAULT_SETTINGS: Omit<CharacterVaultSettings, 'id'
 
 /** Default for Studio → open control on Markdown image links */
 export const DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS = true;
+
+export type DefaultChatPanel = 'orion' | 'agent';
+
+export const DEFAULT_CHAT_PANEL: DefaultChatPanel = 'orion';
+
+export function normalizeDefaultChatPanel(value: unknown): DefaultChatPanel {
+  return value === 'agent' ? 'agent' : 'orion';
+}
 
 /** Used to backfill old settings records missing `ui.spellcheck` */
 export const DEFAULT_SPELLCHECK_SETTINGS: SpellcheckSettings = {

@@ -119,7 +119,7 @@ The **Agent** is a chat that **writes** the character or lorebook you have open.
 3. Send a request. Changes appear when the run finishes
 4. Use **Snapshots** if you need to roll back
 
-It can use a separate model on **Settings → Prompts → Agent**. See [AI Agent](/features/ai-agent).
+It can use a separate model on **Settings → Prompts → Agent**. Set **Settings → Studio → Chat panel** to **Agent** if you want Ask AI to open there. See [AI Agent](/features/ai-agent).
 :::
 
 ::: details What is custom context?

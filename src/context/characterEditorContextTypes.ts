@@ -20,6 +20,7 @@ import type {
   PromptModelMap,
   SectionMeta,
   SpellcheckSettings,
+  DefaultChatPanel,
 } from '../db/characterTypes';
 
 /**
@@ -106,6 +107,8 @@ export interface CharacterEditorContextValue {
   spellcheck: SpellcheckSettings;
   /** When true, clicking Markdown image syntax can open the URL (with a warning). */
   markdownImageOpenLinks: boolean;
+  /** Studio default for Ask AI: Orion or Agent. Header toggle still works. */
+  defaultChatPanel: DefaultChatPanel;
   /** Update a spellcheck field (e.g. enabled, language) */
   updateSpellcheck: (updates: Partial<SpellcheckSettings>) => void;
   /** Add a word to the user's ignore list */

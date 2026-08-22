@@ -10,3 +10,4 @@ export { useAIEditor } from './useAIEditor';
 export type { UseAIEditorOptions, UseAIEditorReturn } from './useAIEditor';
 export { useClipboardImport } from './useClipboardImport';
 export type { UseClipboardImportReturn, ImportState } from './useClipboardImport';
+export { useChatPanelMode } from './useChatPanelMode';

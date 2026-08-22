@@ -20,6 +20,7 @@ import {
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   EMPTY_CUSTOM_CONTEXT_META,
+  normalizeDefaultChatPanel,
 } from '../db/characterTypes';
 import { applyModelBinding, normalizePromptModelMap } from '../services/resolveOperationConfig';
 import type { SectionMeta } from '../db/characterTypes';
@@ -58,7 +59,12 @@ interface CharacterEditorProviderProps {
  * @returns React element
  */
 export default function CharacterEditorProvider({ children }: CharacterEditorProviderProps): React.ReactElement {
-  const { currentCharacter, updateCharacter: updateCharacterBase, updateSpecField: updateSpecFieldBase } = useCharacterContext();
+  const {
+    currentCharacter,
+    updateCharacter: updateCharacterBase,
+    updateSpecField: updateSpecFieldBase,
+    settings,
+  } = useCharacterContext();
   const currentCharacterId = currentCharacter?.id ?? null;
   
   const [activeSection, setActiveSection] = useState<CharacterSection>('name');
@@ -69,6 +75,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [hiddenSections, setHiddenSections] = useState<CharacterSection[]>([]);
   const [spellcheck, setSpellcheckState] = useState<SpellcheckSettings>({ ...DEFAULT_SPELLCHECK_SETTINGS });
   const [markdownImageOpenLinks, setMarkdownImageOpenLinks] = useState(DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS);
+  const [defaultChatPanel, setDefaultChatPanel] = useState(() =>
+    normalizeDefaultChatPanel(settings?.ui.defaultChatPanel),
+  );
   
   // AI-related state
   const [selectedText, setSelectedText] = useState('');
@@ -302,6 +311,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setMarkdownImageOpenLinks(
         settings.ui.markdownImageOpenLinks ?? DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
       );
+      setDefaultChatPanel(normalizeDefaultChatPanel(settings.ui.defaultChatPanel));
       setContextSectionIdsState(contextIds);
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -1148,6 +1158,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     visibleSections,
     spellcheck,
     markdownImageOpenLinks,
+    defaultChatPanel,
     setActiveSection,
     updateCharacter,
     updateSpecField,

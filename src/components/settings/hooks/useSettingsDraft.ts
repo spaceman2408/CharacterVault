@@ -16,7 +16,9 @@ import {
   DEFAULT_SECTION_ORDER,
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
+  DEFAULT_CHAT_PANEL,
   clampContextLength,
+  normalizeDefaultChatPanel,
 } from '../../../db/characterTypes';
 import { characterSettingsService } from '../../../services/CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from '../../../services/resolveOperationConfig';
@@ -35,6 +37,7 @@ export function createDefaultDraft(): SettingsDraft {
     agentModel: undefined,
     showLuckyVortex: true,
     markdownImageOpenLinks: DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
+    defaultChatPanel: DEFAULT_CHAT_PANEL,
     spellcheckEnabled: DEFAULT_SPELLCHECK_SETTINGS.enabled,
     spellcheckLanguage: DEFAULT_SPELLCHECK_SETTINGS.language,
     sectionOrder: [...DEFAULT_SECTION_ORDER],
@@ -174,6 +177,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           showLuckyVortex: fullSettings.ui?.showLuckyVortex ?? true,
           markdownImageOpenLinks:
             fullSettings.ui?.markdownImageOpenLinks ?? DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
+          defaultChatPanel: normalizeDefaultChatPanel(fullSettings.ui?.defaultChatPanel),
           spellcheckEnabled: spell.enabled,
           spellcheckLanguage: spell.language,
           sectionOrder: secOrder,
@@ -254,6 +258,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           ...currentSettings.ui,
           showLuckyVortex: draft.showLuckyVortex,
           markdownImageOpenLinks: draft.markdownImageOpenLinks,
+          defaultChatPanel: draft.defaultChatPanel,
         },
         sectionOrder: draft.sectionOrder,
         hiddenSections: draft.hiddenSections,

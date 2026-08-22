@@ -24,13 +24,15 @@ When a run finishes, changes land in this card or book. A banner in the editor s
 
 You can switch back to Orion at any time. The two chats do not share a thread.
 
+To open Agent by default, set **Settings → Studio → Chat panel** to **Agent**. That applies the next time you open a character or lorebook. The header toggle still works for the current session.
+
 ## Opening the Agent
 
 ### On a character
 
 1. Open the character in the workspace.
 2. Open the **Ask AI** panel (right side; header toggle).
-3. Click **Agent** in the chat header so it stays on.
+3. Click **Agent** in the chat header so it stays on (skip this if Agent is already your Studio default).
 4. Type what you want written. **Enter** sends; **Shift+Enter** adds a line.
 
 The left **AI Context** panel still has [custom context](/features/ai-context#custom-context). Section pins hide in Agent mode; they come back when you switch to Orion. The Agent reads the card through tools, so you do not pick Description vs Personality by hand.

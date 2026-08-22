@@ -10,6 +10,7 @@ import { CharacterAgentChat } from '../../agent';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
 import type { CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
 import { createEmptyCharacterBook } from '../../db/characterTypes';
+import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { generateThumbnail } from '../../utils/thumbnail';
 import { SectionEditor } from '../editor/SectionEditor';
 import { flushLorebookDraft } from '../editor/lorebook/draftFlush';
@@ -786,9 +787,13 @@ function CharacterWorkspaceInner({
     visibleSections,
     updateCharacter,
     flushPendingSaves,
+    defaultChatPanel,
   } = useCharacterEditorContext();
 
-  const [agentMode, setAgentMode] = useState(false);
+  const [agentMode, setAgentMode] = useChatPanelMode(
+    defaultChatPanel,
+    currentCharacter?.id ?? null,
+  );
   const [agentRunning, setAgentRunning] = useState(false);
 
   const customContextIncluded =

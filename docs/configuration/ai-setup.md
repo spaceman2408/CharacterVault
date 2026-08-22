@@ -221,7 +221,11 @@ For full details on placeholders and the toolbar, see [Customizing AI Operation 
 
 ## Studio Tab
 
-The Studio tab controls UI preferences for the AI Creation Studio — primarily the **I'm Feeling Lucky** vortex animation. Toggle it off if the visual effect gets distracting or slows down your device.
+The Studio tab holds UI preferences.
+
+- **AI Creation Studio:** the **I'm Feeling Lucky** vortex animation. Toggle it off if the visual effect gets distracting or slows down your device.
+- **Chat panel:** default Ask AI chat when you open a character or lorebook: **Orion** (talks, does not write the card) or **Agent** (writes the open card or book). You can still switch in the chat header. See [AI Agent](/features/ai-agent).
+- **Editor links** and **Spellcheck:** covered under [Editor](/features/editor).
 
 ## Sections Tab
 

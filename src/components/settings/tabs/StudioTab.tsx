@@ -1,13 +1,24 @@
 /**
- * @fileoverview Studio preferences tab (vortex, editor links, spellcheck).
+ * @fileoverview Studio preferences tab (vortex, default chat, editor links, spellcheck).
  * @module components/settings/tabs/StudioTab
  */
 
 import React from 'react';
-import { ExternalLink, Languages, Wand2 } from 'lucide-react';
+import { Bot, ExternalLink, Languages, MessageSquare, Wand2 } from 'lucide-react';
+import type { DefaultChatPanel } from '../../../db/characterTypes';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
 import type { SettingsTabProps } from '../types';
+
+const CHAT_PANEL_OPTIONS: Array<{
+  id: DefaultChatPanel;
+  label: string;
+  hint: string;
+  Icon: typeof MessageSquare;
+}> = [
+  { id: 'orion', label: 'Orion', hint: 'Chat that does not write the card', Icon: MessageSquare },
+  { id: 'agent', label: 'Agent', hint: 'Chat that writes the open card or book', Icon: Bot },
+];
 
 export const StudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   return (
@@ -30,6 +41,49 @@ export const StudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             </>
           }
         />
+      </SettingsCard>
+
+      <SettingsCard>
+        <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+          <MessageSquare className="w-4 h-4" />
+          Chat panel
+        </h3>
+        <p className="text-sm font-medium text-fg mb-1">Default chat</p>
+        <p className="text-xs text-fg-muted mb-3 leading-relaxed">
+          Ask AI opens on this chat when you open a character or lorebook. You can still switch in
+          the header.
+        </p>
+        <div
+          role="radiogroup"
+          aria-label="Default chat panel"
+          className="grid grid-cols-2 gap-2"
+        >
+          {CHAT_PANEL_OPTIONS.map(({ id, label, hint, Icon }) => {
+            const selected = draft.defaultChatPanel === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setDraft((prev) => ({ ...prev, defaultChatPanel: id }))}
+                className={`flex flex-col items-start gap-1 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                  selected
+                    ? 'border-accent/40 bg-accent-soft text-accent'
+                    : 'border-border bg-surface text-fg-muted hover:bg-hover/60 hover:text-fg'
+                }`}
+              >
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {label}
+                </span>
+                <span className={`text-[11px] leading-snug ${selected ? 'text-accent/80' : 'text-fg-subtle'}`}>
+                  {hint}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </SettingsCard>
 
       <SettingsCard>

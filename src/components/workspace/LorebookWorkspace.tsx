@@ -30,7 +30,13 @@ import type {
   CustomContextMeta,
   VaultLorebook,
 } from '../../db/characterTypes';
-import { createEmptyCharacterBook, DEFAULT_SETTINGS, EMPTY_CUSTOM_CONTEXT_META } from '../../db/characterTypes';
+import {
+  createEmptyCharacterBook,
+  DEFAULT_SETTINGS,
+  EMPTY_CUSTOM_CONTEXT_META,
+  normalizeDefaultChatPanel,
+} from '../../db/characterTypes';
+import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { estimateTokens } from '../../services/AIService';
 import { applyModelBinding } from '../../services/resolveOperationConfig';
 import {
@@ -71,7 +77,11 @@ export function LorebookWorkspace(): React.ReactElement {
   const [titleDraft, setTitleDraft] = useState(currentLorebook?.name ?? '');
   const [isMobile, setIsMobile] = useState(getIsMobileViewport);
   const [isChatOpen, setIsChatOpen] = useState(() => !getIsMobileViewport());
-  const [agentMode, setAgentMode] = useState(false);
+  const defaultChatPanel = normalizeDefaultChatPanel(settings?.ui?.defaultChatPanel);
+  const [agentMode, setAgentMode] = useChatPanelMode(
+    defaultChatPanel,
+    currentLorebook?.id ?? null,
+  );
   const [agentRunning, setAgentRunning] = useState(false);
   const [customContextMeta, setCustomContextMeta] = useState<CustomContextMeta>({
     ...EMPTY_CUSTOM_CONTEXT_META,

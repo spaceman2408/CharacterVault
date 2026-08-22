@@ -42,6 +42,7 @@ export type {
   StoredImage,
   SpellDictionaryCacheEntry,
   SpellcheckSettings,
+  DefaultChatPanel,
   CharacterCustomContext,
   LorebookCustomContext,
   CustomContextMeta,
@@ -51,7 +52,9 @@ export {
   DEFAULT_CHARACTER_VAULT_SETTINGS,
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
+  DEFAULT_CHAT_PANEL,
   EMPTY_CUSTOM_CONTEXT_META,
+  normalizeDefaultChatPanel,
   createEmptyCharacterBook,
 } from './characterTypes';
 export {
