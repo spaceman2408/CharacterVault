@@ -252,6 +252,14 @@ AI features (Orion, Agent, and AI toolbar) require an internet connection to rea
 
 ## Troubleshooting
 
+::: details The Agent’s tool calls fail or it never writes the card
+The Agent needs a **current tool-calling / agentic** model. A small chat model, a roleplay finetune, or last year’s instruct weights will invent broken calls or dump prose instead of editing. That is the model, not a CharacterVault setting.
+
+Use something in the **Qwen3.8 / DeepSeek V4 / GLM-5.3 / Kimi K3** class (or current GPT / Claude via a gateway). **Qwen3.8-27B** is a compact hosted example that handles this Agent well. Local works too if the model was trained for tools. **Gemma 4** (including **E2B** / **E4B**) is a real option. Bigger parameters with tool-call training are still more reliable on large jobs. Map Agent on **Settings → Prompts → Agent** so Orion can stay on a cheaper chat model.
+
+[AI Agent → Troubleshooting](/features/ai-agent#troubleshooting)
+:::
+
 ::: details The AI toolbar buttons are disabled
 This typically means one of two things:
 

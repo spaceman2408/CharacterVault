@@ -95,10 +95,10 @@ Catalogs in the prompt are built at the **start** of the run. After names or key
 
 ### What you see in chat
 
-- **Tool lines** — color-coded list / read / write results, including lorebook entry ids
-- **Thinking** — streams in an expanded **Thinking** fold while it is live; after the reply it collapses
-- **Live token count** — catalogs, custom context, and the current prompt (including tool results)
-- **TTFT / t/s** — on the assistant message info tooltip when the reply finishes, same as Orion
+- **Tool lines:** color-coded list / read / write results, including lorebook entry ids
+- **Thinking:** streams in an expanded **Thinking** fold while it is live; after the reply it collapses
+- **Live token count:** catalogs, custom context, and the current prompt (including tool results)
+- **TTFT / t/s:** on the assistant message info tooltip when the reply finishes, same as Orion
 - Lookup-only reads do not add extra assistant turns; those bodies count in the live meter, then drop out of the transcript
 
 Long threads keep the last **100** messages in the panel so the tab stays light.
@@ -129,9 +129,11 @@ On **Settings → Prompts**, the **Agent** card at the top uses the same picker 
 
 Keys stay on **AI Config**. Save Settings before the mapping applies. Character Agent and lorebook Agent share this one mapping.
 
-Agents generally need a model that can follow tools reliably. A weaker global model for Orion or Fix is fine; point Agent at a stronger one if you have it.
+The Agent is **not** Orion with extra buttons. It has to emit valid tool calls, often several in a row. A model that chats well can still fail here.
 
-See [AI Setup → Prompts Tab](/configuration/ai-setup#prompts-tab).
+Point Agent at a **current tool-calling / agentic** model. Leave a cheap chat model on **AI Config** for Orion and Fix if you want; do not make the Agent use that same model.
+
+See [AI Setup → Prompts Tab](/configuration/ai-setup#prompts-tab). If tool calls fail, see [Troubleshooting](#troubleshooting).
 
 ## Limits (per run)
 
@@ -161,6 +163,80 @@ Open **Snapshots** (character) or **History** (vault book) to compare and restor
 - Prefer one clear job per Send. Split “rewrite description” and “rebuild the lorebook” if either is large.
 - **Stop**, then empty **Send**, retries the last user message.
 - After a run, skim Snapshots if the write was bigger than you meant.
+
+## Troubleshooting {#troubleshooting}
+
+Most “the Agent is broken” reports are the **model**. CharacterVault can only run the tools the model actually calls. If the model cannot do function calling, no setting will save the run.
+
+### Tool calls fail, loop, or never write the card
+
+::: tip
+Switch to a newer model that is trained for tools. That is the fix.
+:::
+
+A small chat model, a roleplay finetune, or last year’s instruct weights will invent XML, call `tool_name`, skip tools and “helpfully” dump prose, or loop the same empty call. That is expected. Those models were not trained for this job.
+
+Size is not enough. An old 70B chat model still loses to a current ~27B that was post-trained for agents. **Qwen3.8-27B** (released August 2026) is a dense open-weight example that handles this Agent well, including the **Thinking** listing on NanoGPT. Hosted names look like `qwen3.8-27b` / `qwen3.8-27b:thinking` (NanoGPT) or `qwen/qwen3.8-27b` (OpenRouter). Fetch the catalog; do not type a guessed slug.
+
+Other current families that are actually built for multi-step tool use (as of August 2026):
+
+| Family | Why it belongs here |
+| :--- | :--- |
+| **Qwen3.8** | **Qwen3.8-27B** for a compact pick; **Qwen3.8-Max** if you want the flagship |
+| **DeepSeek V4** | **V4 Pro** (or Flash if you need cheaper / faster) |
+| **GLM-5.3** | Current GLM coding/agent stack; **GLM-5.2** is the previous one |
+| **Kimi K3** | Current Kimi flagship; older **K2.5 / K2.6** are a generation behind |
+| **GPT-5.6 / Claude Opus 4.8** class | Fine via OpenRouter or another compatible gateway if you already pay for them |
+| **Gemma 4** (local) | Native tool calling across the lineup, including the small **E2B** / **E4B** cuts. See [Local models](#local-models). |
+
+Do **not** use for Agent:
+
+- Small chat/instruct models with **no** tool-calling post-training (generic 7B–8B chat is not the same as **Gemma 4 E2B / E4B**)
+- Roleplay, NSFW, or “uncensored chat” finetunes unless you have already seen them emit clean native `tool_calls` on a real Agent run
+- Older lines: **Llama 3.x** chat, **Qwen2.5**, **Qwen3** 8B/14B as your daily Agent, **DeepSeek V3 / V3.1 / V3.2**, **GLM-4.x**, **Gemma 3**
+- Cheap **mini / nano / flash** SKUs sold for one-shot chat, unless the provider lists tools **and** a real Agent pass works
+
+Orion can stay on a weaker model. Map **Settings → Prompts → Agent** to one of the families above, save, and run again.
+
+### Local models {#local-models}
+
+Local works if you pick models that were trained for tools. Point **Settings → Prompts → Agent** at your local endpoint (LM Studio, llama.cpp, Ollama, and so on).
+
+**Gemma 4** is the example. The whole lineup can call tools, including the small **E2B** and **E4B** cuts. E4B is already useful in practice (a pass that rekeys a dozen lorebook entries is in range). **12B**, **26B-A4B**, and **31B** hold up better as the job gets larger.
+
+::: tip
+More parameters plus tool-call training just works better. A 4B that knows tools will beat a 70B that does not. Between two tool-trained models, the bigger one is the safer pick for a full card or a whole-book rewrite.
+:::
+
+### The Agent talks instead of editing
+
+It is chatting. A tool-capable model reads catalogs and calls `list` / `read` / `update` / `replace`. If you only get a paragraph in the chat and no colored tool lines, the model did not call tools. Same fix: newer tool-calling model.
+
+### `incomplete_action` or cut-off tool JSON
+
+The model started a call and ran out of output, or emitted broken JSON/XML. CharacterVault salvages truncated native calls when it can, then asks the model to finish. If that keeps happening:
+
+- Use a model with **native** `tools` (not XML-in-chat)
+- Prefer a current tool-calling model (**Qwen3.8**, **DeepSeek V4**, **GLM-5.3**, **Kimi K3**, or **Gemma 4**) over a chat-only instruct
+- Split the job, or step up a size, if a small local keeps cutting off (“rewrite description” vs “rebuild the lorebook”)
+
+Agent output is **not** capped by the Sampler **Max Tokens** slider; raising that slider will not fix a model that cannot close a call.
+
+### Context meter is full / prompt too long
+
+Raise **Settings → Sampler → Context Length**. Huge books plus custom context plus a long thread will crowd the window. Start **New chat** if the thread is old; the card stays as last written. Lookup bodies count in the live meter, then drop out.
+
+### Changes never appear in the editor
+
+The Agent writes **once**, when the run finishes (or you **Stop**, for tools that already completed). The banner is the cue. If the run ends with no tool lines, nothing was applied. That is a model/tool failure, not a delayed save.
+
+### Lorebook writes did not reach the vault book
+
+The character must have a [linked library book](/features/lorebook-vault#attach-to-a-character-vault-local). Unlinked card books stay on the character only.
+
+### Wrong greeting number
+
+**Greeting 1** is the first *alternate*, same as the editor. First Message is a separate field. Ask for “greeting 1” or “first message” explicitly.
 
 ## Next Steps
 
