@@ -27,6 +27,7 @@ import { estimateTokens, BYTES_PER_TOKEN } from '../../../services/AIService';
 import { estimateCustomContextTokensFromCharLength } from '../../../services/CustomContextService';
 import { CustomContextBlock } from '../../ai/CustomContextBlock';
 import {
+  DeleteEmbeddedLorebookButton,
   LorebookAttachmentButton,
   LorebookAttachmentProvider,
 } from '../CharacterLorebookAttachments';
@@ -283,17 +284,6 @@ function LorebookEditorInner({
     persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
   }, [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook]);
 
-  const handleDeleteLorebook = useCallback(() => {
-    if (!onDelete) return;
-    const entryCount = entries.length;
-    const message =
-      entryCount > 0
-        ? `Delete this lorebook and all ${entryCount} entries? This cannot be undone.`
-        : 'Delete this lorebook? This cannot be undone.';
-    if (!window.confirm(message)) return;
-    onDelete();
-  }, [onDelete, entries.length]);
-
   const handleExport = useCallback(() => {
     if (entries.length === 0) return;
 
@@ -484,15 +474,10 @@ function LorebookEditorInner({
               </div>
               {onDelete && (
                 <div className="border-t border-border pt-2">
-                  <button
-                    type="button"
-                    onClick={handleDeleteLorebook}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-danger/30 px-2.5 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-soft touch-manipulation"
-                    title="Delete the entire lorebook"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete Lorebook
-                  </button>
+                  <DeleteEmbeddedLorebookButton
+                    entryCount={entries.length}
+                    onDelete={onDelete}
+                  />
                 </div>
               )}
             </div>

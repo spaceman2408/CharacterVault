@@ -6,12 +6,16 @@ const {
   getCharacterIdsLinkedToLorebook,
   updateCharacterEmbeddedBook,
   getCharacterLorebookAttachments,
+  setCharacterLorebookAttachments,
+  createLorebook,
   hasLorebook,
 } = vi.hoisted(() => ({
   updateLorebook: vi.fn(),
   getCharacterIdsLinkedToLorebook: vi.fn(),
   updateCharacterEmbeddedBook: vi.fn(),
   getCharacterLorebookAttachments: vi.fn(),
+  setCharacterLorebookAttachments: vi.fn(),
+  createLorebook: vi.fn(),
   hasLorebook: vi.fn(),
 }));
 
@@ -21,6 +25,8 @@ vi.mock('../../src/db/CharacterDatabase', () => ({
     getCharacterIdsLinkedToLorebook,
     updateCharacterEmbeddedBook,
     getCharacterLorebookAttachments,
+    setCharacterLorebookAttachments,
+    createLorebook,
     hasLorebook,
   },
 }));
@@ -322,5 +328,114 @@ describe('LorebookAttachmentService.syncEmbeddedIfAttached', () => {
 
     expect(synced).toBe(false);
     expect(updateLorebook).not.toHaveBeenCalled();
+  });
+});
+
+describe('LorebookAttachmentService.createAndAttachFromEmbedded', () => {
+  beforeEach(() => {
+    createLorebook.mockReset();
+    setCharacterLorebookAttachments.mockReset();
+    createLorebook.mockImplementation(async (input: { name: string; book: CharacterBook }) =>
+      makeVaultBook({
+        id: 'vault-new',
+        name: input.name,
+        book: input.book,
+      }),
+    );
+    setCharacterLorebookAttachments.mockImplementation(
+      async (characterId: string, lorebookIds: string[]) => ({
+        characterId,
+        lorebookIds,
+        updatedAt: '2020-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+
+  it('creates the vault book then attaches it before returning', async () => {
+    const order: string[] = [];
+    createLorebook.mockImplementation(async (input: { name: string; book: CharacterBook }) => {
+      order.push('create');
+      return makeVaultBook({ id: 'vault-new', name: input.name, book: input.book });
+    });
+    setCharacterLorebookAttachments.mockImplementation(
+      async (characterId: string, lorebookIds: string[]) => {
+        order.push('attach');
+        return { characterId, lorebookIds, updatedAt: '2020-01-01T00:00:00.000Z' };
+      },
+    );
+
+    const embedded: CharacterBook = {
+      name: 'From character',
+      description: 'Notes',
+      entries: [makeEntry(0, 'embedded content')],
+      extensions: {},
+    };
+
+    const created = await lorebookAttachmentService.createAndAttachFromEmbedded(
+      'char-1',
+      embedded,
+      'Fallback',
+    );
+
+    expect(created.id).toBe('vault-new');
+    expect(order).toEqual(['create', 'attach']);
+    expect(setCharacterLorebookAttachments).toHaveBeenCalledWith('char-1', ['vault-new']);
+    expect(createLorebook.mock.calls[0][0].book.entries[0].content).toBe('embedded content');
+  });
+
+  it('does not mutate the embedded book while creating the vault copy', async () => {
+    const embedded: CharacterBook = {
+      name: 'Live',
+      description: '',
+      entries: [makeEntry(0, 'original')],
+      extensions: {},
+    };
+
+    await lorebookAttachmentService.createAndAttachFromEmbedded('char-1', embedded, 'Fallback');
+    const written = (createLorebook.mock.calls[0] as [{ book: CharacterBook }])[0].book;
+    written.entries[0].content = 'mutated after create';
+
+    expect(embedded.entries[0].content).toBe('original');
+  });
+});
+
+describe('LorebookAttachmentService.detach', () => {
+  beforeEach(() => {
+    getCharacterLorebookAttachments.mockReset();
+    setCharacterLorebookAttachments.mockReset();
+    setCharacterLorebookAttachments.mockImplementation(
+      async (characterId: string, lorebookIds: string[]) => ({
+        characterId,
+        lorebookIds,
+        updatedAt: '2020-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+
+  it('clears the vault link for the character', async () => {
+    getCharacterLorebookAttachments.mockResolvedValue({
+      characterId: 'char-1',
+      lorebookIds: ['vault-1'],
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    });
+
+    const result = await lorebookAttachmentService.detach('char-1');
+
+    expect(setCharacterLorebookAttachments).toHaveBeenCalledWith('char-1', []);
+    expect(result.lorebookIds).toEqual([]);
+  });
+
+  it('is a no-op when a specific lorebook id is not attached', async () => {
+    const current = {
+      characterId: 'char-1',
+      lorebookIds: ['vault-other'],
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    };
+    getCharacterLorebookAttachments.mockResolvedValue(current);
+
+    const result = await lorebookAttachmentService.detach('char-1', 'vault-1');
+
+    expect(setCharacterLorebookAttachments).not.toHaveBeenCalled();
+    expect(result).toEqual(current);
   });
 });

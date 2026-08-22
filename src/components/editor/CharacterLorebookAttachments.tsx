@@ -12,7 +12,6 @@ import { Book, Copy, ExternalLink, Link2, Trash2 } from 'lucide-react';
 import type { CharacterBook, LorebookListItem, VaultLorebook } from '../../db/characterTypes';
 import {
   cloneBookForEmbed,
-  cloneEmbeddedBook,
   lorebookAttachmentService,
   type ResolvedLorebookAttachment,
 } from '../../services/LorebookAttachmentService';
@@ -49,7 +48,10 @@ interface AttachmentApi {
   closeMenu: () => void;
   handleAttach: (lorebookId: string) => void;
   handleDetach: () => void;
+  /** Drop the vault link even if the attach menu is busy (used by Delete Lorebook). */
+  removeVaultLink: () => Promise<void>;
   handleOpenInVault: () => void;
+  canOpenInVault: boolean;
   handleCopy: (lorebook: VaultLorebook) => void;
   handleOpen: (lorebookId: string) => void;
 }
@@ -69,7 +71,7 @@ export function LorebookAttachmentProvider({
   onMenuOpen?: () => void;
   children: React.ReactNode;
 }): React.ReactElement {
-  const { lorebookListItems, openLorebook, createLorebook } = useLorebookContext();
+  const { lorebookListItems, openLorebook } = useLorebookContext();
   const { flushPendingSaves } = useCharacterEditorContext();
   const [resolved, setResolved] = useState<ResolvedLorebookAttachment[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -198,6 +200,12 @@ export function LorebookAttachmentProvider({
     }
   }, [attachedId, busy, characterId, reload]);
 
+  const removeVaultLink = useCallback(async () => {
+    await lorebookAttachmentService.detach(characterId);
+    if (!mountedRef.current) return;
+    setResolved([]);
+  }, [characterId]);
+
   const fallbackVaultName = useCallback(
     (book?: CharacterBook) =>
       (book?.name || '').trim() ||
@@ -259,12 +267,12 @@ export function LorebookAttachmentProvider({
       return;
     }
 
-    const fallbackName = fallbackVaultName(embeddedBook);
     const entryCount = embeddedBook?.entries?.length ?? 0;
+    if (entryCount === 0) return;
+
+    const fallbackName = fallbackVaultName(embeddedBook);
     const createOk = window.confirm(
-      entryCount > 0
-        ? `Open in the lorebook vault editor? A vault copy will be created from this character's embedded lorebook (${entryCount} entries), attached to the character, and opened.`
-        : `Open in the lorebook vault editor? An empty vault lorebook will be created, attached to this character, and opened.`,
+      `Open in the lorebook vault editor? A vault copy will be created from this character's embedded lorebook (${entryCount} entries), attached to the character, and opened.`,
     );
     if (!createOk) return;
 
@@ -272,13 +280,14 @@ export function LorebookAttachmentProvider({
     try {
       flushLorebookDraft();
       const latest = await flushPendingSaves();
-      const book = cloneEmbeddedBook(latest?.data.characterBook ?? embeddedBook, fallbackName);
-      const created = await createLorebook({
-        name: book.name || fallbackName,
-        description: book.description || '',
+      const book = latest?.data.characterBook ?? embeddedBook;
+      if ((book?.entries?.length ?? 0) === 0) return;
+      const created = await lorebookAttachmentService.createAndAttachFromEmbedded(
+        characterId,
         book,
-      });
-      await lorebookAttachmentService.attach(characterId, created.id);
+        fallbackName,
+      );
+      await openLorebook(created.id);
     } catch (err) {
       console.error('Failed to open lorebook in vault:', err);
       window.alert(
@@ -294,7 +303,7 @@ export function LorebookAttachmentProvider({
     fallbackVaultName,
     pushEmbeddedAndOpen,
     flushPendingSaves,
-    createLorebook,
+    openLorebook,
     characterId,
   ]);
 
@@ -319,7 +328,10 @@ export function LorebookAttachmentProvider({
       closeMenu,
       handleAttach: (id) => void handleAttach(id),
       handleDetach: () => void handleDetach(),
+      removeVaultLink,
       handleOpenInVault: () => void handleOpenInVault(),
+      canOpenInVault:
+        Boolean(attached && !attached.missing) || (embeddedBook?.entries?.length ?? 0) > 0,
       handleCopy,
       handleOpen: (id) => void handleOpen(id),
     }),
@@ -334,7 +346,9 @@ export function LorebookAttachmentProvider({
       closeMenu,
       handleAttach,
       handleDetach,
+      removeVaultLink,
       handleOpenInVault,
+      embeddedBook,
       handleCopy,
       handleOpen,
     ],
@@ -381,7 +395,7 @@ export function LorebookAttachmentButton(): React.ReactElement | null {
         if (menuOpen) closeMenu();
         else openMenu(event.currentTarget);
       }}
-      className={`inline-flex items-center justify-center gap-0 rounded-lg border p-2 text-xs font-medium transition-colors touch-manipulation disabled:cursor-not-allowed disabled:opacity-40 md:max-w-[10rem] md:gap-1.5 md:px-2.5 md:py-1.5 ${
+      className={`inline-flex items-center justify-center gap-0 rounded-lg border p-2 text-xs font-medium transition-colors touch-manipulation disabled:cursor-not-allowed disabled:opacity-40 md:max-w-40 md:gap-1.5 md:px-2.5 md:py-1.5 ${
         menuOpen
           ? 'border-accent bg-accent text-accent-fg'
           : attached?.missing
@@ -416,6 +430,7 @@ function AttachmentPanel(): React.ReactElement | null {
     handleAttach,
     handleDetach,
     handleOpenInVault,
+    canOpenInVault,
     handleCopy,
     handleOpen,
   } = api;
@@ -431,12 +446,14 @@ function AttachmentPanel(): React.ReactElement | null {
           <button
             type="button"
             onClick={handleOpenInVault}
-            disabled={busy}
+            disabled={busy || !canOpenInVault}
             className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:opacity-40 touch-manipulation"
             title={
               attached && !attached.missing
                 ? 'Write current lorebook to the attached vault book and open it'
-                : 'Create vault lorebook from embedded book and open it'
+                : canOpenInVault
+                  ? 'Create vault lorebook from embedded book and open it'
+                  : 'Add at least one entry before opening in the vault'
             }
           >
             <ExternalLink className="h-3.5 w-3.5" />
@@ -533,5 +550,48 @@ function AttachmentPanel(): React.ReactElement | null {
         )}
       </div>
     </div>
+  );
+}
+
+export function DeleteEmbeddedLorebookButton({
+  entryCount,
+  onDelete,
+}: {
+  entryCount: number;
+  onDelete: () => void;
+}): React.ReactElement {
+  const api = useContext(AttachmentContext);
+
+  const handleClick = () => {
+    const linked = Boolean(api?.attached);
+    const unlink = api?.removeVaultLink;
+    const entryClause =
+      entryCount > 0
+        ? `Delete this lorebook and all ${entryCount} entries?`
+        : 'Delete this lorebook?';
+    const linkClause = linked
+      ? ' This also removes the link to the lorebook vault.'
+      : '';
+    const message = `${entryClause}${linkClause} This cannot be undone.`;
+    if (!window.confirm(message)) return;
+
+    void (async () => {
+      if (linked && unlink) {
+        await unlink();
+      }
+      onDelete();
+    })();
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="flex w-full items-center justify-center gap-2 rounded-lg border border-danger/30 px-2.5 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-soft touch-manipulation"
+      title="Delete the entire lorebook"
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+      Delete Lorebook
+    </button>
   );
 }

@@ -83,6 +83,25 @@ export class LorebookAttachmentService {
     return this.setAttachments(characterId, [lorebookId]);
   }
 
+  /**
+   * Create a vault book from the character's embedded lorebook and attach it
+   * before returning, so the workspace linked list can load on first paint.
+   */
+  async createAndAttachFromEmbedded(
+    characterId: string,
+    embedded: CharacterBook | undefined,
+    fallbackName: string,
+  ): Promise<VaultLorebook> {
+    const book = cloneEmbeddedBook(embedded, fallbackName);
+    const created = await characterDb.createLorebook({
+      name: book.name || fallbackName,
+      description: book.description || '',
+      book,
+    });
+    await this.attach(characterId, created.id);
+    return created;
+  }
+
   async detach(characterId: string, lorebookId?: string): Promise<CharacterLorebookAttachments> {
     const current = await this.getAttachments(characterId);
     if (lorebookId !== undefined && !current.lorebookIds.includes(lorebookId)) {
