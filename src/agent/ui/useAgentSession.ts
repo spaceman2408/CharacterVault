@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChatMessage } from '../../components/ai/types';
-import { generateMessageId } from '../../components/ai/utils';
+import type { ChatMessage, ResponseStats } from '../../components/ai/types';
+import {
+  abortResponseStats,
+  accumulateResponseStats,
+  generateMessageId,
+  toResponseStats,
+  type AccumulatedResponseStats,
+} from '../../components/ai/utils';
 import type { AIConfig, PromptSettings, SamplerSettings } from '../../db/characterTypes';
 import { AIError, AIService } from '../../services/AIService';
+import { getProviderSelectionId } from '../../services/providers';
 import type { ChatMessage as ServiceChatMessage } from '../../services/AIService';
 import { AGENT_MAX_OUTPUT_TOKENS, runLoop } from '../core/runLoop';
 import { stripFences } from '../core/stripFences';
 import type { AgentHost, AgentMessage } from '../core/types';
-import { clipLiveReasoning, LIVE_REASONING_FLUSH_MS } from './liveReasoning';
+import { ChunkString } from '../../utils/chunkString';
+import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
 import { compactToolResultMessage, isLookupOnlyTurn } from './notices';
 import { estimatePromptTokens } from './promptUsage';
 import type { AgentToolEvent } from './types';
@@ -93,9 +101,14 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const lastAssistantIdRef = useRef<string | null>(null);
   const chatHistoryRef = useRef(chatHistory);
   const toolEventsRef = useRef(toolEventsByMessageId);
-  const streamContentRef = useRef('');
-  const streamReasoningRef = useRef('');
+  const streamContentRef = useRef(new ChunkString());
+  const streamReasoningRef = useRef(new ChunkString());
   const reasoningFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingStatsRef = useRef<AccumulatedResponseStats | undefined>(undefined);
+  const callTimingRef = useRef<{
+    requestStartTime: number;
+    firstTokenTime: number | null;
+  } | null>(null);
 
   const createHostRef = useRef(createHost);
   const flushDraftRef = useRef(flushDraft);
@@ -125,8 +138,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   }, []);
 
   const clearStreamDraft = useCallback(() => {
-    streamContentRef.current = '';
-    streamReasoningRef.current = '';
+    streamContentRef.current.clear();
+    streamReasoningRef.current.clear();
     cancelReasoningFlush();
     setStreamingReasoning('');
   }, [cancelReasoningFlush]);
@@ -137,16 +150,16 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       reasoningFlushTimerRef.current = null;
       if (!isMountedRef.current) return;
       if (!(aiConfigRef.current.showReasoning ?? true)) return;
-      setStreamingReasoning(clipLiveReasoning(streamReasoningRef.current));
+      setStreamingReasoning(streamReasoningRef.current.tail(LIVE_REASONING_MAX_CHARS));
     }, LIVE_REASONING_FLUSH_MS);
   }, []);
 
   const appendStreamChunk = useCallback((chunk: { content?: string; reasoning?: string }) => {
     if (chunk.reasoning) {
-      streamReasoningRef.current += chunk.reasoning;
+      streamReasoningRef.current.append(chunk.reasoning);
       if (aiConfigRef.current.showReasoning ?? true) scheduleReasoningFlush();
     }
-    if (chunk.content) streamContentRef.current += chunk.content;
+    if (chunk.content) streamContentRef.current.append(chunk.content);
   }, [scheduleReasoningFlush]);
 
   const attachError = useCallback((message: string) => {
@@ -155,6 +168,30 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     if (targetId) {
       setErrorByMessageId((prev) => ({ ...prev, [targetId]: message }));
     }
+  }, []);
+
+  const consumeAssistantStats = useCallback((includeTokensPerSecond: boolean): ResponseStats | undefined => {
+    const config = aiConfigRef.current;
+    const timing = callTimingRef.current;
+    const acc = pendingStatsRef.current;
+    pendingStatsRef.current = undefined;
+    callTimingRef.current = null;
+
+    if (!includeTokensPerSecond) {
+      if (timing) {
+        return abortResponseStats({
+          requestStartTime: timing.requestStartTime,
+          firstTokenTime: timing.firstTokenTime,
+          modelId: config.modelId,
+          providerId: getProviderSelectionId(config),
+        });
+      }
+      if (!acc) return undefined;
+      return { ttft: acc.ttft, modelId: acc.modelId, providerId: acc.providerId };
+    }
+
+    if (!acc) return undefined;
+    return toResponseStats(acc);
   }, []);
 
   const dropLookupOnlyMessage = useCallback((messageId: string | null) => {
@@ -181,12 +218,14 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
   useEffect(() => {
     isMountedRef.current = true;
+    const contentBuf = streamContentRef.current;
+    const reasoningBuf = streamReasoningRef.current;
     return () => {
       isMountedRef.current = false;
       requestIdRef.current += 1;
       abortedRef.current = true;
-      streamContentRef.current = '';
-      streamReasoningRef.current = '';
+      contentBuf.clear();
+      reasoningBuf.clear();
       if (reasoningFlushTimerRef.current != null) {
         clearTimeout(reasoningFlushTimerRef.current);
         reasoningFlushTimerRef.current = null;
@@ -220,6 +259,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     aiServiceRef.current = null;
     clearStreamDraft();
     lastAssistantIdRef.current = null;
+    pendingStatsRef.current = undefined;
+    callTimingRef.current = null;
     chatHistoryRef.current = [];
     setChatHistory([]);
     toolEventsRef.current = {};
@@ -282,6 +323,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       setError(null);
       clearStreamDraft();
       lastAssistantIdRef.current = null;
+      pendingStatsRef.current = undefined;
+      callTimingRef.current = null;
       onRunningChangeRef.current?.(true);
 
       const historyForLoop: AgentMessage[] = priorHistory.map((message) => ({
@@ -330,16 +373,43 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
             if (!isCurrent() || abortedRef.current) {
               throw new AIError('Request was cancelled', 'unknown');
             }
-            return aiService.chat(toServiceMessages(messages), undefined, onChunk, {
-              maxTokens: AGENT_MAX_OUTPUT_TOKENS,
-              tools: host.tools
-                ? host.tools.map((tool) => ({
-                    name: tool.name,
-                    description: tool.description,
-                    parameters: tool.parameters,
-                  }))
-                : undefined,
+            const requestStartTime = Date.now();
+            let firstTokenTime: number | null = null;
+            callTimingRef.current = { requestStartTime, firstTokenTime: null };
+            const wrappedChunk = onChunk
+              ? (chunk: { content?: string; reasoning?: string }) => {
+                  if (firstTokenTime === null && (chunk.content || chunk.reasoning)) {
+                    firstTokenTime = Date.now();
+                    callTimingRef.current = { requestStartTime, firstTokenTime };
+                  }
+                  onChunk(chunk);
+                }
+              : undefined;
+            const completion = await aiService.chat(
+              toServiceMessages(messages),
+              undefined,
+              wrappedChunk,
+              {
+                maxTokens: AGENT_MAX_OUTPUT_TOKENS,
+                tools: host.tools
+                  ? host.tools.map((tool) => ({
+                      name: tool.name,
+                      description: tool.description,
+                      parameters: tool.parameters,
+                    }))
+                  : undefined,
+              },
+            );
+            pendingStatsRef.current = accumulateResponseStats(pendingStatsRef.current, {
+              requestStartTime,
+              firstTokenTime,
+              content: completion.content ?? '',
+              reasoning: completion.reasoning,
+              modelId: config.modelId,
+              providerId: getProviderSelectionId(config),
             });
+            callTimingRef.current = null;
+            return completion;
           },
           onEvent: (event) => {
             if (!isCurrent() || abortedRef.current) return;
@@ -360,6 +430,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 content: event.text,
                 reasoning: event.reasoning,
                 timestamp: Date.now(),
+                stats: consumeAssistantStats(true),
                 suppressInitialAnimation: streaming,
               };
               const nextHistory = [...chatHistoryRef.current, assistantMessage];
@@ -408,8 +479,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
         if (result.reason === 'abort' && isCurrent()) {
           dropLookupOnlyMessage(lastAssistantIdRef.current);
-          const speech = stripFences(streamContentRef.current);
-          const reasoning = streamReasoningRef.current;
+          const speech = stripFences(streamContentRef.current.toString());
+          const reasoning = streamReasoningRef.current.toString();
           if (speech || reasoning) {
             const id = generateMessageId();
             lastAssistantIdRef.current = id;
@@ -421,6 +492,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 content: speech,
                 reasoning: reasoning || undefined,
                 timestamp: Date.now(),
+                stats: consumeAssistantStats(false),
                 suppressInitialAnimation: true,
               },
             ];
@@ -456,7 +528,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         }
       }
     },
-    [appendStreamChunk, attachError, clearStreamDraft, dropLookupOnlyMessage, isAIConfigured],
+    [appendStreamChunk, attachError, clearStreamDraft, consumeAssistantStats, dropLookupOnlyMessage, isAIConfigured],
   );
 
   const handleRegenerate = useCallback(async () => {

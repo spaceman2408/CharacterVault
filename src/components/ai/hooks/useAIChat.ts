@@ -4,11 +4,17 @@
  */
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
-import { AIService, AIError, estimateTokens } from '../../../services/AIService';
+import { AIService, AIError } from '../../../services/AIService';
 import { getProviderSelectionId } from '../../../services/providers';
 import type { AIConfig, SamplerSettings, PromptSettings } from '../../../db/characterTypes';
 import type { ChatMessage, ConversationMessage } from '../types';
-import { generateMessageId } from '../utils';
+import {
+  abortResponseStats,
+  LIVE_REASONING_MAX_CHARS,
+  computeResponseStats,
+  generateMessageId,
+} from '../utils';
+import { ChunkString } from '../../../utils/chunkString';
 
 export const MAX_CHAT_MESSAGES = 80;
 
@@ -84,7 +90,8 @@ function buildPartialAssistantMessage(
     enableStreaming: boolean;
     modelId: string;
     providerId: string | undefined;
-    ttft?: number;
+    requestStartTime: number;
+    firstTokenTime: number | null;
   }
 ): ChatMessage | null {
   if (!content && !reasoning) return null;
@@ -95,11 +102,12 @@ function buildPartialAssistantMessage(
     content,
     reasoning: reasoning || undefined,
     timestamp: Date.now(),
-    stats: {
-      ttft: options.ttft,
+    stats: abortResponseStats({
+      requestStartTime: options.requestStartTime,
+      firstTokenTime: options.firstTokenTime,
       modelId: options.modelId,
       providerId: options.providerId,
-    },
+    }),
     suppressInitialAnimation: options.enableStreaming,
   };
 }
@@ -111,8 +119,8 @@ function buildAssistantMessage(
     enableStreaming: boolean;
     modelId: string;
     providerId: string | undefined;
-    ttft?: number;
-    tokensPerSecond?: number;
+    requestStartTime: number;
+    firstTokenTime: number | null;
   }
 ): ChatMessage {
   return {
@@ -121,12 +129,14 @@ function buildAssistantMessage(
     content,
     reasoning,
     timestamp: Date.now(),
-    stats: {
-      ttft: options.ttft,
-      tokensPerSecond: options.tokensPerSecond,
+    stats: computeResponseStats({
+      requestStartTime: options.requestStartTime,
+      firstTokenTime: options.firstTokenTime,
+      content,
+      reasoning,
       modelId: options.modelId,
       providerId: options.providerId,
-    },
+    }),
     suppressInitialAnimation: options.enableStreaming,
   };
 }
@@ -150,8 +160,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const [streamingReasoning, setStreamingReasoning] = useState('');
 
   const aiServiceRef = useRef<AIService | null>(null);
-  const streamContentRef = useRef('');
-  const streamReasoningRef = useRef('');
+  const streamContentRef = useRef(new ChunkString());
+  const streamReasoningRef = useRef(new ChunkString());
   const streamRafRef = useRef<number | null>(null);
   const streamDirtyRef = useRef(false);
 
@@ -213,14 +223,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     if (!streamDirtyRef.current) return;
     streamDirtyRef.current = false;
     if (!isMountedRef.current) return;
-    setStreamingContent(streamContentRef.current);
-    setStreamingReasoning(streamReasoningRef.current);
+    setStreamingContent(streamContentRef.current.toString());
+    setStreamingReasoning(streamReasoningRef.current.tail(LIVE_REASONING_MAX_CHARS));
   }, []);
 
   const clearStreamDraft = useCallback(() => {
     cancelStreamRaf();
-    streamContentRef.current = '';
-    streamReasoningRef.current = '';
+    streamContentRef.current.clear();
+    streamReasoningRef.current.clear();
     if (isMountedRef.current) {
       setStreamingContent('');
       setStreamingReasoning('');
@@ -231,11 +241,11 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     (chunk: { content?: string; reasoning?: string }) => {
       let changed = false;
       if (chunk.reasoning) {
-        streamReasoningRef.current += chunk.reasoning;
+        streamReasoningRef.current.append(chunk.reasoning);
         changed = true;
       }
       if (chunk.content) {
-        streamContentRef.current += chunk.content;
+        streamContentRef.current.append(chunk.content);
         changed = true;
       }
       if (!changed) return;
@@ -280,8 +290,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   const handleNewChat = useCallback(() => {
     invalidateInFlight('new-chat');
-    streamContentRef.current = '';
-    streamReasoningRef.current = '';
+    streamContentRef.current.clear();
+    streamReasoningRef.current.clear();
     setChatHistory([]);
     setError(null);
     setIsProcessing(false);
@@ -400,33 +410,21 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           return;
         }
 
-        const contentTokens = estimateTokens(result.content);
-        const reasoningTokens = estimateTokens(result.reasoning ?? '');
-        const totalTokens = contentTokens + reasoningTokens;
-        const completionTime =
-          firstTokenTime !== null
-            ? Date.now() - firstTokenTime
-            : Date.now() - requestStartTime;
-        const ttft =
-          firstTokenTime !== null ? firstTokenTime - requestStartTime : completionTime;
-        const tokensPerSecond =
-          completionTime > 0 ? totalTokens / (completionTime / 1000) : undefined;
-
         const content =
           streaming && streamContentRef.current.length > 0
-            ? streamContentRef.current
+            ? streamContentRef.current.toString()
             : result.content;
         const reasoning =
           streaming && streamReasoningRef.current.length > 0
-            ? streamReasoningRef.current || undefined
+            ? streamReasoningRef.current.toString() || undefined
             : result.reasoning;
 
         const assistantMessage = buildAssistantMessage(content, reasoning, {
           enableStreaming: streaming,
           modelId: config.modelId,
           providerId: getProviderSelectionId(config),
-          ttft,
-          tokensPerSecond,
+          requestStartTime,
+          firstTokenTime,
         });
 
         setChatHistory(trimHistory([...historyToKeep, assistantMessage]));
@@ -447,14 +445,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         if (isRequestCancelled(err)) {
           console.log('[useAIChat] AI request cancelled by user');
           const partial = buildPartialAssistantMessage(
-            streamContentRef.current,
-            streamReasoningRef.current,
+            streamContentRef.current.toString(),
+            streamReasoningRef.current.toString(),
             {
               enableStreaming: streaming,
               modelId: config.modelId,
               providerId: getProviderSelectionId(config),
-              ttft:
-                firstTokenTime !== null ? firstTokenTime - requestStartTime : undefined,
+              requestStartTime,
+              firstTokenTime,
             }
           );
           if (partial) {
@@ -480,8 +478,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           finishTurn();
         } else {
           cancelStreamRaf();
-          streamContentRef.current = '';
-          streamReasoningRef.current = '';
+          streamContentRef.current.clear();
+          streamReasoningRef.current.clear();
         }
       }
     },
@@ -561,11 +559,13 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   useEffect(() => {
     isMountedRef.current = true;
+    const contentBuf = streamContentRef.current;
+    const reasoningBuf = streamReasoningRef.current;
     return () => {
       isMountedRef.current = false;
       invalidateInFlight('unmount');
-      streamContentRef.current = '';
-      streamReasoningRef.current = '';
+      contentBuf.clear();
+      reasoningBuf.clear();
     };
   }, [invalidateInFlight]);
 
