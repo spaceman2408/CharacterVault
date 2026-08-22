@@ -23,6 +23,7 @@ import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
 import { usePersistedPanelWidth } from '../ai/hooks/usePersistedPanelWidth';
 import { LinkedCharactersMenu } from './LinkedCharactersMenu';
+import { flushChatSessions } from '../../utils/chatSessionFlush';
 import { flushLorebookDraft } from '../editor/lorebook/draftFlush';
 import type {
   CharacterBook,
@@ -421,14 +422,22 @@ export function LorebookWorkspace(): React.ReactElement {
   }, [updateLorebook, flushLinkedSync]);
 
   const handleClose = useCallback(async () => {
-    await flushPendingLorebook();
-    closeLorebook();
+    try {
+      await flushChatSessions();
+      await flushPendingLorebook();
+    } finally {
+      closeLorebook();
+    }
   }, [flushPendingLorebook, closeLorebook]);
 
   const handleOpenLinkedCharacter = useCallback(
     async (characterId: string) => {
-      await flushPendingLorebook();
-      await openCharacter(characterId);
+      try {
+        await flushChatSessions();
+        await flushPendingLorebook();
+      } finally {
+        await openCharacter(characterId);
+      }
     },
     [flushPendingLorebook, openCharacter],
   );
@@ -620,7 +629,7 @@ export function LorebookWorkspace(): React.ReactElement {
           )}
 
           {isChatOpen && (
-            <div className="flex h-full min-h-0 w-full flex-col">
+            <div key={currentLorebook.id} className="flex h-full min-h-0 w-full flex-col">
               {agentMode ? (
                 <LorebookAgentChat
                   aiConfig={agentAiConfig}

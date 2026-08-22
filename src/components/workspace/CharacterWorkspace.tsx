@@ -13,6 +13,7 @@ import { createEmptyCharacterBook } from '../../db/characterTypes';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { generateThumbnail } from '../../utils/thumbnail';
 import { SectionEditor } from '../editor/SectionEditor';
+import { flushChatSessions } from '../../utils/chatSessionFlush';
 import { flushLorebookDraft } from '../editor/lorebook/draftFlush';
 import { ContextPanel } from '../ai/ContextPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
@@ -386,6 +387,7 @@ function ImageEditor(): React.ReactElement {
  * CharacterHeader component - Header with character info and actions
  */
 interface CharacterHeaderProps {
+  onClose: () => void;
   onOpenSettings: () => void;
   onOpenRevisions: () => void;
   isOpeningRevisions?: boolean;
@@ -396,7 +398,8 @@ interface CharacterHeaderProps {
   isMobile: boolean;
 }
 
-function CharacterHeader({ 
+function CharacterHeader({
+  onClose,
   onOpenSettings, 
   onOpenRevisions,
   isOpeningRevisions = false,
@@ -406,7 +409,7 @@ function CharacterHeader({
   onToggleChat,
   isMobile 
 }: CharacterHeaderProps): React.ReactElement {
-  const { currentCharacter, closeCharacter } = useCharacterContext();
+  const { currentCharacter } = useCharacterContext();
 
   if (!currentCharacter) return <></>;
 
@@ -450,7 +453,7 @@ function CharacterHeader({
     <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-surface/60 backdrop-blur-xl border-b border-border/60 shrink-0">
       <div className="flex items-center gap-3 md:gap-4">
         <button
-          onClick={closeCharacter}
+          onClick={onClose}
           className="p-2 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent active:scale-95 shrink-0"
           title="Back to characters"
         >
@@ -732,7 +735,8 @@ function CharacterWorkspaceContent(): React.ReactElement {
 
   return (
     <CharacterEditorProvider>
-      <CharacterWorkspaceInner 
+      <CharacterWorkspaceInner
+        key={currentCharacter.id}
         isSettingsOpen={isSettingsOpen}
         setIsSettingsOpen={setIsSettingsOpen}
         isContextOpen={isContextOpen}
@@ -767,6 +771,8 @@ function CharacterWorkspaceInner({
   setIsChatOpen,
   isMobile,
 }: CharacterWorkspaceInnerProps): React.ReactElement {
+  const { closeCharacter } = useCharacterContext();
+  const closingRef = React.useRef(false);
   const { 
     currentCharacter,
     activeSection,
@@ -863,6 +869,18 @@ function CharacterWorkspaceInner({
     flushLorebookDraft();
   }, [flushPendingSaves]);
 
+  const handleClose = useCallback(async () => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    try {
+      await flushChatSessions();
+      flushLorebookDraft();
+      await flushPendingSaves();
+    } finally {
+      closeCharacter();
+    }
+  }, [closeCharacter, flushPendingSaves]);
+
   const takeAgentSnapshot = useCallback(async () => {
     const latest = await flushPendingSaves();
     const character = latest ?? currentCharacter;
@@ -947,7 +965,8 @@ function CharacterWorkspaceInner({
   return (
     <div className="h-dvh w-full flex flex-col bg-bg overflow-hidden">
       
-      <CharacterHeader 
+      <CharacterHeader
+        onClose={() => { void handleClose(); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenRevisions={() => { void openHistory(); }}
         isOpeningRevisions={isOpeningHistory}

@@ -16,6 +16,7 @@ import {
   type ResolvedLorebookAttachment,
 } from '../../services/LorebookAttachmentService';
 import { useCharacterEditorContext, useLorebookContext } from '../../context';
+import { flushChatSessions } from '../../utils/chatSessionFlush';
 import { flushLorebookDraft } from './lorebook/draftFlush';
 import { FieldInfoTip } from './lorebook/FieldInfoTip';
 import type { LorebookAttachmentControls } from './lorebook/types';
@@ -215,6 +216,7 @@ export function LorebookAttachmentProvider({
 
   const pushEmbeddedAndOpen = useCallback(
     async (lorebookId: string) => {
+      await flushChatSessions();
       flushLorebookDraft();
       const latest = await flushPendingSaves();
       const book = latest?.data.characterBook ?? embeddedBook;
@@ -278,6 +280,7 @@ export function LorebookAttachmentProvider({
 
     setBusy(true);
     try {
+      await flushChatSessions();
       flushLorebookDraft();
       const latest = await flushPendingSaves();
       const book = latest?.data.characterBook ?? embeddedBook;

@@ -17,6 +17,7 @@ import {
   generateMessageId,
 } from '../utils';
 import { ChunkString } from '../../../utils/chunkString';
+import { registerChatSessionFlush } from '../../../utils/chatSessionFlush';
 
 export const MAX_CHAT_MESSAGES = 80;
 
@@ -169,6 +170,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   const requestGenerationRef = useRef(0);
   const isMountedRef = useRef(true);
+  const leavingRef = useRef(false);
+  const runPromiseRef = useRef(Promise.resolve());
 
   const chatHistoryRef = useRef(chatHistory);
   const isProcessingRef = useRef(isProcessing);
@@ -265,7 +268,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   // New chat / unmount only — not Stop (Stop must keep generation so partial can commit).
   const invalidateInFlight = useCallback(
-    (reason: 'new-chat' | 'unmount') => {
+    (reason: 'new-chat' | 'unmount' | 'leave') => {
       requestGenerationRef.current += 1;
       cancelStreamRaf();
       const service = aiServiceRef.current;
@@ -293,18 +296,52 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     }
   }, []);
 
+  const releaseSession = useCallback(
+    (reason: 'new-chat' | 'unmount') => {
+      invalidateInFlight(reason);
+      streamContentRef.current.clear();
+      streamReasoningRef.current.clear();
+      chatHistoryRef.current = [];
+      isProcessingRef.current = false;
+      if (reason !== 'unmount' && isMountedRef.current) {
+        setChatHistory([]);
+        setError(null);
+        setIsProcessing(false);
+        setIsStreaming(false);
+        setStreamingContent('');
+        setStreamingReasoning('');
+      }
+    },
+    [invalidateInFlight],
+  );
+
+  const releaseSessionRef = useRef(releaseSession);
+  releaseSessionRef.current = releaseSession;
+
   const handleNewChat = useCallback(() => {
-    invalidateInFlight('new-chat');
+    releaseSession('new-chat');
+  }, [releaseSession]);
+
+  const drainSession = useCallback(async () => {
+    leavingRef.current = true;
+    invalidateInFlight('leave');
     streamContentRef.current.clear();
     streamReasoningRef.current.clear();
-    setChatHistory([]);
-    setError(null);
-    setIsProcessing(false);
     isProcessingRef.current = false;
-    setIsStreaming(false);
-    setStreamingContent('');
-    setStreamingReasoning('');
+    if (isMountedRef.current) {
+      setIsProcessing(false);
+      setIsStreaming(false);
+      setStreamingContent('');
+      setStreamingReasoning('');
+    }
+    try {
+      await runPromiseRef.current;
+    } finally {
+      if (isMountedRef.current) leavingRef.current = false;
+    }
   }, [invalidateInFlight]);
+
+  useEffect(() => registerChatSessionFlush(drainSession), [drainSession]);
 
   const handleDeleteMessage = useCallback((messageId: string) => {
     if (isProcessingRef.current) return;
@@ -332,6 +369,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       historyForContext: ChatMessage[];
       historyToKeep: ChatMessage[];
     }) => {
+      const run = (async () => {
+        if (leavingRef.current) return;
       const { question, historyForContext, historyToKeep } = args;
       const config = aiConfigRef.current;
       const streaming = enableStreamingRef.current;
@@ -487,12 +526,18 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           streamReasoningRef.current.clear();
         }
       }
+      })();
+      runPromiseRef.current = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      await run;
     },
     [appendStreamChunk, cancelStreamRaf, clearStreamDraft, finishTurn]
   );
 
   const handleRegenerate = useCallback(async () => {
-    if (isProcessingRef.current) return;
+    if (leavingRef.current || isProcessingRef.current) return;
 
     const history = chatHistoryRef.current;
     if (history.length === 0) return;
@@ -522,7 +567,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   const handleAsk = useCallback(
     async (question: string) => {
-      if (isProcessingRef.current) return;
+      if (leavingRef.current || isProcessingRef.current) return;
 
       if (!question.trim()) {
         const lastMessage = chatHistoryRef.current[chatHistoryRef.current.length - 1];
@@ -564,15 +609,13 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   useEffect(() => {
     isMountedRef.current = true;
-    const contentBuf = streamContentRef.current;
-    const reasoningBuf = streamReasoningRef.current;
+    leavingRef.current = false;
     return () => {
       isMountedRef.current = false;
-      invalidateInFlight('unmount');
-      contentBuf.clear();
-      reasoningBuf.clear();
+      leavingRef.current = true;
+      releaseSessionRef.current('unmount');
     };
-  }, [invalidateInFlight]);
+  }, []);
 
   return {
     chatHistory,

@@ -17,6 +17,7 @@ import { AGENT_MAX_OUTPUT_TOKENS, runLoop } from '../core/runLoop';
 import { stripFences } from '../core/stripFences';
 import type { AgentHost, AgentMessage } from '../core/types';
 import { ChunkString } from '../../utils/chunkString';
+import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
 import { compactToolResultMessage, isLookupOnlyTurn } from './notices';
 import { estimatePromptTokens } from './promptUsage';
@@ -144,6 +145,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     requestStartTime: number;
     firstTokenTime: number | null;
   } | null>(null);
+  const runPromiseRef = useRef(Promise.resolve());
+  const leavingRef = useRef(false);
 
   const createHostRef = useRef(createHost);
   const flushDraftRef = useRef(flushDraft);
@@ -270,26 +273,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     });
   }, []);
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    const contentBuf = streamContentRef.current;
-    const reasoningBuf = streamReasoningRef.current;
-    return () => {
-      isMountedRef.current = false;
-      requestIdRef.current += 1;
-      abortedRef.current = true;
-      contentBuf.clear();
-      reasoningBuf.clear();
-      if (reasoningFlushTimerRef.current != null) {
-        clearTimeout(reasoningFlushTimerRef.current);
-        reasoningFlushTimerRef.current = null;
-      }
-      aiServiceRef.current?.abort();
-      aiServiceRef.current = null;
-      onRunningChangeRef.current?.(false);
-    };
-  }, []);
-
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -306,28 +289,80 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     onRunningChangeRef.current?.(false);
   }, []);
 
-  const handleNewChat = useCallback(() => {
+  const abortInFlight = useCallback(() => {
     requestIdRef.current += 1;
     abortedRef.current = true;
     aiServiceRef.current?.abort();
     aiServiceRef.current = null;
-    clearStreamDraft();
-    lastAssistantIdRef.current = null;
+    streamContentRef.current.clear();
+    streamReasoningRef.current.clear();
+    cancelReasoningFlush();
     pendingStatsRef.current = undefined;
     callTimingRef.current = null;
-    chatHistoryRef.current = [];
-    setChatHistory([]);
-    toolEventsRef.current = {};
-    setToolEventsByMessageId({});
-    setErrorByMessageId({});
-    setError(null);
-    setBusyLabel(null);
-    setIsProcessing(false);
     isProcessingRef.current = false;
-    setIsStreaming(false);
-    setLivePromptTokens(null);
     onRunningChangeRef.current?.(false);
-  }, [clearStreamDraft]);
+  }, [cancelReasoningFlush]);
+
+  const dropTranscriptRefs = useCallback(() => {
+    lastAssistantIdRef.current = null;
+    chatHistoryRef.current = [];
+    toolEventsRef.current = {};
+    errorByMessageIdRef.current = {};
+  }, []);
+
+  const releaseSession = useCallback(
+    (updateUi: boolean) => {
+      abortInFlight();
+      dropTranscriptRefs();
+      if (updateUi && isMountedRef.current) {
+        setChatHistory([]);
+        setToolEventsByMessageId({});
+        setErrorByMessageId({});
+        setError(null);
+        setBusyLabel(null);
+        setIsProcessing(false);
+        setIsStreaming(false);
+        setLivePromptTokens(null);
+        setStreamingReasoning('');
+      }
+    },
+    [abortInFlight, dropTranscriptRefs],
+  );
+
+  const releaseSessionRef = useRef(releaseSession);
+  releaseSessionRef.current = releaseSession;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    leavingRef.current = false;
+    return () => {
+      isMountedRef.current = false;
+      leavingRef.current = true;
+      releaseSessionRef.current(false);
+    };
+  }, []);
+
+  const handleNewChat = useCallback(() => {
+    releaseSession(true);
+  }, [releaseSession]);
+
+  const drainSession = useCallback(async () => {
+    leavingRef.current = true;
+    abortInFlight();
+    if (isMountedRef.current) {
+      setIsProcessing(false);
+      setIsStreaming(false);
+      setBusyLabel(null);
+      setStreamingReasoning('');
+    }
+    try {
+      await runPromiseRef.current;
+    } finally {
+      if (isMountedRef.current) leavingRef.current = false;
+    }
+  }, [abortInFlight]);
+
+  useEffect(() => registerChatSessionFlush(drainSession), [drainSession]);
 
   const handleDeleteMessage = useCallback((messageId: string) => {
     if (isProcessingRef.current) return;
@@ -359,225 +394,233 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
   const startRun = useCallback(
     async (question: string, priorHistory: ChatMessage[]) => {
-      if (!isAIConfigured) {
-        const message = 'Please configure AI settings first';
-        setError(message);
-        const targetId = chatHistoryRef.current.at(-1)?.id;
-        if (targetId) {
-          setErrorByMessageId((prev) => ({ ...prev, [targetId]: message }));
-        }
-        return;
-      }
-
-      const requestId = ++requestIdRef.current;
-      abortedRef.current = false;
-      isProcessingRef.current = true;
-      setIsProcessing(true);
-      setBusyLabel(null);
-      setError(null);
-      clearStreamDraft();
-      lastAssistantIdRef.current = null;
-      pendingStatsRef.current = undefined;
-      callTimingRef.current = null;
-      onRunningChangeRef.current?.(true);
-
-      const historyForLoop: AgentMessage[] = priorHistory.map((message) => ({
-        role: message.role,
-        content: message.content,
-      }));
-
-      const isCurrent = () => isMountedRef.current && requestId === requestIdRef.current;
-      let runService: AIService | null = null;
-
-      try {
-        await flushDraftRef.current();
-        if (!isCurrent() || abortedRef.current) {
+      const run = (async () => {
+        if (leavingRef.current) return;
+        if (!isAIConfigured) {
+          const message = 'Please configure AI settings first';
+          setError(message);
+          const targetId = chatHistoryRef.current.at(-1)?.id;
+          if (targetId) {
+            setErrorByMessageId((prev) => ({ ...prev, [targetId]: message }));
+          }
           return;
         }
 
-        const config = aiConfigRef.current;
-        const streaming = config.enableStreaming ?? true;
-        const aiService = new AIService(config, samplerSettingsRef.current, promptSettingsRef.current);
-        runService = aiService;
-        aiServiceRef.current = aiService;
+        const requestId = ++requestIdRef.current;
+        abortedRef.current = false;
+        isProcessingRef.current = true;
+        setIsProcessing(true);
+        setBusyLabel(null);
+        setError(null);
+        clearStreamDraft();
+        lastAssistantIdRef.current = null;
+        pendingStatsRef.current = undefined;
+        callTimingRef.current = null;
+        onRunningChangeRef.current?.(true);
 
-        const host = createHostRef.current();
+        const historyForLoop: AgentMessage[] = priorHistory.map((message) => ({
+          role: message.role,
+          content: message.content,
+        }));
 
-        const result = await runLoop({
-          host,
-          userMessage: question,
-          history: historyForLoop,
-          isAborted: () => abortedRef.current || !isCurrent(),
-          onPrompt: (prompt) => {
-            if (!isCurrent() || abortedRef.current) return;
-            setLivePromptTokens(estimatePromptTokens(prompt));
-          },
-          onChunk: streaming
-            ? (chunk) => {
-                if (!isCurrent() || abortedRef.current) return;
-                appendStreamChunk(chunk);
-              }
-            : undefined,
-          complete: async (messages, onChunk) => {
-            if (!isCurrent() || abortedRef.current) {
-              throw new AIError('Request was cancelled', 'unknown');
-            }
-            if (isMountedRef.current) setIsStreaming(streaming);
-            clearStreamDraft();
-            if (!isCurrent() || abortedRef.current) {
-              throw new AIError('Request was cancelled', 'unknown');
-            }
-            const requestStartTime = Date.now();
-            let firstTokenTime: number | null = null;
-            callTimingRef.current = { requestStartTime, firstTokenTime: null };
-            const wrappedChunk = onChunk
-              ? (chunk: { content?: string; reasoning?: string }) => {
-                  if (firstTokenTime === null && (chunk.content || chunk.reasoning)) {
-                    firstTokenTime = Date.now();
-                    callTimingRef.current = { requestStartTime, firstTokenTime };
-                  }
-                  onChunk(chunk);
+        const isCurrent = () => isMountedRef.current && requestId === requestIdRef.current;
+        let runService: AIService | null = null;
+
+        try {
+          await flushDraftRef.current();
+          if (!isCurrent() || abortedRef.current) {
+            return;
+          }
+
+          const config = aiConfigRef.current;
+          const streaming = config.enableStreaming ?? true;
+          const aiService = new AIService(config, samplerSettingsRef.current, promptSettingsRef.current);
+          runService = aiService;
+          aiServiceRef.current = aiService;
+
+          const host = createHostRef.current();
+
+          const result = await runLoop({
+            host,
+            userMessage: question,
+            history: historyForLoop,
+            isAborted: () => abortedRef.current || !isCurrent(),
+            onPrompt: (prompt) => {
+              if (!isCurrent() || abortedRef.current) return;
+              setLivePromptTokens(estimatePromptTokens(prompt));
+            },
+            onChunk: streaming
+              ? (chunk) => {
+                  if (!isCurrent() || abortedRef.current) return;
+                  appendStreamChunk(chunk);
                 }
-              : undefined;
-            const completion = await aiService.chat(
-              toServiceMessages(messages),
-              undefined,
-              wrappedChunk,
-              {
-                maxTokens: AGENT_MAX_OUTPUT_TOKENS,
-                tools: host.tools
-                  ? host.tools.map((tool) => ({
-                      name: tool.name,
-                      description: tool.description,
-                      parameters: tool.parameters,
-                    }))
-                  : undefined,
-              },
-            );
-            pendingStatsRef.current = accumulateResponseStats(pendingStatsRef.current, {
-              requestStartTime,
-              firstTokenTime,
-              content: completion.content ?? '',
-              reasoning: completion.reasoning,
-              modelId: config.modelId,
-              providerId: getProviderSelectionId(config),
-            });
-            callTimingRef.current = null;
-            return completion;
-          },
-          onEvent: (event) => {
-            if (!isCurrent() || abortedRef.current) return;
-            if (event.type === 'tool_start') {
-              setBusyLabel(event.toolName);
-              return;
-            }
-            if (event.type === 'assistant_text') {
-              dropLookupOnlyMessage(lastAssistantIdRef.current);
+              : undefined,
+            complete: async (messages, onChunk) => {
+              if (!isCurrent() || abortedRef.current) {
+                throw new AIError('Request was cancelled', 'unknown');
+              }
+              if (isMountedRef.current) setIsStreaming(streaming);
               clearStreamDraft();
-              setBusyLabel(null);
-              if (isMountedRef.current) setIsStreaming(false);
+              if (!isCurrent() || abortedRef.current) {
+                throw new AIError('Request was cancelled', 'unknown');
+              }
+              const requestStartTime = Date.now();
+              let firstTokenTime: number | null = null;
+              callTimingRef.current = { requestStartTime, firstTokenTime: null };
+              const wrappedChunk = onChunk
+                ? (chunk: { content?: string; reasoning?: string }) => {
+                    if (firstTokenTime === null && (chunk.content || chunk.reasoning)) {
+                      firstTokenTime = Date.now();
+                      callTimingRef.current = { requestStartTime, firstTokenTime };
+                    }
+                    onChunk(chunk);
+                  }
+                : undefined;
+              const completion = await aiService.chat(
+                toServiceMessages(messages),
+                undefined,
+                wrappedChunk,
+                {
+                  maxTokens: AGENT_MAX_OUTPUT_TOKENS,
+                  tools: host.tools
+                    ? host.tools.map((tool) => ({
+                        name: tool.name,
+                        description: tool.description,
+                        parameters: tool.parameters,
+                      }))
+                    : undefined,
+                },
+              );
+              pendingStatsRef.current = accumulateResponseStats(pendingStatsRef.current, {
+                requestStartTime,
+                firstTokenTime,
+                content: completion.content ?? '',
+                reasoning: completion.reasoning,
+                modelId: config.modelId,
+                providerId: getProviderSelectionId(config),
+              });
+              callTimingRef.current = null;
+              return completion;
+            },
+            onEvent: (event) => {
+              if (!isCurrent() || abortedRef.current) return;
+              if (event.type === 'tool_start') {
+                setBusyLabel(event.toolName);
+                return;
+              }
+              if (event.type === 'assistant_text') {
+                dropLookupOnlyMessage(lastAssistantIdRef.current);
+                clearStreamDraft();
+                setBusyLabel(null);
+                if (isMountedRef.current) setIsStreaming(false);
+                const id = generateMessageId();
+                lastAssistantIdRef.current = id;
+                const assistantMessage: ChatMessage = {
+                  id,
+                  role: 'assistant',
+                  content: event.text,
+                  reasoning: clipCommitReasoning(event.reasoning),
+                  timestamp: Date.now(),
+                  stats: consumeAssistantStats(true),
+                  suppressInitialAnimation: streaming,
+                };
+                commitMessage(assistantMessage);
+                return;
+              }
+              if (event.type === 'tool_result') {
+                let targetId = lastAssistantIdRef.current;
+                if (!targetId) {
+                  targetId = generateMessageId();
+                  lastAssistantIdRef.current = targetId;
+                  const placeholder: ChatMessage = {
+                    id: targetId,
+                    role: 'assistant',
+                    content: '',
+                    timestamp: Date.now(),
+                    suppressInitialAnimation: true,
+                  };
+                  commitMessage(placeholder);
+                }
+                const eventRow: AgentToolEvent = {
+                  toolName: event.result.toolName,
+                  ok: event.result.ok,
+                  message: compactToolResultMessage(
+                    event.result.toolName,
+                    event.result.message,
+                    lookupToolNamesRef.current,
+                  ),
+                };
+                const nextEvents = {
+                  ...toolEventsRef.current,
+                  [targetId]: [...(toolEventsRef.current[targetId] ?? []), eventRow],
+                };
+                toolEventsRef.current = nextEvents;
+                setToolEventsByMessageId(nextEvents);
+                return;
+              }
+              if (event.type === 'error') {
+                attachError(event.message);
+              }
+            },
+          });
+
+          if (result.reason === 'abort' && isCurrent()) {
+            dropLookupOnlyMessage(lastAssistantIdRef.current);
+            const speech = stripFences(streamContentRef.current.toString());
+            const reasoning = streamReasoningRef.current.toString();
+            if (speech || reasoning) {
               const id = generateMessageId();
               lastAssistantIdRef.current = id;
-              const assistantMessage: ChatMessage = {
+              commitMessage({
                 id,
-                role: 'assistant',
-                content: event.text,
-                reasoning: clipCommitReasoning(event.reasoning),
+                role: 'assistant' as const,
+                content: speech,
+                reasoning: clipCommitReasoning(reasoning),
                 timestamp: Date.now(),
-                stats: consumeAssistantStats(true),
-                suppressInitialAnimation: streaming,
-              };
-              commitMessage(assistantMessage);
-              return;
+                stats: consumeAssistantStats(false),
+                suppressInitialAnimation: true,
+              });
             }
-            if (event.type === 'tool_result') {
-              let targetId = lastAssistantIdRef.current;
-              if (!targetId) {
-                targetId = generateMessageId();
-                lastAssistantIdRef.current = targetId;
-                const placeholder: ChatMessage = {
-                  id: targetId,
-                  role: 'assistant',
-                  content: '',
-                  timestamp: Date.now(),
-                  suppressInitialAnimation: true,
-                };
-                commitMessage(placeholder);
-              }
-              const eventRow: AgentToolEvent = {
-                toolName: event.result.toolName,
-                ok: event.result.ok,
-                message: compactToolResultMessage(
-                  event.result.toolName,
-                  event.result.message,
-                  lookupToolNamesRef.current,
-                ),
-              };
-              const nextEvents = {
-                ...toolEventsRef.current,
-                [targetId]: [...(toolEventsRef.current[targetId] ?? []), eventRow],
-              };
-              toolEventsRef.current = nextEvents;
-              setToolEventsByMessageId(nextEvents);
-              return;
+          }
+        } catch (err) {
+          if (!isCurrent()) return;
+          if (err instanceof AIError && err.message === 'Request was cancelled') {
+            return;
+          }
+          attachError(err instanceof Error ? err.message : 'Agent request failed');
+        } finally {
+          if (requestId === requestIdRef.current) {
+            dropLookupOnlyMessage(lastAssistantIdRef.current);
+            if (aiServiceRef.current === runService) {
+              aiServiceRef.current = null;
             }
-            if (event.type === 'error') {
-              attachError(event.message);
+            isProcessingRef.current = false;
+            clearStreamDraft();
+            if (isMountedRef.current) {
+              setIsProcessing(false);
+              setIsStreaming(false);
+              setBusyLabel(null);
             }
-          },
-        });
-
-        if (result.reason === 'abort' && isCurrent()) {
-          dropLookupOnlyMessage(lastAssistantIdRef.current);
-          const speech = stripFences(streamContentRef.current.toString());
-          const reasoning = streamReasoningRef.current.toString();
-          if (speech || reasoning) {
-            const id = generateMessageId();
-            lastAssistantIdRef.current = id;
-            commitMessage({
-              id,
-              role: 'assistant' as const,
-              content: speech,
-              reasoning: clipCommitReasoning(reasoning),
-              timestamp: Date.now(),
-              stats: consumeAssistantStats(false),
-              suppressInitialAnimation: true,
-            });
+            onRunningChangeRef.current?.(false);
+          } else {
+            runService?.abort();
+            if (aiServiceRef.current === runService) {
+              aiServiceRef.current = null;
+            }
           }
         }
-      } catch (err) {
-        if (!isCurrent()) return;
-        if (err instanceof AIError && err.message === 'Request was cancelled') {
-          return;
-        }
-        attachError(err instanceof Error ? err.message : 'Agent request failed');
-      } finally {
-        if (requestId === requestIdRef.current) {
-          dropLookupOnlyMessage(lastAssistantIdRef.current);
-          if (aiServiceRef.current === runService) {
-            aiServiceRef.current = null;
-          }
-          isProcessingRef.current = false;
-          clearStreamDraft();
-          if (isMountedRef.current) {
-            setIsProcessing(false);
-            setIsStreaming(false);
-            setBusyLabel(null);
-          }
-          onRunningChangeRef.current?.(false);
-        } else {
-          runService?.abort();
-          if (aiServiceRef.current === runService) {
-            aiServiceRef.current = null;
-          }
-        }
-      }
+      })();
+      runPromiseRef.current = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      await run;
     },
     [appendStreamChunk, attachError, clearStreamDraft, commitMessage, consumeAssistantStats, dropLookupOnlyMessage, isAIConfigured],
   );
 
   const handleRegenerate = useCallback(async () => {
-    if (isProcessingRef.current) return;
+    if (leavingRef.current || isProcessingRef.current) return;
     const history = chatHistoryRef.current;
     const lastUserIndex = lastUserMessageIndex(history);
     if (lastUserIndex < 0) return;
@@ -604,7 +647,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
   const handleAsk = useCallback(
     async (question: string) => {
-      if (isProcessingRef.current) return;
+      if (leavingRef.current || isProcessingRef.current) return;
       const trimmed = question.trim();
       if (!trimmed) {
         await handleRegenerate();
