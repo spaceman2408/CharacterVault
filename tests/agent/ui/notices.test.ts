@@ -127,6 +127,24 @@ describe('isLookupOnlyTurn', () => {
     expect(isLookupOnlyTurn([okReadField], CHARACTER_LOOKUP_TOOLS)).toBe(true);
     expect(isLookupOnlyTurn([okList], CHARACTER_LOOKUP_TOOLS)).toBe(true);
     expect(isLookupOnlyTurn([okReadField])).toBe(false);
+    const okSearch: AgentToolEvent = {
+      toolName: 'search',
+      ok: true,
+      message: '2 matches in 2 places for "harbor"\ndescription (1): …harbor…',
+    };
+    expect(isLookupOnlyTurn([okSearch], CHARACTER_LOOKUP_TOOLS)).toBe(true);
+    const okAudit: AgentToolEvent = {
+      toolName: 'audit_card',
+      ok: true,
+      message: 'Card audit — 3/14 fields filled, 0 greetings, 0 entries, ~10 active / ~10 total tokens',
+    };
+    expect(isLookupOnlyTurn([okAudit], CHARACTER_LOOKUP_TOOLS)).toBe(true);
+    const okRecursion: AgentToolEvent = {
+      toolName: 'read_recursion',
+      ok: true,
+      message: 'Recursion map — 2 entries, 1 edge, 0 isolated, cycle: none; recursive_scanning on',
+    };
+    expect(isLookupOnlyTurn([okRecursion], CHARACTER_LOOKUP_TOOLS)).toBe(true);
   });
 });
 

@@ -1,11 +1,19 @@
 import type { AgentToolEvent } from './types';
 
-export const LOREBOOK_LOOKUP_TOOLS = new Set(['list_entries', 'read_entry']);
+export const LOREBOOK_LOOKUP_TOOLS = new Set([
+  'list_entries',
+  'read_entry',
+  'search',
+  'audit_book',
+  'read_recursion',
+]);
 export const LOREBOOK_WRITE_TOOLS = new Set([
   'add_entry',
   'update_entry',
   'replace_in_entry',
   'delete_entry',
+  'replace_across',
+  'update_book_settings',
 ]);
 
 export const CHARACTER_LOOKUP_TOOLS = new Set([
@@ -15,6 +23,9 @@ export const CHARACTER_LOOKUP_TOOLS = new Set([
   'read_greeting',
   'list_entries',
   'read_entry',
+  'search',
+  'audit_card',
+  'read_recursion',
 ]);
 
 function writeEntryId(

@@ -72,6 +72,20 @@ describe('formatToolEvent', () => {
       formatToolEvent(event('delete_greeting', 'ok deleted greeting 1; 2 remaining')),
     ).toBe('Deleted greeting 1 (2 remaining)');
     expect(formatToolEvent(event('list_entries', '24 entries'))).toBe('Listed 24 entries');
+    expect(
+      formatToolEvent(event('append_to_field', 'ok personality (Personality) — 40 chars')),
+    ).toBe('Appended to Personality (40 chars)');
+    expect(
+      formatToolEvent(
+        event('replace_across', 'ok replaced 7 in 4 places: description, greeting 1, #4 The Red Keep'),
+      ),
+    ).toBe('Replaced 7 in 4 places');
+    expect(
+      formatToolEvent(event('move_greeting', 'ok moved greeting 3 → 1 (4 greetings)')),
+    ).toBe('Moved greeting 3 to 1');
+    expect(
+      formatToolEvent(event('update_book_settings', 'ok Book settings: scan_depth: 4; token_budget: 512')),
+    ).toBe('Updated book settings');
   });
 
   it('formats failures with a clear prefix and stripped error tag', () => {
@@ -84,18 +98,18 @@ describe('formatToolEvent', () => {
         ),
       ),
     ).toBe(
-      "Couldn't replace in field — old not found (re-read and copy a unique snippet, or rewrite the whole value)",
+      "Couldn't replace in field: old not found (re-read and copy a unique snippet, or rewrite the whole value)",
     );
     expect(
       formatToolEvent(
         event('replace_in_entry', 'error: old matches 2 times; pass replace_all true or a longer unique snippet', false),
       ),
     ).toBe(
-      "Couldn't replace in entry — old matches 2 times; pass replace_all true or a longer unique snippet",
+      "Couldn't replace in entry: old matches 2 times; pass replace_all true or a longer unique snippet",
     );
     expect(
       formatToolEvent(event('update_field', 'limit: max 30 field updates per run', false)),
-    ).toBe("Couldn't update field — max 30 field updates per run");
+    ).toBe("Couldn't update field: max 30 field updates per run");
     expect(
       formatToolEvent(
         event(
@@ -104,6 +118,6 @@ describe('formatToolEvent', () => {
           false,
         ),
       ),
-    ).toBe('Incomplete action — a tool_call was not closed with </tool_call>');
+    ).toBe('Incomplete action: a tool_call was not closed with </tool_call>');
   });
 });

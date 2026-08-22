@@ -72,13 +72,32 @@ export function formatToolEvent(event: AgentToolEvent): string {
     if (parsed?.replaced != null) return `Replaced ${parsed.replaced} in ${parsed.label}`;
   }
 
-  if (event.toolName === 'update_field') {
+  if (event.toolName === 'update_field' || event.toolName === 'append_to_field') {
     const parsed = parseOkField(event.message);
     if (parsed) {
+      const verb = event.toolName === 'append_to_field' ? 'Appended to' : 'Updated';
       return parsed.chars != null
-        ? `Updated ${parsed.label} (${parsed.chars} chars)`
-        : `Updated ${parsed.label}`;
+        ? `${verb} ${parsed.label} (${parsed.chars} chars)`
+        : `${verb} ${parsed.label}`;
     }
+  }
+
+  if (event.toolName === 'replace_across') {
+    const match = /^ok replaced (\d+) in (\d+) place/.exec(event.message);
+    if (match) {
+      const hits = match[1];
+      const places = match[2];
+      return `Replaced ${hits} in ${places} ${places === '1' ? 'place' : 'places'}`;
+    }
+  }
+
+  if (event.toolName === 'update_book_settings') {
+    return 'Updated book settings';
+  }
+
+  if (event.toolName === 'move_greeting') {
+    const match = /^ok moved greeting (\d+) → (\d+)/.exec(event.message);
+    if (match) return `Moved greeting ${match[1]} to ${match[2]}`;
   }
 
   if (
