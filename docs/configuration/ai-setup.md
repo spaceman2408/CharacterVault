@@ -60,7 +60,6 @@ The success toast confirms the result, e.g. **"Signed in. Fetched 47 models."**
 
 ::: warning Browser popups must be allowed
 The sign-in flow opens a new window or tab. If your browser blocks popups for this site, the button will appear to do nothing. Allow popups for `spaceman2408.github.io` (or your hosted origin) and try again. If you previously dismissed the permission, click the popup-blocker icon in the address bar to allow them for this site.
-:::
 
 ::: warning Mobile browser support
 PKCE sign-in works best on desktop browsers. Mobile support depends on the browser:
@@ -131,10 +130,11 @@ Refresh is rate-limited (about 30 seconds). Closing and reopening Settings withi
 
 ### NanoGPT Options
 
-When the NanoGPT preset is selected, two additional toggles appear:
+When the NanoGPT preset is selected, three additional toggles appear:
 
 - **Subscription models only** — When on, clicking **Fetch** only returns models included in your NanoGPT subscription. When off, paid models are also listed.
 - **Pay-as-you-go billing** — Force pay-as-you-go pricing even with an active subscription. This is required for provider selection on subscription-covered models.
+- **Cache-capable provider routing** — Route each request to a provider that supports prompt caching for lower cost and latency. When on, CharacterVault sends `caching: true` on chat completions, and NanoGPT sticks to a matching cache-capable provider across follow-up requests by default. This is capability-based routing: if no cache-capable provider is available for a model, the request **fails** rather than silently falling back — so leave it off for models you aren't sure about. It works alongside a selected provider; an explicit **Provider** choice (if set) still sends `X-Provider`.
 
 ### Advanced Options
 
