@@ -38,6 +38,45 @@ export function countOccurrences(haystack: string, needle: string): number {
   return findExactRanges(haystack, needle).length;
 }
 
+export function makeSearchSnippet(
+  source: string,
+  start: number,
+  end: number,
+  radius = 36,
+): string {
+  const from = Math.max(0, start - radius);
+  const to = Math.min(source.length, end + radius);
+  const prefix = from > 0 ? '…' : '';
+  const suffix = to < source.length ? '…' : '';
+  return `${prefix}${source.slice(from, to).replace(/\s+/g, ' ').trim()}${suffix}`;
+}
+
+/** Case-insensitive search with the same quote/dash folding as replace. */
+export function searchInText(
+  source: string,
+  query: string,
+): { count: number; snippet: string | null } {
+  const needle = normalizeForMatch(query).normalized.toLowerCase();
+  if (!needle || !source) return { count: 0, snippet: null };
+  const hay = normalizeForMatch(source);
+  const hayLower = hay.normalized.toLowerCase();
+  let count = 0;
+  let snippet: string | null = null;
+  let from = 0;
+  while (from <= hayLower.length - needle.length) {
+    const at = hayLower.indexOf(needle, from);
+    if (at === -1) break;
+    if (snippet == null) {
+      const start = hay.origIndex[at];
+      const end = hay.origIndex[at + needle.length];
+      snippet = makeSearchSnippet(source, start, end);
+    }
+    count += 1;
+    from = at + needle.length;
+  }
+  return { count, snippet };
+}
+
 function findExactRanges(haystack: string, needle: string): Range[] {
   if (!needle) return [];
   const ranges: Range[] = [];

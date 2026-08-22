@@ -3,6 +3,7 @@ import {
   countOccurrences,
   replaceText,
   replacementText,
+  searchInText,
   searchText,
 } from '../../../src/agent/hosts/replaceText';
 
@@ -136,5 +137,23 @@ describe('searchText', () => {
     expect(searchText({ name: 'replace_in_field', headers: { new: '' }, body: 'from-body' })).toBe(
       'from-body',
     );
+  });
+});
+
+describe('searchInText', () => {
+  it('is case-insensitive and folds quotes', () => {
+    const found = searchInText('She said “Harbor”.', 'harbor');
+    expect(found.count).toBe(1);
+    expect(found.snippet).toContain('Harbor');
+  });
+
+  it('counts non-overlapping matches and returns the first snippet', () => {
+    const found = searchInText('keep keep keep', 'keep');
+    expect(found.count).toBe(3);
+    expect(found.snippet).toContain('keep');
+  });
+
+  it('returns zero for an empty query', () => {
+    expect(searchInText('hello', '')).toEqual({ count: 0, snippet: null });
   });
 });
