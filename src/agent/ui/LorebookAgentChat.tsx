@@ -3,10 +3,9 @@ import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
 import type { ChatMessage } from '../../components/ai/types';
 import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '../../db/characterTypes';
-import { computeAgentContextUsage } from '../hosts/lorebook/contextUsage';
+import { computeAgentContextUsage, usageStatus } from '../hosts/lorebook/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
 import { LiveThinking } from './LiveThinking';
-import { withLivePromptTokens } from './promptUsage';
 import { messageNotices, shouldRenderAgentMessage, visibleToolEvents } from './notices';
 import { useLorebookAgent } from './useLorebookAgent';
 
@@ -67,27 +66,34 @@ export function LorebookAgentChat({
     return labels;
   }, [customContextIncluded]);
 
-  const contextUsage = useMemo(
-    () =>
-      withLivePromptTokens(
-        computeAgentContextUsage({
-          book: getBook(),
-          customContextCharLength,
-          customContextIncluded,
-          history: session.chatHistory,
-          contextLength: samplerSettings.contextLength,
-        }),
-        session.livePromptTokens,
-      ),
-    [
+  // While a live prompt count is pinned, the idle estimate is never shown — skip
+  // the catalog rebuild + full-history encode that would otherwise run per commit.
+  const contextUsage = useMemo(() => {
+    if (session.livePromptTokens != null) {
+      const limit = Math.max(1, samplerSettings.contextLength || 0);
+      const percentage = Math.min(100, (session.livePromptTokens / limit) * 100);
+      return {
+        tokens: session.livePromptTokens,
+        limit,
+        percentage,
+        status: usageStatus(percentage),
+      };
+    }
+    return computeAgentContextUsage({
+      book: getBook(),
       customContextCharLength,
       customContextIncluded,
-      getBook,
-      samplerSettings.contextLength,
-      session.chatHistory,
-      session.livePromptTokens,
-    ],
-  );
+      history: session.chatHistory,
+      contextLength: samplerSettings.contextLength,
+    });
+  }, [
+    customContextCharLength,
+    customContextIncluded,
+    getBook,
+    samplerSettings.contextLength,
+    session.chatHistory,
+    session.livePromptTokens,
+  ]);
 
   const renderMessage = useCallback(
     (message: ChatMessage, index: number) => {
