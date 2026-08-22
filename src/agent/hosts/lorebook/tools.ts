@@ -1,7 +1,24 @@
 import type { CharacterBook, LorebookEntry } from '../../../db/characterTypes';
 import type { ActionResult, ParsedAction } from '../../core/types';
 import { parseReplaceAll, replaceText, replacementText, searchText } from '../replaceText';
+import {
+  applyBookReplacements,
+  collectBookTargets,
+  formatReplaceAcross,
+  replaceAcrossTargets,
+  searchTargets,
+} from '../search';
+import { formatBookAudit } from './audit';
 import { formatEntryCatalog } from './catalog';
+import { formatRecursionMap } from './recursion';
+import {
+  applyEntryFlagPatch,
+  formatBookSettings,
+  formatEntryFlagLines,
+  hasAnyFlagHeader,
+  parseBookSettings,
+  parseEntryFlags,
+} from './flags';
 
 export const LOREBOOK_TOOL_NAMES = [
   'list_entries',
@@ -10,6 +27,11 @@ export const LOREBOOK_TOOL_NAMES = [
   'update_entry',
   'replace_in_entry',
   'delete_entry',
+  'search',
+  'replace_across',
+  'audit_book',
+  'read_recursion',
+  'update_book_settings',
 ] as const;
 export type LorebookToolName = (typeof LOREBOOK_TOOL_NAMES)[number];
 
@@ -72,8 +94,7 @@ export function findEntryById(
 export function formatEntryRead(entry: LorebookEntry): string {
   const name = entry.name?.trim() || '(unnamed)';
   const keys = entry.keys?.length ? entry.keys.join(', ') : '(none)';
-  const lines = [`#${entry.id} ${name}`, `keys: ${keys}`];
-  if (entry.constant) lines.push('constant: true');
+  const lines = [`#${entry.id} ${name}`, `keys: ${keys}`, ...formatEntryFlagLines(entry)];
   lines.push('---', entry.content ?? '');
   return lines.join('\n');
 }
@@ -154,8 +175,14 @@ export function updateEntry(book: CharacterBook, action: ParsedAction): UpdateEn
   const hasName = Object.prototype.hasOwnProperty.call(action.headers, 'name');
   const hasKeys = Object.prototype.hasOwnProperty.call(action.headers, 'keys');
   const hasConstant = Object.prototype.hasOwnProperty.call(action.headers, 'constant');
-  if (!hasContent && !hasName && !hasKeys && !hasConstant) {
+  const hasFlags = hasAnyFlagHeader(action.headers);
+  if (!hasContent && !hasName && !hasKeys && !hasConstant && !hasFlags) {
     return updateEntryError(book, 'error: nothing to update');
+  }
+
+  const flags = parseEntryFlags(action.headers);
+  if ('error' in flags) {
+    return updateEntryError(book, flags.error);
   }
 
   const content = hasContent ? action.body.trim() : existing.content;
@@ -179,7 +206,7 @@ export function updateEntry(book: CharacterBook, action: ParsedAction): UpdateEn
     );
   }
 
-  const nextEntry: LorebookEntry = {
+  let nextEntry: LorebookEntry = {
     ...existing,
     name,
     keys,
@@ -187,13 +214,30 @@ export function updateEntry(book: CharacterBook, action: ParsedAction): UpdateEn
   };
   if (constant) nextEntry.constant = true;
   else if (hasConstant) delete nextEntry.constant;
+  nextEntry = applyEntryFlagPatch(nextEntry, flags.patch);
+
+  const sameList = (a: string[] | undefined, b: string[] | undefined): boolean => {
+    const left = a ?? [];
+    const right = b ?? [];
+    return left.length === right.length && left.every((item, index) => item === right[index]);
+  };
 
   const unchanged =
     nextEntry.content === existing.content &&
     nextEntry.name === existing.name &&
-    nextEntry.keys.length === existing.keys.length &&
-    nextEntry.keys.every((key, index) => key === existing.keys[index]) &&
-    Boolean(nextEntry.constant) === Boolean(existing.constant);
+    sameList(nextEntry.keys, existing.keys) &&
+    Boolean(nextEntry.constant) === Boolean(existing.constant) &&
+    nextEntry.enabled === existing.enabled &&
+    nextEntry.position === existing.position &&
+    nextEntry.depth === existing.depth &&
+    nextEntry.insertion_order === existing.insertion_order &&
+    nextEntry.probability === existing.probability &&
+    Boolean(nextEntry.selective) === Boolean(existing.selective) &&
+    sameList(nextEntry.secondary_keys, existing.secondary_keys) &&
+    Boolean(nextEntry.useProbability) === Boolean(existing.useProbability) &&
+    Boolean(nextEntry.excludeRecursion) === Boolean(existing.excludeRecursion) &&
+    Boolean(nextEntry.preventRecursion) === Boolean(existing.preventRecursion) &&
+    Boolean(nextEntry.delayUntilRecursion) === Boolean(existing.delayUntilRecursion);
   if (unchanged) {
     return {
       book,
@@ -300,6 +344,10 @@ export function addEntry(
   const constant = parseConstantFlag(action.headers.constant);
   const keys = parseCommaList(action.headers.keys);
   const name = entryDisplayName(action);
+  const flags = parseEntryFlags(action.headers);
+  if ('error' in flags) {
+    return addEntryError(book, flags.error);
+  }
 
   if (!content) {
     return addEntryError(book, 'error: content is empty');
@@ -326,22 +374,36 @@ export function addEntry(
     };
 
     if (content.length <= existing.content.trim().length) {
+      const patched = applyEntryFlagPatch(existing, flags.patch);
+      if (patched === existing) {
+        return {
+          book,
+          result: okResult,
+          created: false,
+          changed: false,
+          entryId: existing.id,
+        };
+      }
       return {
-        book,
+        book: {
+          ...book,
+          entries: entries.map((entry) => (entry.id === existing.id ? patched : entry)),
+        },
         result: okResult,
         created: false,
-        changed: false,
+        changed: true,
         entryId: existing.id,
       };
     }
 
-    const nextEntry: LorebookEntry = {
+    let nextEntry: LorebookEntry = {
       ...existing,
       name: name || existing.name,
       keys: keys.length > 0 ? keys : existing.keys,
       content,
     };
     if (constant) nextEntry.constant = true;
+    nextEntry = applyEntryFlagPatch(nextEntry, flags.patch);
 
     return {
       book: {
@@ -355,7 +417,7 @@ export function addEntry(
     };
   }
 
-  const entry = createBlankLorebookEntry(nextAvailableEntryId(entries));
+  const entry = applyEntryFlagPatch(createBlankLorebookEntry(nextAvailableEntryId(entries)), flags.patch);
   entry.name = name;
   entry.keys = keys;
   entry.content = content;
@@ -417,5 +479,78 @@ export function deleteEntry(book: CharacterBook, action: ParsedAction): DeleteEn
     },
     changed: true,
     entryId: id,
+  };
+}
+
+export function searchBook(book: CharacterBook, action: ParsedAction): ActionResult {
+  return searchTargets(collectBookTargets(book), action);
+}
+
+export function replaceAcrossBook(
+  book: CharacterBook,
+  action: ParsedAction,
+): { book: CharacterBook; result: ActionResult; changed: boolean } {
+  const applied = replaceAcrossTargets(collectBookTargets(book), action);
+  if (!applied.ok) {
+    return {
+      book,
+      changed: false,
+      result: { ok: false, toolName: 'replace_across', message: applied.message },
+    };
+  }
+  return {
+    book: applyBookReplacements(book, applied.replacements),
+    changed: true,
+    result: { ok: true, toolName: 'replace_across', message: formatReplaceAcross(applied) },
+  };
+}
+
+export function auditBook(book: CharacterBook): ActionResult {
+  return { ok: true, toolName: 'audit_book', message: formatBookAudit(book) };
+}
+
+export function readRecursion(book: CharacterBook, action: ParsedAction): ActionResult {
+  const raw = action.headers.id;
+  if (raw != null && raw.trim() !== '') {
+    const id = parseEntryId(raw);
+    if (id == null) {
+      return { ok: false, toolName: 'read_recursion', message: 'error: id must be a non-negative integer' };
+    }
+    const entry = findEntryById(book.entries ?? [], id);
+    if (!entry) {
+      return { ok: false, toolName: 'read_recursion', message: `error: no entry #${id}` };
+    }
+    return { ok: true, toolName: 'read_recursion', message: formatRecursionMap(book, id) };
+  }
+  return { ok: true, toolName: 'read_recursion', message: formatRecursionMap(book) };
+}
+
+export function updateBookSettings(
+  book: CharacterBook,
+  action: ParsedAction,
+): { book: CharacterBook; result: ActionResult; changed: boolean } {
+  const parsed = parseBookSettings(action.headers, action.body);
+  if ('error' in parsed) {
+    return {
+      book,
+      changed: false,
+      result: { ok: false, toolName: 'update_book_settings', message: parsed.error },
+    };
+  }
+  const next: CharacterBook = { ...book, ...parsed.patch };
+  const unchanged =
+    next.name === book.name &&
+    next.description === book.description &&
+    next.scan_depth === book.scan_depth &&
+    next.token_budget === book.token_budget &&
+    next.recursive_scanning === book.recursive_scanning;
+  return {
+    book: next,
+    changed: !unchanged,
+    result: {
+      ok: true,
+      toolName: 'update_book_settings',
+      message: `ok ${formatBookSettings(next)}`,
+    },
   };
 }

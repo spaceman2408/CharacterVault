@@ -1,11 +1,13 @@
 import type { CharacterBook } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
 import type { ActionResult, AgentHost, ParsedAction } from '../../core/types';
+import { MAX_REPLACE_ACROSS_PER_RUN } from '../search';
 import { formatEntryCatalog } from './catalog';
 import { buildLorebookAgentSystemPrompt } from './prompt';
 import { LOREBOOK_TOOL_SPECS } from './schemas';
 import {
   addEntry,
+  auditBook,
   deleteEntry,
   entryDisplayName,
   findEntryById,
@@ -18,9 +20,18 @@ import {
   MAX_UPDATES_PER_RUN,
   parseEntryId,
   readEntry,
+  readRecursion,
+  replaceAcrossBook,
   replaceInEntry,
+  searchBook,
+  updateBookSettings,
   updateEntry,
 } from './tools';
+
+export interface LorebookAgentHost extends AgentHost {
+  peekBook(): CharacterBook;
+  applyBook(book: CharacterBook): void;
+}
 
 export interface LorebookHostIO {
   getBook: () => CharacterBook;
@@ -30,13 +41,14 @@ export interface LorebookHostIO {
   maxNewEntries?: number;
 }
 
-export function createLorebookHost(io: LorebookHostIO): AgentHost {
+export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
   const maxNewEntries = io.maxNewEntries ?? MAX_NEW_ENTRIES_PER_RUN;
   let book = io.getBook();
   let dirty = false;
   let addedThisRun = 0;
   let updatedThisRun = 0;
   let deletedThisRun = 0;
+  let replaceAcrossThisRun = 0;
   const revisableIds = new Set<number>();
   const entryReadCache = new Map<number, string>();
   let snapshotTaken = false;
@@ -143,6 +155,50 @@ export function createLorebookHost(io: LorebookHostIO): AgentHost {
         if (applied.entry) cacheEntryRead(applied.entry.id, formatEntryRead(applied.entry));
         return applied.result;
       }
+      if (action.name === 'search') {
+        return searchBook(book, action);
+      }
+      if (action.name === 'audit_book') {
+        return auditBook(book);
+      }
+      if (action.name === 'read_recursion') {
+        return readRecursion(book, action);
+      }
+      if (action.name === 'replace_across') {
+        if (replaceAcrossThisRun >= MAX_REPLACE_ACROSS_PER_RUN) {
+          return {
+            ok: false,
+            toolName: 'replace_across',
+            message: `limit: max ${MAX_REPLACE_ACROSS_PER_RUN} replace_across calls per run`,
+          };
+        }
+        const applied = replaceAcrossBook(book, action);
+        if (!applied.result.ok) return applied.result;
+        if (applied.changed) {
+          book = applied.book;
+          dirty = true;
+          replaceAcrossThisRun += 1;
+          entryReadCache.clear();
+        }
+        return applied.result;
+      }
+      if (action.name === 'update_book_settings') {
+        if (updatedThisRun >= MAX_UPDATES_PER_RUN) {
+          return {
+            ok: false,
+            toolName: 'update_book_settings',
+            message: `limit: max ${MAX_UPDATES_PER_RUN} updates per run`,
+          };
+        }
+        const applied = updateBookSettings(book, action);
+        if (!applied.result.ok) return applied.result;
+        if (applied.changed) {
+          book = applied.book;
+          dirty = true;
+          updatedThisRun += 1;
+        }
+        return applied.result;
+      }
       if (action.name === 'delete_entry') {
         if (deletedThisRun >= MAX_DELETES_PER_RUN) {
           return {
@@ -167,6 +223,16 @@ export function createLorebookHost(io: LorebookHostIO): AgentHost {
         toolName: action.name,
         message: `unknown_action: ${action.name}`,
       };
+    },
+
+    peekBook(): CharacterBook {
+      return book;
+    },
+
+    applyBook(next: CharacterBook): void {
+      book = next;
+      dirty = true;
+      entryReadCache.clear();
     },
 
     async flush(): Promise<void> {

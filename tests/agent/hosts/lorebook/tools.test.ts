@@ -3,12 +3,17 @@ import { createEmptyCharacterBook } from '../../../../src/db/characterTypes';
 import { createLorebookHost } from '../../../../src/agent/hosts/lorebook/createHost';
 import {
   addEntry,
+  auditBook,
   deleteEntry,
   listEntries,
   parseCommaList,
   parseEntryId,
   readEntry,
+  readRecursion,
+  replaceAcrossBook,
   replaceInEntry,
+  searchBook,
+  updateBookSettings,
   updateEntry,
 } from '../../../../src/agent/hosts/lorebook/tools';
 
@@ -57,6 +62,8 @@ describe('listEntries', () => {
     const result = listEntries(book);
     expect(result.ok).toBe(true);
     expect(result.message).toContain('#4 The Red Keep — keys: keep');
+    expect(result.message).toContain('Book settings:');
+    expect(result.message).toMatch(/keys: keep — \d+ chars/);
     expect(result.message).not.toContain('SECRET BODY');
   });
 });
@@ -89,6 +96,42 @@ describe('readEntry', () => {
     expect(result.message).toContain('SECRET BODY');
     expect(result.message).not.toContain('OTHER SECRET');
     expect(result.message).not.toContain('Elsewhere');
+  });
+
+  it('includes non-default activation fields', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        secondary_keys: ['red keep'],
+        content: 'Castle.',
+        extensions: {},
+        enabled: false,
+        constant: true,
+        name: 'The Red Keep',
+        position: 'at_depth',
+        depth: 2,
+        insertion_order: 80,
+        probability: 50,
+        useProbability: true,
+        selective: true,
+        excludeRecursion: true,
+        preventRecursion: true,
+        delayUntilRecursion: true,
+      },
+    ];
+    const result = readEntry(book, action('read_entry', { id: '4' }));
+    expect(result.message).toContain('enabled: false');
+    expect(result.message).toContain('constant: true');
+    expect(result.message).toContain('secondary_keys: red keep');
+    expect(result.message).toContain('position: at_depth');
+    expect(result.message).toContain('depth: 2');
+    expect(result.message).toContain('insertion_order: 80');
+    expect(result.message).toContain('probability: 50');
+    expect(result.message).toContain('excludeRecursion: true');
+    expect(result.message).toContain('preventRecursion: true');
+    expect(result.message).toContain('delayUntilRecursion: true');
   });
 
   it('rejects a missing entry', () => {
@@ -152,6 +195,68 @@ describe('updateEntry', () => {
     expect(result.ok).toBe(false);
     expect(changed).toBe(false);
     expect(result.message).toMatch(/^exists: #1/);
+  });
+
+  it('updates common activation flags without touching content', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'The Red Keep is a castle.',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    const { book: next, result, changed } = updateEntry(
+      book,
+      action('update_entry', {
+        id: '4',
+        enabled: 'false',
+        position: 'after_char',
+        insertion_order: '100',
+        secondary_keys: 'red keep, castle',
+        probability: '40',
+        excludeRecursion: 'true',
+        preventRecursion: 'true',
+        delayUntilRecursion: 'true',
+      }),
+    );
+    expect(result.ok).toBe(true);
+    expect(changed).toBe(true);
+    expect(next.entries[0].content).toBe('The Red Keep is a castle.');
+    expect(next.entries[0].enabled).toBe(false);
+    expect(next.entries[0].position).toBe('after_char');
+    expect(next.entries[0].insertion_order).toBe(100);
+    expect(next.entries[0].secondary_keys).toEqual(['red keep', 'castle']);
+    expect(next.entries[0].selective).toBe(true);
+    expect(next.entries[0].probability).toBe(40);
+    expect(next.entries[0].useProbability).toBe(true);
+    expect(next.entries[0].excludeRecursion).toBe(true);
+    expect(next.entries[0].preventRecursion).toBe(true);
+    expect(next.entries[0].delayUntilRecursion).toBe(true);
+  });
+
+  it('rejects an invalid position', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'Castle.',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    const { result, changed } = updateEntry(
+      book,
+      action('update_entry', { id: '4', position: 'in_the_void' }),
+    );
+    expect(result.ok).toBe(false);
+    expect(changed).toBe(false);
+    expect(result.message).toContain('position must be');
   });
 });
 
@@ -291,6 +396,29 @@ describe('addEntry', () => {
     expect(entry.priority).toBe(0);
     expect(entry.position).toBe('before_char');
     expect(entry.constant).toBeUndefined();
+  });
+
+  it('accepts common activation flags and defaults at_depth to 4', () => {
+    const book = createEmptyCharacterBook('World');
+    const { result, book: next } = addEntry(
+      book,
+      action(
+        'add_entry',
+        {
+          name: 'Harbor',
+          keys: 'harbor',
+          position: 'at_depth',
+          insertion_order: '50',
+          probability: '80',
+        },
+        'A busy harbor.',
+      ),
+    );
+    expect(result.ok).toBe(true);
+    expect(next.entries[0].position).toBe('at_depth');
+    expect(next.entries[0].depth).toBe(4);
+    expect(next.entries[0].insertion_order).toBe(50);
+    expect(next.entries[0].probability).toBe(80);
   });
 
   it('allows empty keys when constant is true', () => {
@@ -549,5 +677,225 @@ describe('createLorebookHost', () => {
     expect(book.entries).toHaveLength(1);
     await host.flush?.();
     expect(book.entries).toHaveLength(0);
+  });
+
+  it('searches the in-run book after add_entry and persists replace_across on flush', async () => {
+    let book = createEmptyCharacterBook('World');
+    const host = createLorebookHost({
+      getBook: () => book,
+      setBook: async (next) => {
+        book = next;
+      },
+      getCustomContext: async () => null,
+    });
+
+    await host.execute(action('add_entry', { name: 'Harbor', keys: 'harbor' }, 'A busy harbor.'));
+    const found = await host.execute(action('search', { query: 'harbor' }));
+    expect(found.ok).toBe(true);
+    expect(found.message).toContain('Harbor');
+    expect(found.message).not.toContain('\n---\n');
+
+    const replaced = await host.execute(
+      action('replace_across', { old: 'harbor', new: 'port', replace_all: 'true' }),
+    );
+    expect(replaced.ok).toBe(true);
+    await host.flush?.();
+    expect(book.entries[0].content).toContain('port');
+    expect(book.entries[0].keys).toContain('port');
+  });
+
+  it('updates book settings on flush', async () => {
+    let book = createEmptyCharacterBook('World');
+    const host = createLorebookHost({
+      getBook: () => book,
+      setBook: async (next) => {
+        book = next;
+      },
+      getCustomContext: async () => null,
+    });
+    const result = await host.execute(
+      action('update_book_settings', {
+        scan_depth: '4',
+        token_budget: '512',
+        recursive_scanning: 'true',
+      }),
+    );
+    expect(result.ok).toBe(true);
+    expect(book.scan_depth).toBeUndefined();
+    await host.flush?.();
+    expect(book.scan_depth).toBe(4);
+    expect(book.token_budget).toBe(512);
+    expect(book.recursive_scanning).toBe(true);
+  });
+});
+
+describe('searchBook', () => {
+  it('returns locations and snippets without bodies', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content:
+          'Far below the walls, the harbor district wakes before dawn and the fishermen argue over berths.',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    const result = searchBook(book, action('search', { query: 'harbor' }));
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('harbor');
+    expect(result.message).toContain('#4 The Red Keep');
+    expect(result.message).not.toContain('\n---\n');
+  });
+});
+
+describe('replaceAcrossBook', () => {
+  it('replaces in content and keys when unique or replace_all', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['harbor'],
+        content: 'The harbor is busy.',
+        extensions: {},
+        enabled: true,
+        name: 'Harbor',
+      },
+    ];
+    const { book: next, result } = replaceAcrossBook(
+      book,
+      action('replace_across', { old: 'harbor', new: 'port', replace_all: 'true' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(next.entries[0].content).toBe('The port is busy.');
+    expect(next.entries[0].keys).toEqual(['port']);
+    expect(result.message).toContain('replaced');
+  });
+
+  it('fails the whole call when one place is not unique', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'keep keep',
+        extensions: {},
+        enabled: true,
+        name: 'Keep',
+      },
+    ];
+    const { changed, result } = replaceAcrossBook(
+      book,
+      action('replace_across', { old: 'keep', new: 'Keep' }),
+    );
+    expect(result.ok).toBe(false);
+    expect(changed).toBe(false);
+    expect(result.message).toContain('matches 2 times');
+  });
+});
+
+describe('auditBook', () => {
+  it('reports counts without entry bodies', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 1,
+        keys: ['harbor'],
+        content: 'SECRET BODY',
+        extensions: {},
+        enabled: true,
+        name: 'Harbor',
+      },
+      {
+        id: 2,
+        keys: ['harbor'],
+        content: '',
+        extensions: {},
+        enabled: false,
+        name: 'Docks',
+      },
+    ];
+    const result = auditBook(book);
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('2 entries');
+    expect(result.message).toContain('Duplicate keys');
+    expect(result.message).not.toContain('SECRET BODY');
+  });
+});
+
+describe('updateBookSettings', () => {
+  it('patches scan_depth and recursive_scanning', () => {
+    const book = createEmptyCharacterBook('World');
+    const { book: next, result, changed } = updateBookSettings(
+      book,
+      action('update_book_settings', { scan_depth: '3', recursive_scanning: 'true' }),
+    );
+    expect(result.ok).toBe(true);
+    expect(changed).toBe(true);
+    expect(next.scan_depth).toBe(3);
+    expect(next.recursive_scanning).toBe(true);
+    expect(next.name).toBe('World');
+  });
+});
+
+describe('readRecursion', () => {
+  function linkedBook() {
+    const book = createEmptyCharacterBook('World');
+    book.recursive_scanning = true;
+    book.entries = [
+      {
+        id: 1,
+        keys: ['harbor'],
+        content: 'The docks sit beside the harbor.',
+        extensions: {},
+        enabled: true,
+        name: 'Harbor',
+      },
+      {
+        id: 2,
+        keys: ['docks'],
+        content: 'Ships unload at the docks.',
+        extensions: {},
+        enabled: true,
+        name: 'Docks',
+      },
+    ];
+    return book;
+  }
+
+  it('maps who can unlock whom without dumping bodies', () => {
+    const result = readRecursion(linkedBook(), action('read_recursion'));
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('Recursion map');
+    expect(result.message).toContain('#1 Harbor → #2 Docks (docks)');
+    expect(result.message).not.toContain('The docks sit beside the harbor.');
+  });
+
+  it('focuses incoming and outgoing for one entry', () => {
+    const result = readRecursion(linkedBook(), action('read_recursion', { id: '2' }));
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain('Recursion for #2 Docks');
+    expect(result.message).toContain('Incoming:');
+    expect(result.message).toContain('#1 Harbor → #2 Docks (docks)');
+    expect(result.message).toContain('Outgoing: (none)');
+  });
+
+  it('drops an edge when the target is non-recursable', () => {
+    const book = linkedBook();
+    const blocked = updateEntry(
+      book,
+      action('update_entry', { id: '2', excludeRecursion: 'true' }),
+    );
+    const result = readRecursion(blocked.book, action('read_recursion'));
+    expect(result.message).not.toContain('#1 Harbor → #2 Docks');
+    expect(result.message).toContain('excludeRecursion');
+  });
+
+  it('rejects a missing focus id', () => {
+    const result = readRecursion(linkedBook(), action('read_recursion', { id: '9' }));
+    expect(result.ok).toBe(false);
+    expect(result.message).toBe('error: no entry #9');
   });
 });
