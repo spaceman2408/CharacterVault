@@ -3,6 +3,8 @@ import type { ChatMessage, ResponseStats } from '../../components/ai/types';
 import {
   abortResponseStats,
   accumulateResponseStats,
+  clipCommitReasoning,
+  COMMIT_REASONING_MAX_CHARS,
   generateMessageId,
   toResponseStats,
   type AccumulatedResponseStats,
@@ -48,6 +50,38 @@ export function lastUserMessageIndex(history: Array<{ role: string }>): number {
     if (history[i].role === 'user') return i;
   }
   return -1;
+}
+
+export const AGENT_MAX_CHAT_MESSAGES = 100;
+
+/** Oldest-first transcript cap; per-message maps are filtered to surviving ids. */
+export function trimAgentHistory(
+  history: ChatMessage[],
+  toolEventsByMessageId: Record<string, AgentToolEvent[]>,
+  errorByMessageId: Record<string, string>,
+): {
+  history: ChatMessage[];
+  toolEventsByMessageId: Record<string, AgentToolEvent[]>;
+  errorByMessageId: Record<string, string>;
+} {
+  if (history.length <= AGENT_MAX_CHAT_MESSAGES) {
+    return { history, toolEventsByMessageId, errorByMessageId };
+  }
+  const nextHistory = history.slice(history.length - AGENT_MAX_CHAT_MESSAGES);
+  const keepIds = new Set(nextHistory.map((message) => message.id));
+  const nextEvents: Record<string, AgentToolEvent[]> = {};
+  for (const [id, events] of Object.entries(toolEventsByMessageId)) {
+    if (keepIds.has(id)) nextEvents[id] = events;
+  }
+  const nextErrors: Record<string, string> = {};
+  for (const [id, message] of Object.entries(errorByMessageId)) {
+    if (keepIds.has(id)) nextErrors[id] = message;
+  }
+  return {
+    history: nextHistory,
+    toolEventsByMessageId: nextEvents,
+    errorByMessageId: nextErrors,
+  };
 }
 
 export interface UseAgentSessionReturn {
@@ -101,6 +135,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const lastAssistantIdRef = useRef<string | null>(null);
   const chatHistoryRef = useRef(chatHistory);
   const toolEventsRef = useRef(toolEventsByMessageId);
+  const errorByMessageIdRef = useRef(errorByMessageId);
   const streamContentRef = useRef(new ChunkString());
   const streamReasoningRef = useRef(new ChunkString());
   const reasoningFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,6 +160,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   aiConfigRef.current = aiConfig;
   samplerSettingsRef.current = samplerSettings;
   promptSettingsRef.current = promptSettings;
+  errorByMessageIdRef.current = errorByMessageId;
 
   const isAIConfigured = useMemo(() => {
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
@@ -157,10 +193,28 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const appendStreamChunk = useCallback((chunk: { content?: string; reasoning?: string }) => {
     if (chunk.reasoning) {
       streamReasoningRef.current.append(chunk.reasoning);
+      if (streamReasoningRef.current.length > COMMIT_REASONING_MAX_CHARS * 2) {
+        streamReasoningRef.current.capToTail(COMMIT_REASONING_MAX_CHARS);
+      }
       if (aiConfigRef.current.showReasoning ?? true) scheduleReasoningFlush();
     }
     if (chunk.content) streamContentRef.current.append(chunk.content);
   }, [scheduleReasoningFlush]);
+
+  const commitMessage = useCallback((message: ChatMessage) => {
+    const trimmed = trimAgentHistory(
+      [...chatHistoryRef.current, message],
+      toolEventsRef.current,
+      errorByMessageIdRef.current,
+    );
+    chatHistoryRef.current = trimmed.history;
+    setChatHistory(trimmed.history);
+    toolEventsRef.current = trimmed.toolEventsByMessageId;
+    setToolEventsByMessageId(trimmed.toolEventsByMessageId);
+    if (trimmed.errorByMessageId !== errorByMessageIdRef.current) {
+      setErrorByMessageId(trimmed.errorByMessageId);
+    }
+  }, []);
 
   const attachError = useCallback((message: string) => {
     setError(message);
@@ -428,14 +482,12 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 id,
                 role: 'assistant',
                 content: event.text,
-                reasoning: event.reasoning,
+                reasoning: clipCommitReasoning(event.reasoning),
                 timestamp: Date.now(),
                 stats: consumeAssistantStats(true),
                 suppressInitialAnimation: streaming,
               };
-              const nextHistory = [...chatHistoryRef.current, assistantMessage];
-              chatHistoryRef.current = nextHistory;
-              setChatHistory(nextHistory);
+              commitMessage(assistantMessage);
               return;
             }
             if (event.type === 'tool_result') {
@@ -450,9 +502,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                   timestamp: Date.now(),
                   suppressInitialAnimation: true,
                 };
-                const nextHistory = [...chatHistoryRef.current, placeholder];
-                chatHistoryRef.current = nextHistory;
-                setChatHistory(nextHistory);
+                commitMessage(placeholder);
               }
               const eventRow: AgentToolEvent = {
                 toolName: event.result.toolName,
@@ -484,20 +534,15 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
           if (speech || reasoning) {
             const id = generateMessageId();
             lastAssistantIdRef.current = id;
-            const nextHistory = [
-              ...chatHistoryRef.current,
-              {
-                id,
-                role: 'assistant' as const,
-                content: speech,
-                reasoning: reasoning || undefined,
-                timestamp: Date.now(),
-                stats: consumeAssistantStats(false),
-                suppressInitialAnimation: true,
-              },
-            ];
-            chatHistoryRef.current = nextHistory;
-            setChatHistory(nextHistory);
+            commitMessage({
+              id,
+              role: 'assistant' as const,
+              content: speech,
+              reasoning: clipCommitReasoning(reasoning),
+              timestamp: Date.now(),
+              stats: consumeAssistantStats(false),
+              suppressInitialAnimation: true,
+            });
           }
         }
       } catch (err) {
@@ -528,7 +573,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         }
       }
     },
-    [appendStreamChunk, attachError, clearStreamDraft, consumeAssistantStats, dropLookupOnlyMessage, isAIConfigured],
+    [appendStreamChunk, attachError, clearStreamDraft, commitMessage, consumeAssistantStats, dropLookupOnlyMessage, isAIConfigured],
   );
 
   const handleRegenerate = useCallback(async () => {
@@ -573,12 +618,10 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         timestamp: Date.now(),
       };
       const priorHistory = chatHistoryRef.current;
-      const nextHistory = [...priorHistory, userMessage];
-      chatHistoryRef.current = nextHistory;
-      setChatHistory(nextHistory);
+      commitMessage(userMessage);
       await startRun(trimmed, priorHistory);
     },
-    [handleRegenerate, startRun],
+    [commitMessage, handleRegenerate, startRun],
   );
 
   return {
