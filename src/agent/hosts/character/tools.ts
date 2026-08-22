@@ -10,7 +10,13 @@ import {
   type TextTarget,
 } from '../search';
 import { formatCardAudit } from './audit';
-import { formatFieldCatalog, formatFieldRead, formatGreetingCatalog, formatGreetingRead } from './catalog';
+import {
+  formatFieldCatalog,
+  formatFieldRead,
+  formatGreetingCatalog,
+  formatGreetingRead,
+  tokenCountLabel,
+} from './catalog';
 import {
   CHARACTER_AGENT_FIELD_IDS,
   fieldLabel,
@@ -100,7 +106,7 @@ export function updateField(
     changed: true,
     result: ok(
       'update_field',
-      `ok ${rawId} (${fieldLabel(rawId)}) — ${value.length} chars`,
+      `ok ${rawId} (${fieldLabel(rawId)}) — ${tokenCountLabel(value)}`,
     ),
   };
 }
@@ -137,7 +143,7 @@ export function replaceInField(
     changed: applied.text !== current,
     result: ok(
       'replace_in_field',
-      `ok ${rawId} (${fieldLabel(rawId)}) — replaced ${applied.count} (${value.length} chars)`,
+      `ok ${rawId} (${fieldLabel(rawId)}) — replaced ${applied.count} (${tokenCountLabel(value)})`,
     ),
   };
 }
@@ -309,7 +315,7 @@ export function appendToField(
       changed: merged.length !== existing.length,
       result: ok(
         'append_to_field',
-        `ok tags (${fieldLabel('tags')}) — ${value.length} chars`,
+        `ok tags (${fieldLabel('tags')}) — ${tokenCountLabel(value)}`,
       ),
     };
   }
@@ -326,7 +332,7 @@ export function appendToField(
     changed: nextValue !== current,
     result: ok(
       'append_to_field',
-      `ok ${rawId} (${fieldLabel(rawId)}) — ${value.length} chars`,
+      `ok ${rawId} (${fieldLabel(rawId)}) — ${tokenCountLabel(value)}`,
     ),
   };
 }

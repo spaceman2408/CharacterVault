@@ -63,7 +63,7 @@ describe('listEntries', () => {
     expect(result.ok).toBe(true);
     expect(result.message).toContain('#4 The Red Keep — keys: keep');
     expect(result.message).toContain('Book settings:');
-    expect(result.message).toMatch(/keys: keep — \d+ chars/);
+    expect(result.message).toMatch(/keys: keep — \d+ tokens/);
     expect(result.message).not.toContain('SECRET BODY');
   });
 });

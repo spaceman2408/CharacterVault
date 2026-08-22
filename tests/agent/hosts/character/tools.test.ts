@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createCharacterHost } from '../../../../src/agent/hosts/character/createHost';
 import type { CharacterHostPersist } from '../../../../src/agent/hosts/character/createHost';
+import { tokenCountLabel } from '../../../../src/agent/hosts/character/catalog';
 import {
   addGreeting,
   appendToField,
@@ -70,7 +71,7 @@ describe('listFields', () => {
   it('does not include field bodies', () => {
     const result = listFields(spec({ description: 'SECRET BODY' }));
     expect(result.ok).toBe(true);
-    expect(result.message).toContain('description (Description) — 11 chars');
+    expect(result.message).toContain(`description (Description) — ${tokenCountLabel('SECRET BODY')}`);
     expect(result.message).not.toContain('SECRET BODY');
   });
 });
@@ -166,8 +167,8 @@ describe('greetings', () => {
     const result = listGreetings(
       spec({ alternate_greetings: ['SECRET HELLO', 'OTHER'] }),
     );
-    expect(result.message).toContain('1 — 12 chars');
-    expect(result.message).toContain('2 — 5 chars');
+    expect(result.message).toContain(`1 — ${tokenCountLabel('SECRET HELLO')}`);
+    expect(result.message).toContain(`2 — ${tokenCountLabel('OTHER')}`);
     expect(result.message).not.toContain('SECRET HELLO');
   });
 

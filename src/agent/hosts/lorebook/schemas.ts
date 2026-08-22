@@ -4,7 +4,7 @@ export const LOREBOOK_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
     name: 'list_entries',
     description:
-      'Return id, name, keys, size, and notable flags for every entry, plus book settings. Skip if the catalog in context is enough.',
+      'Return id, name, keys, token size, and notable flags for every entry, plus book settings. Skip if the catalog in context is enough.',
     parameters: {
       type: 'object',
       properties: {},

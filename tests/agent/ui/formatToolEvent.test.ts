@@ -16,7 +16,7 @@ describe('formatToolEvent', () => {
       formatToolEvent(
         event(
           'replace_in_field',
-          'ok description (Description) — replaced 2 (3849 chars)',
+          'ok description (Description) — replaced 2 (3849 tokens)',
         ),
       ),
     ).toBe('Replaced 2 in Description');
@@ -24,7 +24,7 @@ describe('formatToolEvent', () => {
       formatToolEvent(
         event(
           'replace_in_field',
-          'ok creator_notes (Creator Notes) — replaced 2 (28961 chars)',
+          'ok creator_notes (Creator Notes) — replaced 2 (28961 tokens)',
         ),
       ),
     ).toBe('Replaced 2 in Creator Notes');
@@ -60,8 +60,8 @@ describe('formatToolEvent', () => {
 
   it('formats field updates, greetings, and lists', () => {
     expect(
-      formatToolEvent(event('update_field', 'ok description (Description) — 3849 chars')),
-    ).toBe('Updated Description (3849 chars)');
+      formatToolEvent(event('update_field', 'ok description (Description) — 3849 tokens')),
+    ).toBe('Updated Description (3849 tokens)');
     expect(formatToolEvent(event('add_greeting', 'ok greeting 3/3'))).toBe(
       'Added greeting 3 of 3',
     );
@@ -73,8 +73,8 @@ describe('formatToolEvent', () => {
     ).toBe('Deleted greeting 1 (2 remaining)');
     expect(formatToolEvent(event('list_entries', '24 entries'))).toBe('Listed 24 entries');
     expect(
-      formatToolEvent(event('append_to_field', 'ok personality (Personality) — 40 chars')),
-    ).toBe('Appended to Personality (40 chars)');
+      formatToolEvent(event('append_to_field', 'ok personality (Personality) — 40 tokens')),
+    ).toBe('Appended to Personality (40 tokens)');
     expect(
       formatToolEvent(
         event('replace_across', 'ok replaced 7 in 4 places: description, greeting 1, #4 The Red Keep'),

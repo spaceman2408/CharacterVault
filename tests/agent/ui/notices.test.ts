@@ -122,7 +122,7 @@ describe('isLookupOnlyTurn', () => {
     const okReadField: AgentToolEvent = {
       toolName: 'read_field',
       ok: true,
-      message: 'description (Description) — 12 chars\n---\nSECRET',
+      message: 'description (Description) — 3 tokens\n---\nSECRET',
     };
     expect(isLookupOnlyTurn([okReadField], CHARACTER_LOOKUP_TOOLS)).toBe(true);
     expect(isLookupOnlyTurn([okList], CHARACTER_LOOKUP_TOOLS)).toBe(true);

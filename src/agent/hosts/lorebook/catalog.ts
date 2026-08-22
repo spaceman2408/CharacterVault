@@ -11,8 +11,8 @@ export function formatEntryCatalog(book: CharacterBook): string {
   const settings = formatBookSettings(book);
   const entries = book.entries ?? [];
   if (entries.length === 0) {
-    return `${settings}\nCurrent lorebook entries (id, name, keys, size, flags):\n(none)`;
+    return `${settings}\nCurrent lorebook entries (id, name, keys, token size, flags):\n(none)`;
   }
   const lines = entries.map(entryLabel);
-  return `${settings}\nCurrent lorebook entries (id, name, keys, size, flags):\n${lines.join('\n')}`;
+  return `${settings}\nCurrent lorebook entries (id, name, keys, token size, flags):\n${lines.join('\n')}`;
 }

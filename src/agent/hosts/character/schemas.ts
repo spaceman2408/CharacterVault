@@ -4,7 +4,7 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
     name: 'list_fields',
     description:
-      'Return id, label, and size for every writable card field. Skip if the catalog in context is enough.',
+      'Return id, label, and token size for every writable card field. Skip if the catalog in context is enough.',
     parameters: {
       type: 'object',
       properties: {},
@@ -80,7 +80,7 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
     name: 'list_greetings',
     description:
-      'Return 1-based index and length for each alternate greeting. Greeting 1 is the first alternate. first_mes is a separate field.',
+      'Return 1-based index and token size for each alternate greeting. Greeting 1 is the first alternate. first_mes is a separate field.',
     parameters: {
       type: 'object',
       properties: {},

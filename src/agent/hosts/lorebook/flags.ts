@@ -1,4 +1,5 @@
 import type { CharacterBook, LorebookEntry, LorebookPosition } from '../../../db/characterTypes';
+import { estimateTokens } from '../../../services/AIService';
 
 export const ENTRY_FLAG_KEYS = [
   'enabled',
@@ -205,7 +206,7 @@ export function formatEntryFlagLines(entry: LorebookEntry): string[] {
 }
 
 export function formatEntryFlagSuffix(entry: LorebookEntry): string {
-  const parts: string[] = [`${(entry.content ?? '').length} chars`];
+  const parts: string[] = [`${estimateTokens(entry.content ?? '')} tokens`];
   if (entry.enabled === false) parts.push('disabled');
   if (entry.constant) parts.push('constant');
   if (entry.insertion_order != null && entry.insertion_order !== 0) {
@@ -233,7 +234,7 @@ export function formatBookSettings(book: CharacterBook): string {
   const description = book.description ?? '';
   const parts = [
     name ? `name: ${name}` : null,
-    description ? `description: ${description.length} chars` : null,
+    description ? `description: ${estimateTokens(description)} tokens` : null,
     `scan_depth: ${book.scan_depth ?? '(default)'}`,
     `token_budget: ${book.token_budget ?? '(default)'}`,
     `recursive_scanning: ${book.recursive_scanning ? 'on' : 'off'}`,

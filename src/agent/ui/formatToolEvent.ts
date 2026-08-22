@@ -14,20 +14,20 @@ function parseOkEntry(
 
 function parseOkField(
   message: string,
-): { label: string; chars?: number; replaced?: number } | null {
-  const replaced = /^ok \S+ \((.+)\) — replaced (\d+)(?: \((\d+) chars\))?$/.exec(
+): { label: string; tokens?: number; replaced?: number } | null {
+  const replaced = /^ok \S+ \((.+)\) — replaced (\d+)(?: \((\d+) tokens\))?$/.exec(
     message,
   );
   if (replaced) {
     return {
       label: replaced[1],
       replaced: Number(replaced[2]),
-      chars: replaced[3] != null ? Number(replaced[3]) : undefined,
+      tokens: replaced[3] != null ? Number(replaced[3]) : undefined,
     };
   }
-  const updated = /^ok \S+ \((.+)\) — (\d+) chars$/.exec(message);
+  const updated = /^ok \S+ \((.+)\) — (\d+) tokens$/.exec(message);
   if (!updated) return null;
-  return { label: updated[1], chars: Number(updated[2]) };
+  return { label: updated[1], tokens: Number(updated[2]) };
 }
 
 function parseOkGreeting(
@@ -76,8 +76,8 @@ export function formatToolEvent(event: AgentToolEvent): string {
     const parsed = parseOkField(event.message);
     if (parsed) {
       const verb = event.toolName === 'append_to_field' ? 'Appended to' : 'Updated';
-      return parsed.chars != null
-        ? `${verb} ${parsed.label} (${parsed.chars} chars)`
+      return parsed.tokens != null
+        ? `${verb} ${parsed.label} (${parsed.tokens} tokens)`
         : `${verb} ${parsed.label}`;
     }
   }
