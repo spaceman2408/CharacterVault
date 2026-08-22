@@ -205,9 +205,10 @@ function LorebookEditorInner({
   );
 
   const filteredEntries = useMemo(() => {
-    if (!searchQuery.trim()) return entries;
+    const sorted = [...entries].sort((a, b) => a.id - b.id);
+    if (!searchQuery.trim()) return sorted;
     const query = searchQuery.toLowerCase();
-    return entries.filter(
+    return sorted.filter(
       (entry) =>
         (entry.name?.toLowerCase() || '').includes(query) ||
         (entry.comment?.toLowerCase() || '').includes(query) ||
