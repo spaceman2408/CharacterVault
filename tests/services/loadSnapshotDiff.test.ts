@@ -65,16 +65,16 @@ describe('loadSnapshotDiff', () => {
       },
     ];
 
-    const loadSnapshotPayload = vi.fn(async () => snapshot);
+    const loadSnapshotForDiff = vi.fn(async () => snapshot);
     const diffSnapshotAgainstCharacter = vi.fn(async () => entries);
 
     const result = await loadSnapshotDiff('snap-1', character, {
-      loadSnapshotPayload,
+      loadSnapshotForDiff,
       diffSnapshotAgainstCharacter,
     });
 
-    expect(loadSnapshotPayload).toHaveBeenCalledOnce();
-    expect(loadSnapshotPayload).toHaveBeenCalledWith('snap-1');
+    expect(loadSnapshotForDiff).toHaveBeenCalledOnce();
+    expect(loadSnapshotForDiff).toHaveBeenCalledWith('snap-1');
     expect(diffSnapshotAgainstCharacter).toHaveBeenCalledOnce();
     expect(diffSnapshotAgainstCharacter).toHaveBeenCalledWith(snapshot, character);
     expect(result).toEqual({ snapshot, entries });
@@ -82,11 +82,11 @@ describe('loadSnapshotDiff', () => {
 
   it('returns empty entries when the snapshot is missing', async () => {
     const character = makeCharacter();
-    const loadSnapshotPayload = vi.fn(async () => undefined);
+    const loadSnapshotForDiff = vi.fn(async () => undefined);
     const diffSnapshotAgainstCharacter = vi.fn();
 
     const result = await loadSnapshotDiff('missing', character, {
-      loadSnapshotPayload,
+      loadSnapshotForDiff,
       diffSnapshotAgainstCharacter,
     });
 

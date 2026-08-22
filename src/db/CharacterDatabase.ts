@@ -81,6 +81,55 @@ async function computeSnapshotPayloadHash(payload: CharacterSnapshot['payload'])
   return hashString(serializedPayload);
 }
 
+async function digestParts(parts: string[]): Promise<string> {
+  if (globalThis.crypto?.subtle) {
+    const encoder = new TextEncoder();
+    const encoded = parts.map(part => encoder.encode(part));
+    const totalLength = encoded.reduce((sum, part) => sum + part.length, 0);
+    const bytes = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const part of encoded) {
+      bytes.set(part, offset);
+      offset += part.length;
+    }
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  let hashA = 0x811c9dc5;
+  let hashB = 0x9e3779b1;
+  for (const part of parts) {
+    for (let index = 0; index < part.length; index += 1) {
+      const code = part.charCodeAt(index);
+      hashA ^= code;
+      hashA = Math.imul(hashA, 0x01000193);
+      hashB ^= code;
+      hashB = Math.imul(hashB, 0x85ebca6b);
+    }
+  }
+  return `${(hashA >>> 0).toString(16).padStart(8, '0')}${(hashB >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+/**
+ * v10 payload hash: image bytes are excluded and the content-addressed
+ * imageHash is folded in, so hashing never serializes base64 image strings.
+ * Must stay in sync with CharacterSnapshotService.buildPayloadHash.
+ */
+async function computeCompactSnapshotHash(payload: CharacterSnapshot['payload'], imageHash: string | null): Promise<string> {
+  const book = payload.data.characterBook;
+  const normalizedPayload: CharacterSnapshotPayload = {
+    ...payload,
+    imageData: '',
+    thumbnailData: '',
+    data: {
+      ...payload.data,
+      characterBook: !book || book.entries.length === 0 ? undefined : book,
+    },
+  };
+  const serializedPayload = stableSerialize(normalizedPayload);
+  return digestParts(imageHash ? [serializedPayload, ':', imageHash] : [serializedPayload]);
+}
+
 /**
  * Build a lightweight vault-list row from a full character.
  * Keeps thumbnails + token estimates without retaining imageData / lorebook blobs in React state.
@@ -131,6 +180,9 @@ export class CharacterDatabase extends Dexie {
   /** Table storing snapshots */
   snapshots!: Table<CharacterSnapshot, string>;
 
+  /** Lightweight snapshot metadata — timeline/prune reads stay off the heavy payload rows */
+  snapshotIndex!: Table<SnapshotMetadata, string>;
+
   /** Table storing settings */
   settings!: Table<CharacterVaultSettings, string>;
 
@@ -160,6 +212,9 @@ export class CharacterDatabase extends Dexie {
 
   /** Snapshots for standalone lorebooks */
   lorebookSnapshots!: Table<LorebookSnapshot, string>;
+
+  /** Lightweight lorebook snapshot metadata index */
+  lorebookSnapshotIndex!: Table<LorebookSnapshotMetadata, string>;
 
   /** Character → standalone lorebook attach list (vault-local) */
   characterLorebookAttachments!: Table<CharacterLorebookAttachments, string>;
@@ -278,6 +333,57 @@ export class CharacterDatabase extends Dexie {
       characterLorebookAttachments: 'characterId',
       lorebookCustomContext: 'lorebookId',
     });
+
+    // Version 10: Lightweight snapshot metadata indexes. Timeline, prune and
+    // dedupe reads no longer materialize full snapshot payloads.
+    // Character payload hashes are re-computed with image bytes excluded
+    // (folds in imageHash instead) so hashing never builds base64 strings.
+    this.version(10)
+      .stores({
+        characters: 'id, name, updatedAt, createdAt',
+        settings: 'id',
+        snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+        snapshotIndex: 'id, characterId, createdAt, [characterId+createdAt]',
+        storedImages: 'id',
+        spellDictionaryCache: 'id',
+        characterListIndex: 'id, name, updatedAt, lastOpenedAt',
+        characterCustomContext: 'characterId',
+        lorebooks: 'id, name, updatedAt, createdAt',
+        lorebookListIndex: 'id, name, updatedAt, lastOpenedAt',
+        lorebookSnapshots: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+        lorebookSnapshotIndex: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+        characterLorebookAttachments: 'characterId',
+        lorebookCustomContext: 'lorebookId',
+      })
+      .upgrade(async (tx) => {
+        const snapshotsTable = tx.table<CharacterSnapshot, string>('snapshots');
+        const snapshotIndexTable = tx.table<SnapshotMetadata, string>('snapshotIndex');
+        await snapshotsTable.toCollection().each(async (snapshot) => {
+          const payloadHash = await computeCompactSnapshotHash(snapshot.payload, snapshot.imageHash);
+          if (snapshot.payloadHash !== payloadHash) {
+            await snapshotsTable.update(snapshot.id, { payloadHash });
+          }
+          await snapshotIndexTable.put({
+            id: snapshot.id,
+            characterId: snapshot.characterId,
+            source: snapshot.source,
+            createdAt: snapshot.createdAt,
+            payloadHash,
+            imageHash: snapshot.imageHash,
+          });
+        });
+
+        const lorebookIndexTable = tx.table<LorebookSnapshotMetadata, string>('lorebookSnapshotIndex');
+        await tx.table<LorebookSnapshot, string>('lorebookSnapshots').toCollection().each(async (snapshot) => {
+          await lorebookIndexTable.put({
+            id: snapshot.id,
+            lorebookId: snapshot.lorebookId,
+            source: snapshot.source,
+            createdAt: snapshot.createdAt,
+            payloadHash: snapshot.payloadHash,
+          });
+        });
+      });
   }
 
   private async syncLorebookListIndex(lorebook: VaultLorebook): Promise<void> {
@@ -533,6 +639,7 @@ export class CharacterDatabase extends Dexie {
       [
         this.characters,
         this.snapshots,
+        this.snapshotIndex,
         this.characterListIndex,
         this.characterCustomContext,
         this.characterLorebookAttachments,
@@ -541,6 +648,7 @@ export class CharacterDatabase extends Dexie {
         await this.characters.delete(id);
         await this.characterListIndex.delete(id);
         await this.snapshots.where('characterId').equals(id).delete();
+        await this.snapshotIndex.where('characterId').equals(id).delete();
         await this.characterCustomContext.delete(id);
         await this.characterLorebookAttachments.delete(id);
       }
@@ -718,8 +826,11 @@ export class CharacterDatabase extends Dexie {
   // ============================================================================
 
   async createSnapshot(input: CreateSnapshotInput): Promise<CharacterSnapshot | null> {
-    const latestSnapshot = await this.getLatestSnapshot(input.characterId);
-    if (latestSnapshot?.payloadHash === input.payloadHash) {
+    const latestMetadata = await this.snapshotIndex
+      .where('[characterId+createdAt]')
+      .between([input.characterId, Dexie.minKey], [input.characterId, Dexie.maxKey])
+      .last();
+    if (latestMetadata?.payloadHash === input.payloadHash) {
       return null;
     }
 
@@ -738,7 +849,7 @@ export class CharacterDatabase extends Dexie {
       imageHash: input.imageHash,
     };
 
-    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
+    await this.transaction('rw', this.snapshots, this.storedImages, this.snapshotIndex, async () => {
       // Store the image in content-addressed storage if provided
       if (input.imageHash && input.payload.imageData) {
         await this.storedImages.put({
@@ -749,6 +860,14 @@ export class CharacterDatabase extends Dexie {
       }
 
       await this.snapshots.add(snapshot);
+      await this.snapshotIndex.put({
+        id: snapshot.id,
+        characterId: snapshot.characterId,
+        source: snapshot.source,
+        createdAt: snapshot.createdAt,
+        payloadHash: snapshot.payloadHash,
+        imageHash: snapshot.imageHash,
+      });
       await this.pruneSnapshotsForCharacter(input.characterId, 10);
     });
 
@@ -764,41 +883,44 @@ export class CharacterDatabase extends Dexie {
   }
 
   async getLatestSnapshot(characterId: string): Promise<CharacterSnapshot | undefined> {
-    const snapshots = await this.snapshots
-      .where('characterId')
-      .equals(characterId)
-      .sortBy('createdAt');
-    return snapshots.at(-1);
+    return this.snapshots
+      .where('[characterId+createdAt]')
+      .between([characterId, Dexie.minKey], [characterId, Dexie.maxKey])
+      .last();
   }
 
   async deleteSnapshot(snapshotId: string): Promise<void> {
-    const snapshot = await this.snapshots.get(snapshotId);
-    if (!snapshot) {
+    const characterId =
+      (await this.snapshotIndex.get(snapshotId))?.characterId ??
+      (await this.snapshots.get(snapshotId))?.characterId;
+    if (!characterId) {
       return;
     }
 
-    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
+    await this.transaction('rw', this.snapshots, this.storedImages, this.snapshotIndex, async () => {
       await this.snapshots.delete(snapshotId);
-      await this.cleanOrphanedImages(snapshot.characterId);
+      await this.snapshotIndex.delete(snapshotId);
+      await this.cleanOrphanedImages(characterId);
     });
   }
 
   async pruneSnapshotsForCharacter(characterId: string, limit: number): Promise<void> {
-    const snapshots = await this.snapshots
+    const metadata = await this.snapshotIndex
       .where('characterId')
       .equals(characterId)
       .sortBy('createdAt');
 
-    const prunable = snapshots.filter((snapshot) => snapshot.source !== 'open');
-    const reserved = snapshots.length - prunable.length;
+    const prunable = metadata.filter((entry) => entry.source !== 'open');
+    const reserved = metadata.length - prunable.length;
     const keep = Math.max(0, limit - reserved);
     if (prunable.length <= keep) {
       return;
     }
 
-    const snapshotsToDelete = prunable.slice(0, prunable.length - keep);
-    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
-      await Promise.all(snapshotsToDelete.map(snapshot => this.snapshots.delete(snapshot.id)));
+    const toDelete = prunable.slice(0, prunable.length - keep);
+    await this.transaction('rw', this.snapshots, this.storedImages, this.snapshotIndex, async () => {
+      await Promise.all(toDelete.map(entry => this.snapshots.delete(entry.id)));
+      await Promise.all(toDelete.map(entry => this.snapshotIndex.delete(entry.id)));
       await this.cleanOrphanedImages(characterId);
     });
   }
@@ -810,20 +932,11 @@ export class CharacterDatabase extends Dexie {
    * @returns {Promise<SnapshotMetadata[]>} Array of snapshot metadata, newest first, opened baseline last
    */
   async getSnapshotMetadataForCharacter(characterId: string): Promise<SnapshotMetadata[]> {
-    const snapshots = await this.snapshots
+    const metadata = await this.snapshotIndex
       .where('characterId')
       .equals(characterId)
       .toArray();
-    return snapshots
-      .map(({ id, characterId: cId, source, createdAt, payloadHash, imageHash }) => ({
-        id,
-        characterId: cId,
-        source,
-        createdAt,
-        payloadHash,
-        imageHash,
-      }))
-      .sort(compareSnapshotTimeline);
+    return metadata.sort(compareSnapshotTimeline);
   }
 
   /**
@@ -848,25 +961,15 @@ export class CharacterDatabase extends Dexie {
    * @returns {Promise<void>}
    */
   async cleanOrphanedImages(characterId?: string): Promise<void> {
-    let snapshots: CharacterSnapshot[];
+    const metadata = characterId
+      ? await this.snapshotIndex.where('characterId').equals(characterId).toArray()
+      : await this.snapshotIndex.toArray();
 
-    if (characterId) {
-      snapshots = await this.snapshots
-        .where('characterId')
-        .equals(characterId)
-        .toArray();
-    } else {
-      snapshots = await this.snapshots.toArray();
-    }
-
-    // Get all image hashes that are still referenced
     const referencedHashes = new Set(
-      snapshots.map(s => s.imageHash).filter((hash): hash is string => hash !== null)
+      metadata.map(entry => entry.imageHash).filter((hash): hash is string => hash !== null)
     );
 
-    // Get all stored image IDs
-    const allStoredImages = await this.storedImages.toArray();
-    const storedImageIds = allStoredImages.map(img => img.id);
+    const storedImageIds = await this.storedImages.toCollection().primaryKeys();
 
     // Find orphaned images (stored but not referenced)
     const orphanedIds = storedImageIds.filter(id => !referencedHashes.has(id));
@@ -893,7 +996,10 @@ export class CharacterDatabase extends Dexie {
    * @returns {Promise<void>}
    */
   async deleteSnapshotById(snapshotId: string): Promise<void> {
-    await this.snapshots.delete(snapshotId);
+    await this.transaction('rw', this.snapshots, this.snapshotIndex, async () => {
+      await this.snapshots.delete(snapshotId);
+      await this.snapshotIndex.delete(snapshotId);
+    });
   }
 
   /**
@@ -911,9 +1017,10 @@ export class CharacterDatabase extends Dexie {
     imageData: string,
     thumbnailData: string,
   ): Promise<void> {
-    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
+    await this.transaction('rw', this.snapshots, this.storedImages, this.snapshotIndex, async () => {
       await this.storedImages.put({ id: imageHash, imageData, thumbnailData });
       await this.snapshots.update(snapshotId, { imageHash });
+      await this.snapshotIndex.update(snapshotId, { imageHash });
     });
   }
 
@@ -935,7 +1042,7 @@ export class CharacterDatabase extends Dexie {
     payloadHash: string,
     imageHash: string | null,
   ): Promise<void> {
-    await this.transaction('rw', this.snapshots, this.storedImages, async () => {
+    await this.transaction('rw', this.snapshots, this.storedImages, this.snapshotIndex, async () => {
       if (imageHash && payload.imageData) {
         await this.storedImages.put({
           id: imageHash,
@@ -953,6 +1060,7 @@ export class CharacterDatabase extends Dexie {
         payloadHash,
         imageHash,
       });
+      await this.snapshotIndex.update(snapshotId, { payloadHash, imageHash });
 
       await this.cleanOrphanedImages(characterId);
     });
@@ -1068,6 +1176,7 @@ export class CharacterDatabase extends Dexie {
         this.lorebooks,
         this.lorebookListIndex,
         this.lorebookSnapshots,
+        this.lorebookSnapshotIndex,
         this.characterLorebookAttachments,
         this.lorebookCustomContext,
       ],
@@ -1075,6 +1184,7 @@ export class CharacterDatabase extends Dexie {
         await this.lorebooks.delete(id);
         await this.lorebookListIndex.delete(id);
         await this.lorebookSnapshots.where('lorebookId').equals(id).delete();
+        await this.lorebookSnapshotIndex.where('lorebookId').equals(id).delete();
         await this.lorebookCustomContext.delete(id);
 
         // Drop attach references to this book
@@ -1166,8 +1276,11 @@ export class CharacterDatabase extends Dexie {
   // ============================================================================
 
   async createLorebookSnapshot(input: CreateLorebookSnapshotInput): Promise<LorebookSnapshot | null> {
-    const latest = await this.getLatestLorebookSnapshot(input.lorebookId);
-    if (latest?.payloadHash === input.payloadHash) {
+    const latestMetadata = await this.lorebookSnapshotIndex
+      .where('[lorebookId+createdAt]')
+      .between([input.lorebookId, Dexie.minKey], [input.lorebookId, Dexie.maxKey])
+      .last();
+    if (latestMetadata?.payloadHash === input.payloadHash) {
       return null;
     }
 
@@ -1180,8 +1293,15 @@ export class CharacterDatabase extends Dexie {
       payloadHash: input.payloadHash,
     };
 
-    await this.transaction('rw', this.lorebookSnapshots, async () => {
+    await this.transaction('rw', this.lorebookSnapshots, this.lorebookSnapshotIndex, async () => {
       await this.lorebookSnapshots.add(snapshot);
+      await this.lorebookSnapshotIndex.put({
+        id: snapshot.id,
+        lorebookId: snapshot.lorebookId,
+        source: snapshot.source,
+        createdAt: snapshot.createdAt,
+        payloadHash: snapshot.payloadHash,
+      });
       await this.pruneLorebookSnapshots(input.lorebookId, 10);
     });
 
@@ -1197,27 +1317,18 @@ export class CharacterDatabase extends Dexie {
   }
 
   async getLatestLorebookSnapshot(lorebookId: string): Promise<LorebookSnapshot | undefined> {
-    const snapshots = await this.lorebookSnapshots
-      .where('lorebookId')
-      .equals(lorebookId)
-      .sortBy('createdAt');
-    return snapshots.at(-1);
+    return this.lorebookSnapshots
+      .where('[lorebookId+createdAt]')
+      .between([lorebookId, Dexie.minKey], [lorebookId, Dexie.maxKey])
+      .last();
   }
 
   async getLorebookSnapshotMetadata(lorebookId: string): Promise<LorebookSnapshotMetadata[]> {
-    const snapshots = await this.lorebookSnapshots
+    const metadata = await this.lorebookSnapshotIndex
       .where('lorebookId')
       .equals(lorebookId)
       .toArray();
-    return snapshots
-      .map(({ id, lorebookId: bookId, source, createdAt, payloadHash }) => ({
-        id,
-        lorebookId: bookId,
-        source,
-        createdAt,
-        payloadHash,
-      }))
-      .sort(compareSnapshotTimeline);
+    return metadata.sort(compareSnapshotTimeline);
   }
 
   async getLorebookSnapshotById(snapshotId: string): Promise<LorebookSnapshot | undefined> {
@@ -1225,7 +1336,10 @@ export class CharacterDatabase extends Dexie {
   }
 
   async deleteLorebookSnapshot(snapshotId: string): Promise<void> {
-    await this.lorebookSnapshots.delete(snapshotId);
+    await this.transaction('rw', this.lorebookSnapshots, this.lorebookSnapshotIndex, async () => {
+      await this.lorebookSnapshots.delete(snapshotId);
+      await this.lorebookSnapshotIndex.delete(snapshotId);
+    });
   }
 
   /**
@@ -1244,24 +1358,30 @@ export class CharacterDatabase extends Dexie {
     if (existing.source !== 'open') {
       throw new Error('Only the opened baseline can be updated');
     }
-    await this.lorebookSnapshots.update(snapshotId, { payload, payloadHash });
+    await this.transaction('rw', this.lorebookSnapshots, this.lorebookSnapshotIndex, async () => {
+      await this.lorebookSnapshots.update(snapshotId, { payload, payloadHash });
+      await this.lorebookSnapshotIndex.update(snapshotId, { payloadHash });
+    });
   }
 
   async pruneLorebookSnapshots(lorebookId: string, limit: number): Promise<void> {
-    const snapshots = await this.lorebookSnapshots
+    const metadata = await this.lorebookSnapshotIndex
       .where('lorebookId')
       .equals(lorebookId)
       .sortBy('createdAt');
 
-    const prunable = snapshots.filter((snapshot) => snapshot.source !== 'open');
-    const reserved = snapshots.length - prunable.length;
+    const prunable = metadata.filter((entry) => entry.source !== 'open');
+    const reserved = metadata.length - prunable.length;
     const keep = Math.max(0, limit - reserved);
     if (prunable.length <= keep) {
       return;
     }
 
     const toDelete = prunable.slice(0, prunable.length - keep);
-    await Promise.all(toDelete.map((snapshot) => this.lorebookSnapshots.delete(snapshot.id)));
+    await this.transaction('rw', this.lorebookSnapshots, this.lorebookSnapshotIndex, async () => {
+      await Promise.all(toDelete.map((entry) => this.lorebookSnapshots.delete(entry.id)));
+      await Promise.all(toDelete.map((entry) => this.lorebookSnapshotIndex.delete(entry.id)));
+    });
   }
 
   // ============================================================================

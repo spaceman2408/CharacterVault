@@ -48,7 +48,7 @@ export function shouldComputePayloadHash(isModalVisible: boolean): boolean {
 }
 
 export interface SnapshotDiffLoader {
-  loadSnapshotPayload(snapshotId: string): Promise<CharacterSnapshot | undefined>;
+  loadSnapshotForDiff(snapshotId: string): Promise<CharacterSnapshot | undefined>;
   diffSnapshotAgainstCharacter(
     snapshot: CharacterSnapshot,
     character: Character,
@@ -64,7 +64,7 @@ export async function loadSnapshotDiff(
   character: Character,
   loader: SnapshotDiffLoader,
 ): Promise<{ snapshot: CharacterSnapshot | null; entries: SnapshotDiffEntry[] }> {
-  const snapshot = await loader.loadSnapshotPayload(snapshotId);
+  const snapshot = await loader.loadSnapshotForDiff(snapshotId);
   if (!snapshot) {
     return { snapshot: null, entries: [] };
   }

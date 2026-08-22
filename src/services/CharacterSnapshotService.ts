@@ -76,26 +76,51 @@ function stableSerialize(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function hashString(value: string): string {
+function hashParts(parts: string[]): string {
   let hashA = 0x811c9dc5;
   let hashB = 0x9e3779b1;
 
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
-    hashA ^= code;
-    hashA = Math.imul(hashA, 0x01000193);
-    hashB ^= code;
-    hashB = Math.imul(hashB, 0x85ebca6b);
+  for (const part of parts) {
+    for (let index = 0; index < part.length; index += 1) {
+      const code = part.charCodeAt(index);
+      hashA ^= code;
+      hashA = Math.imul(hashA, 0x01000193);
+      hashB ^= code;
+      hashB = Math.imul(hashB, 0x85ebca6b);
+    }
   }
 
   return `${(hashA >>> 0).toString(16).padStart(8, '0')}${(hashB >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+/**
+ * Hash parts as one contiguous digest without concatenating the inputs —
+ * snapshot payloads and base64 images are large enough that the extra
+ * string copy shows up in memory profiles.
+ */
+async function digestParts(parts: string[]): Promise<string> {
+  if (globalThis.crypto?.subtle) {
+    const encoder = new TextEncoder();
+    const encoded = parts.map(part => encoder.encode(part));
+    const totalLength = encoded.reduce((sum, part) => sum + part.length, 0);
+    const bytes = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const part of encoded) {
+      bytes.set(part, offset);
+      offset += part.length;
+    }
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  return hashParts(parts);
 }
 
 function clonePayloadData<T>(value: T): T {
   if (value === undefined) {
     return value;
   }
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function getSectionLabel(section: SnapshotDiffEntry['section']): string {
@@ -148,9 +173,16 @@ class CharacterSnapshotService {
     };
   }
 
-  async buildPayloadHash(payload: CharacterSnapshotPayload): Promise<string> {
+  /**
+   * Hash the payload with image bytes excluded; the content-addressed
+   * imageHash is folded in instead, so hashing never serializes base64.
+   * Must stay in sync with the v10 re-hash migration in CharacterDatabase.
+   */
+  async buildPayloadHash(payload: CharacterSnapshotPayload, imageHash: string | null = null): Promise<string> {
     const normalizedPayload: CharacterSnapshotPayload = {
       ...payload,
+      imageData: '',
+      thumbnailData: '',
       data: {
         ...payload.data,
         characterBook: normalizeLorebook(payload.data.characterBook ?? null) ?? undefined,
@@ -158,13 +190,7 @@ class CharacterSnapshotService {
     };
     const serializedPayload = stableSerialize(normalizedPayload);
 
-    if (globalThis.crypto?.subtle) {
-      const payloadBytes = new TextEncoder().encode(serializedPayload);
-      const digest = await globalThis.crypto.subtle.digest('SHA-256', payloadBytes);
-      return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
-    }
-
-    return hashString(serializedPayload);
+    return digestParts(imageHash ? [serializedPayload, ':', imageHash] : [serializedPayload]);
   }
 
   /**
@@ -174,15 +200,21 @@ class CharacterSnapshotService {
    * @returns {Promise<string>} Image hash
    */
   async computeImageHash(imageData: string, thumbnailData: string): Promise<string> {
-    const combined = `${imageData}:${thumbnailData}`;
-
     if (globalThis.crypto?.subtle) {
-      const bytes = new TextEncoder().encode(combined);
+      // Hash imageData + ':' + thumbnailData from one buffer; the base64
+      // strings are large and a template-literal concat adds another copy.
+      const encoder = new TextEncoder();
+      const imageBytes = encoder.encode(imageData);
+      const thumbnailBytes = encoder.encode(thumbnailData);
+      const bytes = new Uint8Array(imageBytes.length + 1 + thumbnailBytes.length);
+      bytes.set(imageBytes, 0);
+      bytes[imageBytes.length] = 0x3a;
+      bytes.set(thumbnailBytes, imageBytes.length + 1);
       const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
       return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
     }
 
-    return hashString(combined);
+    return hashParts([imageData, ':', thumbnailData]);
   }
 
   async createSnapshot(character: Character, source: SnapshotSource): Promise<CharacterSnapshot | null> {
@@ -233,13 +265,13 @@ class CharacterSnapshotService {
       thumbnailData: character.thumbnailData,
       data: clonePayloadData(character.data),
     };
-    const payloadHash = await this.buildPayloadHash(fullPayload);
 
-    // Compute image hash for content-addressed storage
+    // Image hash first — the payload hash folds it in instead of the base64 bytes
     let imageHash: string | null = null;
     if (character.imageData) {
       imageHash = await this.computeImageHash(character.imageData, character.thumbnailData);
     }
+    const payloadHash = await this.buildPayloadHash(fullPayload, imageHash);
 
     // Store the payload with image data (the DB will store it in storedImages)
     // The payload will be stripped when stored in the snapshot table
@@ -295,6 +327,15 @@ class CharacterSnapshotService {
     }
 
     return snapshot;
+  }
+
+  /**
+   * Load the stored snapshot without resolving image bytes.
+   * Diff path only — diffSnapshotAgainstCharacter resolves the image
+   * itself, and only when it actually changed.
+   */
+  async loadSnapshotForDiff(snapshotId: string): Promise<CharacterSnapshot | undefined> {
+    return characterDb.getSnapshotById(snapshotId);
   }
 
   async deleteSnapshot(snapshot: CharacterSnapshot): Promise<void> {
@@ -439,12 +480,12 @@ class CharacterSnapshotService {
    */
   async overwriteSnapshot(snapshotId: string, character: Character): Promise<void> {
     const fullPayload: CharacterSnapshotPayload = this.buildPayload(character);
-    const payloadHash = await this.buildPayloadHash(fullPayload);
 
     let imageHash: string | null = null;
     if (character.imageData) {
       imageHash = await this.computeImageHash(character.imageData, character.thumbnailData);
     }
+    const payloadHash = await this.buildPayloadHash(fullPayload, imageHash);
 
     await characterDb.overwriteSnapshotPayload(
       snapshotId,
@@ -484,7 +525,10 @@ class CharacterSnapshotService {
    */
   async computeCharacterPayloadHash(character: Character): Promise<string> {
     const payload = this.buildPayload(character);
-    return this.buildPayloadHash(payload);
+    const imageHash = character.imageData
+      ? await this.computeImageHash(character.imageData, character.thumbnailData)
+      : null;
+    return this.buildPayloadHash(payload, imageHash);
   }
 
   /**

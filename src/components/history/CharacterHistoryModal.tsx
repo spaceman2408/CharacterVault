@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useCharacterEditorContext } from '../../context';
 import { characterSnapshotService, shouldComputePayloadHash } from '../../services';
-import type { CharacterBook, CharacterSnapshot, SnapshotMetadata, SnapshotDiffEntry } from '../../db/characterTypes';
+import type { CharacterBook, SnapshotMetadata, SnapshotDiffEntry } from '../../db/characterTypes';
 
 interface CharacterHistoryModalProps {
   isOpen: boolean;
@@ -1151,7 +1151,7 @@ function SnapshotSummary({
 
 interface DiffSectionProps {
   entry: SnapshotDiffEntry;
-  snapshot: CharacterSnapshot | null;
+  snapshotLoaded: boolean;
   isActive: boolean;
   isCollapsed: boolean;
   isBusy: boolean;
@@ -1162,7 +1162,7 @@ interface DiffSectionProps {
 
 function DiffSection({
   entry,
-  snapshot,
+  snapshotLoaded,
   isActive,
   isCollapsed,
   isBusy,
@@ -1170,7 +1170,7 @@ function DiffSection({
   onToggle,
   onRestore,
 }: DiffSectionProps): React.ReactElement {
-  const isSnapshotMissing = snapshot === null;
+  const isSnapshotMissing = !snapshotLoaded;
 
   return (
     <div className="border-t pt-4 first:border-t-0 first:pt-0 border-border">
@@ -1231,7 +1231,7 @@ export function CharacterHistoryModal({
     getSnapshotDiff,
   } = useCharacterEditorContext();
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
-  const [selectedSnapshot, setSelectedSnapshot] = useState<CharacterSnapshot | null>(null);
+  const [snapshotLoaded, setSnapshotLoaded] = useState(false);
   const [diffEntries, setDiffEntries] = useState<SnapshotDiffEntry[]>([]);
   const [isLoadingDiff, setIsLoadingDiff] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
@@ -1268,7 +1268,7 @@ export function CharacterHistoryModal({
 
   const resetModalState = useCallback(() => {
     setSelectedSnapshotId(null);
-    setSelectedSnapshot(null);
+    setSnapshotLoaded(false);
     setDiffEntries([]);
     setConfirmAction(null);
     setCollapsedSections({});
@@ -1446,7 +1446,7 @@ export function CharacterHistoryModal({
 
   useEffect(() => {
     if (!selectedSnapshotId) {
-      setSelectedSnapshot(null);
+      setSnapshotLoaded(false);
       setDiffEntries([]);
       setHasAttemptedLoad(false);
       return;
@@ -1468,12 +1468,12 @@ export function CharacterHistoryModal({
         if (cancelled) return;
 
         setDiffEntries(filtered);
-        setSelectedSnapshot(snapshot);
+        setSnapshotLoaded(snapshot !== null);
       } catch (error) {
         if (cancelled) return;
         console.error('Failed to load diff:', error);
         setDiffEntries([]);
-        setSelectedSnapshot(null);
+        setSnapshotLoaded(false);
       } finally {
         if (!cancelled) {
           const elapsed = performance.now() - startTime;
@@ -1546,7 +1546,7 @@ export function CharacterHistoryModal({
               return;
             }
             setDiffEntries(entries.filter(entry => entry.changed));
-            setSelectedSnapshot(snapshot);
+            setSnapshotLoaded(snapshot !== null);
             setHasAttemptedLoad(true);
           } finally {
             if (reloadGeneration === confirmReloadGenerationRef.current) {
@@ -1566,7 +1566,7 @@ export function CharacterHistoryModal({
               return;
             }
             setDiffEntries(entries.filter(entry => entry.changed));
-            setSelectedSnapshot(snapshot);
+            setSnapshotLoaded(snapshot !== null);
           } finally {
             if (reloadGeneration === confirmReloadGenerationRef.current) {
               setIsLoadingDiff(false);
@@ -1596,7 +1596,7 @@ export function CharacterHistoryModal({
     if (snapshotId !== selectedSnapshotId) {
       setSelectedSnapshotId(snapshotId);
       setDiffEntries([]);
-      setSelectedSnapshot(null);
+      setSnapshotLoaded(false);
       setIsLoadingDiff(true);
       setHasAttemptedLoad(false);
     }
@@ -1732,7 +1732,7 @@ export function CharacterHistoryModal({
                       changedSectionCount={changedSectionCount}
                       hasActiveSectionDiff={hasActiveSectionDiff}
                       isBusy={isBusy}
-                      isSnapshotMissing={selectedSnapshot === null}
+                      isSnapshotMissing={!snapshotLoaded}
                       hasAttemptedLoad={hasAttemptedLoad}
                       onRestore={() => selectedMetadata && setConfirmAction({ kind: 'restore-whole', metadata: selectedMetadata })}
                       onUpdateBaseline={() => selectedMetadata && setConfirmAction({ kind: 'update-baseline', metadata: selectedMetadata })}
@@ -1749,7 +1749,7 @@ export function CharacterHistoryModal({
                         <DiffSection
                           key={entry.section}
                           entry={entry}
-                          snapshot={selectedSnapshot}
+                          snapshotLoaded={snapshotLoaded}
                           isActive={entry.section === activeSection}
                           isCollapsed={collapsedSections[entry.section] ?? isSectionCollapsedByDefault(entry.section, activeSection)}
                           isBusy={isBusy}
