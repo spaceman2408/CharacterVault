@@ -22,7 +22,7 @@ export default defineConfig({
     },
   },
   build: {
-    chunkSizeWarningLimit: 1500,
+    chunkSizeWarningLimit: 2500,
     target: 'esnext',
     outDir: 'dist',
     sourcemap: true,
