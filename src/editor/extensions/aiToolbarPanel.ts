@@ -715,7 +715,9 @@ function createToolbarPanel(
 
   const resultCloseBtn = document.createElement('button');
   resultCloseBtn.innerHTML = '✕';
+  resultCloseBtn.title = 'Dismiss error (Escape)';
   resultCloseBtn.style.cssText = `
+    display: none;
     padding: 2px 6px;
     font-size: 14px;
     color: var(--ai-toolbar-text-muted);
@@ -1026,10 +1028,12 @@ function createToolbarPanel(
       processingIndicator.style.display = 'none';
       reasoningFold.style.display = 'none';
       reasoningText.textContent = '';
+      resultCloseBtn.style.display = 'inline';
       actionButtons.style.display = 'none';
       return;
     } else {
       errorDisplay.style.display = 'none';
+      resultCloseBtn.style.display = 'none';
     }
 
     // Compact processing row until first stream tokens / while waiting
