@@ -33,7 +33,7 @@ You can:
 
 - **Edit every field** of a V2/V3 character card: description, personality, greetings, lorebook, creator notes, and extensions
 - **Keep standalone lorebooks** in a second vault library (World Info), with import/export, snapshots, and optional linking to characters (linked books stay in sync)
-- **Use AI to help you write** through Orion (a built-in chat assistant) and an AI toolbar with enhance, rephrase, shorten, fix, and other operations
+- **Use AI to help you write** through Orion (chat), the **Agent** (writes the open card or lorebook), and an AI toolbar with enhance, rephrase, shorten, fix, and other operations
 - **Save snapshots** at any point and roll back to previous versions, either the entire card or individual sections
 - **Import and export** PNG cards with embedded data and JSON files, compatible with SillyTavern, TavernAI, and other tools
 - **Stay in control** with local IndexedDB storage, dark and light themes
@@ -56,7 +56,7 @@ In the lorebook editor, **Options → Map** (or book settings **Map**) shows whi
 ## AI Features
 
 ::: details How do I enable AI features?
-To use the AI toolbar or Orion assistant, you must configure an AI provider:
+To use the AI toolbar, Orion, or the Agent, you must configure an AI provider:
 
 1. Open a character in the workspace
 2. Click **Settings** in the workspace header
@@ -108,11 +108,22 @@ To use Orion:
 2. Open the **Ask AI** panel and type your question
 3. Orion responds using the selected context
 
-Orion uses your configured AI provider and understands Character Vault's features and the V2/V3 specification. See [AI Assistant — Orion](/features/ai-assistant).
+Orion uses your configured AI provider and understands Character Vault's features and the V2/V3 specification. See [AI Assistant Orion](/features/ai-assistant).
+:::
+
+::: details What is the Agent?
+The **Agent** is a chat that **writes** the character or lorebook you have open. You ask for a fill or a revision; when the run finishes, those fields and entries update. Orion does not do that.
+
+1. Open **Ask AI** and click **Agent** in the chat header
+2. Optionally enable [custom context](/features/ai-context#custom-context) as source notes
+3. Send a request. Changes appear when the run finishes
+4. Use **Snapshots** if you need to roll back
+
+It can use a separate model on **Settings → Prompts → Agent**. See [AI Agent](/features/ai-agent).
 :::
 
 ::: details What is custom context?
-**Custom context** is free-text notes you paste for one character in the **AI Context** panel. When enabled, those notes are sent to Orion and the AI toolbar along with any pinned card sections.
+**Custom context** is free-text notes you paste for one character in the **AI Context** panel. When enabled, those notes are sent to Orion, the Agent, and the AI toolbar. Orion and the toolbar also use any pinned card sections; the Agent reads the card with tools and does not use section pins.
 
 - Stored only in this browser, per character (IndexedDB)
 - Not part of PNG/JSON export or SillyTavern card data
@@ -235,7 +246,7 @@ For important characters, export a PNG backup before clearing browser data. See 
 ::: details Can I use Character Vault offline?
 The app works offline. You can create, edit, organize, import, and export characters without an internet connection.
 
-AI features (Orion assistant and AI toolbar) require an internet connection to reach your configured API endpoint.
+AI features (Orion, Agent, and AI toolbar) require an internet connection to reach your configured API endpoint.
 :::
 
 ## Troubleshooting
@@ -281,7 +292,7 @@ Each prompt must include `${text}` as a placeholder (the selected or full editor
 ::: details Can each toolbar button use a different model?
 Yes. On **Settings → Prompts**, expand any operation and set **Model for this prompt**. You can keep **Default (AI Config)** or point that op at another endpoint (Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio, custom) and model. Keys are configured on the **AI Config** tab first.
 
-Orion chat and AI Creation Studio always use the global AI Config model. Lorebook ✨ key generation follows the **Custom** prompt mapping when set.
+Orion chat and AI Creation Studio always use the global AI Config model. The **Agent** uses the **Agent** mapping at the top of the Prompts tab (Default follows AI Config). Lorebook ✨ key generation follows the **Custom** prompt mapping when set.
 
 See [AI Setup → Per-prompt model routing](/configuration/ai-setup#per-prompt-model-routing) and [Editor → Per-operation model routing](/features/editor#per-operation-model-routing).
 :::

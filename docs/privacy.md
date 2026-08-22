@@ -27,9 +27,9 @@ If you run CharacterVault yourself (local build or your own host), only that hos
 
 ## AI features (optional)
 
-AI tools (Orion chat, the AI toolbar, AI Creation Studio, and similar) only work after you configure a provider (API base URL, key, and model, or a sign-in flow such as NanoGPT where offered).
+AI tools (Orion chat, the Agent, the AI toolbar, AI Creation Studio, and similar) only work after you configure a provider (API base URL, key, and model, or a sign-in flow such as NanoGPT where offered).
 
-When you use those features, text and context you send (for example selected sections of a card, enabled custom context notes, chat messages, or generation prompts) are transmitted to **that provider** so a model can respond. CharacterVault does not intermediate those requests through a CharacterVault-owned AI backend for the standard open-source app.
+When you use those features, text and context you send (for example selected sections of a card, enabled custom context notes, chat messages, Agent catalogs and field or entry bodies it reads, or generation prompts) are transmitted to **that provider** so a model can respond. CharacterVault does not intermediate those requests through a CharacterVault-owned AI backend for the standard open-source app.
 
 - Your provider’s privacy policy and terms apply to that traffic.
 - API keys and related credentials are stored **locally** in your browser settings, not on CharacterVault servers.

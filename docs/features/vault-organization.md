@@ -100,7 +100,7 @@ When the library first loads, skeleton placeholders appear while character thumb
 All character data is stored locally in your browser. No server is required to use Character Vault.
 
 ::: warning
-AI features (Orion assistant, AI toolbar) require an internet connection to reach your configured API endpoint.
+AI features (Orion, Agent, AI toolbar) require an internet connection to reach your configured API endpoint.
 :::
 
 ## Next Steps

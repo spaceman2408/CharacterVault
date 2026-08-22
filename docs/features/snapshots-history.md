@@ -8,7 +8,7 @@ Each snapshot is labelled with a colour-coded badge in the timeline:
 
 | Badge | When It's Created |
 | :--- | :--- |
-| **Opened card** | Automatically the first time you open a character card. Only one baseline exists per character; it is protected from deletion. |
+| **Opened card** | Automatically the first time you open a character card. Only one baseline exists per character; it is protected from deletion. It stays last in the list. |
 | **Manual save point** | When you click **Save snapshot** in the Snapshots modal. |
 | **Post-restore save point** | Automatically after a restore (full card or section) completes. This records the state right after the rollback is applied. |
 
@@ -93,6 +93,8 @@ If nothing has changed between the snapshot and your current draft, the **Restor
 
 ## Best Practices
 
+The [Agent](/features/ai-agent) takes **one snapshot** before it writes the card or book (only if something changed). Use that save point if a run went further than you wanted.
+
 - **Save a snapshot before big changes** – Click **Save snapshot** before overhauling a description or rewriting a greeting.
 - **Use section restore for surgical fixes** – If only one field was accidentally changed, restore just that section instead of rolling back the entire card.
 - **Export as backup** – For important characters, [export a PNG copy](/features/import-export) as an external backup in addition to relying on local snapshots.
@@ -107,10 +109,13 @@ Books in the [Lorebook Vault](/features/lorebook-vault) have a separate history 
 | **Manual** | **Snapshot now** in the History modal (only if something changed) |
 | **Rollback** | Created after a restore |
 
+The lorebook [Agent](/features/ai-agent) also snapshots once before it writes the book.
+
 You can list snapshots, preview book metadata and a sample of entries, restore a snapshot over the current book, or delete individual snapshots. Restore asks for confirmation. Restoring a library book also updates every linked character. History is stored locally with the rest of the vault.
 
 ## Next Steps
 
 - [Import and export characters](/features/import-export)
 - [Lorebook Vault](/features/lorebook-vault)
+- [AI Agent](/features/ai-agent)
 - [Organize your vault](/features/vault-organization)

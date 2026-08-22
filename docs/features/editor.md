@@ -293,6 +293,7 @@ Full setup notes: [AI Setup → Prompts Tab](/configuration/ai-setup#prompts-tab
 - [Lorebook editor](/features/lorebook-editor)
 - [Lorebook Vault](/features/lorebook-vault)
 - [Creator Notes preview](/features/creator-notes)
-- [AI Assistant — Orion](/features/ai-assistant)
+- [AI Assistant Orion](/features/ai-assistant)
+- [AI Agent](/features/ai-agent)
 - [Configure AI provider](/configuration/ai-setup)
 - [Customize section tab layout](/configuration/section-layout)

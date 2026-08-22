@@ -104,7 +104,8 @@ Higher effort does **not** always improve creative prose. For roleplay flavor an
 - [AI Setup](/configuration/ai-setup) — base URL, API key, model, streaming, NanoGPT / Synthetic / OpenRouter usage cards  
 - [Sampler Settings](/configuration/sampler-settings) — temperature, top-p, min-p, context length  
 - [Editor & AI Toolkit](/features/editor) — toolbar operations that use these settings  
-- [AI Assistant Orion](/features/ai-assistant) — chat assistant  
+- [AI Assistant Orion](/features/ai-assistant)
+- [AI Agent](/features/ai-agent)  
 
 ## Finding this in the app
 

@@ -5,7 +5,9 @@ The **AI Context** panel is a docked side panel that lets you control what gets 
 - **Character card sections** you pin (Description, Personality, Scenario, and so on)
 - Optional **custom context** — free-text notes you paste for this character
 
-Both feed the **Orion** chat assistant and the **AI toolbar** (Enhance, Rephrase, Shorten, lorebook key generation, and similar ops). Think of the panel as choosing what the AI "sees" when it helps you write or edit.
+Pinned sections feed the **Orion** chat assistant and the **AI toolbar** (Enhance, Rephrase, Shorten, lorebook key generation, and similar ops). Think of the panel as choosing what those tools "see" when they help you write or edit.
+
+The [Agent](/features/ai-agent) does not use section pins. In Agent mode this panel keeps **custom context** and hides the pin list (pins come back when you switch to Orion). The Agent reads the card or book with tools instead.
 
 ::: tip
 This panel works with your configured AI provider. If you haven't set one up yet, see [AI Setup](/configuration/ai-setup).
@@ -61,6 +63,7 @@ The modal shows a live token estimate and soft warnings when the block is large 
 | Surface | Uses custom context when enabled? |
 | :--- | :--- |
 | Orion (Ask AI) chat | Yes |
+| Agent (character or lorebook) | Yes (source notes; it still reads the card or book itself) |
 | AI toolbar (Enhance, Rephrase, Custom, etc.) | Yes |
 | Lorebook ✨ key generation | Yes (same context pipeline as the toolbar) |
 | AI Creation Studio | No (studio has its own flow) |
@@ -112,6 +115,8 @@ If you don't see "Lorebook" in the Add Context list, it means your character doe
 
 This two-layer system means you can include the entire lorebook but hide specific entries by closing their eye icons. Or keep the lorebook out of AI context entirely while leaving all entries enabled for roleplay in SillyTavern.
 
+The [Agent](/features/ai-agent) does not use this pin/eye pipeline. It lists and reads entries on its own. New entries it adds start with the eye closed, so they do not land in Orion or the toolbar until you open it.
+
 The lorebook editor also shows an **AI context** usage bar (included entry count and estimated tokens vs book budget or sampler context length), with **All** / **None** shortcuts.
 
 ### How the Toggles Work Together
@@ -137,4 +142,5 @@ See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-
 - [Lorebook Vault](/features/lorebook-vault)
 - [Editor & AI Toolkit](/features/editor) (AI toolbar operations)
 - [AI Assistant (Orion)](/features/ai-assistant)
+- [AI Agent](/features/ai-agent)
 - [Configure AI provider](/configuration/ai-setup)

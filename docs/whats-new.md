@@ -6,6 +6,18 @@ Quick overview of recent updates to CharacterVault.
 
 ## August 2026
 
+### Agent (writes the card)
+
+A second chat next to Orion that **fills and revises** the open character or standalone lorebook.
+
+- Toggle **Agent** in the Ask AI header (character workspace or lorebook vault)
+- Optional [custom context](/features/ai-context#custom-context) as source notes; it reads fields and entries with tools
+- Writes once when the run finishes (snapshot first). **Stop**, then empty **Send**, retries
+- Own model on **Settings → Prompts → Agent** (Default follows AI Config)
+- Greeting 1 is the first alternate, same as the editor
+
+[AI Agent →](/features/ai-agent) · [AI Setup → Prompts](/configuration/ai-setup#prompts-tab) · [Snapshots](/features/snapshots-history)
+
 ### Provider usage cards (1.3.1)
 
 - **Synthetic** — new preset. Model list prefers `syn:` aliases; **Synthetic Usage** shows five-hour request and weekly credit quotas
@@ -77,7 +89,7 @@ Each AI toolbar prompt can use its **own endpoint and model**, not only the glob
 - **Examples** — Fast model for Fix, a stronger model for Rephrase, local LM Studio for experiments
 - **Lorebook ✨ keys** — Follow the **Custom** prompt mapping when set
 
-Orion chat and AI Creation Studio still use the global AI Config model. Sampler / streaming / reasoning stay global.
+Orion chat and AI Creation Studio still use the global AI Config model. The [Agent](/features/ai-agent) has its own mapping on the Prompts tab. Sampler / streaming / reasoning stay global.
 
 Model and provider pickers (AI Config and Prompts) open as mobile-friendly sheets so search is easy on phones.
 

@@ -37,9 +37,9 @@ Each row shows name, description (if any), entry count, and last opened / update
 
 Opening a book shows a full workspace:
 
-- **Header** – Back to vault, editable title, entry/token summary, **History** (snapshots), export, optional **Orion** chat panel (same AI assistant as characters)
+- **Header** – Back to vault, editable title, entry/token summary, **History** (snapshots), export, optional chat panel
 - **Main** – Shared [Lorebook Editor](/features/lorebook-editor) (entry list + detail)
-- **Orion** – Optional side chat about the book (desktop resizable; mobile can open/close)
+- **Chat** – Optional side panel: **Orion** to talk about the book, or **Agent** to add and revise entries in this book ([AI Agent](/features/ai-agent))
 
 Data stays in **IndexedDB** on this device. No account is required.
 
@@ -108,5 +108,6 @@ See [Import & Export](/features/import-export#lorebook-import--export) and [Lore
 
 - [Lorebook Editor](/features/lorebook-editor) (fields, recursion map, AI keys)
 - [AI Context](/features/ai-context)
+- [AI Agent](/features/ai-agent)
 - [Vault Organization](/features/vault-organization)
 - [Snapshots & Rollback](/features/snapshots-history)

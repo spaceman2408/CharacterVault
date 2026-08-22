@@ -205,5 +205,6 @@ See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-
 - [Recursion Map Guide](/features/recursion-map-guide)
 - [Lorebook Vault](/features/lorebook-vault)
 - [AI Context](/features/ai-context)
+- [AI Agent](/features/ai-agent)
 - [Creating & Editing Characters](/getting-started/creating-characters)
 - [Configure AI](/configuration/ai-setup)

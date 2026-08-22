@@ -142,3 +142,4 @@ Max Tokens is capped at 8,192 on save. Context Length is clamped to 2,048–1,00
 
 - [Configure your AI provider](/configuration/ai-setup)
 - [Use the AI assistant](/features/ai-assistant)
+- [AI Agent](/features/ai-agent)

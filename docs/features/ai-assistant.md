@@ -5,7 +5,7 @@ Character Vault includes a built-in AI assistant called **Orion** that helps you
 ::: tip
 Orion requires an AI provider to be configured. See [AI Setup](/configuration/ai-setup) to get connected first.
 
-Orion always uses the **global** model from **Settings → AI Config**. Per-prompt model mappings on the Prompts tab apply only to the AI toolbar (and lorebook key generation for Custom), not to this chat panel.
+Orion always uses the **global** model from **Settings → AI Config**. Per-prompt model mappings on the Prompts tab apply to the AI toolbar (and lorebook key generation for Custom). The [Agent](/features/ai-agent) has its own mapping and is a separate chat that **writes** the card or book.
 :::
 
 ## Opening the AI Panels
@@ -15,7 +15,7 @@ The workspace has two docked panels:
 - **Context Panel** (left) — Choose which character sections (and optional custom notes) the AI can see.
 - **Ask AI Panel** (right) — Chat with the AI assistant.
 
-Both panels can be toggled from the workspace header.
+Both panels can be toggled from the workspace header. In the chat header, **Agent** switches this panel to the writing Agent. Switch it off to come back to Orion. The two threads stay separate.
 
 ## Using the Context Panel
 
@@ -64,7 +64,8 @@ To enable and configure reasoning, see [AI Setup → Advanced Options](/configur
 
 ## Next Steps
 
-- [AI Context Panel](/features/ai-context) — sections, custom context, tokens
+- [AI Agent](/features/ai-agent) (writes the open card or book)
+- [AI Context Panel](/features/ai-context)
 - [Configure your AI provider](/configuration/ai-setup)
 - [Use the AI toolbar for text operations](/features/editor#ai-toolbar)
 - [Adjust sampler settings](/configuration/sampler-settings)

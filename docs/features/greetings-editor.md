@@ -39,12 +39,14 @@ Selecting a greeting opens the full CodeMirror editor on the right. The editor i
 
 ## Tips
 
-- **First Message vs. Greetings** — The **First Message** tab is the primary greeting. The Greetings tab holds alternate greetings that give players a choice of opening messages.
+- **First Message vs. Greetings.** The **First Message** tab is the primary greeting. The Greetings tab holds alternate greetings that give players a choice of opening messages. The [Agent](/features/ai-agent) uses the same numbering: Greeting 1 is the first alternate.
+- **Agent.** Ask the character Agent to add or rewrite alternates. Changes show when the run finishes.
 - **Use the AI toolbar** — Select a greeting and use Enhance or Custom to quickly rewrite or improve it.
 - **Keep greetings distinct** — Each greeting should offer a noticeably different opening scenario or tone so players have meaningful choices.
 
 ## Next Steps
 
 - [Text Editor features](/features/editor)
+- [AI Agent](/features/ai-agent)
 - [Lorebook Editor](/features/lorebook-editor)
 - [Configure AI provider](/configuration/ai-setup)

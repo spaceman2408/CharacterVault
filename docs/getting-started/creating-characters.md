@@ -111,5 +111,6 @@ The Creator Notes tab supports **HTML and CSS** with a sandboxed live preview â€
 - [Lorebook Vault](/features/lorebook-vault)
 - [Creator Notes preview](/features/creator-notes)
 - [Use the AI assistant to brainstorm content](/features/ai-assistant)
+- [Ask the Agent to write the card](/features/ai-agent)
 - [Import existing character cards](/features/import-export)
 - [Learn about snapshot history and rollback](/features/snapshots-history)

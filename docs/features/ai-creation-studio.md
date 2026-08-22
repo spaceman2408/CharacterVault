@@ -211,3 +211,4 @@ Generation can consume significant tokens depending on your model and sampler se
 - [Adjust sampler settings](/configuration/sampler-settings)
 - [Learn about the character editor](/features/editor)
 - [Use the AI Assistant for refinement](/features/ai-assistant)
+- [Ask the Agent to write the saved card](/features/ai-agent)

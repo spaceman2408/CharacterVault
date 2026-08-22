@@ -1,6 +1,6 @@
 # AI Setup
 
-Character Vault's AI features — the Orion assistant and AI toolbar — require an AI provider endpoint. This guide covers every option in the settings panel.
+Character Vault's AI features (Orion, the Agent, and the AI toolbar) require an AI provider endpoint. This guide covers every option in the settings panel.
 
 ## Opening Settings
 
@@ -15,7 +15,7 @@ You can close the panel with **Cancel** or `Escape` to discard changes.
 
 ### Security Notice
 
-At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to remove all AI configuration (key, URL, model) — your characters are not affected. A confirmation step prevents accidental clears. Prompt templates and **per-prompt model mappings** on the Prompts tab are kept (they do not store secrets).
+At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to remove all AI configuration (key, URL, model) — your characters are not affected. A confirmation step prevents accidental clears. Prompt templates, **per-prompt model mappings**, and the **Agent** model mapping on the Prompts tab are kept (they do not store secrets).
 
 ### API Base URL
 
@@ -83,7 +83,7 @@ Click the model field (or **Fetch models**) to load and choose a model. Selectio
 
 Model selections are saved per base URL, so switching providers remembers your last chosen model for each.
 
-This is your **global default** model — used by Orion chat, AI Creation Studio, and any toolbar prompt that is still set to **Default** on the [Prompts tab](#prompts-tab).
+This is your **global default** model, used by Orion chat, AI Creation Studio, the Agent when its mapping is Default, and any toolbar prompt still set to **Default** on the [Prompts tab](#prompts-tab).
 
 On **Synthetic**, `syn:` aliases (Large text, Small text, and vision variants) are listed first; embedding-only models are omitted. On **OpenRouter**, the picker uses display names and drops non-text models. Both adapters seed reasoning-effort allowlists when the catalog reports them.
 
@@ -162,9 +162,18 @@ The Sampler tab includes:
 
 ## Prompts Tab
 
-The Prompts tab lets you edit the **user prompt templates** used by each AI toolbar operation, and optionally **route each operation to a different endpoint and model**.
+The Prompts tab lets you pick a **model for the Agent**, edit the **user prompt templates** used by each AI toolbar operation, and optionally **route each operation to a different endpoint and model**.
 
-Prompts are divided into two groups:
+### Agent model
+
+The **Agent** card at the top of the tab uses the same endpoint and model picker as a toolbar op:
+
+- **Default (AI Config)** keeps the global model.
+- Or choose a preset (or custom URL) you already saved a key for, then pick or type a model ID.
+
+Character Agent and lorebook Agent share this mapping. Sampler, streaming, and reasoning stay global. See [AI Agent](/features/ai-agent#model-for-agent).
+
+Prompts below that are divided into two groups:
 
 - **Primary Operations** — Enhance, Rephrase, Custom. Each prompt is in a collapsible section. Click to expand and edit in a text area.
 - **Polish Operations** — Shorten, Lengthen, Vivid, Emotion, Fix. Same collapsible layout.
@@ -194,11 +203,12 @@ Under each expanded prompt, **Model for this prompt** controls which API endpoin
 - A mapped prompt must have both an endpoint and a non-empty model ID, or Save is blocked.
 - Collapsed prompt headers show `→ {modelId}` when a mapping is set.
 
-**What is not routed (yet)**
+**What uses which model**
 
 | Surface | Uses |
 | :--- | :--- |
-| AI toolbar ops (Enhance, Fix, …) | Per-prompt map, or global default |
+| **Agent** (character or lorebook chat) | Prompts tab **Agent** mapping, or global default |
+| AI toolbar ops (Enhance, Fix, and the rest) | Per-prompt map, or global default |
 | Lorebook **AI key generation** (✨) | The **Custom / instruct** mapping if set, otherwise global |
 | **Orion** chat | Always global AI Config |
 | **AI Creation Studio** | Always global AI Config |
@@ -246,6 +256,7 @@ If Max Tokens is too close to Context Length, you'll see a warning. The AI needs
 When the total input exceeds the context window:
 
 - **In Chat (Orion)**: The system prompt (Orion persona) and current question are kept. Context entries from the AI Context panel (pinned sections, then custom context) are included next. Older conversation history is dropped first.
+- **In Agent chat**: Catalogs, optional custom context, and the current request stay. Full field and entry bodies are read with tools and counted in the live meter. Raise Context Length for large books.
 - **In Editor (AI Toolbar)**: The selected text is kept. Context entries are dropped first if space is tight.
 
 Pin fewer sections, trim custom context, or raise **Context Length** on the Sampler tab if you hit limits often. See [AI Context Panel](/features/ai-context).
@@ -254,6 +265,7 @@ Pin fewer sections, trim custom context, or raise **Context Length** on the Samp
 
 - [AI Context Panel](/features/ai-context) — sections, custom context, tokens
 - [Use the AI assistant](/features/ai-assistant)
+- [AI Agent](/features/ai-agent)
 - [Adjust sampler settings](/configuration/sampler-settings)
 - [Customize AI operation prompts & model routing](/features/editor#customizing-ai-operation-prompts)
 
