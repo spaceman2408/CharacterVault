@@ -456,7 +456,7 @@ function HighlightedText({
           className={`min-w-0 rounded px-1.5 py-0.5 text-fg ${
             textClassName
           } ${
-            line.changed ? 'bg-muted/80 bg-muted' : ''
+            line.changed ? 'bg-muted' : ''
           }`}
         >
           {line.segments.length > 0 ? line.segments.map((segment, segmentIndex) => (
@@ -512,7 +512,7 @@ function HunkedHighlightedText({
           <div
             key={line.key}
             className={`min-w-0 rounded px-1.5 py-0.5 font-mono text-[12px] leading-5 whitespace-pre-wrap break-all wrap-anywhere text-fg ${
-              line.changed ? 'bg-muted/80 bg-muted' : ''
+              line.changed ? 'bg-muted' : ''
             }`}
           >
             {line.segments.length > 0 ? line.segments.map((segment, segmentIndex) => (
@@ -1615,7 +1615,7 @@ export function CharacterHistoryModal({
       onClick={requestClose}
     >
       <div
-        className={`relative flex h-dvh w-full flex-col overflow-hidden bg-surface transition-all duration-200 bg-bg sm:h-[min(88vh,860px)] sm:max-w-7xl sm:rounded-2xl sm:border sm:border-border sm:shadow-2xl ${
+        className={`relative flex h-dvh w-full flex-col overflow-hidden bg-surface transition-all duration-200 sm:h-[min(88vh,860px)] sm:max-w-7xl sm:rounded-2xl sm:border sm:border-border sm:shadow-2xl ${
           isClosing ? 'translate-y-3 opacity-0 sm:translate-y-0 sm:scale-[0.98]' : 'translate-y-0 opacity-100 sm:scale-100'
         }`}
         onClick={(event) => event.stopPropagation()}
