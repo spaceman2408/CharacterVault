@@ -1,7 +1,42 @@
 import type { CharacterBook, CharacterSpec } from '../../../db/characterTypes';
 import { estimateCharacterCardTokens } from '../../../services/AIService';
 import { formatBookAudit } from '../lorebook/audit';
-import { CHARACTER_AGENT_FIELD_IDS, fieldLabel, getFieldValue } from './fields';
+import { getFieldValue, type CharacterAgentFieldId } from './fields';
+
+/** Spec fields `audit_card` reports. name, creator, creator_notes, character_version, and avatar are omitted. */
+export const CHARACTER_AUDIT_FIELD_IDS = [
+  'description',
+  'first_mes',
+  'mes_example',
+  'scenario',
+  'physical_description',
+  'personality',
+  'system_prompt',
+  'post_history_instructions',
+  'tags',
+] as const satisfies readonly CharacterAgentFieldId[];
+
+/** Empty is fine when description already contains that material. */
+export const CHARACTER_AUDIT_DESCRIPTION_COVERED_FIELD_IDS = [
+  'physical_description',
+  'personality',
+] as const satisfies readonly CharacterAgentFieldId[];
+
+/** Empty is fine; description does not need to cover these. */
+export const CHARACTER_AUDIT_OPTIONAL_FIELD_IDS = [
+  'scenario',
+  'system_prompt',
+  'post_history_instructions',
+] as const satisfies readonly CharacterAgentFieldId[];
+
+const NON_REQUIRED_FIELD_ID_SET = new Set<string>([
+  ...CHARACTER_AUDIT_DESCRIPTION_COVERED_FIELD_IDS,
+  ...CHARACTER_AUDIT_OPTIONAL_FIELD_IDS,
+]);
+
+const CHARACTER_AUDIT_REQUIRED_FIELD_IDS = CHARACTER_AUDIT_FIELD_IDS.filter(
+  (id) => !NON_REQUIRED_FIELD_ID_SET.has(id),
+);
 
 const MACRO_FIELDS = [
   'description',
@@ -9,6 +44,9 @@ const MACRO_FIELDS = [
   'scenario',
   'first_mes',
   'mes_example',
+  'system_prompt',
+  'post_history_instructions',
+  'physical_description',
 ] as const;
 
 function fieldHasMacro(text: string, macro: '{{char}}' | '{{user}}'): boolean {
@@ -27,21 +65,39 @@ function collectMacroPlaces(spec: CharacterSpec, macro: '{{char}}' | '{{user}}')
 }
 
 export function formatCardAudit(spec: CharacterSpec, book: CharacterBook): string {
-  const filled = CHARACTER_AGENT_FIELD_IDS.filter((id) => getFieldValue(spec, id).trim().length > 0);
-  const empty = CHARACTER_AGENT_FIELD_IDS.filter((id) => getFieldValue(spec, id).trim().length === 0);
+  const requiredFilled = CHARACTER_AUDIT_REQUIRED_FIELD_IDS.filter(
+    (id) => getFieldValue(spec, id).trim().length > 0,
+  );
+  const requiredEmpty = CHARACTER_AUDIT_REQUIRED_FIELD_IDS.filter(
+    (id) => getFieldValue(spec, id).trim().length === 0,
+  );
+  const descriptionCoveredEmpty = CHARACTER_AUDIT_DESCRIPTION_COVERED_FIELD_IDS.filter(
+    (id) => getFieldValue(spec, id).trim().length === 0,
+  );
+  const optionalEmpty = CHARACTER_AUDIT_OPTIONAL_FIELD_IDS.filter(
+    (id) => getFieldValue(spec, id).trim().length === 0,
+  );
   const greetings = spec.alternate_greetings ?? [];
   const emptyGreetings = greetings.filter((greeting) => !greeting.trim()).length;
   const tokens = estimateCharacterCardTokens({ spec, characterBook: book }, spec.name);
 
-  const header = `Card audit — ${filled.length}/${CHARACTER_AGENT_FIELD_IDS.length} fields filled, ${greetings.length} greeting${
+  const header = `Card audit — ${requiredFilled.length}/${CHARACTER_AUDIT_REQUIRED_FIELD_IDS.length} required filled, ${greetings.length} greeting${
     greetings.length === 1 ? '' : 's'
   }, ${(book.entries ?? []).length} ${
     (book.entries ?? []).length === 1 ? 'entry' : 'entries'
   }, ~${tokens.active} active / ~${tokens.total} total tokens`;
 
   const lines = [header];
-  if (empty.length > 0) {
-    lines.push(`Empty fields: ${empty.map((id) => fieldLabel(id)).join(', ')}`);
+  if (requiredEmpty.length > 0) {
+    lines.push(`Empty fields: ${requiredEmpty.join(', ')}`);
+  }
+  if (descriptionCoveredEmpty.length > 0) {
+    lines.push(
+      `Empty (ok if in description): ${descriptionCoveredEmpty.join(', ')}`,
+    );
+  }
+  if (optionalEmpty.length > 0) {
+    lines.push(`Empty (optional): ${optionalEmpty.join(', ')}`);
   }
   if (emptyGreetings > 0) {
     lines.push(`Empty greetings: ${emptyGreetings}`);

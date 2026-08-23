@@ -489,4 +489,37 @@ describe('auditCard', () => {
     expect(result.message).toContain('Empty fields');
     expect(result.message).not.toContain('SECRET BODY');
   });
+
+  it('audits playable spec fields and splits description-covered vs optional empties', () => {
+    const result = auditCard(
+      spec({
+        name: 'Aria',
+        description: 'A cartographer who maps harbors.',
+        personality: '',
+        scenario: 'A rain-soaked port.',
+        first_mes: 'Hello.',
+        mes_example: '',
+        system_prompt: '',
+        post_history_instructions: '',
+        physical_description: '',
+        creator: '',
+        creator_notes: 'PRIVATE NOTES',
+        character_version: '',
+        avatar: '',
+        tags: [],
+      }),
+      createEmptyCharacterBook('Aria'),
+    );
+    expect(result.message).toContain('2/4 required filled');
+    expect(result.message).toContain('Empty fields: mes_example, tags');
+    expect(result.message).toContain('Empty (ok if in description): physical_description, personality');
+    expect(result.message).toContain('Empty (optional): system_prompt, post_history_instructions');
+    expect(result.message).not.toContain('Empty (optional): scenario');
+    expect(result.message).not.toContain('Name');
+    expect(result.message).not.toContain('Creator');
+    expect(result.message).not.toContain('Version');
+    expect(result.message).not.toContain('Avatar');
+    expect(result.message).not.toContain('PRIVATE NOTES');
+    expect(result.message).toContain('Lorebook:');
+  });
 });
