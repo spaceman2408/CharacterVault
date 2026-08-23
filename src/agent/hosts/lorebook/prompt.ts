@@ -21,7 +21,7 @@ export const LOREBOOK_TOOL_DOCS = `Use the provided tools (native function calls
 - search — query. Case-insensitive. Locations and snippets only.
 - replace_across — old, new or content, optional replace_all. Unique match per place unless replace_all.
 - audit_book — no arguments. Counts, tokens, duplicate keys, recursion. No bodies.
-- read_recursion — optional id. Whole-book recursion map, or one entry’s incoming/outgoing edges. No bodies.
+- read_recursion — optional id. Whole-book recursion map, or one entry's incoming/outgoing edges. No bodies.
 - update_book_settings — optional name, description, scan_depth, token_budget, recursive_scanning.
 
 You may emit up to 12 actions per reply, then wait for tool results. Finish each call (complete JSON arguments, or </tool_call>) before starting the next.`;

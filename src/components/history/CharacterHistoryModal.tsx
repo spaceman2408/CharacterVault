@@ -242,7 +242,7 @@ function formatSnapshotLabel(source: SnapshotMetadata['source']): string {
     case 'open':
       return 'Opened card';
     case 'auto':
-      return 'Legacy auto save point';
+      return 'Agentic auto save point';
     case 'manual':
       return 'Manual save point';
     case 'rollback':
@@ -257,7 +257,7 @@ function formatSnapshotDescription(source: SnapshotMetadata['source']): string {
     case 'open':
       return 'Saved when this card was opened.';
     case 'auto':
-      return 'Saved automatically by an older version of the app.';
+      return 'Saved automatically by the agentic system.';
     case 'manual':
       return 'Saved on demand from the revisions panel.';
     case 'rollback':

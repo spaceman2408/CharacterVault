@@ -322,9 +322,15 @@ export function ContextPanel({
 
       {agentMode ? (
         <div className="flex-1 min-h-0 overflow-y-auto p-4">
-          <div className="rounded-xl border border-border bg-muted/40 px-3 py-3 text-xs leading-relaxed text-fg-muted">
-            The agent reads this card itself. Section pins are for Orion and the
-            AI toolbar. They come back when you switch off Agent.
+          <div className="rounded-xl border border-border bg-muted/40 px-3 py-3 text-xs leading-relaxed text-fg-muted space-y-2">
+            <p>
+              The agent reads this card itself. Section pins are for Orion and the
+              AI toolbar. They come back when you switch off Agent.
+            </p>
+            <p className="flex items-start gap-1.5 text-fg-subtle">
+              <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              Custom context is always sent if enabled.
+            </p>
           </div>
         </div>
       ) : (
