@@ -32,6 +32,8 @@ describe('buildCharacterAgentSystemPrompt', () => {
     expect(prompt).toContain('personality and physical_description may stay empty');
     expect(prompt).toContain('system_prompt, post_history_instructions, and scenario are optional');
     expect(prompt).toContain('description does not need to cover them');
+    expect(prompt).toContain('Active / Inactive split');
+    expect(prompt).toContain('one greeting as the opening');
     expect(prompt).not.toContain('look and personality');
     expect(prompt).not.toContain('(Appearance)');
   });

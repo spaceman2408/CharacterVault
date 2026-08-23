@@ -34,6 +34,15 @@ function duplicateKeyLines(entries: LorebookEntry[]): string[] {
   return lines;
 }
 
+/** Sum of entry bodies only (keys, names, and comments omitted). */
+export function estimateBookContentTokens(book: CharacterBook): number {
+  let contentTokens = 0;
+  for (const entry of book.entries ?? []) {
+    contentTokens += estimateTokens(entry.content ?? '');
+  }
+  return contentTokens;
+}
+
 export function formatBookAudit(book: CharacterBook): string {
   const entries = book.entries ?? [];
   const graph = buildRecursionGraph(entries);
@@ -41,10 +50,7 @@ export function formatBookAudit(book: CharacterBook): string {
   const constants = entries.filter((entry) => entry.constant).length;
   const disabled = entries.filter((entry) => entry.enabled === false).length;
   const empty = entries.filter((entry) => !(entry.content ?? '').trim()).length;
-  let contentTokens = 0;
-  for (const entry of entries) {
-    contentTokens += estimateTokens(entry.content ?? '');
-  }
+  const contentTokens = estimateBookContentTokens(book);
 
   const lines = [
     `Lorebook: ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} (${constants} constant, ${disabled} disabled, ${empty} empty)`,

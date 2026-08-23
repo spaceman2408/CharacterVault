@@ -21,6 +21,7 @@ import {
 } from '../../../../src/agent/hosts/character/tools';
 import type { CharacterBook, CharacterSpec } from '../../../../src/db/characterTypes';
 import { createEmptyCharacterBook } from '../../../../src/db/characterTypes';
+import { estimateTokens } from '../../../../src/services/AIService';
 
 function spec(overrides: Partial<CharacterSpec> = {}): CharacterSpec {
   return {
@@ -521,5 +522,57 @@ describe('auditCard', () => {
     expect(result.message).not.toContain('Avatar');
     expect(result.message).not.toContain('PRIVATE NOTES');
     expect(result.message).toContain('Lorebook:');
+  });
+
+  it('counts greetings as inactive; only one is used per chat', () => {
+    const description = 'A cartographer who maps harbors.';
+    const firstMes = 'Hello there, traveler from the rain-soaked port.';
+    const altA = 'Another long-ish opening used instead of first_mes.';
+    const altB = 'A third opening that is not in the prompt at the same time.';
+    const result = auditCard(
+      spec({
+        description,
+        first_mes: firstMes,
+        mes_example: '',
+        personality: '',
+        physical_description: '',
+        scenario: '',
+        system_prompt: '',
+        post_history_instructions: '',
+        alternate_greetings: [altA, altB],
+      }),
+      createEmptyCharacterBook('Aria'),
+    );
+    const active = estimateTokens(description);
+    const firstMesTokens = estimateTokens(firstMes);
+    const altTokens = estimateTokens(altA) + estimateTokens(altB);
+    expect(result.message).toContain(`Active ~${active} (in ST prompt:`);
+    expect(result.message).toContain(`first_mes ~${firstMesTokens}`);
+    expect(result.message).toContain(`2 greetings ~${altTokens} (one greeting used per chat)`);
+    expect(result.message).not.toContain(`Active ~${active + firstMesTokens + altTokens}`);
+  });
+
+  it('reports lorebook body tokens as bytes÷4, not character length', () => {
+    const content = 'Dragons are rare in this harbor. '.repeat(80);
+    const book = createEmptyCharacterBook('Aria');
+    book.entries = [
+      {
+        id: 1,
+        keys: ['dragon', 'drake', 'wyrm'],
+        content,
+        extensions: {},
+        enabled: true,
+        name: 'Dragons',
+        comment: 'A very long unused comment '.repeat(40),
+      },
+    ];
+    const result = auditCard(spec({ description: 'A cartographer.' }), book);
+    const bodyTokens = estimateTokens(content);
+    expect(bodyTokens).toBeGreaterThan(0);
+    expect(bodyTokens).not.toBe(content.length);
+    expect(result.message).toContain(`lorebook ~${bodyTokens}`);
+    expect(result.message).toContain(`Entry content: ~${bodyTokens} tokens`);
+    expect(result.message).not.toContain(`lorebook ~${content.length}`);
+    expect(result.message).not.toContain(content);
   });
 });

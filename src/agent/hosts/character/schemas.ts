@@ -206,7 +206,7 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
     name: 'audit_card',
     description:
-      'Read-only report for description, first_mes, alternate_greetings, mes_example, scenario, physical_description, personality, system_prompt, post_history_instructions, tags, and lorebook. personality and physical_description may be empty if description already contains that material. system_prompt, post_history_instructions, and scenario are optional. Omits name, creator, creator_notes, character_version, avatar. Tokens, duplicate keys, recursion, macros. No bodies.',
+      'Read-only report for description, first_mes, alternate_greetings, mes_example, scenario, physical_description, personality, system_prompt, post_history_instructions, tags, and lorebook. Returns active tokens (in the SillyTavern character prompt) vs inactive (first_mes, alternate greetings — one used per chat — and lorebook World Info). personality and physical_description may be empty if description already contains that material. system_prompt, post_history_instructions, and scenario are optional. Omits name, creator, creator_notes, character_version, avatar. Duplicate keys, recursion, macros. No bodies.',
     parameters: {
       type: 'object',
       properties: {},

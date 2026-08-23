@@ -1,6 +1,6 @@
 import type { CharacterBook, CharacterSpec } from '../../../db/characterTypes';
-import { estimateCharacterCardTokens } from '../../../services/AIService';
-import { formatBookAudit } from '../lorebook/audit';
+import { estimateTokens } from '../../../services/AIService';
+import { estimateBookContentTokens, formatBookAudit } from '../lorebook/audit';
 import { getFieldValue, type CharacterAgentFieldId } from './fields';
 
 /** Spec fields `audit_card` reports. name, creator, creator_notes, character_version, and avatar are omitted. */
@@ -27,6 +27,17 @@ export const CHARACTER_AUDIT_OPTIONAL_FIELD_IDS = [
   'scenario',
   'system_prompt',
   'post_history_instructions',
+] as const satisfies readonly CharacterAgentFieldId[];
+
+/** Always-on SillyTavern character-prompt fields. first_mes and alts are not included. */
+export const CHARACTER_AUDIT_ACTIVE_FIELD_IDS = [
+  'description',
+  'personality',
+  'physical_description',
+  'scenario',
+  'system_prompt',
+  'post_history_instructions',
+  'mes_example',
 ] as const satisfies readonly CharacterAgentFieldId[];
 
 const NON_REQUIRED_FIELD_ID_SET = new Set<string>([
@@ -79,15 +90,30 @@ export function formatCardAudit(spec: CharacterSpec, book: CharacterBook): strin
   );
   const greetings = spec.alternate_greetings ?? [];
   const emptyGreetings = greetings.filter((greeting) => !greeting.trim()).length;
-  const tokens = estimateCharacterCardTokens({ spec, characterBook: book }, spec.name);
+  let activeTokens = 0;
+  for (const id of CHARACTER_AUDIT_ACTIVE_FIELD_IDS) {
+    activeTokens += estimateTokens(getFieldValue(spec, id));
+  }
+  const firstMesTokens = estimateTokens(spec.first_mes ?? '');
+  let altGreetingTokens = 0;
+  for (const greeting of greetings) {
+    altGreetingTokens += estimateTokens(greeting);
+  }
+  const lorebookTokens = estimateBookContentTokens(book);
 
   const header = `Card audit — ${requiredFilled.length}/${CHARACTER_AUDIT_REQUIRED_FIELD_IDS.length} required filled, ${greetings.length} greeting${
     greetings.length === 1 ? '' : 's'
   }, ${(book.entries ?? []).length} ${
     (book.entries ?? []).length === 1 ? 'entry' : 'entries'
-  }, ~${tokens.active} active / ~${tokens.total} total tokens`;
+  }`;
 
-  const lines = [header];
+  const lines = [
+    header,
+    `Active ~${activeTokens} (in ST prompt: description, personality, physical_description, scenario, system_prompt, post_history_instructions, mes_example)`,
+    `Inactive: first_mes ~${firstMesTokens}; ${greetings.length} greeting${
+      greetings.length === 1 ? '' : 's'
+    } ~${altGreetingTokens} (one greeting used per chat); lorebook ~${lorebookTokens} (World Info, keyed/budgeted)`,
+  ];
   if (requiredEmpty.length > 0) {
     lines.push(`Empty fields: ${requiredEmpty.join(', ')}`);
   }
