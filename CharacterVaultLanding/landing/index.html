@@ -40,8 +40,8 @@
       <div class="hero-stars" aria-hidden="true"></div>
       <div class="container hero-inner">
         <div class="hero-copy">
-          <a class="hero-pill reveal" href="https://spaceman2408.github.io/CharacterVault/docs/releases/v1.3.0" target="_blank" rel="noopener">
-            New in 1.3.0: Lorebook Vault &amp; the visual recursion map
+          <a class="hero-pill reveal" href="https://spaceman2408.github.io/CharacterVault/docs/releases/v1.4.0" target="_blank" rel="noopener">
+            New in 1.4.0: the Agent edits your card for real
             <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
           <p class="hero-eyebrow reveal">Free and open source</p>
@@ -259,6 +259,45 @@
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="section" id="agent">
+      <div class="container">
+        <p class="section-label reveal">New in 1.4.0 — the Agent</p>
+        <h2 class="reveal">Describe the edit.<br>The Agent writes the card.</h2>
+        <p class="section-sub reveal">Orion talks back. The Agent rolls up its sleeves: it reads your open character or lorebook through tools, then fills, rewrites, and cuts for real — while you watch the tool calls live.</p>
+        <div class="agent-demo reveal" id="agent-demo">
+          <div class="window-bar" aria-hidden="true">
+            <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
+            <span class="wb-url">charactervault / agent</span>
+          </div>
+          <div class="agent-body">
+            <div class="agent-banner" id="agentBanner" aria-hidden="true">Agent is writing. Changes appear when the run finishes.</div>
+            <div class="agent-turn agent-user reveal-static">
+              <span class="agent-role">You</span>
+              <p class="agent-bubble">Rekey the lorebook entries to proper nouns and trim anything empty.</p>
+            </div>
+            <div class="agent-turn agent-bot">
+              <span class="agent-role">Agent</span>
+              <div class="agent-thread" id="agentThread"></div>
+            </div>
+            <div class="agent-foot">
+              <span class="agent-foot-item"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> Catalogs read</span>
+              <span class="agent-foot-item agent-meter"><span class="agent-meter-dot"></span> <span id="agentTokens">1.2k</span> tok live</span>
+              <span class="agent-foot-item agent-thinking" id="agentThinking">Thinking…</span>
+            </div>
+          </div>
+        </div>
+        <ul class="agent-bullets reveal">
+          <li>Snippet edits match existing text — no rewriting the whole field</li>
+          <li>Whole-book and whole-card tools: search, replace-everywhere, audit</li>
+          <li>Own model slot, native function calling, writes once per run</li>
+        </ul>
+        <a class="section-link reveal" href="https://spaceman2408.github.io/CharacterVault/docs/features/ai-agent" target="_blank" rel="noopener" style="display:flex;justify-content:center;margin-top:1.8rem">
+          Read the Agent docs
+          <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
       </div>
     </section>
 

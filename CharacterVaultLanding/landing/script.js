@@ -279,6 +279,127 @@ if (aiDemo) {
   }
 }
 
+/* ---------- Agent demo ---------- */
+
+const agentDemo = document.getElementById('agent-demo');
+
+if (agentDemo) {
+  const thread = document.getElementById('agentThread');
+  const banner = document.getElementById('agentBanner');
+  const thinking = document.getElementById('agentThinking');
+  const tokensEl = document.getElementById('agentTokens');
+
+  const steps = [
+    { type: 'tool', cls: 'is-list', tag: 'list', text: 'lorebook entries · 14 found' },
+    { type: 'tool', cls: 'is-read', tag: 'read', text: 'entry #7 “old keep”' },
+    { type: 'tool', cls: 'is-write', tag: 'write', text: 'rekey #7 → “The Old Keep”' },
+    { type: 'tool', cls: 'is-write', tag: 'write', text: 'rekey #3 → “Meridian Compact”' },
+    { type: 'tool', cls: 'is-delete', tag: 'delete', text: '#11 empty content' },
+    { type: 'prose', text: 'Rekeyed two entries to proper nouns and removed the one empty stub. The book scans clean.' },
+    { type: 'wrote', text: 'Wrote 3 changes · snapshot taken' },
+  ];
+
+  const buildEl = (step) => {
+    if (step.type === 'tool') {
+      const el = document.createElement('span');
+      el.className = `agent-tool ${step.cls}`;
+      el.innerHTML = `<span class="agent-tool-tag">${step.tag}</span><span class="agent-tool-text">${step.text}</span>`;
+      return el;
+    }
+    if (step.type === 'prose') {
+      const el = document.createElement('p');
+      el.className = 'agent-prose';
+      el.textContent = step.text;
+      return el;
+    }
+    const el = document.createElement('span');
+    el.className = 'agent-wrote';
+    el.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> ${step.text}`;
+    return el;
+  };
+
+  const renderStatic = () => {
+    banner.classList.add('show');
+    for (const el of stepEls) el.classList.add('show');
+    thinking.classList.remove('show');
+    tokensEl.textContent = '1.4k';
+  };
+
+  const stepEls = steps.map(buildEl);
+  for (const el of stepEls) thread.appendChild(el);
+
+  if (reducedMotion) {
+    renderStatic();
+  } else {
+    let running = false;
+    const timers = new Set();
+
+    const wait = (ms) =>
+      new Promise((resolve) => {
+        const id = setTimeout(() => {
+          timers.delete(id);
+          resolve();
+        }, ms);
+        timers.add(id);
+      });
+
+    const stopDemo = () => {
+      running = false;
+      for (const id of timers) clearTimeout(id);
+      timers.clear();
+    };
+
+    const runDemo = async () => {
+      if (running) return;
+      running = true;
+
+      while (running) {
+        for (const el of stepEls) el.classList.remove('show');
+        banner.classList.remove('show');
+        thinking.classList.remove('show');
+        tokensEl.textContent = '1.2k';
+        await wait(900);
+        if (!running) break;
+
+        banner.classList.add('show');
+        thinking.classList.add('show');
+        await wait(700);
+        if (!running) break;
+
+        for (let i = 0; i < stepEls.length; i++) {
+          if (!running) break;
+          stepEls[i].classList.add('show');
+          tokensEl.textContent = `${(1.2 + i * 0.12).toFixed(1)}k`;
+          if (steps[i].type === 'wrote') {
+            thinking.classList.remove('show');
+            await wait(2600);
+          } else if (steps[i].type === 'prose') {
+            await wait(1300);
+          } else {
+            await wait(820);
+          }
+        }
+        if (!running) break;
+
+        await wait(2600);
+      }
+    };
+
+    new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            runDemo();
+          } else {
+            stopDemo();
+          }
+        }
+      },
+      { threshold: 0.3 }
+    ).observe(agentDemo);
+  }
+}
+
 /* ---------- Context panel demo ---------- */
 
 const ctxDemo = document.getElementById('ctx-demo');
