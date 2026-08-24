@@ -59,7 +59,7 @@ When the **Nano-GPT** preset is selected, a **Sign in with NanoGPT** button appe
 The success toast confirms the result, e.g. **"Signed in. Fetched 47 models."**
 
 ::: warning Browser popups must be allowed
-The sign-in flow opens a new window or tab. If your browser blocks popups for this site, the button will appear to do nothing. Allow popups for `spaceman2408.github.io` (or your hosted origin) and try again. If you previously dismissed the permission, click the popup-blocker icon in the address bar to allow them for this site.
+The sign-in flow opens a new window or tab. If your browser blocks popups for this site, the button will appear to do nothing. Allow popups for `vault.charactervault.app` (or your hosted origin) and try again. If you previously dismissed the permission, click the popup-blocker icon in the address bar to allow them for this site.
 
 ::: warning Mobile browser support
 PKCE sign-in works best on desktop browsers. Mobile support depends on the browser:

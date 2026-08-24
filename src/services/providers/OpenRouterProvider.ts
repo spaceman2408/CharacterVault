@@ -11,7 +11,7 @@ import type {
 } from './types';
 
 export const OPENROUTER_APP_TITLE = 'CharacterVault';
-export const OPENROUTER_APP_URL = 'https://spaceman2408.github.io/CharacterVault';
+export const OPENROUTER_APP_URL = 'https://vault.charactervault.app';
 
 const MAX_MODEL_PAGES = 20;
 

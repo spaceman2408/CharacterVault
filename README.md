@@ -11,8 +11,9 @@
 </p>
 
 <p align="center">
-  <a href="https://spaceman2408.github.io/CharacterVault/">Try Online</a> •
-  <a href="https://spaceman2408.github.io/CharacterVault/docs/">Documentation</a> •
+  <a href="https://charactervault.app">Website</a> •
+  <a href="https://vault.charactervault.app/">Try Online</a> •
+  <a href="https://vault.charactervault.app/docs/">Documentation</a> •
   <a href="https://github.com/spaceman2408/CharacterVault">GitHub</a>
 </p>
 
@@ -39,7 +40,7 @@
 
 ### Use Online
 
-Visit **[https://spaceman2408.github.io/CharacterVault](https://spaceman2408.github.io/CharacterVault)**
+Visit **[https://vault.charactervault.app](https://vault.charactervault.app)** (marketing site: [charactervault.app](https://charactervault.app))
 
 ### Run Locally
 
@@ -56,7 +57,7 @@ Then open `http://localhost:3000` in your browser.
 
 ## Documentation
 
-Full documentation is available at **[https://spaceman2408.github.io/CharacterVault/docs/](https://spaceman2408.github.io/CharacterVault/docs/)**
+Full documentation is available at **[https://vault.charactervault.app/docs/](https://vault.charactervault.app/docs/)**
 
 Topics include:
 
@@ -81,7 +82,7 @@ Topics include:
 
 ## Privacy
 
-Character cards and lorebooks stay in your browser. See the [Privacy](https://spaceman2408.github.io/CharacterVault/docs/privacy) notice for hosting and optional AI details.
+Character cards and lorebooks stay in your browser. See the [Privacy](https://vault.charactervault.app/docs/privacy) notice for hosting and optional AI details.
 
 ## License
 

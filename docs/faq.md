@@ -7,9 +7,15 @@ Character Vault is a browser-based tool for creating, editing, and organizing ro
 :::
 
 ::: details Do I need to install anything?
-No. You can use the hosted version at **[https://spaceman2408.github.io/CharacterVault](https://spaceman2408.github.io/CharacterVault)** directly in your browser. No installation required.
+No. You can use the hosted version at **[https://vault.charactervault.app](https://vault.charactervault.app)** directly in your browser. No installation required. The marketing site is **[https://charactervault.app](https://charactervault.app)**.
 
 If you prefer to run locally or develop on the codebase, see the [Installation guide](/getting-started/installation).
+:::
+
+::: details I used the old GitHub Pages URL. Where did my characters go?
+The current app is **[https://vault.charactervault.app](https://vault.charactervault.app)**. Browser storage is tied to the site origin, so a library on `spaceman2408.github.io` does not appear on `vault.charactervault.app`.
+
+To move cards and lorebooks: on the old site, use the vault header backup (ZIP). Unzip it, then on the new app use **Import** and select the PNG/JSON files. The GitHub Pages build may still load, but it is frozen and no longer updated.
 :::
 
 ::: details Does the editor have spellcheck?

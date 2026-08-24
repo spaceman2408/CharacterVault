@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Docs',
   description: 'AI Character Management Suite',
-  base: '/CharacterVault/docs/',
+  base: '/docs/',
   srcDir: '.',
   outDir: '../dist/docs',
   cleanUrls: true,
@@ -13,7 +13,7 @@ export default defineConfig({
   themeConfig: {
     logo: '/CharacterVaultLogo.svg',
 nav: [
-      { text: 'App', link: 'https://spaceman2408.github.io/CharacterVault/' },
+      { text: 'App', link: 'https://vault.charactervault.app' },
       { text: 'GitHub', link: 'https://github.com/spaceman2408/CharacterVault' },
     ],
     sidebar: [
@@ -81,7 +81,7 @@ nav: [
       provider: 'local',
     },
     footer: {
-      message: '<a href="/CharacterVault/docs/privacy">Privacy</a>',
+      message: '<a href="/docs/privacy">Privacy</a>',
       copyright: 'Copyright © 2026 spaceman2408',
     },
   },

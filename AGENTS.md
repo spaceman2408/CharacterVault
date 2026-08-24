@@ -12,7 +12,7 @@ Main capabilities:
 - Snapshots / history rollback
 - Settings for AI providers (OpenAI-compatible + NanoGPT), prompts, sampler, sections, studio
 
-Live site: GitHub Pages. License: GPL-3.0-only.
+Live site: Cloudflare Pages (`charactervault.app` landing, `vault.charactervault.app` app). License: GPL-3.0-only.
 
 ## Stack
 

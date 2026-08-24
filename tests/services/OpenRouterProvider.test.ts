@@ -269,7 +269,7 @@ describe('OpenRouterProvider network methods', () => {
   it('sends attribution headers on chat requests', () => {
     expect(new OpenRouterProvider().getChatHeaders()).toEqual(openRouterAppHeaders());
     expect(openRouterAppHeaders()['HTTP-Referer']).toBe(
-      'https://spaceman2408.github.io/CharacterVault'
+      'https://vault.charactervault.app'
     );
     expect(openRouterAppHeaders()['X-OpenRouter-Title']).toBe('CharacterVault');
   });

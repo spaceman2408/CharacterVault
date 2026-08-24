@@ -4,7 +4,7 @@ Character Vault runs entirely in your browser. You can use the hosted version or
 
 ## Option 1: Use Online (Recommended)
 
-Visit **[https://spaceman2408.github.io/CharacterVault](https://spaceman2408.github.io/CharacterVault)** and start using Character Vault immediately. No installation required.
+Visit **[https://vault.charactervault.app](https://vault.charactervault.app)** and start using Character Vault immediately. No installation required. The marketing site is **[https://charactervault.app](https://charactervault.app)**.
 
 ## Option 2: Run Locally
 
