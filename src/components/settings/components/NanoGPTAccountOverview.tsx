@@ -573,7 +573,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
                   <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                   <span>
                     {/cors/i.test(usageError)
-                      ? 'Subscription status unavailable (NanoGPT blocks this API in browsers). Official app and localhost need no worker. Self-hosted production: see docs → NanoGPT Usage Proxy.'
+                      ? 'Subscription status unavailable (NanoGPT blocks this API in browsers). Localhost and the official Cloudflare host proxy this automatically. Self-hosted production: see docs → NanoGPT Usage Proxy.'
                       : usageError}
                   </span>
                 </div>

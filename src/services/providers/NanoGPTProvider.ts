@@ -414,17 +414,8 @@ function resolveCorsSafeNanoGptUrl(absoluteUrl: string): string {
     return `${configuredProxy.replace(/\/$/, '')}${parsed.pathname}${parsed.search}`;
   }
 
-  // Vite dev server and `vite preview` proxy (see vite.config.ts)
-  if (import.meta.env.DEV) {
-    return `/__nanogpt${parsed.pathname}${parsed.search}`;
-  }
-
-  // vite preview is production build mode but can still use the preview proxy
-  if (import.meta.env.MODE === 'production' && /localhost|127\.0\.0\.1/.test(window.location.hostname)) {
-    return `/__nanogpt${parsed.pathname}${parsed.search}`;
-  }
-
-  return absoluteUrl;
+  // Vite `/__nanogpt` in dev/preview; Cloudflare Pages Function in production.
+  return `/__nanogpt${parsed.pathname}${parsed.search}`;
 }
 
 function asNumber(value: unknown): number | null {
