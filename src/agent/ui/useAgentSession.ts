@@ -21,6 +21,7 @@ import type { AgentHost, AgentMessage, AgentToolMode } from '../core/types';
 import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
+import { LIVE_SPEECH_MAX_CHARS, liveAgentSpeech } from './speechDraft';
 import { compactToolResultMessage, isLookupOnlyTurn } from './notices';
 import { estimatePromptTokens } from './promptUsage';
 import type { AgentToolEvent } from './types';
@@ -132,6 +133,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingReasoning, setStreamingReasoning] = useState('');
+  const [streamingContent, setStreamingContent] = useState('');
   const [livePromptTokens, setLivePromptTokens] = useState<number | null>(null);
 
   const aiServiceRef = useRef<AIService | null>(null);
@@ -145,7 +147,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const errorByMessageIdRef = useRef(errorByMessageId);
   const streamContentRef = useRef(new ChunkString());
   const streamReasoningRef = useRef(new ChunkString());
-  const reasoningFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingStatsRef = useRef<AccumulatedResponseStats | undefined>(undefined);
   const callTimingRef = useRef<{
     requestStartTime: number;
@@ -175,40 +177,51 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
   }, [aiConfig.modelId]);
 
-  const cancelReasoningFlush = useCallback(() => {
-    if (reasoningFlushTimerRef.current != null) {
-      clearTimeout(reasoningFlushTimerRef.current);
-      reasoningFlushTimerRef.current = null;
+  const cancelStreamFlush = useCallback(() => {
+    if (streamFlushTimerRef.current != null) {
+      clearTimeout(streamFlushTimerRef.current);
+      streamFlushTimerRef.current = null;
     }
   }, []);
 
   const clearStreamDraft = useCallback(() => {
     streamContentRef.current.clear();
     streamReasoningRef.current.clear();
-    cancelReasoningFlush();
+    cancelStreamFlush();
     setStreamingReasoning('');
-  }, [cancelReasoningFlush]);
+    setStreamingContent('');
+  }, [cancelStreamFlush]);
 
-  const scheduleReasoningFlush = useCallback(() => {
-    if (reasoningFlushTimerRef.current != null) return;
-    reasoningFlushTimerRef.current = setTimeout(() => {
-      reasoningFlushTimerRef.current = null;
+  const scheduleStreamFlush = useCallback(() => {
+    if (streamFlushTimerRef.current != null) return;
+    streamFlushTimerRef.current = setTimeout(() => {
+      streamFlushTimerRef.current = null;
       if (!isMountedRef.current) return;
-      if (!(aiConfigRef.current.showReasoning ?? true)) return;
-      setStreamingReasoning(streamReasoningRef.current.tail(LIVE_REASONING_MAX_CHARS));
+      if (aiConfigRef.current.showReasoning ?? true) {
+        setStreamingReasoning(streamReasoningRef.current.tail(LIVE_REASONING_MAX_CHARS));
+      }
+      setStreamingContent(liveAgentSpeech(streamContentRef.current.toString()));
     }, LIVE_REASONING_FLUSH_MS);
   }, []);
 
   const appendStreamChunk = useCallback((chunk: { content?: string; reasoning?: string }) => {
+    let dirty = false;
     if (chunk.reasoning) {
       streamReasoningRef.current.append(chunk.reasoning);
       if (streamReasoningRef.current.length > COMMIT_REASONING_MAX_CHARS * 2) {
         streamReasoningRef.current.capToTail(COMMIT_REASONING_MAX_CHARS);
       }
-      if (aiConfigRef.current.showReasoning ?? true) scheduleReasoningFlush();
+      if (aiConfigRef.current.showReasoning ?? true) dirty = true;
     }
-    if (chunk.content) streamContentRef.current.append(chunk.content);
-  }, [scheduleReasoningFlush]);
+    if (chunk.content) {
+      streamContentRef.current.append(chunk.content);
+      if (streamContentRef.current.length > LIVE_SPEECH_MAX_CHARS * 2) {
+        streamContentRef.current.capToTail(LIVE_SPEECH_MAX_CHARS);
+      }
+      dirty = true;
+    }
+    if (dirty) scheduleStreamFlush();
+  }, [scheduleStreamFlush]);
 
   const commitMessage = useCallback((message: ChatMessage) => {
     const trimmed = trimAgentHistory(
@@ -302,12 +315,12 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     aiServiceRef.current = null;
     streamContentRef.current.clear();
     streamReasoningRef.current.clear();
-    cancelReasoningFlush();
+    cancelStreamFlush();
     pendingStatsRef.current = undefined;
     callTimingRef.current = null;
     isProcessingRef.current = false;
     onRunningChangeRef.current?.(false);
-  }, [cancelReasoningFlush]);
+  }, [cancelStreamFlush]);
 
   const dropTranscriptRefs = useCallback(() => {
     lastAssistantIdRef.current = null;
@@ -330,6 +343,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         setIsStreaming(false);
         setLivePromptTokens(null);
         setStreamingReasoning('');
+        setStreamingContent('');
       }
     },
     [abortInFlight, dropTranscriptRefs],
@@ -360,6 +374,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       setIsStreaming(false);
       setBusyLabel(null);
       setStreamingReasoning('');
+      setStreamingContent('');
     }
     try {
       await runPromiseRef.current;
@@ -687,7 +702,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     error,
     busyLabel,
     isStreaming,
-    streamingContent: '',
+    streamingContent,
     streamingReasoning,
     livePromptTokens,
     handleAsk,

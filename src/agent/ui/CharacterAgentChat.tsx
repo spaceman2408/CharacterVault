@@ -6,6 +6,7 @@ import type { AIConfig, CharacterBook, CharacterSpec, PromptSettings, SamplerSet
 import type { CharacterHostPersist } from '../hosts/character/createHost';
 import { computeCharacterAgentContextUsage, usageStatus } from '../hosts/character/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
+import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
 import {
   CHARACTER_LOOKUP_TOOLS,
@@ -167,7 +168,7 @@ export function CharacterAgentChat({
       isProcessing={session.isProcessing}
       error={session.chatHistory.length === 0 ? session.error : null}
       isStreaming={session.isStreaming}
-      streamingContent=""
+      streamingContent={session.streamingContent}
       streamingReasoning={session.streamingReasoning}
       handleAsk={session.handleAsk}
       handleRegenerate={session.handleRegenerate}
@@ -189,6 +190,7 @@ export function CharacterAgentChat({
           {aiConfig.showReasoning !== false ? (
             <LiveThinking text={session.streamingReasoning} />
           ) : null}
+          <LiveSpeech text={session.streamingContent} isStreaming={session.isStreaming} />
         </div>
       }
     />

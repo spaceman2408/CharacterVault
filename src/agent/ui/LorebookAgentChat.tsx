@@ -5,6 +5,7 @@ import type { ChatMessage } from '../../components/ai/types';
 import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '../../db/characterTypes';
 import { computeAgentContextUsage, usageStatus } from '../hosts/lorebook/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
+import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
 import { messageNotices, shouldRenderAgentMessage, visibleToolEvents } from './notices';
 import { useLorebookAgent } from './useLorebookAgent';
@@ -164,7 +165,7 @@ export function LorebookAgentChat({
       isProcessing={session.isProcessing}
       error={session.chatHistory.length === 0 ? session.error : null}
       isStreaming={session.isStreaming}
-      streamingContent=""
+      streamingContent={session.streamingContent}
       streamingReasoning={session.streamingReasoning}
       handleAsk={session.handleAsk}
       handleRegenerate={session.handleRegenerate}
@@ -186,6 +187,7 @@ export function LorebookAgentChat({
           {aiConfig.showReasoning !== false ? (
             <LiveThinking text={session.streamingReasoning} />
           ) : null}
+          <LiveSpeech text={session.streamingContent} isStreaming={session.isStreaming} />
         </div>
       }
     />
