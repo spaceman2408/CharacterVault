@@ -418,6 +418,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         setIsProcessing(true);
         setBusyLabel(null);
         setError(null);
+        errorByMessageIdRef.current = {};
+        setErrorByMessageId({});
         clearStreamDraft();
         lastAssistantIdRef.current = null;
         pendingStatsRef.current = undefined;
@@ -648,7 +650,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     setErrorByMessageId((prev) => {
       const next: Record<string, string> = {};
       for (const [id, message] of Object.entries(prev)) {
-        if (keepIds.has(id)) next[id] = message;
+        if (keepIds.has(id) && id !== lastUser.id) next[id] = message;
       }
       return next;
     });
