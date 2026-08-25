@@ -4,6 +4,7 @@ import { mapNativeToolCalls } from './toolCalls';
 import type {
   ActionResult,
   AgentMessage,
+  AgentToolMode,
   NativeToolCall,
   ParseResult,
   RunLoopOptions,
@@ -16,6 +17,12 @@ export const AGENT_MAX_OUTPUT_TOKENS = 16384;
 
 const CONTINUE_NUDGE =
   'Your last tool_call was cut off (output length). Continue exactly from the cutoff and close </tool_call>. Do not repeat completed calls.';
+
+export function isToolsUnsupportedError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const typed = error as { type?: unknown; name?: unknown };
+  return typed.type === 'tools_unsupported' || typed.name === 'ToolsUnsupportedError';
+}
 
 export function isLengthFinish(reason: string | null | undefined): boolean {
   if (!reason) return false;
@@ -100,13 +107,16 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
     isAborted = () => false,
     maxTurns = DEFAULT_MAX_TURNS,
     maxActionsPerTurn = DEFAULT_MAX_ACTIONS_PER_TURN,
+    toolMode: initialToolMode,
   } = options;
 
   const emit = onEvent ?? (() => undefined);
 
+  let toolMode: AgentToolMode =
+    initialToolMode ?? (host.tools && host.tools.length > 0 ? 'native' : 'xml');
   const extra = await host.extraContextChunks();
   const messages: AgentMessage[] = [
-    { role: 'system', content: host.buildSystemPrompt({ extraChunks: extra }) },
+    { role: 'system', content: host.buildSystemPrompt({ extraChunks: extra, toolMode }) },
     ...history.filter((message) => message.role !== 'system'),
     { role: 'user', content: userMessage },
   ];
@@ -140,6 +150,15 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
       if (isAborted()) {
         return finish('abort');
       }
+      if (isToolsUnsupportedError(err) && toolMode === 'native') {
+        toolMode = 'xml';
+        messages[0] = {
+          role: 'system',
+          content: host.buildSystemPrompt({ extraChunks: extra, toolMode: 'xml' }),
+        };
+        turn -= 1;
+        continue;
+      }
       const message = err instanceof Error ? err.message : 'Agent request failed';
       emit({ type: 'error', message });
       return finish('error');
@@ -164,6 +183,13 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
       };
       nativeIds = mapped.ids;
       nativeIncomplete = mapped.incomplete;
+    } else if (toolMode === 'native') {
+      parsed = {
+        segments: content ? [{ kind: 'speech', text: content }] : [],
+        actions: [],
+        speech: content,
+        incomplete: false,
+      };
     } else {
       parsed = parseActions(content);
       if (parsed.incomplete && isLengthFinish(finishReason)) {

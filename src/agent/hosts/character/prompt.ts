@@ -1,6 +1,8 @@
 import { buildSystemPrompt } from '../../../services/PromptBuilder';
+import { formatAgentToolGuide } from '../../core/prompts';
+import type { AgentToolMode } from '../../core/types';
 
-export const CHARACTER_ACTION_SYNTAX = `If native tools are unavailable, use XML:
+export const CHARACTER_ACTION_SYNTAX = `Use XML:
 <tool_call>
 update_field
 id: description
@@ -26,10 +28,9 @@ first_mes is the main greeting. Alternate greetings are numbered from 1 (Greetin
 To revise a lorebook entry, read_entry that id. For a small edit, replace_in_entry with a unique snippet from that latest read. After a replace, read_entry again before another replace in that entry. If a large delete fails, update_entry with the remaining full body. Do not add an entry whose name is already in the catalog. To remove an entry, delete_entry by id.
 Common lorebook activation on add_entry / update_entry: enabled, position (before_char, after_char, before_example, after_example, at_depth), depth (with at_depth), insertion_order, secondary_keys, selective, probability, excludeRecursion (non-recursable), preventRecursion, delayUntilRecursion. To inspect who can unlock whom, read_recursion (optional id for one entry). Use update_book_settings for scan_depth, token_budget, and recursive_scanning. After a large write, audit_card if you need a size/consistency check.
 When reporting audit_card, use its Active / Inactive split as written. Active is the SillyTavern character prompt. first_mes and alternate greetings are not in that prompt; a chat uses one greeting as the opening, so do not sum them into context load or recommend trimming greetings for token budget unless the user asked about greeting size. Lorebook size is World Info: entries insert on keys up to token_budget, not the whole book. Stick to the audit fields; do not add name, creator, creator_notes, character_version, or avatar from the catalog unless the user asked about those.
-While calling tools, emit tool_call only — no user-facing prose. When the card and book cover the request, stop: no tool calls, a short summary is enough.`;
+While calling tools, emit tool calls only — no user-facing prose. When the card and book cover the request, stop: no tool calls, a short summary is enough.`;
 
-export const CHARACTER_TOOL_DOCS = `Use the provided tools (native function calls). Prefer those over XML.
-- list_fields — no arguments. Returns id, label, and token size. Skip this if the catalog in context is enough.
+export const CHARACTER_TOOL_LIST = `- list_fields — no arguments. Returns id, label, and token size. Skip this if the catalog in context is enough.
 - read_field — id. Returns that field's full content.
 - update_field — id, content (the full new value). tags is comma-separated. Not for alternate greetings.
 - replace_in_field — id, old (unique snippet from the latest read_field; quotes and dashes need not be exact), new or content (empty deletes). After a replace, read_field before another. To delete a section, old may be the first line through the last unique line. Not for alternate greetings.
@@ -51,11 +52,12 @@ export const CHARACTER_TOOL_DOCS = `Use the provided tools (native function call
 - replace_in_entry — id, old (unique snippet from the latest read_entry; quotes and dashes need not be exact), new or content (empty deletes). After a replace, read_entry before another. To delete a section, old may be the first line through the last unique line.
 - delete_entry — id. Removes that entry.
 - read_recursion — optional id. Whole-book recursion map, or one entry’s incoming/outgoing edges. No bodies.
-- update_book_settings — optional name, description, scan_depth, token_budget, recursive_scanning.
+- update_book_settings — optional name, description, scan_depth, token_budget, recursive_scanning.`;
 
-You may emit up to 12 actions per reply, then wait for tool results. Finish each call (complete JSON arguments, or </tool_call>) before starting the next.`;
-
-export function buildCharacterAgentSystemPrompt(extraChunks: string[]): string {
-  const persona = `${CHARACTER_AGENT_PERSONA}\n\n${CHARACTER_ACTION_SYNTAX}\n\n${CHARACTER_TOOL_DOCS}`;
+export function buildCharacterAgentSystemPrompt(
+  extraChunks: string[],
+  toolMode: AgentToolMode = 'native',
+): string {
+  const persona = `${CHARACTER_AGENT_PERSONA}\n\n${formatAgentToolGuide(toolMode, CHARACTER_TOOL_LIST, CHARACTER_ACTION_SYNTAX)}`;
   return buildSystemPrompt(persona, extraChunks);
 }

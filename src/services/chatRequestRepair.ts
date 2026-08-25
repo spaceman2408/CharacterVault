@@ -88,6 +88,10 @@ export function capabilityCacheKey(baseUrl: string, modelId: string): string {
   return `${baseUrl.replace(/\/$/, '')}::${modelId}`;
 }
 
+export function isNativeToolsRejected(baseUrl: string, modelId: string): boolean {
+  return getCapabilityCache(baseUrl, modelId).rejectedParams.has('tools');
+}
+
 export function getCapabilityCache(baseUrl: string, modelId: string): ModelCapabilityCache {
   const key = capabilityCacheKey(baseUrl, modelId);
   const existing = capabilityCaches.get(key);

@@ -260,4 +260,60 @@ Castle
     expect(followUp.some((message) => message.role === 'assistant' && message.tool_calls?.length)).toBe(true);
     expect(followUp.some((message) => message.role === 'tool' && message.tool_call_id === 'call_keep')).toBe(true);
   });
+
+  it('does not parse XML from the body in native mode', async () => {
+    const { host, calls } = fakeHost();
+    const result = await runLoop({
+      host,
+      complete: scriptedComplete([
+        `<tool_call>
+add_entry
+name: Keep
+keys: keep
+---
+Castle
+</tool_call>`,
+      ]),
+      userMessage: 'go',
+      toolMode: 'native',
+    });
+    expect(result.reason).toBe('complete');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('rebuilds an XML prompt after native tools are rejected', async () => {
+    const { host, calls } = fakeHost();
+    host.buildSystemPrompt = ({ extraChunks, toolMode }) =>
+      `${toolMode ?? 'none'}\n${extraChunks.join('\n')}`;
+    let attempts = 0;
+    const complete = vi.fn(async (messages: AgentMessage[]) => {
+      attempts += 1;
+      if (attempts === 1) {
+        expect(messages[0]?.content).toContain('native');
+        throw Object.assign(new Error('Unknown parameter: tools'), { type: 'tools_unsupported' });
+      }
+      expect(messages[0]?.content).toContain('xml');
+      if (attempts === 2) {
+        return {
+          content: `<tool_call>
+add_entry
+name: Keep
+keys: keep
+---
+Castle
+</tool_call>`,
+        };
+      }
+      return { content: 'Stopped.' };
+    });
+    const result = await runLoop({
+      host,
+      complete,
+      userMessage: 'go',
+      toolMode: 'native',
+    });
+    expect(result.reason).toBe('complete');
+    expect(attempts).toBe(3);
+    expect(calls[0]?.headers.name).toBe('Keep');
+  });
 });

@@ -3,6 +3,7 @@ import {
   applyCapabilityCache,
   clearCapabilityCaches,
   getCapabilityCache,
+  isNativeToolsRejected,
   mapEffortToSupported,
   matchRejectedParams,
   parseSupportedValues,
@@ -157,6 +158,19 @@ describe('repairChatRequest', () => {
     expect(result!.removed).toEqual(expect.arrayContaining(['tools', 'tool_choice']));
     expect(result!.request.tools).toBeUndefined();
     expect(result!.request.tool_choice).toBeUndefined();
+  });
+});
+
+describe('isNativeToolsRejected', () => {
+  beforeEach(() => {
+    clearCapabilityCaches();
+  });
+
+  it('is true after a tools rejection is cached for that model', () => {
+    const cache = getCapabilityCache('https://api.example.com', 'model-a');
+    recordRepairInCache(cache, { request: {}, removed: ['tools', 'tool_choice'], remapped: {} });
+    expect(isNativeToolsRejected('https://api.example.com', 'model-a')).toBe(true);
+    expect(isNativeToolsRejected('https://api.example.com', 'model-b')).toBe(false);
   });
 });
 

@@ -11,11 +11,13 @@ import {
 } from '../../components/ai/utils';
 import type { AIConfig, PromptSettings, SamplerSettings } from '../../db/characterTypes';
 import { AIError, AIService } from '../../services/AIService';
+import { isNativeToolsRejected } from '../../services/chatRequestRepair';
 import { getProviderSelectionId } from '../../services/providers';
+import { normalizeBaseUrl } from '../../utils/aiBaseUrl';
 import type { ChatMessage as ServiceChatMessage } from '../../services/AIService';
 import { AGENT_MAX_OUTPUT_TOKENS, runLoop } from '../core/runLoop';
 import { stripFences } from '../core/stripFences';
-import type { AgentHost, AgentMessage } from '../core/types';
+import type { AgentHost, AgentMessage, AgentToolMode } from '../core/types';
 import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
@@ -31,6 +33,10 @@ export interface UseAgentSessionOptions {
   flushDraft: () => void | Promise<void>;
   lookupToolNames: ReadonlySet<string>;
   onRunningChange?: (running: boolean) => void;
+}
+
+function resolveAgentToolMode(config: AIConfig): AgentToolMode {
+  return isNativeToolsRejected(normalizeBaseUrl(config.baseUrl), config.modelId) ? 'xml' : 'native';
 }
 
 function toServiceMessages(messages: AgentMessage[]): ServiceChatMessage[] {
@@ -439,11 +445,13 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
           aiServiceRef.current = aiService;
 
           const host = createHostRef.current();
+          const toolMode = resolveAgentToolMode(config);
 
           const result = await runLoop({
             host,
             userMessage: question,
             history: historyForLoop,
+            toolMode,
             isAborted: () => abortedRef.current || !isCurrent(),
             onPrompt: (prompt) => {
               if (!isCurrent() || abortedRef.current) return;
@@ -482,13 +490,15 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 wrappedChunk,
                 {
                   maxTokens: AGENT_MAX_OUTPUT_TOKENS,
-                  tools: host.tools
-                    ? host.tools.map((tool) => ({
-                        name: tool.name,
-                        description: tool.description,
-                        parameters: tool.parameters,
-                      }))
-                    : undefined,
+                  tools:
+                    isNativeToolsRejected(normalizeBaseUrl(config.baseUrl), config.modelId) ||
+                    !host.tools
+                      ? undefined
+                      : host.tools.map((tool) => ({
+                          name: tool.name,
+                          description: tool.description,
+                          parameters: tool.parameters,
+                        })),
                 },
               );
               pendingStatsRef.current = accumulateResponseStats(pendingStatsRef.current, {

@@ -27,7 +27,7 @@ Do not export the parser, loop, or host from the barrel. Tests import those file
 
 1. Handle it in `hosts/lorebook/tools.ts`.
 2. Add the name to `LOREBOOK_TOOL_NAMES`.
-3. Add an OpenAI function schema in `hosts/lorebook/schemas.ts` and document the tool in `hosts/lorebook/prompt.ts`. Native `tools` / `tool_calls` are the primary control plane. XML `<tool_call>` is the fallback (including when a provider 400s on `tools`). The parser still accepts `<<<>>>` fences; do not teach that format.
+3. Add an OpenAI function schema in `hosts/lorebook/schemas.ts` and document the tool in `hosts/lorebook/prompt.ts`. Native `tools` / `tool_calls` are the primary control plane. XML `<tool_call>` is a separate mode (never in the same system prompt). A 400 that rejects `tools` is cached per base URL + model; the run rebuilds an XML-only prompt and retries. Later runs for that model start in XML. The parser still accepts `<<<>>>` fences; do not teach that format.
 4. Tests under `tests/agent/hosts/lorebook/`.
 
 Do not mention the tool in `core/`.
@@ -64,4 +64,4 @@ On the character workspace, Agent mode always mounts `CharacterAgentChat` (tab c
 - `replace_in_field` / `replace_in_greeting` / `replace_in_entry` / `replace_across` do a unique-match substring replace (or `replace_all`). Exact text wins; otherwise quotes, dashes, and newlines are folded. A multiline `old` can be the first line through the last unique line (middle may be mangled). Deleting a markdown heading alone is rejected so the section body is not left behind. They fail if `old` is missing or matches more than once. `replace_across` applies per place and fails the whole call if any one place is ambiguous. Full `update_*` still replaces the whole value. These writes do not go through CodeMirror.
 - The host keeps an in-run copy of the book and caches formatted `read_entry` payloads by id. `update_entry` writes that cache so the next read returns the new body. `delete_entry` drops the id from the book and the read cache. `flush()` persists once at the end of the run.
 - Agent `add_entry` sets `extensions.context_enabled: false` so new entries are not pinned into AI context.
-- Agent completions send `max_tokens: 16384` without changing the sampler input budget. Prefer `message.tool_calls` when the API returns them; otherwise parse XML and salvage a cut last call. One continuation on `finish_reason: length` if the tail is still unusable. Native turns echo `role: tool` results; XML turns keep the user-text result blob.
+- Agent completions send `max_tokens: 16384` without changing the sampler input budget. Native mode teaches function calls only and does not parse XML from the message body. XML mode is used when the provider has rejected `tools` (cached). Prefer `message.tool_calls` when the API returns them. One continuation on `finish_reason: length` if the XML tail is still unusable. Native turns echo `role: tool` results; XML turns keep the user-text result blob.

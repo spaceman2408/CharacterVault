@@ -269,6 +269,7 @@ export type AIErrorType =
   | 'auth' 
   | 'rate_limit' 
   | 'invalid_request'
+  | 'tools_unsupported'
   | 'content_policy_violation'
   | 'server'
   | 'unknown';
@@ -958,6 +959,14 @@ Provide only the generated text without any additional commentary.`;
           );
           if (supported) recordSupportedEfforts(cache, supported);
           recordRepairInCache(cache, repaired);
+
+          if (repaired.removed.includes('tools')) {
+            throw new AIError(
+              'This model does not support native function calling',
+              'tools_unsupported',
+              400,
+            );
+          }
 
           const remapParts = Object.entries(repaired.remapped).map(
             ([k, v]) => `${k}=${v}`

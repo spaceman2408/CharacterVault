@@ -43,6 +43,9 @@ export interface AgentMessage {
 
 export type AgentDoneReason = 'complete' | 'max_turns' | 'abort' | 'error';
 
+/** Native `tools` / `tool_calls` vs XML `<tool_call>` text. Never mix in one prompt. */
+export type AgentToolMode = 'native' | 'xml';
+
 export type AgentEvent =
   | { type: 'assistant_text'; text: string; reasoning?: string }
   | { type: 'tool_start'; toolName: string }
@@ -67,7 +70,7 @@ export type Completer = (
 export interface AgentHost {
   readonly toolNames: readonly string[];
   readonly tools?: readonly AgentToolSpec[];
-  buildSystemPrompt(input: { extraChunks: string[] }): string;
+  buildSystemPrompt(input: { extraChunks: string[]; toolMode?: AgentToolMode }): string;
   extraContextChunks(): Promise<string[]>;
   execute(action: ParsedAction): Promise<ActionResult>;
   /** Persist side effects once per run. No-op when nothing changed. */
@@ -79,6 +82,8 @@ export interface RunLoopOptions {
   complete: Completer;
   userMessage: string;
   history?: AgentMessage[];
+  /** Defaults to native when `host.tools` is set, otherwise XML. */
+  toolMode?: AgentToolMode;
   onEvent?: (event: AgentEvent) => void;
   onChunk?: (chunk: CompleterChunk) => void;
   /** Live prompt for the next (or just-updated) completion. Do not retain the array. */

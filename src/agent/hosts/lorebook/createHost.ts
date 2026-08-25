@@ -1,6 +1,6 @@
 import type { CharacterBook } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
-import type { ActionResult, AgentHost, ParsedAction } from '../../core/types';
+import type { ActionResult, AgentHost, AgentToolMode, ParsedAction } from '../../core/types';
 import { MAX_REPLACE_ACROSS_PER_RUN } from '../search';
 import { formatEntryCatalog } from './catalog';
 import { buildLorebookAgentSystemPrompt } from './prompt';
@@ -67,8 +67,8 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
     toolNames: LOREBOOK_TOOL_NAMES,
     tools: LOREBOOK_TOOL_SPECS,
 
-    buildSystemPrompt(input: { extraChunks: string[] }): string {
-      return buildLorebookAgentSystemPrompt(input.extraChunks);
+    buildSystemPrompt(input: { extraChunks: string[]; toolMode?: AgentToolMode }): string {
+      return buildLorebookAgentSystemPrompt(input.extraChunks, input.toolMode ?? 'native');
     },
 
     async extraContextChunks(): Promise<string[]> {

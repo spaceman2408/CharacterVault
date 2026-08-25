@@ -132,7 +132,7 @@ export const LOREBOOK_TOOL_SPECS: readonly AgentToolSpec[] = [
         new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
         content: {
           type: 'string',
-          description: 'Replacement text if new is omitted (XML body).',
+          description: 'Replacement text if new is omitted.',
         },
         replace_all: {
           type: 'boolean',
@@ -176,7 +176,7 @@ export const LOREBOOK_TOOL_SPECS: readonly AgentToolSpec[] = [
         new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
         content: {
           type: 'string',
-          description: 'Replacement text if new is omitted (XML body).',
+          description: 'Replacement text if new is omitted.',
         },
         replace_all: {
           type: 'boolean',
