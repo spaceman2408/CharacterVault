@@ -396,6 +396,7 @@ interface CharacterHeaderProps {
   onToggleContext: () => void;
   onToggleChat: () => void;
   isMobile: boolean;
+  agentRunning?: boolean;
 }
 
 function CharacterHeader({
@@ -407,7 +408,8 @@ function CharacterHeader({
   isChatOpen, 
   onToggleContext, 
   onToggleChat,
-  isMobile 
+  isMobile,
+  agentRunning = false,
 }: CharacterHeaderProps): React.ReactElement {
   const { currentCharacter } = useCharacterContext();
 
@@ -476,8 +478,20 @@ function CharacterHeader({
             <h1 className="font-semibold text-fg text-sm md:text-base truncate">
               {currentCharacter.name}
             </h1>
-            <p className="text-xs text-fg-muted hidden sm:block">
-              Editing character
+            <p className={`text-xs ${agentRunning ? 'block' : 'hidden sm:block'}`}>
+              <span className={`text-fg-muted ${agentRunning ? 'hidden sm:inline' : ''}`}>
+                Editing character
+              </span>
+              {agentRunning ? (
+                <span
+                  role="status"
+                  aria-live="polite"
+                  title="Changes appear when the run finishes. Use Snapshots to roll back."
+                  className="text-accent animate-pulse sm:ml-2"
+                >
+                  Agent writing
+                </span>
+              ) : null}
             </p>
           </div>
         </div>
@@ -975,6 +989,7 @@ function CharacterWorkspaceInner({
         onToggleContext={toggleContext}
         onToggleChat={toggleChat}
         isMobile={isMobile}
+        agentRunning={agentRunning}
       />
       
       {/* Mobile Backdrop */}
@@ -1028,11 +1043,6 @@ function CharacterWorkspaceInner({
                   : 'rounded-2xl p-4 md:p-6'
               }`}
               data-section-editor-container>
-              {agentRunning ? (
-                <div className="mb-2 shrink-0 rounded-lg border border-border bg-accent-soft px-3 py-1.5 text-xs text-accent">
-                  Agent is writing. Changes appear when the run finishes. Use Snapshots to roll back.
-                </div>
-              ) : null}
               <div className="relative min-h-0 flex-1">
                 {activeSection === 'image' ? (
                   <ImageEditor />

@@ -478,10 +478,22 @@ export function LorebookWorkspace(): React.ReactElement {
                 className="w-full max-w-64 truncate bg-transparent font-semibold text-fg text-sm md:text-base outline-none focus:ring-0"
                 aria-label="Lorebook name"
               />
-              <p className="text-xs text-fg-muted hidden sm:block truncate">
-                {entryCount} entr{entryCount === 1 ? 'y' : 'ies'}
-                {totalTokens > 0 ? ` · ${totalTokens.toLocaleString()} tokens` : ''}
-                {isSaving ? ' · Saving…' : ''}
+              <p className={`text-xs truncate ${agentRunning ? 'block' : 'hidden sm:block'}`}>
+                <span className={`text-fg-muted ${agentRunning ? 'hidden sm:inline' : ''}`}>
+                  {entryCount} entr{entryCount === 1 ? 'y' : 'ies'}
+                  {totalTokens > 0 ? ` · ${totalTokens.toLocaleString()} tokens` : ''}
+                  {isSaving ? ' · Saving…' : ''}
+                </span>
+                {agentRunning ? (
+                  <span
+                    role="status"
+                    aria-live="polite"
+                    title="New entries appear when the run finishes. Use Snapshots to roll back."
+                    className="text-accent animate-pulse sm:ml-2"
+                  >
+                    Agent writing
+                  </span>
+                ) : null}
               </p>
             </div>
           </div>
@@ -590,11 +602,6 @@ export function LorebookWorkspace(): React.ReactElement {
               onSave: saveCustomContext,
               onClear: clearCustomContext,
             }}
-            statusBanner={
-              agentRunning
-                ? 'Agent is writing. New entries appear when the run finishes. Use Snapshots to roll back.'
-                : undefined
-            }
           />
         </main>
 

@@ -103,10 +103,17 @@ export function AIChatView({
     }
   }, []);
 
+  const focusComposer = useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
+
   const handleSubmit = async () => {
     if (!askQuestion.trim()) {
       if (canRetryEmptySend(chatHistory, showRegenerate)) {
-        await handleRegenerate();
+        const retry = handleRegenerate();
+        focusComposer();
+        await retry;
+        return;
       }
       return;
     }
@@ -114,7 +121,9 @@ export function AIChatView({
     const question = askQuestion.trim();
     setAskQuestion('');
     resetComposerHeight();
-    await handleAsk(question);
+    const ask = handleAsk(question);
+    focusComposer();
+    await ask;
   };
 
   const canSend =
@@ -349,11 +358,17 @@ export function AIChatView({
               }
             }}
             onInput={onComposerInput}
-            disabled={isProcessing}
           />
           <button
             type="button"
-            onClick={() => void (isProcessing ? handleAbort() : handleSubmit())}
+            onClick={() => {
+              if (isProcessing) {
+                handleAbort();
+                focusComposer();
+                return;
+              }
+              void handleSubmit();
+            }}
             disabled={!canSend}
             className={`
               shrink-0 h-10 w-10 flex items-center justify-center rounded-xl transition-all

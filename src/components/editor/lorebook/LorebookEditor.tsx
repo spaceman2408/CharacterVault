@@ -77,7 +77,6 @@ function LorebookEditorInner({
   markdownImageOpenLinks,
   customContext,
   attachment,
-  statusBanner,
 }: LorebookEditorProps): React.ReactElement {
   const normalizedPropLorebook = useMemo(
     () => normalizeCharacterBook(lorebook),
@@ -322,12 +321,7 @@ function LorebookEditorInner({
 
   const editor = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      {statusBanner ? (
-        <div className="shrink-0 border-b border-border bg-accent-soft px-3 py-1.5 text-xs text-accent">
-          {statusBanner}
-        </div>
-      ) : null}
-    <div className="flex min-h-0 flex-1 overflow-hidden md:flex-row">
+      <div className="flex min-h-0 flex-1 overflow-hidden md:flex-row">
       <div
         className={`
           flex min-h-0 w-full flex-col overflow-hidden border-border bg-muted/40
