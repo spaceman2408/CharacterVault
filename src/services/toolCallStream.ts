@@ -1,3 +1,5 @@
+import { ChunkString } from '../utils/chunkString';
+
 export interface NativeToolCall {
   id: string;
   name: string;
@@ -14,25 +16,32 @@ export interface ToolCallDelta {
   };
 }
 
-export function applyToolCallDeltas(acc: NativeToolCall[], deltas: ToolCallDelta[]): void {
+/** In-stream accumulator; `arguments` stays chunked until finalize. */
+export interface AccumulatingToolCall {
+  id: string;
+  name: string;
+  arguments: ChunkString;
+}
+
+export function applyToolCallDeltas(acc: AccumulatingToolCall[], deltas: ToolCallDelta[]): void {
   for (const delta of deltas) {
     const index = delta.index ?? Math.max(0, acc.length - 1);
     while (acc.length <= index) {
-      acc.push({ id: '', name: '', arguments: '' });
+      acc.push({ id: '', name: '', arguments: new ChunkString() });
     }
     const current = acc[index];
     if (delta.id) current.id = delta.id;
     if (delta.function?.name) current.name += delta.function.name;
-    if (delta.function?.arguments) current.arguments += delta.function.arguments;
+    if (delta.function?.arguments) current.arguments.append(delta.function.arguments);
   }
 }
 
-export function finalizeToolCalls(acc: NativeToolCall[]): NativeToolCall[] {
+export function finalizeToolCalls(acc: AccumulatingToolCall[]): NativeToolCall[] {
   return acc
     .map((call, index) => ({
       id: call.id || `call_${index}`,
       name: call.name,
-      arguments: call.arguments,
+      arguments: call.arguments.toString(),
     }))
     .filter((call) => call.name.length > 0);
 }

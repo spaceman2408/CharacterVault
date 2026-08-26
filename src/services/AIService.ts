@@ -33,6 +33,7 @@ import {
   applyToolCallDeltas,
   finalizeToolCalls,
   normalizeMessageToolCalls,
+  type AccumulatingToolCall,
   type NativeToolCall,
 } from './toolCallStream';
 
@@ -1119,7 +1120,7 @@ Provide only the generated text without any additional commentary.`;
     this.streamReader = reader;
     const decoder = new TextDecoder();
     const parser = new ReasoningParser();
-    const toolCallAcc: NativeToolCall[] = [];
+    const toolCallAcc: AccumulatingToolCall[] = [];
     let finishReason: string | null = null;
     let doneSentinel = false;
     let pendingLine = '';
