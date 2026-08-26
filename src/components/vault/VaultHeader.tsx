@@ -10,6 +10,7 @@ import {
   Sun,
   Upload,
 } from 'lucide-react';
+import { StagingPromoBanner } from '../StagingPromoBanner';
 import { IconButton } from './IconButton';
 import { logoSrc } from './utils';
 
@@ -54,8 +55,10 @@ export function VaultHeader({
 }: VaultHeaderProps): React.ReactElement {
   return (
     <>
-      <header className="sticky top-0 z-30 w-full backdrop-blur-xl bg-surface/85 border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sm:gap-4">
+      <div className="sticky top-0 z-30 w-full">
+        <StagingPromoBanner />
+        <header className="w-full backdrop-blur-xl bg-surface/85 border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2 shrink-0">
             <img
               src={logoSrc}
@@ -188,8 +191,9 @@ export function VaultHeader({
               <BookOpen className="w-4 h-4" />
             </a>
           </div>
-        </div>
-      </header>
+          </div>
+        </header>
+      </div>
 
       <div className="sm:hidden px-4 pt-3">
         <div className="relative group">

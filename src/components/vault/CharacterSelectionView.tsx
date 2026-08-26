@@ -268,8 +268,8 @@ export function CharacterSelectionView({
 
             {!isPromoDismissed && !isLoading && (
               <>
-                <div className="hidden lg:block fixed left-4 xl:left-6 top-24 z-40 w-56 xl:w-64">
-                  <div className="sticky top-24">
+                <div className="hidden lg:block fixed left-4 xl:left-6 top-36 z-40 w-56 xl:w-64">
+                  <div className="sticky top-36">
                     <PromoBanner onDismiss={handlePromoDismiss} />
                   </div>
                 </div>
