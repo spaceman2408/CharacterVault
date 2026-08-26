@@ -34,18 +34,24 @@ export function CharacterSettingsPanel({
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const toastTimeoutsRef = useRef<number[]>([]);
+  const toastTimeoutsRef = useRef<Map<string, number>>(new Map());
 
   const addToast = useCallback((type: ToastNotification['type'], message: string) => {
     const id = Math.random().toString(36).substring(7);
     setToasts((prev) => [...prev, { id, type, message }]);
     const timeoutId = window.setTimeout(() => {
+      toastTimeoutsRef.current.delete(id);
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 5000);
-    toastTimeoutsRef.current.push(timeoutId);
+    toastTimeoutsRef.current.set(id, timeoutId);
   }, []);
 
   const removeToast = useCallback((id: string) => {
+    const timeoutId = toastTimeoutsRef.current.get(id);
+    if (timeoutId !== undefined) {
+      window.clearTimeout(timeoutId);
+      toastTimeoutsRef.current.delete(id);
+    }
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
@@ -64,6 +70,7 @@ export function CharacterSettingsPanel({
   });
 
   const nanoGPT = useNanoGPTSignIn({
+    isOpen,
     baseUrl: draft.ai.baseUrl,
     setDraft,
     handleApiKeyChange: modelCatalog.handleApiKeyChange,
@@ -76,21 +83,22 @@ export function CharacterSettingsPanel({
     if (isOpen) return;
     setToasts([]);
     toastTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
-    toastTimeoutsRef.current = [];
+    toastTimeoutsRef.current.clear();
   }, [isOpen]);
 
   useEffect(() => {
+    const timeouts = toastTimeoutsRef.current;
     return () => {
-      toastTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
-      toastTimeoutsRef.current = [];
+      timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      timeouts.clear();
     };
   }, []);
 
   // Keyboard: Escape + arrow tab navigation
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
+    if (!isOpen) return;
 
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
       }
