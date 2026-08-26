@@ -9,7 +9,6 @@ import {
   Users,
   Upload,
   Plus,
-  FileText,
   Type,
   Image,
   MessageCircle,
@@ -20,17 +19,17 @@ import {
   ChevronLeft,
   X,
   BookOpen,
-  Wand2,
   PenTool,
   Book,
   Zap,
-  Palette,
-  ScrollText,
   ExternalLink,
+  History,
+  Bot,
+  Link,
+  Map,
+  Archive,
 } from 'lucide-react';
 import './tutorial.css';
-
-// --- Tutorial Step Data ---
 
 interface TutorialStep {
   id: number;
@@ -39,85 +38,100 @@ interface TutorialStep {
   description: string;
   features: { icon: React.ElementType; label: string; detail: string }[];
   accentIcon: React.ElementType;
+  showSillyTavernCallout?: boolean;
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 0,
     title: 'Welcome to CharacterVault',
-    subtitle: 'Your distraction-free character card workshop',
+    subtitle: 'Character cards and lorebooks, in the browser',
     description:
-      'CharacterVault is your all-in-one workspace for creating, editing, and managing character spec cards. Built for SillyTavern and compatible platforms — supporting both V2 and V3 card formats out of the box.',
+      'CharacterVault is your workspace for SillyTavern-compatible V2 and V3 character cards and World Info lorebooks. Cards and books are stored locally in your browser. No account is required for core use.',
     features: [
-      { icon: Users, label: 'Your Library', detail: 'Manage your entire character collection in one place, stored locally in your browser' },
-      { icon: PenTool, label: 'Full-Featured Editor', detail: 'Section-based editing with dedicated tabs for every card field' },
-      { icon: Sparkles, label: 'AI-Powered Tools', detail: 'Built-in AI toolbar and chat assistant to help craft your characters' },
+      { icon: Users, label: 'Your vault', detail: 'Two libraries on the home screen (Characters and Lorebooks) with search by name or tags' },
+      { icon: PenTool, label: 'Tabbed editor', detail: 'Dedicated tabs for every card field, with auto-save as you type' },
+      { icon: Sparkles, label: 'AI when you want it', detail: 'Toolbar, Orion chat, and an Agent that can write the open card or book, after you add a provider in Settings' },
     ],
     accentIcon: BookOpen,
   },
   {
     id: 1,
-    title: 'Import or Create',
-    subtitle: 'Start with what you have — or from scratch',
+    title: 'Your vault',
+    subtitle: 'Characters, lorebooks, and ways to start',
     description:
-      'Bring in your existing character cards or start fresh. CharacterVault reads V2 and V3 PNG cards with embedded metadata, as well as raw JSON files. Click "Import" in the header or the "+ New" button to get started.',
+      'The home screen has a Characters tab and a Lorebooks tab. Search, import existing files, create a blank item, or generate a card with AI Create. You can also drag and drop files onto the vault.',
     features: [
-      { icon: Upload, label: 'Import Cards', detail: 'Import PNG cards with embedded data or raw JSON character files' },
-      { icon: Plus, label: 'Create New', detail: 'Start fresh with a blank character template and build from scratch' },
-      { icon: FileText, label: 'V2 & V3 Support', detail: 'Full compatibility with both character card specifications' },
-      { icon: ExternalLink, label: 'SillyTavern Extension', detail: 'Import straight from SillyTavern with the companion extension. Install the extension, export choosing "CharacterVault"' },
+      { icon: Upload, label: 'Import', detail: 'PNG cards with embedded data, character JSON, or lorebook JSON. Multiple files and drag-and-drop are supported' },
+      { icon: Plus, label: 'New / AI Create', detail: 'Start from a blank template, or open AI Creation Studio from the header to generate a card from a concept or tags' },
+      { icon: Download, label: 'Backup', detail: 'Download a ZIP of your characters and lorebooks from the vault header' },
+      { icon: ExternalLink, label: 'SillyTavern extension', detail: 'Install the companion extension and export choosing "CharacterVault" to send cards here' },
     ],
     accentIcon: Upload,
+    showSillyTavernCallout: true,
   },
   {
     id: 2,
-    title: 'Edit Your Character',
-    subtitle: 'Every field organized in dedicated sections',
+    title: 'Edit in sections',
+    subtitle: 'Every field has its own tab',
     description:
-      'Navigate through tabs for each part of your character card. Every section has a focused CodeMirror editor with search & replace so you can work without distractions.',
+      'Open a character to enter the workspace. Tabs cover name, description, personality, scenario, greetings, examples, system prompt, lorebook, and more. Changes save automatically. Each text section uses a focused editor with search and replace.',
     features: [
-      { icon: Type, label: 'Core Sections', detail: 'Name, Description, Personality, Scenario, First Message, Example Messages, System Prompt, and more' },
-      { icon: Image, label: 'Image', detail: 'Upload or drag & drop your character\'s portrait image directly' },
-      { icon: Book, label: 'Lorebook', detail: 'Built-in lorebook editor — manage entries with trigger keys, priority, position, and AI-assisted content' },
+      { icon: Type, label: 'Core fields', detail: 'Name, Description, Personality, Scenario, First Message, Greetings, Examples, System Prompt, and the rest of the spec' },
+      { icon: Image, label: 'Image', detail: 'Upload or replace the portrait on the Image tab' },
+      { icon: Book, label: 'Card lorebook', detail: 'Manage World Info entries on the card (keys, priority, position, and content) with the same editor used for vault books' },
     ],
     accentIcon: PenTool,
   },
   {
     id: 3,
-    title: 'AI Writing Tools',
-    subtitle: 'Your editing suite, supercharged',
+    title: 'Three AI tools',
+    subtitle: 'Configure a provider, then pick the tool',
     description:
-      'Select any text in the editor to reveal the AI toolbar. Use one-click operations to transform your writing, or give custom instructions. All AI results stream in real-time and can be accepted or rejected.',
+      'Open Settings (gear in the workspace) and add a provider under AI Config. After that you have three tools: an inline toolbar, Orion for chat, and an Agent that can edit the open character or lorebook.',
     features: [
-      { icon: Zap, label: 'Enhance & Rephrase', detail: 'Expand your text with more depth, or rephrase for better clarity and flow' },
-      { icon: Palette, label: 'Style Polish', detail: 'Make text more Vivid, add Emotion, Shorten, Lengthen, or Fix Grammar — all one click' },
-      { icon: Wand2, label: 'Custom Instructions', detail: 'Type any instruction and the AI applies it to your selected text' },
+      { icon: Zap, label: 'Toolbar', detail: 'Select text in the editor to enhance, rephrase, shorten, lengthen, fix grammar, or run a custom instruction. Streamed results can be accepted or rejected' },
+      { icon: MessageCircle, label: 'Orion', detail: 'Open the Ask AI panel to brainstorm and draft in chat. Pin card sections in AI Context. Orion does not change the card unless you copy from it' },
+      { icon: Bot, label: 'Agent', detail: 'Toggle Agent in the Ask AI header. It reads and writes the open character or lorebook. Changes land when the run finishes; a snapshot is taken first' },
     ],
     accentIcon: Sparkles,
   },
   {
     id: 4,
-    title: 'Orion & Export',
-    subtitle: 'Chat with your AI assistant — and ship your cards',
+    title: 'Lorebook vault',
+    subtitle: 'Standalone World Info, linked if you want',
     description:
-      'Orion is CharacterVault\'s built-in chat assistant. Add sections to the AI Context panel so Orion can read your card and give tailored advice. When you\'re done, export as PNG with embedded data or raw JSON.',
+      'The Lorebooks tab is a second library for standalone World Info books, each with its own workspace. You can link one book to many characters so edits stay in sync. Card export still uses the lorebook stored on the card.',
     features: [
-      { icon: MessageCircle, label: 'Ask Orion', detail: 'Chat about best practices, get help writing sections, or brainstorm character ideas' },
-      { icon: ScrollText, label: 'AI Context', detail: 'Pin card sections to context so the AI has full awareness of your character' },
-      { icon: Download, label: 'Export', detail: 'Save as a PNG with embedded card data, or export the raw JSON file' },
+      { icon: Book, label: 'Library', detail: 'Create, import, export, and duplicate standalone lorebooks from the Lorebooks tab' },
+      { icon: Link, label: 'Link to characters', detail: 'Open in vault from a character to attach a library book. Edits in the lorebook workspace update every linked character' },
+      { icon: Map, label: 'Recursion map', detail: 'Open Map in the lorebook editor to see unlock paths between entries' },
     ],
-    accentIcon: MessageCircle,
+    accentIcon: Book,
   },
   {
     id: 5,
-    title: 'You\'re All Set!',
-    subtitle: 'Start building your characters',
+    title: 'Snapshots and export',
+    subtitle: 'Roll back, then ship',
     description:
-      'That\'s everything you need to know. Your characters are stored locally in your browser — private and always available. You can replay this tutorial anytime by clicking the help icon in the header bar.',
+      'Use History in the workspace to save snapshots and restore a full card, individual sections, or a standalone lorebook. When you are ready, export a single card or back up the whole vault.',
     features: [
-      { icon: Rocket, label: 'Get Started', detail: 'Create your first character or import an existing card' },
-      { icon: BookOpen, label: 'Replay Tutorial', detail: 'Click the help icon (?) in the header bar anytime' },
-      { icon: Users, label: 'Your Data, Your Control', detail: 'Everything stays local in your browser — no servers, no sign-up required' },
+      { icon: History, label: 'Snapshots', detail: 'Save a point in time and roll back later: full card, selected sections, or the open lorebook' },
+      { icon: Download, label: 'Export', detail: 'Save a PNG with embedded card data, or the raw JSON. Lorebooks export as JSON' },
+      { icon: Archive, label: 'Backup', detail: 'From the vault header, download a ZIP of characters and lorebooks' },
+    ],
+    accentIcon: History,
+  },
+  {
+    id: 6,
+    title: 'You\'re all set!',
+    subtitle: 'Start building',
+    description:
+      'That\'s the orientation. Replay this walkthrough anytime with the help icon in the header, or open the docs from the book icon. Cards and lorebooks stay in your browser. Optional AI calls go to the provider you configure.',
+    features: [
+      { icon: Rocket, label: 'Get started', detail: 'Create a character, import a card, or use AI Create' },
+      { icon: BookOpen, label: 'Replay tutorial', detail: 'Click the help icon (?) in the header bar anytime' },
+      { icon: Users, label: 'Your data', detail: 'Cards and lorebooks stay local. No sign-up for core use. AI is optional and uses your provider' },
     ],
     accentIcon: Rocket,
   },
@@ -306,8 +320,7 @@ export function WelcomeTutorial({ onComplete, skipEntranceAnimation = false }: W
                 })}
               </div>
 
-              {/* SillyTavern integration callout - step 0 only */}
-              {step.id === 0 && (
+              {step.showSillyTavernCallout && (
                 <div className="mt-3 sm:mt-4 relative flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl overflow-hidden bg-linear-to-r from-amber-900/80 via-yellow-800/80 to-amber-900/80 dark:from-amber-900/60 dark:via-yellow-700/50 dark:to-amber-900/60 border border-amber-500/30 shadow-[0_0_24px_-4px_rgba(251,191,36,0.3)]">
                   {/* Golden shimmer sweep */}
                   <div className="absolute inset-0 pointer-events-none overflow-hidden">
