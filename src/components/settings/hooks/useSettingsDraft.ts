@@ -3,7 +3,7 @@
  * @module components/settings/hooks/useSettingsDraft
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   AIConfig,
   PromptModelBinding,
@@ -20,7 +20,10 @@ import {
   clampContextLength,
   normalizeDefaultChatPanel,
 } from '../../../db/characterTypes';
-import { characterSettingsService } from '../../../services/CharacterSettingsService';
+import {
+  characterSettingsService,
+  persistableAIConfig,
+} from '../../../services/CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from '../../../services/resolveOperationConfig';
 import { normalizeBaseUrl } from '../config/aiBaseUrlPresets';
 import type { AddToast, SettingsDraft } from '../types';
@@ -46,11 +49,12 @@ export function createDefaultDraft(): SettingsDraft {
 }
 
 function mergeLoadedAIConfig(config: AIConfig): AIConfig {
+  const sanitized = persistableAIConfig(config);
   const merged: AIConfig = {
-    ...DEFAULT_SETTINGS.ai,
-    ...config,
-    apiKeysByBaseUrl: { ...(config.apiKeysByBaseUrl ?? {}) },
-    modelIdsByBaseUrl: { ...(config.modelIdsByBaseUrl ?? {}) },
+    ...sanitized,
+    apiKeysByBaseUrl: { ...(sanitized.apiKeysByBaseUrl ?? {}) },
+    modelIdsByBaseUrl: { ...(sanitized.modelIdsByBaseUrl ?? {}) },
+    availableModels: [],
   };
   const normalizedBaseUrl = normalizeBaseUrl(merged.baseUrl);
 
@@ -148,9 +152,19 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
   const [draft, setDraft] = useState<SettingsDraft>(createDefaultDraft);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
+
+    let cancelled = false;
 
     const loadSettings = async () => {
       setIsLoading(true);
@@ -168,6 +182,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
             characterSettingsService.getSpellcheckSettings(),
           ]);
 
+        if (cancelled || !mountedRef.current) return;
+
         setDraft({
           ai: mergeLoadedAIConfig(config),
           sampler: mergeLoadedSampler(sampler),
@@ -184,14 +200,20 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           hiddenSections: secHidden,
         });
       } catch (err) {
+        if (cancelled || !mountedRef.current) return;
         console.error('Failed to load settings:', err);
         addToast('error', 'Failed to load settings');
       } finally {
-        setIsLoading(false);
+        if (!cancelled && mountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
     void loadSettings();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, addToast]);
 
   const save = useCallback(async () => {
@@ -269,12 +291,15 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         language: draft.spellcheckLanguage,
       });
 
+      if (!mountedRef.current) return;
       await reloadSettings();
+      if (!mountedRef.current) return;
       addToast('success', 'Settings saved successfully!');
     } catch {
+      if (!mountedRef.current) return;
       addToast('error', 'Failed to save settings');
     } finally {
-      setIsSaving(false);
+      if (mountedRef.current) setIsSaving(false);
     }
   }, [draft, reloadSettings, addToast]);
 

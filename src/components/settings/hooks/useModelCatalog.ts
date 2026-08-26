@@ -17,6 +17,10 @@ import {
 } from '../config/aiBaseUrlPresets';
 import type { AddToast, SettingsDraft } from '../types';
 
+function isAbortError(err: unknown): boolean {
+  return err instanceof Error && err.name === 'AbortError';
+}
+
 interface CachedModels {
   models: AIModelInfo[];
   fetchedAt: number;
@@ -57,6 +61,9 @@ export function useModelCatalog({
   modelsByBaseUrlRef.current = modelsByBaseUrl;
   const fetchingModelsByBaseUrlRef = useRef(fetchingModelsByBaseUrl);
   fetchingModelsByBaseUrlRef.current = fetchingModelsByBaseUrl;
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
+  const catalogAbortRef = useRef<AbortController | null>(null);
   /** Skip setState after unmount when in-flight model/provider fetches complete */
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -65,6 +72,34 @@ export function useModelCatalog({
       mountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      catalogAbortRef.current?.abort();
+      catalogAbortRef.current = null;
+      setModelsByBaseUrl({});
+      setFetchingModelsByBaseUrl({});
+      setModelProviders([]);
+      setSupportsProviderSelection(false);
+      setIsFetchingModels(false);
+      setIsFetchingProviders(false);
+      setDraft((prev) =>
+        prev.ai.availableModels?.length
+          ? { ...prev, ai: { ...prev.ai, availableModels: [] } }
+          : prev
+      );
+      return;
+    }
+
+    const controller = new AbortController();
+    catalogAbortRef.current = controller;
+    return () => {
+      controller.abort();
+      if (catalogAbortRef.current === controller) {
+        catalogAbortRef.current = null;
+      }
+    };
+  }, [isOpen, setDraft]);
 
   const isCacheStale = (normalizedUrl: string, subscriptionOnly: boolean): boolean => {
     const cached = modelsByBaseUrlRef.current[normalizedUrl];
@@ -82,12 +117,17 @@ export function useModelCatalog({
       const normalizedUrl = normalizeBaseUrl(baseUrl);
       const subscriptionOnly =
         options?.subscriptionOnly ?? !!draftRef.current.ai.subscriptionModelsOnly;
+      if (!isOpenRef.current || !mountedRef.current) {
+        return modelsByBaseUrlRef.current[normalizedUrl]?.models ?? [];
+      }
       if (fetchingModelsByBaseUrlRef.current[normalizedUrl]) {
         return modelsByBaseUrlRef.current[normalizedUrl]?.models ?? [];
       }
-      if (mountedRef.current) {
-        setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: true }));
+      const signal = catalogAbortRef.current?.signal;
+      if (signal?.aborted) {
+        return modelsByBaseUrlRef.current[normalizedUrl]?.models ?? [];
       }
+      setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: true }));
       try {
         const aiService = new AIService(
           { ...draftRef.current.ai, baseUrl, apiKey, subscriptionModelsOnly: subscriptionOnly },
@@ -96,18 +136,22 @@ export function useModelCatalog({
         const models = await aiService.fetchModels({
           subscriptionOnly,
           detailed: true,
+          signal,
         });
-        if (mountedRef.current) {
+        if (mountedRef.current && isOpenRef.current && !signal?.aborted) {
           setModelsByBaseUrl((prev) => ({
             ...prev,
             [normalizedUrl]: { models, fetchedAt: Date.now(), subscriptionOnly },
           }));
         }
         return models;
-      } catch {
+      } catch (err) {
+        if (isAbortError(err)) {
+          return modelsByBaseUrlRef.current[normalizedUrl]?.models ?? [];
+        }
         return [];
       } finally {
-        if (mountedRef.current) {
+        if (mountedRef.current && isOpenRef.current) {
           setFetchingModelsByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: false }));
         }
       }
@@ -151,6 +195,7 @@ export function useModelCatalog({
           fetchModelsForUrl(preset.baseUrl, apiKey, { subscriptionOnly }).then((models) => {
             if (
               !mountedRef.current ||
+              !isOpenRef.current ||
               normalizeBaseUrl(draftRef.current.ai.baseUrl) !== normalizedUrl
             ) {
               return;
@@ -186,6 +231,7 @@ export function useModelCatalog({
           };
         }
 
+        const signal = catalogAbortRef.current?.signal;
         const aiService = new AIService(
           { ...draftRef.current.ai, subscriptionModelsOnly: subscriptionOnly },
           sampler
@@ -193,8 +239,9 @@ export function useModelCatalog({
         const models = await aiService.fetchModels({
           subscriptionOnly,
           detailed: true,
+          signal,
         });
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || !isOpenRef.current || signal?.aborted) return;
         const normalizedUrl = normalizeBaseUrl(ai.baseUrl);
         setDraft((prev) => ({
           ...prev,
@@ -206,14 +253,14 @@ export function useModelCatalog({
         }));
         addToast('success', `Fetched ${models.length} models`);
       } catch (err) {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || !isOpenRef.current || isAbortError(err)) return;
         if (err instanceof AIError) {
           addToast('error', err.message);
         } else {
           addToast('error', 'Failed to fetch models');
         }
       } finally {
-        if (mountedRef.current) setIsFetchingModels(false);
+        if (mountedRef.current && isOpenRef.current) setIsFetchingModels(false);
       }
     },
     [addToast, setDraft]
@@ -225,10 +272,11 @@ export function useModelCatalog({
 
       if (mountedRef.current) setIsFetchingProviders(true);
       try {
+        const signal = catalogAbortRef.current?.signal;
         const aiService = new AIService(ai, sampler);
-        const providerInfo = await aiService.fetchModelProviders(modelId);
+        const providerInfo = await aiService.fetchModelProviders(modelId, signal);
 
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || !isOpenRef.current || signal?.aborted) return;
 
         setSupportsProviderSelection(providerInfo.supportsProviderSelection);
 
@@ -252,12 +300,12 @@ export function useModelCatalog({
           setModelProviders([]);
         }
       } catch (err) {
+        if (isAbortError(err) || !mountedRef.current || !isOpenRef.current) return;
         console.error('Failed to fetch model providers:', err);
-        if (!mountedRef.current) return;
         setModelProviders([]);
         setSupportsProviderSelection(false);
       } finally {
-        if (mountedRef.current) setIsFetchingProviders(false);
+        if (mountedRef.current && isOpenRef.current) setIsFetchingProviders(false);
       }
     },
     [setDraft]
@@ -265,6 +313,8 @@ export function useModelCatalog({
 
   // Fetch providers when model changes
   useEffect(() => {
+    if (!isOpen || isLoading) return;
+
     if (!draft.ai.modelId) {
       setModelProviders([]);
       setSupportsProviderSelection(false);
@@ -274,7 +324,7 @@ export function useModelCatalog({
     void fetchModelProviders(draft.ai.modelId, draft.ai, draft.sampler);
     // Intentionally depend on modelId primarily; full ai/sampler passed into fetch
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.ai.modelId, fetchModelProviders]);
+  }, [isOpen, isLoading, draft.ai.modelId, fetchModelProviders]);
 
   const handleBaseUrlChange = useCallback(
     (baseUrl: string, loadStoredProfile: boolean) => {
@@ -311,6 +361,7 @@ export function useModelCatalog({
         const apiKey = draftRef.current.ai.apiKeysByBaseUrl?.[normalizedUrl];
         if (apiKey) {
           void fetchModelsForUrl(baseUrl, apiKey, { subscriptionOnly }).then((models) => {
+            if (!mountedRef.current || !isOpenRef.current) return;
             setDraft((prev) => ({
               ...prev,
               ai: { ...prev.ai, availableModels: models },
@@ -350,6 +401,7 @@ export function useModelCatalog({
         const apiKey = draftRef.current.ai.apiKeysByBaseUrl?.[normalizedUrl];
         if (apiKey) {
           void fetchModelsForUrl(baseUrl, apiKey, { subscriptionOnly }).then((models) => {
+            if (!mountedRef.current || !isOpenRef.current) return;
             setDraft((prev) => ({
               ...prev,
               ai: { ...prev.ai, availableModels: models },
