@@ -15,7 +15,7 @@ import {
   PanelRight,
   Settings,
 } from 'lucide-react';
-import { LorebookAgentChat } from '../../agent';
+import { LorebookAgentChat, type AgentToolTarget } from '../../agent';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { LorebookEditor } from '../editor/LorebookEditor';
 import { LorebookHistoryModal } from '../history/LorebookHistoryModal';
@@ -84,6 +84,13 @@ export function LorebookWorkspace(): React.ReactElement {
     currentLorebook?.id ?? null,
   );
   const [agentRunning, setAgentRunning] = useState(false);
+  const [lorebookFocusEntry, setLorebookFocusEntry] = useState<{ id: number; nonce: number } | null>(
+    null,
+  );
+  const openAgentTarget = useCallback((target: AgentToolTarget) => {
+    if (target.type !== 'entry') return;
+    setLorebookFocusEntry({ id: target.id, nonce: Date.now() });
+  }, []);
   const [customContextMeta, setCustomContextMeta] = useState<CustomContextMeta>({
     ...EMPTY_CUSTOM_CONTEXT_META,
   });
@@ -595,6 +602,7 @@ export function LorebookWorkspace(): React.ReactElement {
             characterName={currentLorebook.name}
             spellcheck={spellcheck}
             markdownImageOpenLinks={markdownImageOpenLinks}
+            focusEntry={lorebookFocusEntry}
             customContext={{
               ownerId: currentLorebook.id,
               meta: customContextMeta,
@@ -667,6 +675,7 @@ export function LorebookWorkspace(): React.ReactElement {
                   }
                   onClose={() => setIsChatOpen(false)}
                   onRunningChange={setAgentRunning}
+                  onOpenTarget={openAgentTarget}
                 />
               ) : (
                 <AIChatPanel

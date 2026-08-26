@@ -9,7 +9,7 @@ import { FoldedText } from '../../components/ai/components/FoldedText';
 import { StatsInfoButton } from '../../components/ai/components/StatsInfoButton';
 import { HoverInfoTip } from './HoverInfoTip';
 import { ToolEventList } from './ToolEventList';
-import type { AgentToolEvent } from './types';
+import type { AgentToolEvent, AgentToolTarget } from './types';
 
 export const AgentChatMessage = memo(function AgentChatMessage({
   message,
@@ -23,6 +23,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   recapLine,
   onRegenerate,
   onDelete,
+  onOpenTarget,
 }: {
   message: ChatMessage;
   messageIndex: number;
@@ -35,6 +36,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   recapLine?: string | null;
   onRegenerate: () => void;
   onDelete: (messageId: string) => void;
+  onOpenTarget?: (target: AgentToolTarget) => void;
 }): React.ReactElement {
   const handleDelete = useCallback(() => {
     onDelete(message.id);
@@ -86,7 +88,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
         <p className="text-xs text-fg-muted">{recapLine}</p>
       ) : null}
 
-      <ToolEventList events={toolEvents} />
+      <ToolEventList events={toolEvents} onOpenTarget={onOpenTarget} />
 
       {notices.length > 0 ? (
         <ul className="space-y-1">

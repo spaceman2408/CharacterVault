@@ -16,6 +16,7 @@ import {
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
+import type { AgentToolTarget } from './types';
 import { useLorebookAgent } from './useLorebookAgent';
 
 export interface LorebookAgentChatProps {
@@ -32,6 +33,7 @@ export interface LorebookAgentChatProps {
   headerActions?: ReactNode;
   onClose?: () => void;
   onRunningChange?: (running: boolean) => void;
+  onOpenTarget?: (target: AgentToolTarget) => void;
   title?: string;
   emptyBody?: string;
   contextEmptyHint?: string;
@@ -62,6 +64,7 @@ export function LorebookAgentChat({
   emptyBody = 'Ask it to build or extend this book from custom context. It can add entries directly. Use Snapshots if you need to roll back.',
   contextEmptyHint = 'Custom context is optional. Enable it in the lorebook sidebar to give the agent source notes.',
   composerHint = 'Empty Enter or Send retries · Writes go into this book',
+  onOpenTarget,
 }: LorebookAgentChatProps): React.ReactElement {
   const session = useLorebookAgent({
     aiConfig,
@@ -142,11 +145,13 @@ export function LorebookAgentChat({
           recapLine={recapLine}
           onRegenerate={session.handleRegenerate}
           onDelete={session.handleDeleteMessage}
+          onOpenTarget={onOpenTarget}
         />
       );
     },
     [
       aiConfig.showReasoning,
+      onOpenTarget,
       session.chatHistory.length,
       session.errorByMessageId,
       session.handleDeleteMessage,

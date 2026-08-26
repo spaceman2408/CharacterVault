@@ -18,6 +18,7 @@ import {
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
+import type { AgentToolTarget } from './types';
 import { useCharacterAgent } from './useCharacterAgent';
 
 export interface CharacterAgentChatProps {
@@ -35,6 +36,7 @@ export interface CharacterAgentChatProps {
   headerActions?: ReactNode;
   onClose?: () => void;
   onRunningChange?: (running: boolean) => void;
+  onOpenTarget?: (target: AgentToolTarget) => void;
 }
 
 const AGENT_SUGGESTIONS: readonly string[] = [
@@ -58,6 +60,7 @@ export function CharacterAgentChat({
   headerActions,
   onClose,
   onRunningChange,
+  onOpenTarget,
 }: CharacterAgentChatProps): React.ReactElement {
   const session = useCharacterAgent({
     aiConfig,
@@ -141,11 +144,13 @@ export function CharacterAgentChat({
           recapLine={recapLine}
           onRegenerate={session.handleRegenerate}
           onDelete={session.handleDeleteMessage}
+          onOpenTarget={onOpenTarget}
         />
       );
     },
     [
       aiConfig.showReasoning,
+      onOpenTarget,
       session.chatHistory.length,
       session.errorByMessageId,
       session.handleDeleteMessage,

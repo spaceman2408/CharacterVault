@@ -39,6 +39,8 @@ export interface LorebookEditorProps {
   customContext?: LorebookCustomContextControls;
   /** Character workspace only — compact attach control in the entry header */
   attachment?: LorebookAttachmentControls;
+  /** Select this entry id when nonce changes (Agent tool-line navigation). */
+  focusEntry?: { id: number; nonce: number } | null;
 }
 
 export interface LorebookAttachmentControls {

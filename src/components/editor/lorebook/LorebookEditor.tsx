@@ -3,7 +3,7 @@
  * Two-panel: entry list sidebar + detail editor.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Book,
@@ -77,6 +77,7 @@ function LorebookEditorInner({
   markdownImageOpenLinks,
   customContext,
   attachment,
+  focusEntry,
 }: LorebookEditorProps): React.ReactElement {
   const normalizedPropLorebook = useMemo(
     () => normalizeCharacterBook(lorebook),
@@ -102,6 +103,8 @@ function LorebookEditorInner({
   }, [normalizedPropLorebook]);
 
   const entries = draftLorebook.entries;
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
   const bookName = draftLorebook.name ?? '';
   const bookDescription = draftLorebook.description ?? '';
   const safeSelectedIndex = selectedEntryIndex < entries.length ? selectedEntryIndex : 0;
@@ -110,6 +113,14 @@ function LorebookEditorInner({
   useEffect(() => {
     setIsOptionsOpen(false);
   }, [selectedEntry?.id]);
+
+  useEffect(() => {
+    if (!focusEntry) return;
+    const index = entriesRef.current.findIndex((entry) => entry.id === focusEntry.id);
+    if (index < 0) return;
+    setSelectedEntryIndex(index);
+    setIsMobileViewOpen(true);
+  }, [focusEntry]);
 
   const handleOpenRecursionMap = useCallback(() => {
     if (entries.length === 0) return;

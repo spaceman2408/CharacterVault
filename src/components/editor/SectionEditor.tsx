@@ -19,6 +19,7 @@ import type { Extension } from '@codemirror/state';
 
 interface SectionEditorProps {
   section: CharacterSection;
+  focusEntry?: { id: number; nonce: number } | null;
 }
 
 interface MinimalSectionHeaderProps {
@@ -239,7 +240,7 @@ function getSectionValue(character: { data: { spec: { name: string; description:
  * Section Editor with CodeMirror and AI integration
  * Uses fixed AI toolbar panel at top of editor - no floating elements, no drag needed
  */
-export function SectionEditor({ section }: SectionEditorProps): React.ReactElement {
+export function SectionEditor({ section, focusEntry }: SectionEditorProps): React.ReactElement {
   const {
     currentCharacter,
     updateCharacter,
@@ -459,6 +460,7 @@ export function SectionEditor({ section }: SectionEditorProps): React.ReactEleme
             characterName={currentCharacter?.name}
             spellcheck={spellcheck}
             markdownImageOpenLinks={markdownImageOpenLinks}
+            focusEntry={focusEntry}
             attachment={
               currentCharacter?.id
                 ? {

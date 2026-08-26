@@ -18,6 +18,7 @@ import type { ChatMessage as ServiceChatMessage } from '../../services/AIService
 import { AGENT_MAX_OUTPUT_TOKENS, runLoop } from '../core/runLoop';
 import { stripFences } from '../core/stripFences';
 import type { AgentHost, AgentMessage, AgentToolMode } from '../core/types';
+import { parseToolTarget } from './toolTarget';
 import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
@@ -581,6 +582,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                     event.result.toolName,
                     event.result.message,
                     lookupToolNamesRef.current,
+                  ),
+                  target: parseToolTarget(
+                    event.result.toolName,
+                    event.result.ok,
+                    event.result.message,
                   ),
                 };
                 const nextEvents = {

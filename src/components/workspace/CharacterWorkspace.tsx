@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { CharacterAgentChat } from '../../agent';
+import { CharacterAgentChat, type AgentToolTarget } from '../../agent';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
 import type { CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
 import { createEmptyCharacterBook } from '../../db/characterTypes';
@@ -787,6 +787,9 @@ function CharacterWorkspaceInner({
 }: CharacterWorkspaceInnerProps): React.ReactElement {
   const { closeCharacter } = useCharacterContext();
   const closingRef = React.useRef(false);
+  const [lorebookFocusEntry, setLorebookFocusEntry] = useState<{ id: number; nonce: number } | null>(
+    null,
+  );
   const { 
     currentCharacter,
     activeSection,
@@ -813,6 +816,22 @@ function CharacterWorkspaceInner({
   const [agentMode, setAgentMode] = useChatPanelMode(
     defaultChatPanel,
     currentCharacter?.id ?? null,
+  );
+
+  const openAgentTarget = useCallback(
+    (target: AgentToolTarget) => {
+      if (target.type === 'field') {
+        setActiveSection(target.id as CharacterSection);
+        return;
+      }
+      if (target.type === 'greeting') {
+        setActiveSection('alternate_greetings');
+        return;
+      }
+      setActiveSection('lorebook');
+      setLorebookFocusEntry({ id: target.id, nonce: Date.now() });
+    },
+    [setActiveSection],
   );
   const [agentRunning, setAgentRunning] = useState(false);
 
@@ -1047,7 +1066,7 @@ function CharacterWorkspaceInner({
                 {activeSection === 'image' ? (
                   <ImageEditor />
                 ) : (
-                  <SectionEditor section={activeSection} />
+                  <SectionEditor section={activeSection} focusEntry={lorebookFocusEntry} />
                 )}
               </div>
             </div>
@@ -1104,6 +1123,7 @@ function CharacterWorkspaceInner({
               headerActions={agentToggle}
               onClose={() => setIsChatOpen(false)}
               onRunningChange={setAgentRunning}
+              onOpenTarget={openAgentTarget}
             />
           ) : (
             <AIChatPanel
