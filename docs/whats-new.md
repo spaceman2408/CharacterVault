@@ -6,6 +6,18 @@ Quick overview of recent updates to CharacterVault.
 
 ## August 2026
 
+### 1.4.1
+
+Agent chat polish, a rewritten tutorial, and a way to try upcoming builds.
+
+- Composer stays usable during an Agent run; **Agent writing** is in the workspace header
+- Assistant text streams after thinking; retry clears error bubbles on the message
+- If a model rejects native `tools`, that model stays on XML for the rest of the session
+- First-run walkthrough matches the current product (replay from the vault **?**)
+- On production, a dismissible header strip links to [staging.charactervault.app](https://staging.charactervault.app)
+
+[Release 1.4.1 →](/releases/v1.4.1) · [AI Agent →](/features/ai-agent)
+
 ### Agent (1.4.0)
 
 A second chat next to Orion that **fills and revises** the open character or standalone lorebook.

@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.1 (2026-08-25)
+
+Agent chat polish, a rewritten first-run tutorial, and a staging preview banner. Full notes: [v1.4.1 release notes](/releases/v1.4.1).
+
+### Highlights
+
+- Agent composer stays focused during a run; **Agent writing** lives in the workspace header
+- Live Agent speech streams after thinking (XML stripped, buffer capped)
+- Retry and regenerate clear per-message error bubbles
+- Native `tools` vs XML: a tools 400 is cached per model, the turn retries XML-only, later runs skip native tools
+- First-run tutorial covers vault libraries, AI Create, Orion vs Agent, lorebooks, and snapshots
+- Production vault header can point people at [staging.charactervault.app](https://staging.charactervault.app)
+
+Details: [AI Agent](/features/ai-agent) · [What's New](/whats-new)
+
+---
+
 ## 1.4.0 (2026-08-22)
 
 The Agent: a chat that reads and edits the open character or lorebook through tools. Full notes: [v1.4.0 release notes](/releases/v1.4.0).
