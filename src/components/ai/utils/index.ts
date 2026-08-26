@@ -28,12 +28,19 @@ export function generateMessageId(): string {
 
 export const LIVE_REASONING_FLUSH_MS = 80;
 export const LIVE_REASONING_MAX_CHARS = 6000;
+export const LIVE_CONTENT_MAX_CHARS = 8000;
 
 export const COMMIT_REASONING_MAX_CHARS = 20000;
 
 export function clipLiveReasoning(text: string): string {
   if (text.length <= LIVE_REASONING_MAX_CHARS) return text;
   return `…${text.slice(-LIVE_REASONING_MAX_CHARS)}`;
+}
+
+/** Live Orion draft only; committed history keeps the full buffer. */
+export function clipLiveContent(text: string): string {
+  if (text.length <= LIVE_CONTENT_MAX_CHARS) return text;
+  return `…${text.slice(-LIVE_CONTENT_MAX_CHARS)}`;
 }
 
 /** Committed thinking is display-only (never resent to the model); keep a generous tail. */

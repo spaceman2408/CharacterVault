@@ -12,6 +12,7 @@ import {
   abortResponseStats,
   clipCommitReasoning,
   COMMIT_REASONING_MAX_CHARS,
+  LIVE_CONTENT_MAX_CHARS,
   LIVE_REASONING_MAX_CHARS,
   computeResponseStats,
   generateMessageId,
@@ -228,7 +229,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     if (!streamDirtyRef.current) return;
     streamDirtyRef.current = false;
     if (!isMountedRef.current) return;
-    setStreamingContent(streamContentRef.current.toString());
+    setStreamingContent(streamContentRef.current.tail(LIVE_CONTENT_MAX_CHARS));
     setStreamingReasoning(streamReasoningRef.current.tail(LIVE_REASONING_MAX_CHARS));
   }, []);
 
