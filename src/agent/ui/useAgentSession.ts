@@ -553,7 +553,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 const assistantMessage: ChatMessage = {
                   id,
                   role: 'assistant',
-                  content: event.text,
+                  content: stripFences(event.text),
                   reasoning: clipCommitReasoning(event.reasoning),
                   timestamp: Date.now(),
                   stats: consumeAssistantStats(true),

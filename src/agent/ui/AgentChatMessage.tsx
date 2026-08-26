@@ -1,4 +1,5 @@
 import React, { memo, useCallback } from 'react';
+import { stripFences } from '../core/stripFences';
 import { CopyButton } from '../../components/ai/components/CopyButton';
 import { DeleteMessageButton } from '../../components/ai/components/DeleteMessageButton';
 import { LazyMarkdown } from '../../components/ai/components/LazyMarkdown';
@@ -70,7 +71,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   }
 
   const reasoning = showReasoning ? message.reasoning?.trim() : '';
-  const speech = message.content.trim();
+  const speech = stripFences(message.content);
 
   return (
     <div className={`group space-y-1.5 ${message.suppressInitialAnimation ? '' : 'message-animate'}`}>
@@ -82,7 +83,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
 
       {speech ? (
         <div className="prose prose-sm dark:prose-invert min-w-0 max-w-none text-sm text-fg">
-          <LazyMarkdown content={message.content} />
+          <LazyMarkdown content={speech} />
         </div>
       ) : recapLine ? (
         <p className="text-xs text-fg-muted">{recapLine}</p>
@@ -107,7 +108,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
         <span>{formatTime(message.timestamp)}</span>
         {message.stats ? <StatsInfoButton stats={message.stats} /> : null}
         <span className="ml-auto flex gap-0.5">
-          {speech ? <CopyButton content={message.content} /> : null}
+          {speech ? <CopyButton content={speech} /> : null}
           {showRegenerate ? (
             <RegenerateButton
               messageIndex={messageIndex}

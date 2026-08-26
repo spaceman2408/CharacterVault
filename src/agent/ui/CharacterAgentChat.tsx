@@ -133,7 +133,7 @@ export function CharacterAgentChat({
       }
       return (
         <AgentChatMessage
-          message={speech !== message.content ? { ...message, content: speech } : message}
+          message={message}
           messageIndex={index}
           chatHistoryLength={session.chatHistory.length}
           isProcessing={session.isProcessing}
