@@ -6,6 +6,8 @@ import type { AIConfig, CharacterBook, CharacterSpec, PromptSettings, SamplerSet
 import type { CharacterHostPersist } from '../hosts/character/createHost';
 import { computeCharacterAgentContextUsage, usageStatus } from '../hosts/character/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
+import { AgentToolModeChip } from './AgentToolModeChip';
+import { formatAgentBusyLabel } from './busyLabel';
 import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
 import {
@@ -158,8 +160,13 @@ export function CharacterAgentChat({
       placeholder="Tell the agent what to write…"
       contextLabels={contextLabels}
       contextEmptyHint="Custom context is optional. Enable it in the AI Context panel to give the agent source notes."
-      composerHint="Stop, then Send to retry · Writes go into this card"
-      headerActions={headerActions}
+      composerHint="Empty Enter or Send retries · Writes go into this card"
+      headerActions={
+        <>
+          <AgentToolModeChip mode={session.toolMode} />
+          {headerActions}
+        </>
+      }
       showReasoning={false}
       showRegenerate
       showStreamDraft={false}
@@ -184,7 +191,7 @@ export function CharacterAgentChat({
           <div className="flex items-center gap-2">
             <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
             <span className="text-xs">
-              {session.busyLabel ? `Running ${session.busyLabel}` : 'Working…'}
+              {session.busyLabel ? `Running ${formatAgentBusyLabel(session.busyLabel)}` : 'Working…'}
             </span>
           </div>
           {aiConfig.showReasoning !== false ? (

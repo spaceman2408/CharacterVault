@@ -5,6 +5,8 @@ import type { ChatMessage } from '../../components/ai/types';
 import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '../../db/characterTypes';
 import { computeAgentContextUsage, usageStatus } from '../hosts/lorebook/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
+import { AgentToolModeChip } from './AgentToolModeChip';
+import { formatAgentBusyLabel } from './busyLabel';
 import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
 import { messageNotices, shouldRenderAgentMessage, visibleToolEvents } from './notices';
@@ -53,7 +55,7 @@ export function LorebookAgentChat({
   title = 'Lorebook agent',
   emptyBody = 'Ask it to build or extend this book from custom context. It can add entries directly. Use Snapshots if you need to roll back.',
   contextEmptyHint = 'Custom context is optional. Enable it in the lorebook sidebar to give the agent source notes.',
-  composerHint = 'Stop, then Send to retry · Writes go into this book',
+  composerHint = 'Empty Enter or Send retries · Writes go into this book',
 }: LorebookAgentChatProps): React.ReactElement {
   const session = useLorebookAgent({
     aiConfig,
@@ -156,7 +158,12 @@ export function LorebookAgentChat({
       contextLabels={contextLabels}
       contextEmptyHint={contextEmptyHint}
       composerHint={composerHint}
-      headerActions={headerActions}
+      headerActions={
+        <>
+          <AgentToolModeChip mode={session.toolMode} />
+          {headerActions}
+        </>
+      }
       showReasoning={false}
       showRegenerate
       showStreamDraft={false}
@@ -181,7 +188,7 @@ export function LorebookAgentChat({
           <div className="flex items-center gap-2">
             <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
             <span className="text-xs">
-              {session.busyLabel ? `Running ${session.busyLabel}` : 'Working…'}
+              {session.busyLabel ? `Running ${formatAgentBusyLabel(session.busyLabel)}` : 'Working…'}
             </span>
           </div>
           {aiConfig.showReasoning !== false ? (

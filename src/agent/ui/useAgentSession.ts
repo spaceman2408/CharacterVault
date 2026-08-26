@@ -103,6 +103,7 @@ export interface UseAgentSessionReturn {
   streamingContent: string;
   streamingReasoning: string;
   livePromptTokens: number | null;
+  toolMode: AgentToolMode;
   handleAsk: (question: string) => Promise<void>;
   handleRegenerate: () => Promise<void>;
   handleNewChat: () => void;
@@ -176,6 +177,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const isAIConfigured = useMemo(() => {
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
   }, [aiConfig.modelId]);
+
+  const toolMode = useMemo(
+    () => resolveAgentToolMode(aiConfig),
+    [aiConfig],
+  );
 
   const cancelStreamFlush = useCallback(() => {
     if (streamFlushTimerRef.current != null) {
@@ -705,6 +711,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     streamingContent,
     streamingReasoning,
     livePromptTokens,
+    toolMode,
     handleAsk,
     handleRegenerate,
     handleNewChat,
