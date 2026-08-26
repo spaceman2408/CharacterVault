@@ -226,9 +226,8 @@ export class OpenRouterProvider implements IProviderAdapter {
   async fetchModels(
     baseUrl: string,
     apiKey: string,
-    _options: FetchModelsOptions = {}
+    options: FetchModelsOptions = {}
   ): Promise<ExtendedAIModelInfo[]> {
-    void _options;
     const normalizedUrl = normalizeBaseUrl(baseUrl);
     const collected: unknown[] = [];
     const seenUrls = new Set<string>();
@@ -241,6 +240,7 @@ export class OpenRouterProvider implements IProviderAdapter {
       const response = await fetch(requestUrl, {
         method: 'GET',
         headers: this.getHeaders(apiKey),
+        signal: options.signal,
       });
 
       if (!response.ok) {

@@ -48,7 +48,8 @@ export interface IProviderAdapter {
   fetchModelProviders(
     baseUrl: string,
     apiKey: string,
-    modelId: string
+    modelId: string,
+    signal?: AbortSignal
   ): Promise<ModelProviderInfo>;
 
   /** Check cached provider info without making an API call */
@@ -68,6 +69,7 @@ export interface IProviderAdapter {
 export interface FetchModelsOptions {
   subscriptionOnly?: boolean;
   detailed?: boolean;
+  signal?: AbortSignal;
 }
 
 /** NanoGPT subscription state from /api/subscription/v1/usage */

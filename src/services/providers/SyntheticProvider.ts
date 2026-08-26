@@ -282,14 +282,14 @@ export class SyntheticProvider implements IProviderAdapter {
   async fetchModels(
     baseUrl: string,
     apiKey: string,
-    _options: FetchModelsOptions = {}
+    options: FetchModelsOptions = {}
   ): Promise<ExtendedAIModelInfo[]> {
-    void _options;
     const normalizedUrl = normalizeBaseUrl(baseUrl);
 
     const response = await fetch(`${normalizedUrl}/models`, {
       method: 'GET',
       headers: this.getHeaders(apiKey),
+      signal: options.signal,
     });
 
     if (!response.ok) {

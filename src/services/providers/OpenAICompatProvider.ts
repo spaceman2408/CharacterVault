@@ -64,14 +64,14 @@ export class OpenAICompatProvider implements IProviderAdapter {
   async fetchModels(
     baseUrl: string,
     apiKey: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _options: FetchModelsOptions = {}
+    options: FetchModelsOptions = {}
   ): Promise<ExtendedAIModelInfo[]> {
     const normalizedUrl = this.normalizeBaseUrl(baseUrl);
 
     const response = await fetch(`${normalizedUrl}/models`, {
       method: 'GET',
       headers: this.getHeaders(apiKey),
+      signal: options.signal,
     });
 
     if (!response.ok) {

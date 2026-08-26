@@ -122,6 +122,7 @@ export class NanoGPTProvider implements IProviderAdapter {
     const response = await fetch(url, {
       method: 'GET',
       headers: this.getHeaders(apiKey),
+      signal: options.signal,
     });
 
     if (!response.ok) {
@@ -187,7 +188,8 @@ export class NanoGPTProvider implements IProviderAdapter {
   async fetchModelProviders(
     baseUrl: string,
     apiKey: string,
-    modelId: string
+    modelId: string,
+    signal?: AbortSignal
   ): Promise<ModelProviderInfo> {
     const cached = this.getCachedProviderInfo(modelId);
     if (cached) return cached;
@@ -203,6 +205,7 @@ export class NanoGPTProvider implements IProviderAdapter {
     const response = await fetch(url, {
       method: 'GET',
       headers,
+      signal,
     });
 
     if (!response.ok) {
@@ -281,7 +284,8 @@ export class NanoGPTProvider implements IProviderAdapter {
    */
   async fetchSubscriptionUsage(
     baseUrl: string,
-    apiKey: string
+    apiKey: string,
+    signal?: AbortSignal
   ): Promise<NanoGPTSubscriptionUsage> {
     if (!apiKey.trim()) {
       throw new Error('API key required');
@@ -301,8 +305,10 @@ export class NanoGPTProvider implements IProviderAdapter {
           Authorization: `Bearer ${apiKey}`,
           'x-api-key': apiKey,
         },
+        signal,
       });
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') throw err;
       throw new Error(
         'Subscription usage blocked by browser CORS (NanoGPT does not allow this endpoint from web apps). Balance still works. Local dev uses a Vite proxy — restart `npm run dev` after updating.'
       );
@@ -332,7 +338,7 @@ export class NanoGPTProvider implements IProviderAdapter {
    * Fetch account balance.
    * POST /api/check-balance (x-api-key auth)
    */
-  async fetchBalance(baseUrl: string, apiKey: string): Promise<NanoGPTBalance> {
+  async fetchBalance(baseUrl: string, apiKey: string, signal?: AbortSignal): Promise<NanoGPTBalance> {
     if (!apiKey.trim()) {
       throw new Error('API key required');
     }
@@ -344,6 +350,7 @@ export class NanoGPTProvider implements IProviderAdapter {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
       },
+      signal,
     });
 
     if (!response.ok) {

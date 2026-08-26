@@ -715,6 +715,9 @@ Provide only the generated text without any additional commentary.`;
       const provider = resolveProvider(this.config.baseUrl);
       return await provider.fetchModels(this.getBaseUrl(), this.config.apiKey, options);
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw error;
+      }
       if (error instanceof Error) {
         if (error.message === 'Invalid API key') {
           throw new AIError('Invalid API key', 'auth', 401);
@@ -734,7 +737,7 @@ Provide only the generated text without any additional commentary.`;
    * - Non-supporting providers return immediately (no network call)
    * - Provider cache is checked before making an API call
    */
-  async fetchModelProviders(modelId: string): Promise<ModelProviderInfo> {
+  async fetchModelProviders(modelId: string, signal?: AbortSignal): Promise<ModelProviderInfo> {
     try {
       const provider = resolveProvider(this.config.baseUrl);
 
@@ -748,8 +751,16 @@ Provide only the generated text without any additional commentary.`;
         };
       }
 
-      return await provider.fetchModelProviders(this.getBaseUrl(), this.config.apiKey, modelId);
+      return await provider.fetchModelProviders(
+        this.getBaseUrl(),
+        this.config.apiKey,
+        modelId,
+        signal
+      );
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw error;
+      }
       if (error instanceof Error) {
         if (error.message === 'Rate limit exceeded') {
           throw new AIError('Rate limit exceeded', 'rate_limit', 429);
