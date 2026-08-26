@@ -3,7 +3,7 @@
  * @module components/ai/components/CodeBlockCopyButton
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 
 export interface CodeBlockCopyButtonProps {
@@ -18,16 +18,31 @@ export function CodeBlockCopyButton({
   className = '',
 }: CodeBlockCopyButtonProps): React.ReactElement {
   const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleCopy = async () => {
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(content);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
       setCopied(true);
-      setTimeout(() => setCopied(false), 1000);
+      timeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        timeoutRef.current = null;
+      }, 1000);
     } catch (err) {
       console.error('Failed to copy code block:', err);
     }
-  };
+  }, [content]);
 
   return (
     <button

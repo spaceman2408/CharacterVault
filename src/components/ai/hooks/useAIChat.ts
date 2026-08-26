@@ -173,6 +173,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const isMountedRef = useRef(true);
   const leavingRef = useRef(false);
   const runPromiseRef = useRef(Promise.resolve());
+  const turnStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const turnStartResolveRef = useRef<(() => void) | null>(null);
 
   const chatHistoryRef = useRef(chatHistory);
   const isProcessingRef = useRef(isProcessing);
@@ -224,6 +226,16 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     streamDirtyRef.current = false;
   }, []);
 
+  const settleTurnStartWait = useCallback(() => {
+    if (turnStartTimerRef.current != null) {
+      clearTimeout(turnStartTimerRef.current);
+      turnStartTimerRef.current = null;
+    }
+    const resolve = turnStartResolveRef.current;
+    turnStartResolveRef.current = null;
+    resolve?.();
+  }, []);
+
   const flushStreamToState = useCallback(() => {
     streamRafRef.current = null;
     if (!streamDirtyRef.current) return;
@@ -272,6 +284,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     (reason: 'new-chat' | 'unmount' | 'leave') => {
       requestGenerationRef.current += 1;
       cancelStreamRaf();
+      settleTurnStartWait();
       const service = aiServiceRef.current;
       if (service) {
         console.log(`[useAIChat] Aborting in-flight AI request (${reason})`);
@@ -279,7 +292,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         aiServiceRef.current = null;
       }
     },
-    [cancelStreamRaf]
+    [cancelStreamRaf, settleTurnStartWait]
   );
 
   const clearError = useCallback(() => {
@@ -287,15 +300,16 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   }, []);
 
   const handleAbort = useCallback(() => {
+    isProcessingRef.current = false;
+    settleTurnStartWait();
     if (aiServiceRef.current) {
       aiServiceRef.current.abort();
     }
-    isProcessingRef.current = false;
     if (isMountedRef.current) {
       setIsProcessing(false);
       setIsStreaming(false);
     }
-  }, []);
+  }, [settleTurnStartWait]);
 
   const releaseSession = useCallback(
     (reason: 'new-chat' | 'unmount') => {
@@ -385,11 +399,16 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       setError(null);
       clearStreamDraft();
 
-      await new Promise<void>(resolve => {
-        window.setTimeout(resolve, ASSISTANT_TURN_START_DELAY_MS);
+      await new Promise<void>((resolve) => {
+        turnStartResolveRef.current = resolve;
+        turnStartTimerRef.current = setTimeout(() => {
+          turnStartTimerRef.current = null;
+          turnStartResolveRef.current = null;
+          resolve();
+        }, ASSISTANT_TURN_START_DELAY_MS);
       });
 
-      if (!isCurrent()) {
+      if (!isCurrent() || !isProcessingRef.current || leavingRef.current) {
         return;
       }
 
