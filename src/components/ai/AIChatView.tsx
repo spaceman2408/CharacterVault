@@ -352,10 +352,11 @@ export function AIChatView({
             rows={1}
             className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-40 transition-all"
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !isProcessing && askQuestion.trim()) {
-                e.preventDefault();
-                void handleSubmit();
-              }
+              if (e.key !== 'Enter' || e.shiftKey || isProcessing) return;
+              const canRetry = canRetryEmptySend(chatHistory, showRegenerate);
+              if (!askQuestion.trim() && !canRetry) return;
+              e.preventDefault();
+              void handleSubmit();
             }}
             onInput={onComposerInput}
           />
