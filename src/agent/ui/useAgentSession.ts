@@ -305,6 +305,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
   const handleAbort = useCallback(() => {
     abortedRef.current = true;
+    cancelStreamFlush();
     aiServiceRef.current?.abort();
     isProcessingRef.current = false;
     if (isMountedRef.current) {
@@ -313,7 +314,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       setBusyLabel(null);
     }
     onRunningChangeRef.current?.(false);
-  }, []);
+  }, [cancelStreamFlush]);
 
   const abortInFlight = useCallback(() => {
     requestIdRef.current += 1;
