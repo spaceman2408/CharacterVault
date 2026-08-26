@@ -122,13 +122,19 @@ export async function buildAuthUrl(): Promise<string> {
  * popup is blocked, falls back to a new tab. The relay page relies on
  * `window.opener`, so no `noopener` is used.
  */
-export async function startSignIn(): Promise<void> {
+export async function startSignIn(): Promise<Window | null> {
   const url = await buildAuthUrl();
   const popup = window.open(url, 'nanogpt-oauth', 'popup,width=560,height=720');
   if (!popup) {
     // Popup blocked — open in a new tab (opener reference preserved).
-    window.open(url, 'nanogpt-oauth');
+    return window.open(url, 'nanogpt-oauth');
   }
+  return popup;
+}
+
+/** Drop PKCE verifier/state if the settings panel closes mid-flow. */
+export function cancelPendingSignIn(): void {
+  sessionStorage.removeItem(PENDING_FLOW_KEY);
 }
 
 /**
