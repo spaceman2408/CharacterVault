@@ -23,6 +23,15 @@ import { characterDb } from '../db/CharacterDatabase';
 import type { CharacterSection } from '../db/characterTypes';
 import { normalizeModelBinding, normalizePromptModelMap } from './resolveOperationConfig';
 
+/** Drop ephemeral UI-only fields so model catalogs never land in IndexedDB. */
+export function persistableAIConfig(aiConfig: AIConfig): AIConfig {
+  return {
+    ...DEFAULT_SETTINGS.ai,
+    ...aiConfig,
+    availableModels: [],
+  };
+}
+
 /**
  * Settings Service class for managing application settings in CharacterVault
  */
@@ -150,11 +159,7 @@ export class CharacterSettingsService {
    */
   async getAISettings(): Promise<AIConfig> {
     const settings = await this.getSettings();
-    // Merge with defaults to ensure all properties exist
-    return {
-      ...DEFAULT_SETTINGS.ai,
-      ...settings.ai,
-    };
+    return persistableAIConfig(settings.ai ?? DEFAULT_SETTINGS.ai);
   }
 
   /**
@@ -165,10 +170,7 @@ export class CharacterSettingsService {
     
     const updatedSettings: CharacterVaultSettings = {
       ...settings,
-      ai: {
-        ...DEFAULT_SETTINGS.ai,
-        ...aiConfig,
-      },
+      ai: persistableAIConfig(aiConfig),
     };
     
     await characterDb.settings.put(updatedSettings);
@@ -325,10 +327,7 @@ export class CharacterSettingsService {
     
     const updatedSettings: CharacterVaultSettings = {
       ...settings,
-      ai: {
-        ...DEFAULT_SETTINGS.ai,
-        ...aiConfig,
-      },
+      ai: persistableAIConfig(aiConfig),
       sampler: {
         ...DEFAULT_SETTINGS.sampler,
         ...sampler,

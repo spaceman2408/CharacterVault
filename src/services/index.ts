@@ -51,7 +51,11 @@ export {
 } from './providers';
 
 // CharacterVault services
-export { CharacterSettingsService, characterSettingsService } from './CharacterSettingsService';
+export {
+  CharacterSettingsService,
+  characterSettingsService,
+  persistableAIConfig,
+} from './CharacterSettingsService';
 export { CharacterImportService, characterImportService } from './CharacterImportService';
 export { CharacterExportService, characterExportService } from './CharacterExportService';
 export { CharacterSnapshotService, characterSnapshotService, type SnapshotRestoreAction } from './CharacterSnapshotService';
