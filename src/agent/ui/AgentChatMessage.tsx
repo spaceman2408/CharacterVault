@@ -20,6 +20,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   showRegenerate,
   notices,
   toolEvents,
+  recapLine,
   onRegenerate,
   onDelete,
 }: {
@@ -31,6 +32,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   showRegenerate: boolean;
   notices: string[];
   toolEvents: AgentToolEvent[];
+  recapLine?: string | null;
   onRegenerate: () => void;
   onDelete: (messageId: string) => void;
 }): React.ReactElement {
@@ -80,6 +82,8 @@ export const AgentChatMessage = memo(function AgentChatMessage({
         <div className="prose prose-sm dark:prose-invert min-w-0 max-w-none text-sm text-fg">
           <LazyMarkdown content={message.content} />
         </div>
+      ) : recapLine ? (
+        <p className="text-xs text-fg-muted">{recapLine}</p>
       ) : null}
 
       <ToolEventList events={toolEvents} />

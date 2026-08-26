@@ -96,3 +96,9 @@ export function isLookupOnlyTurn(
 ): boolean {
   return events.length > 0 && events.every((event) => event.ok && lookupTools.has(event.toolName));
 }
+
+export function writeRecapLine(events: AgentToolEvent[]): string | null {
+  const n = events.filter((event) => event.ok).length;
+  if (n === 0) return null;
+  return n === 1 ? 'Applied 1 write' : `Applied ${n} writes`;
+}

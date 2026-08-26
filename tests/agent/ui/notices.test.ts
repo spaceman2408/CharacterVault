@@ -6,6 +6,7 @@ import {
   messageNotices,
   shouldRenderAgentMessage,
   visibleToolEvents,
+  writeRecapLine,
 } from '../../../src/agent/ui/notices';
 import type { AgentToolEvent } from '../../../src/agent/ui/types';
 
@@ -159,5 +160,14 @@ describe('shouldRenderAgentMessage', () => {
     expect(shouldRenderAgentMessage('assistant', '', [okAdd], [])).toBe(true);
     expect(shouldRenderAgentMessage('assistant', '', [failed], [])).toBe(true);
     expect(shouldRenderAgentMessage('assistant', '', [], [], 'planning the cut')).toBe(true);
+  });
+});
+
+describe('writeRecapLine', () => {
+  it('counts successful writes only', () => {
+    expect(writeRecapLine([okAdd])).toBe('Applied 1 write');
+    expect(writeRecapLine([okAdd, okUpdate])).toBe('Applied 2 writes');
+    expect(writeRecapLine([failed])).toBeNull();
+    expect(writeRecapLine([])).toBeNull();
   });
 });

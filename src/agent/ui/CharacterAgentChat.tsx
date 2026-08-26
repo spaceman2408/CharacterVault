@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
 import type { ChatMessage } from '../../components/ai/types';
 import type { AIConfig, CharacterBook, CharacterSpec, PromptSettings, SamplerSettings } from '../../db/characterTypes';
+import { stripFences } from '../core/stripFences';
 import type { CharacterHostPersist } from '../hosts/character/createHost';
 import { computeCharacterAgentContextUsage, usageStatus } from '../hosts/character/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
@@ -15,6 +16,7 @@ import {
   messageNotices,
   shouldRenderAgentMessage,
   visibleToolEvents,
+  writeRecapLine,
 } from './notices';
 import { useCharacterAgent } from './useCharacterAgent';
 
@@ -112,8 +114,8 @@ export function CharacterAgentChat({
       const events = session.toolEventsByMessageId[message.id] ?? [];
       const notices = messageNotices(session.errorByMessageId[message.id]);
       const toolEvents = visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS);
-      const hideSpeech = events.length > 0;
-      const speech = hideSpeech ? '' : message.content;
+      const speech = message.role === 'assistant' ? stripFences(message.content) : message.content;
+      const recapLine = speech ? null : writeRecapLine(toolEvents);
       const showReasoning = aiConfig.showReasoning ?? true;
       if (
         !shouldRenderAgentMessage(
@@ -128,7 +130,7 @@ export function CharacterAgentChat({
       }
       return (
         <AgentChatMessage
-          message={hideSpeech ? { ...message, content: '' } : message}
+          message={speech !== message.content ? { ...message, content: speech } : message}
           messageIndex={index}
           chatHistoryLength={session.chatHistory.length}
           isProcessing={session.isProcessing}
@@ -136,6 +138,7 @@ export function CharacterAgentChat({
           showRegenerate
           notices={notices}
           toolEvents={toolEvents}
+          recapLine={recapLine}
           onRegenerate={session.handleRegenerate}
           onDelete={session.handleDeleteMessage}
         />

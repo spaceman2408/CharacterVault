@@ -3,13 +3,19 @@ import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
 import type { ChatMessage } from '../../components/ai/types';
 import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '../../db/characterTypes';
+import { stripFences } from '../core/stripFences';
 import { computeAgentContextUsage, usageStatus } from '../hosts/lorebook/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
 import { AgentToolModeChip } from './AgentToolModeChip';
 import { formatAgentBusyLabel } from './busyLabel';
 import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
-import { messageNotices, shouldRenderAgentMessage, visibleToolEvents } from './notices';
+import {
+  messageNotices,
+  shouldRenderAgentMessage,
+  visibleToolEvents,
+  writeRecapLine,
+} from './notices';
 import { useLorebookAgent } from './useLorebookAgent';
 
 export interface LorebookAgentChatProps {
@@ -109,8 +115,8 @@ export function LorebookAgentChat({
       const events = session.toolEventsByMessageId[message.id] ?? [];
       const notices = messageNotices(session.errorByMessageId[message.id]);
       const toolEvents = visibleToolEvents(events);
-      const hideSpeech = events.length > 0;
-      const speech = hideSpeech ? '' : message.content;
+      const speech = message.role === 'assistant' ? stripFences(message.content) : message.content;
+      const recapLine = speech ? null : writeRecapLine(toolEvents);
       const showReasoning = aiConfig.showReasoning ?? true;
       if (
         !shouldRenderAgentMessage(
@@ -125,7 +131,7 @@ export function LorebookAgentChat({
       }
       return (
         <AgentChatMessage
-          message={hideSpeech ? { ...message, content: '' } : message}
+          message={speech !== message.content ? { ...message, content: speech } : message}
           messageIndex={index}
           chatHistoryLength={session.chatHistory.length}
           isProcessing={session.isProcessing}
@@ -133,6 +139,7 @@ export function LorebookAgentChat({
           showRegenerate
           notices={notices}
           toolEvents={toolEvents}
+          recapLine={recapLine}
           onRegenerate={session.handleRegenerate}
           onDelete={session.handleDeleteMessage}
         />
