@@ -278,6 +278,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
   const [cooldownSec, setCooldownSec] = useState(() => getCooldownRemainingSec(baseUrl, apiKey));
 
   const requestIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   const updateCooldownDisplay = useCallback(() => {
     setCooldownSec(getCooldownRemainingSec(baseUrl, apiKey));
@@ -326,6 +327,9 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
       }
 
       const hadCache = Boolean(cached);
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       const requestId = ++requestIdRef.current;
       if (opts?.manual || hadCache) {
         setIsRefreshing(true);
@@ -334,11 +338,11 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
       }
 
       const [usageResult, balanceResult] = await Promise.allSettled([
-        nanoProvider.fetchSubscriptionUsage(baseUrl, apiKey),
-        nanoProvider.fetchBalance(baseUrl, apiKey),
+        nanoProvider.fetchSubscriptionUsage(baseUrl, apiKey, controller.signal),
+        nanoProvider.fetchBalance(baseUrl, apiKey, controller.signal),
       ]);
 
-      if (requestId !== requestIdRef.current) return;
+      if (controller.signal.aborted || requestId !== requestIdRef.current) return;
 
       const nextUsage =
         usageResult.status === 'fulfilled' ? usageResult.value : null;
@@ -404,6 +408,7 @@ export const NanoGPTAccountOverview: React.FC<NanoGPTAccountOverviewProps> = ({
   useEffect(() => {
     return () => {
       requestIdRef.current += 1;
+      abortRef.current?.abort();
     };
   }, []);
 

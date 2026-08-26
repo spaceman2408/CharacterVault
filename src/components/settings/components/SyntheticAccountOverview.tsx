@@ -274,7 +274,17 @@ export const SyntheticAccountOverview: React.FC<SyntheticAccountOverviewProps> =
   );
 
   useEffect(() => {
-    if (!enabled) return;
+    return () => {
+      requestIdRef.current += 1;
+      abortRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) {
+      abortRef.current?.abort();
+      return;
+    }
 
     if (!apiKey.trim()) {
       abortRef.current?.abort();
