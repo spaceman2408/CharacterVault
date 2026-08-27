@@ -106,7 +106,7 @@ Long threads keep the last **100** messages in the panel so the tab stays light.
 ### Chat controls
 
 - **Stop** (square while it is working) cancels the current run. Writes that already finished in that run still flush.
-- **Empty Send or Enter** retries the last request (same as the composer hint).
+- **Send** with an empty box retries the last request (same as the composer hint).
 - **New chat** clears the thread. The card stays as last written.
 - Delete a message to trim from that point; you cannot delete while a run is in progress.
 

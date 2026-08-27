@@ -168,7 +168,7 @@ export function CharacterAgentChat({
       placeholder="Tell the agent what to write…"
       contextLabels={contextLabels}
       contextEmptyHint="Custom context is optional. Enable it in the AI Context panel to give the agent source notes."
-      composerHint="Empty Enter or Send retries · Writes go into this card"
+      composerHint="Stop, then Send to retry · Writes go into this card"
       headerActions={
         <>
           <AgentToolModeChip mode={session.toolMode} />

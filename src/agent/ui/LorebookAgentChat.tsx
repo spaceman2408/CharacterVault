@@ -63,7 +63,7 @@ export function LorebookAgentChat({
   title = 'Lorebook agent',
   emptyBody = 'Ask it to build or extend this book from custom context. It can add entries directly. Use Snapshots if you need to roll back.',
   contextEmptyHint = 'Custom context is optional. Enable it in the lorebook sidebar to give the agent source notes.',
-  composerHint = 'Empty Enter or Send retries · Writes go into this book',
+  composerHint = 'Stop, then Send to retry · Writes go into this book',
   onOpenTarget,
 }: LorebookAgentChatProps): React.ReactElement {
   const session = useLorebookAgent({
