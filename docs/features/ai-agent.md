@@ -9,7 +9,7 @@ It can use the **global** model from **Settings → AI Config**, or its own mapp
 :::
 
 ::: warning It writes for real
-When a run finishes, changes land in this card or book. A banner in the editor says so while it is working. Use [Snapshots](/features/snapshots-history) if you need to roll back.
+When a run finishes, changes land in this card or book. A pulsing **Agent writing** label in the workspace header is the cue. Use [Snapshots](/features/snapshots-history) if you need to roll back.
 :::
 
 ## Orion vs Agent
@@ -89,13 +89,15 @@ Until that write, the editor keeps the previous text. A pulsing **Agent writing*
 
 Snippet edits match a unique stretch of existing text instead of rewriting the whole field or entry. Matching tolerates quote styles and multi-section spans. If the snippet is not unique, ask it to re-read and copy a longer stretch.
 
-Providers that accept OpenAI-style `tools` use native function calling. If a provider returns 400 on `tools`, CharacterVault remembers that model, retries the turn with XML tool calls in the message, and later runs for that model skip native tools. You do not turn this on separately.
+Providers that accept OpenAI-style `tools` use native function calling. If a provider returns 400 on `tools`, CharacterVault remembers that model, retries the turn with XML tool calls in the message, and later runs for that model skip native tools. You do not turn this on separately. The chat header shows a **Native** or **XML** chip for the current model (hover for the same explanation).
 
 Catalogs in the prompt are built at the **start** of the run. After names or keys change, the Agent can list again in that same run. The **next** Send rebuilds catalogs from the saved card.
 
 ### What you see in chat
 
-- **Tool lines:** color-coded list / read / write results, including lorebook entry ids
+- **Tool lines:** color-coded list / read / write results, including lorebook entry ids. Click a successful write to open that field, greeting, or lorebook entry.
+- **Write recap:** speech from a turn that also called tools stays on the message. If there was no speech, **Applied N writes** sits above the tool list.
+- **Busy labels:** while a tool is running, the header spinner uses English phrases (`Updating field`) instead of snake_case names.
 - **Thinking:** streams in an expanded **Thinking** fold while it is live; after the reply it collapses
 - **Live token count:** catalogs, custom context, and the current prompt (including tool results)
 - **TTFT / t/s:** on the assistant message info tooltip when the reply finishes, same as Orion
@@ -228,7 +230,7 @@ Raise **Settings → Sampler → Context Length**. Huge books plus custom contex
 
 ### Changes never appear in the editor
 
-The Agent writes **once**, when the run finishes (or you **Stop**, for tools that already completed). The banner is the cue. If the run ends with no tool lines, nothing was applied. That is a model/tool failure, not a delayed save.
+The Agent writes **once**, when the run finishes (or you **Stop**, for tools that already completed). The **Agent writing** header label is the cue. If the run ends with no tool lines, nothing was applied. That is a model/tool failure, not a delayed save.
 
 ### Lorebook writes did not reach the vault book
 

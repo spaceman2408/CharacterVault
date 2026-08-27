@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.2 (2026-08-27)
+
+Agent write recap and jump-to-target, plus Settings and stream cleanup. Full notes: [v1.4.2 release notes](/releases/v1.4.2).
+
+### Highlights
+
+- Click a successful Agent write line to open that field, greeting, or lorebook entry
+- Write turns keep speech (or show **Applied N writes**); **Native** / **XML** chip and English busy labels
+- NanoGPT sign-in cancels when the popup or Settings closes; model catalogs are not persisted
+- Settings aborts catalog and account fetches on close; Orion/Agent live streams and chat timers cannot outlive the panel
+
+Details: [AI Agent](/features/ai-agent) · [What's New](/whats-new)
+
+---
+
 ## 1.4.1 (2026-08-25)
 
 Agent chat polish, a rewritten first-run tutorial, and a staging preview banner. Full notes: [v1.4.1 release notes](/releases/v1.4.1).

@@ -6,6 +6,18 @@ Quick overview of recent updates to CharacterVault.
 
 ## August 2026
 
+### 1.4.2
+
+Agent write recap and jump-to-target, plus leaner Settings and live streams.
+
+- Click a successful write line to open that field, greeting, or lorebook entry
+- Speech stays on write turns; otherwise **Applied N writes** above the tool list
+- Header chip shows **Native** or **XML**; busy text is plain English
+- NanoGPT sign-in stops if you close the popup; model catalogs stay out of saved config
+- Closing Settings and leaving chat abort fetches and timers that used to linger
+
+[Release 1.4.2 →](/releases/v1.4.2) · [AI Agent →](/features/ai-agent)
+
 ### 1.4.1
 
 Agent chat polish, a rewritten tutorial, and a way to try upcoming builds.
