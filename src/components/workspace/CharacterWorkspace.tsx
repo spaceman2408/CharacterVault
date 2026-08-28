@@ -1107,43 +1107,50 @@ function CharacterWorkspaceInner({
               <div className="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-transparent group-hover:bg-accent/60 group-active:bg-accent transition-colors" />
             </div>
           )}
-          {agentMode ? (
-            <CharacterAgentChat
-              aiConfig={agentAiConfig}
-              samplerSettings={samplerSettings}
-              promptSettings={promptSettings}
-              getSpec={getAgentSpec}
-              getBook={getAgentBook}
-              persist={persistAgentCard}
-              getCustomContext={getAgentCustomContext}
-              flushDraft={flushAgentCardDraft}
-              takeSnapshot={takeAgentSnapshot}
-              customContextIncluded={customContextIncluded}
-              customContextCharLength={customContextCharLength}
-              headerActions={agentToggle}
-              onClose={() => setIsChatOpen(false)}
-              onRunningChange={setAgentRunning}
-              onOpenTarget={openAgentTarget}
-              chatOwnerType="character"
-              chatOwnerId={currentCharacter?.id ?? ''}
-            />
-          ) : (
-            <AIChatPanel
-              selectedText={selectedText}
-              contextEntryIds={contextSectionIds}
-              customContextIncluded={customContextIncluded}
-              aiConfig={aiConfig}
-              samplerSettings={samplerSettings}
-              promptSettings={promptSettings}
-              onComplete={(result) => handleAIOperation(result, 'ask', selectedText)}
-              getContextContent={stableGetContextContent}
-              activeSection={activeSection}
-              onClose={() => setIsChatOpen(false)}
-              isMobile={isMobile}
-              headerActions={agentToggle}
-              chatOwnerType="character"
-              chatOwnerId={currentCharacter?.id ?? ''}
-            />
+          {isChatOpen && (
+            <div
+              key={currentCharacter?.id ?? ''}
+              className="flex h-full min-h-0 w-full flex-col"
+            >
+              {agentMode ? (
+                <CharacterAgentChat
+                  aiConfig={agentAiConfig}
+                  samplerSettings={samplerSettings}
+                  promptSettings={promptSettings}
+                  getSpec={getAgentSpec}
+                  getBook={getAgentBook}
+                  persist={persistAgentCard}
+                  getCustomContext={getAgentCustomContext}
+                  flushDraft={flushAgentCardDraft}
+                  takeSnapshot={takeAgentSnapshot}
+                  customContextIncluded={customContextIncluded}
+                  customContextCharLength={customContextCharLength}
+                  headerActions={agentToggle}
+                  onClose={() => setIsChatOpen(false)}
+                  onRunningChange={setAgentRunning}
+                  onOpenTarget={openAgentTarget}
+                  chatOwnerType="character"
+                  chatOwnerId={currentCharacter?.id ?? ''}
+                />
+              ) : (
+                <AIChatPanel
+                  selectedText={selectedText}
+                  contextEntryIds={contextSectionIds}
+                  customContextIncluded={customContextIncluded}
+                  aiConfig={aiConfig}
+                  samplerSettings={samplerSettings}
+                  promptSettings={promptSettings}
+                  onComplete={(result) => handleAIOperation(result, 'ask', selectedText)}
+                  getContextContent={stableGetContextContent}
+                  activeSection={activeSection}
+                  onClose={() => setIsChatOpen(false)}
+                  isMobile={isMobile}
+                  headerActions={agentToggle}
+                  chatOwnerType="character"
+                  chatOwnerId={currentCharacter?.id ?? ''}
+                />
+              )}
+            </div>
           )}
         </aside>
       </div>
