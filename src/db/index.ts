@@ -46,6 +46,11 @@ export type {
   CharacterCustomContext,
   LorebookCustomContext,
   CustomContextMeta,
+  ChatOwnerType,
+  ChatPanel,
+  StoredChatMessage,
+  StoredChatToolEvent,
+  StoredChatResponseStats,
 } from './characterTypes';
 export {
   CHARACTER_SECTIONS,

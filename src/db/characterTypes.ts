@@ -239,6 +239,42 @@ export interface LorebookCustomContext {
   charLength: number;
 }
 
+export type ChatOwnerType = 'character' | 'lorebook';
+export type ChatPanel = 'orion' | 'agent';
+
+export interface StoredChatToolEvent {
+  toolName: string;
+  ok: boolean;
+  message: string;
+  target?:
+    | { type: 'field'; id: string }
+    | { type: 'greeting'; index: number }
+    | { type: 'entry'; id: number };
+}
+
+export interface StoredChatResponseStats {
+  ttft?: number;
+  tokensPerSecond?: number;
+  modelId?: string;
+  providerId?: string;
+}
+
+/** Vault-local Orion/Agent transcript row. Not part of card export. */
+export interface StoredChatMessage {
+  id: UUID;
+  ownerType: ChatOwnerType;
+  ownerId: UUID;
+  panel: ChatPanel;
+  seq: number;
+  role: 'user' | 'assistant';
+  content: string;
+  reasoning?: string;
+  timestamp: number;
+  stats?: StoredChatResponseStats;
+  toolEvents?: StoredChatToolEvent[];
+  error?: string;
+}
+
 /** Lightweight custom-context fields safe to keep in React state */
 export interface CustomContextMeta {
   enabled: boolean;

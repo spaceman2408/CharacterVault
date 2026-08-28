@@ -29,6 +29,7 @@ import type {
   UpdateVaultLorebookInput,
   CharacterLorebookAttachments,
   CharacterBook,
+  StoredChatMessage,
 } from './characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS, createEmptyCharacterBook } from './characterTypes';
 import { estimateCharacterCardTokens, estimateTokens } from '../services/AIService';
@@ -219,6 +220,9 @@ export class CharacterDatabase extends Dexie {
   /** Character → standalone lorebook attach list (vault-local) */
   characterLorebookAttachments!: Table<CharacterLorebookAttachments, string>;
 
+  /** Vault-local Orion/Agent transcripts (one row per message) */
+  chatMessages!: Table<StoredChatMessage, string>;
+
   constructor() {
     super('character-vault-db');
 
@@ -384,6 +388,24 @@ export class CharacterDatabase extends Dexie {
           });
         });
       });
+
+    this.version(11).stores({
+      characters: 'id, name, updatedAt, createdAt',
+      settings: 'id',
+      snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+      snapshotIndex: 'id, characterId, createdAt, [characterId+createdAt]',
+      storedImages: 'id',
+      spellDictionaryCache: 'id',
+      characterListIndex: 'id, name, updatedAt, lastOpenedAt',
+      characterCustomContext: 'characterId',
+      lorebooks: 'id, name, updatedAt, createdAt',
+      lorebookListIndex: 'id, name, updatedAt, lastOpenedAt',
+      lorebookSnapshots: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+      lorebookSnapshotIndex: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+      characterLorebookAttachments: 'characterId',
+      lorebookCustomContext: 'lorebookId',
+      chatMessages: 'id, [ownerType+ownerId], [ownerType+ownerId+panel], [ownerType+ownerId+panel+seq]',
+    });
   }
 
   private async syncLorebookListIndex(lorebook: VaultLorebook): Promise<void> {
@@ -643,6 +665,7 @@ export class CharacterDatabase extends Dexie {
         this.characterListIndex,
         this.characterCustomContext,
         this.characterLorebookAttachments,
+        this.chatMessages,
       ],
       async () => {
         await this.characters.delete(id);
@@ -651,6 +674,7 @@ export class CharacterDatabase extends Dexie {
         await this.snapshotIndex.where('characterId').equals(id).delete();
         await this.characterCustomContext.delete(id);
         await this.characterLorebookAttachments.delete(id);
+        await this.chatMessages.where('[ownerType+ownerId]').equals(['character', id]).delete();
       }
     );
   }
@@ -1179,6 +1203,7 @@ export class CharacterDatabase extends Dexie {
         this.lorebookSnapshotIndex,
         this.characterLorebookAttachments,
         this.lorebookCustomContext,
+        this.chatMessages,
       ],
       async () => {
         await this.lorebooks.delete(id);
@@ -1186,6 +1211,7 @@ export class CharacterDatabase extends Dexie {
         await this.lorebookSnapshots.where('lorebookId').equals(id).delete();
         await this.lorebookSnapshotIndex.where('lorebookId').equals(id).delete();
         await this.lorebookCustomContext.delete(id);
+        await this.chatMessages.where('[ownerType+ownerId]').equals(['lorebook', id]).delete();
 
         // Drop attach references to this book
         const attachments = await this.characterLorebookAttachments.toArray();
