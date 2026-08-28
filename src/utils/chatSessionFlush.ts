@@ -2,7 +2,7 @@ type FlushFn = () => void | Promise<void>;
 
 const flushes = new Set<FlushFn>();
 
-/** Active Orion/Agent sessions register so leave paths can abort and drop transcripts. */
+/** Active Orion/Agent sessions register so leave paths can abort in-flight runs. */
 export function registerChatSessionFlush(fn: FlushFn): () => void {
   flushes.add(fn);
   return () => {

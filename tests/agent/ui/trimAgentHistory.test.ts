@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  AGENT_MAX_CHAT_MESSAGES,
-  trimAgentHistory,
-} from '../../../src/agent/ui/useAgentSession';
+import { clipAgentHistoryWindow } from '../../../src/agent/ui/useAgentSession';
+import { CHAT_UI_MAX_WINDOW } from '../../../src/services/ChatHistoryService';
 import type { ChatMessage } from '../../../src/components/ai/types';
 import type { AgentToolEvent } from '../../../src/agent/ui/types';
 
@@ -10,29 +8,31 @@ function makeMessage(id: string, role: 'user' | 'assistant'): ChatMessage {
   return { id, role, content: `content-${id}`, timestamp: 1 };
 }
 
-describe('trimAgentHistory', () => {
+describe('clipAgentHistoryWindow', () => {
   it('returns the inputs unchanged at or under the cap', () => {
     const history = [makeMessage('m1', 'user'), makeMessage('m2', 'assistant')];
     const events = { m2: [{ toolName: 'read_entry', ok: true, message: '#1' }] };
     const errors = { m2: 'boom' };
-    const result = trimAgentHistory(history, events, errors);
+    const result = clipAgentHistoryWindow(history, events, errors);
     expect(result.history).toBe(history);
     expect(result.toolEventsByMessageId).toBe(events);
     expect(result.errorByMessageId).toBe(errors);
+    expect(result.clipped).toBe(false);
   });
 
   it('slices oldest-first at the cap and preserves order', () => {
-    const ids = Array.from({ length: AGENT_MAX_CHAT_MESSAGES + 2 }, (_, i) => `m${i}`);
+    const ids = Array.from({ length: CHAT_UI_MAX_WINDOW + 2 }, (_, i) => `m${i}`);
     const history = ids.map((id) => makeMessage(id, 'user'));
-    const result = trimAgentHistory(history, {}, {});
-    expect(result.history).toHaveLength(AGENT_MAX_CHAT_MESSAGES);
+    const result = clipAgentHistoryWindow(history, {}, {});
+    expect(result.history).toHaveLength(CHAT_UI_MAX_WINDOW);
     expect(result.history[0].id).toBe('m2');
     expect(result.history[result.history.length - 1].id).toBe(ids[ids.length - 1]);
     expect(result.history.map((m) => m.id)).toEqual(ids.slice(2));
+    expect(result.clipped).toBe(true);
   });
 
   it('drops tool events and errors for trimmed messages only', () => {
-    const count = AGENT_MAX_CHAT_MESSAGES + 3;
+    const count = CHAT_UI_MAX_WINDOW + 3;
     const history: ChatMessage[] = Array.from({ length: count }, (_, i) =>
       makeMessage(`m${i}`, i % 2 === 0 ? 'user' : 'assistant'),
     );
@@ -44,7 +44,7 @@ describe('trimAgentHistory', () => {
     );
     const errors = Object.fromEntries(history.map((m) => [m.id, `error-${m.id}`]));
 
-    const result = trimAgentHistory(history, events, errors);
+    const result = clipAgentHistoryWindow(history, events, errors);
 
     const keepIds = new Set(result.history.map((m) => m.id));
     expect(Object.keys(result.toolEventsByMessageId).sort()).toEqual(

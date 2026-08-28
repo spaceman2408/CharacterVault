@@ -2,7 +2,13 @@ import React, { useCallback, useMemo, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
 import type { ChatMessage } from '../../components/ai/types';
-import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '../../db/characterTypes';
+import type {
+  AIConfig,
+  CharacterBook,
+  ChatOwnerType,
+  PromptSettings,
+  SamplerSettings,
+} from '../../db/characterTypes';
 import { stripFences } from '../core/stripFences';
 import { computeAgentContextUsage, usageStatus } from '../hosts/lorebook/contextUsage';
 import { AgentChatMessage } from './AgentChatMessage';
@@ -34,6 +40,8 @@ export interface LorebookAgentChatProps {
   onClose?: () => void;
   onRunningChange?: (running: boolean) => void;
   onOpenTarget?: (target: AgentToolTarget) => void;
+  chatOwnerType: ChatOwnerType;
+  chatOwnerId: string;
   title?: string;
   emptyBody?: string;
   contextEmptyHint?: string;
@@ -65,6 +73,8 @@ export function LorebookAgentChat({
   contextEmptyHint = 'Custom context is optional. Enable it in the lorebook sidebar to give the agent source notes.',
   composerHint = 'Stop, then Send to retry · Writes go into this book',
   onOpenTarget,
+  chatOwnerType,
+  chatOwnerId,
 }: LorebookAgentChatProps): React.ReactElement {
   const session = useLorebookAgent({
     aiConfig,
@@ -76,6 +86,8 @@ export function LorebookAgentChat({
     flushDraft,
     takeSnapshot,
     onRunningChange,
+    chatOwnerType,
+    chatOwnerId,
   });
 
   const contextLabels = useMemo(() => {
@@ -192,6 +204,9 @@ export function LorebookAgentChat({
       handleDeleteMessage={session.handleDeleteMessage}
       handleAbort={session.handleAbort}
       clearError={session.clearError}
+      isHydrating={session.isHydrating}
+      hasOlderMessages={session.hasOlderMessages}
+      onLoadOlder={session.handleLoadOlder}
       onClose={onClose}
       emptySuggestions={BOOK_SUGGESTIONS}
       renderMessage={renderMessage}

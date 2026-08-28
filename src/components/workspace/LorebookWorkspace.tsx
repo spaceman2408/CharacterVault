@@ -655,6 +655,8 @@ export function LorebookWorkspace(): React.ReactElement {
                   getCustomContext={getAgentCustomContext}
                   flushDraft={flushAgentDraft}
                   takeSnapshot={takeAgentSnapshot}
+                  chatOwnerType="lorebook"
+                  chatOwnerId={currentLorebook.id}
                   customContextIncluded={
                     customContextMeta.enabled && customContextMeta.charLength > 0
                   }

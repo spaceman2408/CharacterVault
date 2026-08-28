@@ -2,7 +2,14 @@ import React, { useCallback, useMemo, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
 import type { ChatMessage } from '../../components/ai/types';
-import type { AIConfig, CharacterBook, CharacterSpec, PromptSettings, SamplerSettings } from '../../db/characterTypes';
+import type {
+  AIConfig,
+  CharacterBook,
+  CharacterSpec,
+  ChatOwnerType,
+  PromptSettings,
+  SamplerSettings,
+} from '../../db/characterTypes';
 import { stripFences } from '../core/stripFences';
 import type { CharacterHostPersist } from '../hosts/character/createHost';
 import { computeCharacterAgentContextUsage, usageStatus } from '../hosts/character/contextUsage';
@@ -37,6 +44,8 @@ export interface CharacterAgentChatProps {
   onClose?: () => void;
   onRunningChange?: (running: boolean) => void;
   onOpenTarget?: (target: AgentToolTarget) => void;
+  chatOwnerType: ChatOwnerType;
+  chatOwnerId: string;
 }
 
 const AGENT_SUGGESTIONS: readonly string[] = [
@@ -61,6 +70,8 @@ export function CharacterAgentChat({
   onClose,
   onRunningChange,
   onOpenTarget,
+  chatOwnerType,
+  chatOwnerId,
 }: CharacterAgentChatProps): React.ReactElement {
   const session = useCharacterAgent({
     aiConfig,
@@ -73,6 +84,8 @@ export function CharacterAgentChat({
     flushDraft,
     takeSnapshot,
     onRunningChange,
+    chatOwnerType,
+    chatOwnerId,
   });
 
   const contextLabels = useMemo(() => {
@@ -191,6 +204,9 @@ export function CharacterAgentChat({
       handleDeleteMessage={session.handleDeleteMessage}
       handleAbort={session.handleAbort}
       clearError={session.clearError}
+      isHydrating={session.isHydrating}
+      hasOlderMessages={session.hasOlderMessages}
+      onLoadOlder={session.handleLoadOlder}
       onClose={onClose}
       emptySuggestions={AGENT_SUGGESTIONS}
       renderMessage={renderMessage}

@@ -1124,6 +1124,8 @@ function CharacterWorkspaceInner({
               onClose={() => setIsChatOpen(false)}
               onRunningChange={setAgentRunning}
               onOpenTarget={openAgentTarget}
+              chatOwnerType="character"
+              chatOwnerId={currentCharacter?.id ?? ''}
             />
           ) : (
             <AIChatPanel

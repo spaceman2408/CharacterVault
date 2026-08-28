@@ -1,5 +1,11 @@
 import { useCallback } from 'react';
-import type { AIConfig, CharacterBook, PromptSettings, SamplerSettings } from '../../db/characterTypes';
+import type {
+  AIConfig,
+  CharacterBook,
+  ChatOwnerType,
+  PromptSettings,
+  SamplerSettings,
+} from '../../db/characterTypes';
 import { createLorebookHost } from '../hosts/lorebook/createHost';
 import { LOREBOOK_LOOKUP_TOOLS } from './notices';
 import {
@@ -20,6 +26,8 @@ export interface UseLorebookAgentOptions {
   flushDraft: () => void | Promise<void>;
   takeSnapshot: () => Promise<void>;
   onRunningChange?: (running: boolean) => void;
+  chatOwnerType: ChatOwnerType;
+  chatOwnerId: string;
 }
 
 export type UseLorebookAgentReturn = UseAgentSessionReturn;
@@ -35,6 +43,8 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     flushDraft,
     takeSnapshot,
     onRunningChange,
+    chatOwnerType,
+    chatOwnerId,
   } = options;
 
   const createHost = useCallback(
@@ -56,5 +66,8 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     lookupToolNames: LOREBOOK_LOOKUP_TOOLS,
     onRunningChange,
     createHost,
+    chatOwnerType,
+    chatOwnerId,
+    chatPanel: 'agent',
   });
 }

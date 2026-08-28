@@ -3,6 +3,7 @@ import type {
   AIConfig,
   CharacterBook,
   CharacterSpec,
+  ChatOwnerType,
   PromptSettings,
   SamplerSettings,
 } from '../../db/characterTypes';
@@ -22,6 +23,8 @@ export interface UseCharacterAgentOptions {
   flushDraft: () => void | Promise<void>;
   takeSnapshot: () => Promise<void>;
   onRunningChange?: (running: boolean) => void;
+  chatOwnerType: ChatOwnerType;
+  chatOwnerId: string;
 }
 
 export type UseCharacterAgentReturn = UseAgentSessionReturn;
@@ -38,6 +41,8 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
     flushDraft,
     takeSnapshot,
     onRunningChange,
+    chatOwnerType,
+    chatOwnerId,
   } = options;
 
   const createHost = useCallback(
@@ -60,5 +65,8 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
     lookupToolNames: CHARACTER_LOOKUP_TOOLS,
     onRunningChange,
     createHost,
+    chatOwnerType,
+    chatOwnerId,
+    chatPanel: 'agent',
   });
 }
