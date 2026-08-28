@@ -242,6 +242,13 @@ describe('ChatHistoryService', () => {
     ]);
   });
 
+  it('loadTail waits for in-flight writes on the same thread', async () => {
+    const write = service.put(msg('late', 1));
+    const page = await service.loadTail(thread, 10);
+    await write;
+    expect(page.messages.map((row) => row.id)).toEqual(['late']);
+  });
+
   it('drops settled write-queue keys so the map cannot grow without bound', async () => {
     expect(chatWriteQueuePendingCount()).toBe(0);
     await service.put(msg('m1', 1));

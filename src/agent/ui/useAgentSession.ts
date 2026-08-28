@@ -409,6 +409,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     seqByIdRef.current = new Map();
     maxSeqRef.current = 0;
     hasOlderRef.current = false;
+    hydrateGenerationRef.current += 1;
+    hydratingRef.current = false;
   }, []);
 
   const releaseSession = useCallback(
@@ -592,6 +594,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     const keepIds = new Set(nextHistory.map((message) => message.id));
     chatHistoryRef.current = nextHistory;
     setChatHistory(nextHistory);
+    const fromSeq = seqByIdRef.current.get(messageId);
     pruneSeqById(seqByIdRef.current, keepIds);
 
     const nextEvents: Record<string, AgentToolEvent[]> = {};
@@ -609,7 +612,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     setErrorByMessageId(nextErrors);
     setError(null);
     setLivePromptTokens(null);
-    const fromSeq = seqByIdRef.current.get(messageId);
     if (fromSeq != null) {
       void chatHistoryService.deleteFrom(threadRef(), fromSeq);
     }
@@ -865,9 +867,9 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     const keepIds = new Set(historyToKeep.map((message) => message.id));
     chatHistoryRef.current = historyToKeep;
     setChatHistory(historyToKeep);
-    pruneSeqById(seqByIdRef.current, keepIds);
     const dropped = history[lastUserIndex + 1];
     const fromSeq = dropped ? seqByIdRef.current.get(dropped.id) : undefined;
+    pruneSeqById(seqByIdRef.current, keepIds);
     if (fromSeq != null) {
       void chatHistoryService.deleteFrom(threadRef(), fromSeq);
     }

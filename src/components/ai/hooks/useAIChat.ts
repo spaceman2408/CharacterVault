@@ -465,6 +465,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       seqByIdRef.current = new Map();
       maxSeqRef.current = 0;
       hasOlderRef.current = false;
+      hydrateGenerationRef.current += 1;
+      hydratingRef.current = false;
       if (reason !== 'unmount' && isMountedRef.current) {
         setChatHistory([]);
         setHasOlderMessages(false);

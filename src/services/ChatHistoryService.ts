@@ -64,6 +64,10 @@ function notifyPersistFailure(error: unknown): void {
   });
 }
 
+function pendingWrites(thread: ChatThreadRef): Promise<void> {
+  return writeQueues.get(chatThreadKey(thread)) ?? Promise.resolve();
+}
+
 function enqueue(thread: ChatThreadRef, op: () => Promise<void>): Promise<void> {
   const key = chatThreadKey(thread);
   const next: Promise<void> = (writeQueues.get(key) ?? Promise.resolve())
@@ -119,6 +123,7 @@ export class ChatHistoryService {
     if (!thread.ownerId || limit <= 0) {
       return { messages: [], hasMore: false };
     }
+    await pendingWrites(thread);
     const rows = await seqRange(thread, Dexie.minKey, Dexie.maxKey)
       .reverse()
       .limit(limit + 1)
@@ -136,6 +141,7 @@ export class ChatHistoryService {
     if (!thread.ownerId || limit <= 0) {
       return { messages: [], hasMore: false };
     }
+    await pendingWrites(thread);
     const rows = await seqRange(thread, Dexie.minKey, beforeSeq, true, false)
       .reverse()
       .limit(limit + 1)
@@ -147,6 +153,7 @@ export class ChatHistoryService {
 
   async maxSeq(thread: ChatThreadRef): Promise<number> {
     if (!thread.ownerId) return 0;
+    await pendingWrites(thread);
     const last = await seqRange(thread, Dexie.minKey, Dexie.maxKey).last();
     return last?.seq ?? 0;
   }
