@@ -406,6 +406,66 @@ export class CharacterDatabase extends Dexie {
       lorebookCustomContext: 'lorebookId',
       chatMessages: 'id, [ownerType+ownerId], [ownerType+ownerId+panel], [ownerType+ownerId+panel+seq]',
     });
+
+    this.version(12)
+      .stores({
+        characters: 'id, name, updatedAt, createdAt',
+        settings: 'id',
+        snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+        snapshotIndex: 'id, characterId, createdAt, [characterId+createdAt]',
+        storedImages: 'id',
+        spellDictionaryCache: 'id',
+        characterListIndex: 'id, name, updatedAt, lastOpenedAt',
+        characterCustomContext: 'characterId',
+        lorebooks: 'id, name, updatedAt, createdAt',
+        lorebookListIndex: 'id, name, updatedAt, lastOpenedAt',
+        lorebookSnapshots: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+        lorebookSnapshotIndex: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+        characterLorebookAttachments: 'characterId',
+        lorebookCustomContext: 'lorebookId',
+        chatMessages:
+          'id, [ownerType+ownerId], [ownerType+ownerId+panel], [ownerType+ownerId+panel+seq]',
+      })
+      .upgrade(async (tx) => {
+        const table = tx.table<StoredChatMessage, string>('chatMessages');
+        const rows = await table.toArray();
+        const kept = new Map<string, StoredChatMessage>();
+        const toDelete: string[] = [];
+        for (const row of rows) {
+          const key = `${row.ownerType}\0${row.ownerId}\0${row.panel}\0${row.seq}`;
+          const previous = kept.get(key);
+          if (!previous) {
+            kept.set(key, row);
+            continue;
+          }
+          if (row.timestamp >= previous.timestamp) {
+            toDelete.push(previous.id);
+            kept.set(key, row);
+          } else {
+            toDelete.push(row.id);
+          }
+        }
+        await Promise.all(toDelete.map((id) => table.delete(id)));
+      });
+
+    this.version(13).stores({
+      characters: 'id, name, updatedAt, createdAt',
+      settings: 'id',
+      snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+      snapshotIndex: 'id, characterId, createdAt, [characterId+createdAt]',
+      storedImages: 'id',
+      spellDictionaryCache: 'id',
+      characterListIndex: 'id, name, updatedAt, lastOpenedAt',
+      characterCustomContext: 'characterId',
+      lorebooks: 'id, name, updatedAt, createdAt',
+      lorebookListIndex: 'id, name, updatedAt, lastOpenedAt',
+      lorebookSnapshots: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+      lorebookSnapshotIndex: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+      characterLorebookAttachments: 'characterId',
+      lorebookCustomContext: 'lorebookId',
+      chatMessages:
+        'id, [ownerType+ownerId], [ownerType+ownerId+panel], &[ownerType+ownerId+panel+seq]',
+    });
   }
 
   private async syncLorebookListIndex(lorebook: VaultLorebook): Promise<void> {

@@ -18,12 +18,13 @@ export function formatTime(timestamp: number): string {
   });
 }
 
-/**
- * Generate unique message ID
- * @returns Unique message ID string in format "msg_{timestamp}_{random}"
- */
+/** Unique message id. Prefers UUID; falls back to timestamp + random. */
 export function generateMessageId(): string {
-  return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const cryptoObj = globalThis.crypto;
+  if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
+    return `msg_${cryptoObj.randomUUID()}`;
+  }
+  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
 export const LIVE_REASONING_FLUSH_MS = 80;

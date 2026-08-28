@@ -3,6 +3,7 @@ import {
   clipCommitReasoning,
   clipLiveContent,
   COMMIT_REASONING_MAX_CHARS,
+  generateMessageId,
   LIVE_CONTENT_MAX_CHARS,
   LIVE_REASONING_MAX_CHARS,
 } from '../../../src/components/ai/utils';
@@ -43,5 +44,15 @@ describe('clipLiveContent', () => {
     const clipped = clipLiveContent(text);
     expect(clipped).toBe(`…${'a'.repeat(LIVE_CONTENT_MAX_CHARS)}`);
     expect(clipped.length).toBe(LIVE_CONTENT_MAX_CHARS + 1);
+  });
+});
+
+describe('generateMessageId', () => {
+  it('returns unique ids with a msg_ prefix', () => {
+    const first = generateMessageId();
+    const second = generateMessageId();
+    expect(first).toMatch(/^msg_/);
+    expect(second).toMatch(/^msg_/);
+    expect(first).not.toBe(second);
   });
 });
