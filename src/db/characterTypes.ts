@@ -261,7 +261,8 @@ export interface StoredChatResponseStats {
 
 /** Vault-local Orion/Agent transcript row. Not part of card export. */
 export interface StoredChatMessage {
-  id: UUID;
+  /** UI message id (`msg_${timestamp}_${random}`), not a UUID. */
+  id: string;
   ownerType: ChatOwnerType;
   ownerId: UUID;
   panel: ChatPanel;
