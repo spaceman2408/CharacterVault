@@ -68,6 +68,24 @@ export {
   type CustomContextOwner,
 } from './CustomContextService';
 export {
+  ChatHistoryService,
+  chatHistoryService,
+  CHAT_UI_PAGE_SIZE,
+  CHAT_UI_OLDER_PAGE_SIZE,
+  CHAT_UI_MAX_WINDOW,
+  CHAT_UI_HARD_WINDOW,
+  clipChatHistoryWindow,
+  chatThreadKey,
+  type ChatThreadRef,
+  type ChatPage,
+} from './ChatHistoryService';
+export {
+  storedToChatMessage,
+  storedToAgentThread,
+  chatMessageToStored,
+  pruneSeqById,
+} from './chatHistoryMap';
+export {
   openHistoryAfterFlush,
   shouldComputePayloadHash,
   loadSnapshotDiff,
