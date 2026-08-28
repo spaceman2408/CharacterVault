@@ -62,6 +62,7 @@ vi.mock('../../src/db', () => ({
         if (index === -1) rows.push({ ...row });
         else rows[index] = { ...row };
       },
+      get: async (id: string) => rows.find((row) => row.id === id),
       delete: async (id: string) => {
         const index = rows.findIndex((row) => row.id === id);
         if (index !== -1) rows.splice(index, 1);
@@ -87,6 +88,7 @@ vi.mock('../../src/db', () => ({
               const matched = collection().sort((a, b) => a.seq - b.seq);
               return matched[matched.length - 1];
             },
+            count: async () => collection().length,
             delete: async () => {
               const ids = new Set(collection().map((row) => row.id));
               for (let i = rows.length - 1; i >= 0; i -= 1) {
@@ -119,6 +121,7 @@ vi.mock('../../src/utils/ephemeralToast', () => ({
 
 import {
   ChatHistoryService,
+  CHAT_DISK_MAX_PER_THREAD,
   CHAT_UI_PAGE_SIZE,
   chatWriteQueuePendingCount,
   clipChatHistoryWindow,
@@ -214,6 +217,33 @@ describe('ChatHistoryService', () => {
     await service.deleteById(thread, 'drop');
     const page = await service.loadTail(thread, 10);
     expect(page.messages.map((row) => row.id)).toEqual(['keep']);
+  });
+
+  it('deleteById ignores rows that belong to another thread', async () => {
+    await service.put(msg('shared', 1, other));
+    await service.deleteById(thread, 'shared');
+    expect((await service.loadTail(other, 10)).messages.map((row) => row.id)).toEqual(['shared']);
+  });
+
+  it('trimOldest keeps the newest rows', async () => {
+    for (let i = 1; i <= 5; i += 1) {
+      await service.put(msg(`m${i}`, i));
+    }
+    await service.trimOldest(thread, 2);
+    expect((await service.loadTail(thread, 10)).messages.map((row) => row.id)).toEqual([
+      'm4',
+      'm5',
+    ]);
+  });
+
+  it('put drops oldest rows when the thread exceeds the disk cap', async () => {
+    for (let i = 1; i <= CHAT_DISK_MAX_PER_THREAD + 3; i += 1) {
+      await service.put(msg(`cap${i}`, i));
+    }
+    const page = await service.loadTail(thread, CHAT_DISK_MAX_PER_THREAD + 10);
+    expect(page.messages).toHaveLength(CHAT_DISK_MAX_PER_THREAD);
+    expect(page.messages[0].id).toBe('cap4');
+    expect(page.messages.at(-1)?.id).toBe(`cap${CHAT_DISK_MAX_PER_THREAD + 3}`);
   });
 
   it('clear removes only that panel', async () => {

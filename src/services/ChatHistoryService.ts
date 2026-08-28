@@ -12,6 +12,8 @@ export const CHAT_UI_OLDER_PAGE_SIZE = 40;
 export const CHAT_UI_MAX_WINDOW = 160;
 /** Absolute in-memory cap including “load earlier” pages. */
 export const CHAT_UI_HARD_WINDOW = 320;
+/** Per-thread IndexedDB cap. Oldest rows are dropped past this. */
+export const CHAT_DISK_MAX_PER_THREAD = 500;
 
 export interface ChatThreadRef {
   ownerType: ChatOwnerType;
@@ -110,6 +112,49 @@ function chronological(rows: StoredChatMessage[]): StoredChatMessage[] {
   return [...rows].sort((a, b) => a.seq - b.seq);
 }
 
+function sameThread(row: StoredChatMessage, thread: ChatThreadRef): boolean {
+  return (
+    row.ownerType === thread.ownerType
+    && row.ownerId === thread.ownerId
+    && row.panel === thread.panel
+  );
+}
+
+async function trimOldestRows(
+  thread: ChatThreadRef,
+  keep: number = CHAT_DISK_MAX_PER_THREAD,
+): Promise<void> {
+  if (!thread.ownerId) return;
+  if (keep <= 0) {
+    await seqRange(thread, Dexie.minKey, Dexie.maxKey).delete();
+    return;
+  }
+  const count = await seqRange(thread, Dexie.minKey, Dexie.maxKey).count();
+  if (count <= keep) return;
+  const newest = await seqRange(thread, Dexie.minKey, Dexie.maxKey)
+    .reverse()
+    .limit(keep)
+    .toArray();
+  if (newest.length === 0) return;
+  const minKeepSeq = newest.reduce(
+    (min, row) => (row.seq < min ? row.seq : min),
+    newest[0].seq,
+  );
+  await seqRange(thread, Dexie.minKey, minKeepSeq, true, false).delete();
+}
+
+async function persistRow(row: StoredChatMessage): Promise<void> {
+  const thread = { ownerType: row.ownerType, ownerId: row.ownerId, panel: row.panel };
+  try {
+    await characterDb.chatMessages.put(row);
+  } catch (error) {
+    if (!isQuotaExceeded(error)) throw error;
+    await trimOldestRows(thread, Math.max(1, Math.floor(CHAT_DISK_MAX_PER_THREAD / 2)));
+    await characterDb.chatMessages.put(row);
+  }
+  await trimOldestRows(thread);
+}
+
 export function clipChatHistoryWindow<T>(items: T[], max = CHAT_UI_MAX_WINDOW): T[] {
   if (items.length <= max) return items;
   return items.slice(items.length - max);
@@ -162,14 +207,25 @@ export class ChatHistoryService {
     return enqueue(
       { ownerType: row.ownerType, ownerId: row.ownerId, panel: row.panel },
       async () => {
-        await characterDb.chatMessages.put(row);
+        await persistRow(row);
       },
     );
   }
 
   deleteById(thread: ChatThreadRef, id: string): Promise<void> {
     return enqueue(thread, async () => {
+      const existing = await characterDb.chatMessages.get(id);
+      if (!existing || !sameThread(existing, thread)) return;
       await characterDb.chatMessages.delete(id);
+    });
+  }
+
+  trimOldest(
+    thread: ChatThreadRef,
+    keep: number = CHAT_DISK_MAX_PER_THREAD,
+  ): Promise<void> {
+    return enqueue(thread, async () => {
+      await trimOldestRows(thread, keep);
     });
   }
 

@@ -74,6 +74,7 @@ export {
   CHAT_UI_OLDER_PAGE_SIZE,
   CHAT_UI_MAX_WINDOW,
   CHAT_UI_HARD_WINDOW,
+  CHAT_DISK_MAX_PER_THREAD,
   clipChatHistoryWindow,
   chatThreadKey,
   type ChatThreadRef,
