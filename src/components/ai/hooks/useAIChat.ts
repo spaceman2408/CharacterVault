@@ -209,6 +209,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const hasOlderRef = useRef(false);
   const hydrateGenerationRef = useRef(0);
   const hydratingRef = useRef(Boolean(chatOwnerId));
+  const historyReadyRef = useRef(!chatOwnerId);
+  const loadOlderLockRef = useRef(false);
   const chatOwnerTypeRef = useRef(chatOwnerType);
   const chatOwnerIdRef = useRef(chatOwnerId);
   const chatPanelRef = useRef(chatPanel);
@@ -270,93 +272,12 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const persistMessage = useCallback(
     (message: ChatMessage) => {
       const thread = threadRef();
-      if (!thread.ownerId) return;
+      if (!thread.ownerId || !historyReadyRef.current) return;
       const seq = allocateSeq(seqByIdRef.current, maxSeqRef, message.id);
       void chatHistoryService.put(chatMessageToStored(message, { ...thread, seq }));
     },
     [],
   );
-
-  useEffect(() => {
-    const generation = ++hydrateGenerationRef.current;
-    hydratingRef.current = true;
-    const thread = {
-      ownerType: chatOwnerType,
-      ownerId: chatOwnerId,
-      panel: chatPanel,
-    };
-    seqByIdRef.current = new Map();
-    maxSeqRef.current = 0;
-    hasOlderRef.current = false;
-    setHasOlderMessages(false);
-    chatHistoryRef.current = [];
-    setChatHistory([]);
-
-    if (!thread.ownerId) {
-      hydratingRef.current = false;
-      setIsHydrating(false);
-      return;
-    }
-
-    hydratingRef.current = true;
-    setIsHydrating(true);
-    let cancelled = false;
-    void chatHistoryService.loadTail(thread).then((page) => {
-      if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) return;
-      const ingested = ingestStoredPage(page, seqByIdRef.current);
-      maxSeqRef.current = ingested.maxSeq;
-      hasOlderRef.current = page.hasMore;
-      setHasOlderMessages(page.hasMore);
-      const loaded = page.messages.map(storedToChatMessage);
-      chatHistoryRef.current = loaded;
-      setChatHistory(loaded);
-      hydratingRef.current = false;
-      setIsHydrating(false);
-    }).catch(() => {
-      if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) return;
-      hydratingRef.current = false;
-      setIsHydrating(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [chatOwnerType, chatOwnerId, chatPanel]);
-
-  const handleLoadOlder = useCallback(async () => {
-    const generation = hydrateGenerationRef.current;
-    const thread = threadRef();
-    const oldest = chatHistoryRef.current[0];
-    const beforeSeq = oldest ? seqByIdRef.current.get(oldest.id) : undefined;
-    if (!thread.ownerId || beforeSeq == null) return;
-    if (chatHistoryRef.current.length >= CHAT_UI_HARD_WINDOW) return;
-
-    const page = await chatHistoryService.loadBefore(thread, beforeSeq);
-    if (
-      !isMountedRef.current
-      || generation !== hydrateGenerationRef.current
-      || hydratingRef.current
-    ) {
-      return;
-    }
-    if (page.messages.length === 0) {
-      hasOlderRef.current = page.hasMore;
-      setHasOlderMessages(page.hasMore);
-      return;
-    }
-    const seen = new Set(chatHistoryRef.current.map((message) => message.id));
-    const prepended = page.messages
-      .map(storedToChatMessage)
-      .filter((message) => !seen.has(message.id));
-    const room = CHAT_UI_HARD_WINDOW - chatHistoryRef.current.length;
-    const kept = prepended.slice(Math.max(0, prepended.length - room));
-    const next = [...kept, ...chatHistoryRef.current];
-    ingestStoredPage({ messages: page.messages, hasMore: page.hasMore }, seqByIdRef.current);
-    pruneSeqById(seqByIdRef.current, next.map((message) => message.id));
-    chatHistoryRef.current = next;
-    hasOlderRef.current = page.hasMore || kept.length < prepended.length;
-    setHasOlderMessages(hasOlderRef.current);
-    setChatHistory(next);
-  }, []);
 
   const isAIConfigured = useMemo(() => {
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
@@ -411,6 +332,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       }
       if (chunk.content) {
         streamContentRef.current.append(chunk.content);
+        if (streamContentRef.current.length > LIVE_CONTENT_MAX_CHARS * 2) {
+          streamContentRef.current.capToTail(LIVE_CONTENT_MAX_CHARS);
+        }
         changed = true;
       }
       if (!changed) return;
@@ -438,6 +362,124 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     },
     [cancelStreamRaf, settleTurnStartWait]
   );
+
+  useEffect(() => {
+    invalidateInFlight('leave');
+    const generation = ++hydrateGenerationRef.current;
+    hydratingRef.current = true;
+    historyReadyRef.current = false;
+    const thread = {
+      ownerType: chatOwnerType,
+      ownerId: chatOwnerId,
+      panel: chatPanel,
+    };
+    seqByIdRef.current = new Map();
+    maxSeqRef.current = 0;
+    hasOlderRef.current = false;
+    setHasOlderMessages(false);
+    chatHistoryRef.current = [];
+    setChatHistory([]);
+
+    if (!thread.ownerId) {
+      hydratingRef.current = false;
+      historyReadyRef.current = true;
+      setIsHydrating(false);
+      return;
+    }
+
+    setIsHydrating(true);
+    let cancelled = false;
+    void chatHistoryService
+      .loadTail(thread)
+      .then((page) => {
+        if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) {
+          return;
+        }
+        const ingested = ingestStoredPage(page, seqByIdRef.current);
+        maxSeqRef.current = ingested.maxSeq;
+        hasOlderRef.current = page.hasMore;
+        setHasOlderMessages(page.hasMore);
+        const loaded = page.messages.map(storedToChatMessage);
+        chatHistoryRef.current = loaded;
+        setChatHistory(loaded);
+        hydratingRef.current = false;
+        historyReadyRef.current = true;
+        setIsHydrating(false);
+      })
+      .catch(async () => {
+        if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) {
+          return;
+        }
+        try {
+          maxSeqRef.current = await chatHistoryService.maxSeq(thread);
+        } catch {
+          maxSeqRef.current = 0;
+        }
+        if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) {
+          return;
+        }
+        hydratingRef.current = false;
+        historyReadyRef.current = false;
+        setIsHydrating(false);
+        setError('Could not load chat history.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [chatOwnerType, chatOwnerId, chatPanel, invalidateInFlight]);
+
+  const handleLoadOlder = useCallback(async () => {
+    if (
+      loadOlderLockRef.current
+      || hydratingRef.current
+      || !historyReadyRef.current
+    ) {
+      return;
+    }
+    const generation = hydrateGenerationRef.current;
+    const thread = threadRef();
+    const oldest = chatHistoryRef.current[0];
+    const beforeSeq = oldest ? seqByIdRef.current.get(oldest.id) : undefined;
+    if (!thread.ownerId || beforeSeq == null) return;
+    if (chatHistoryRef.current.length >= CHAT_UI_HARD_WINDOW) return;
+
+    loadOlderLockRef.current = true;
+    try {
+      const page = await chatHistoryService.loadBefore(thread, beforeSeq);
+      if (
+        !isMountedRef.current
+        || generation !== hydrateGenerationRef.current
+        || hydratingRef.current
+      ) {
+        return;
+      }
+      if (page.messages.length === 0) {
+        hasOlderRef.current = page.hasMore;
+        setHasOlderMessages(page.hasMore);
+        return;
+      }
+      const seen = new Set(chatHistoryRef.current.map((message) => message.id));
+      const prepended = page.messages
+        .map(storedToChatMessage)
+        .filter((message) => !seen.has(message.id));
+      const room = CHAT_UI_HARD_WINDOW - chatHistoryRef.current.length;
+      const kept = prepended.slice(Math.max(0, prepended.length - room));
+      const next = [...kept, ...chatHistoryRef.current];
+      ingestStoredPage({ messages: page.messages, hasMore: page.hasMore }, seqByIdRef.current);
+      pruneSeqById(seqByIdRef.current, next.map((message) => message.id));
+      chatHistoryRef.current = next;
+      hasOlderRef.current = page.hasMore || kept.length < prepended.length;
+      setHasOlderMessages(hasOlderRef.current);
+      setChatHistory(next);
+    } catch (error) {
+      console.error('Failed to load earlier chat messages:', error);
+      if (isMountedRef.current && generation === hydrateGenerationRef.current) {
+        setError('Could not load earlier messages.');
+      }
+    } finally {
+      loadOlderLockRef.current = false;
+    }
+  }, []);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -467,6 +509,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       hasOlderRef.current = false;
       hydrateGenerationRef.current += 1;
       hydratingRef.current = false;
+      historyReadyRef.current = reason !== 'unmount';
       if (reason !== 'unmount' && isMountedRef.current) {
         setChatHistory([]);
         setHasOlderMessages(false);
@@ -634,10 +677,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           return;
         }
 
-        const content =
-          streaming && streamContentRef.current.length > 0
-            ? streamContentRef.current.toString()
-            : result.content;
+        const content = result.content || streamContentRef.current.toString();
         const reasoning =
           streaming && streamReasoningRef.current.length > 0
             ? streamReasoningRef.current.toString() || undefined
@@ -719,7 +759,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   );
 
   const handleRegenerate = useCallback(async () => {
-    if (leavingRef.current || isProcessingRef.current || hydratingRef.current) return;
+    if (
+      leavingRef.current
+      || isProcessingRef.current
+      || hydratingRef.current
+      || !historyReadyRef.current
+    ) {
+      return;
+    }
 
     const history = chatHistoryRef.current;
     if (history.length === 0) return;
@@ -756,7 +803,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   const handleAsk = useCallback(
     async (question: string) => {
-      if (leavingRef.current || isProcessingRef.current || hydratingRef.current) return;
+      if (
+        leavingRef.current
+        || isProcessingRef.current
+        || hydratingRef.current
+        || !historyReadyRef.current
+      ) {
+        return;
+      }
 
       if (!question.trim()) {
         const lastMessage = chatHistoryRef.current[chatHistoryRef.current.length - 1];

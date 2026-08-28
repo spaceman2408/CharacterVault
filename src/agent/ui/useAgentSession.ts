@@ -192,6 +192,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const hasOlderRef = useRef(false);
   const hydrateGenerationRef = useRef(0);
   const hydratingRef = useRef(Boolean(chatOwnerId));
+  const historyReadyRef = useRef(!chatOwnerId);
+  const loadOlderLockRef = useRef(false);
   const chatOwnerTypeRef = useRef(chatOwnerType);
   const chatOwnerIdRef = useRef(chatOwnerId);
   const chatPanelRef = useRef(chatPanel);
@@ -224,7 +226,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
   const persistMessage = useCallback((message: ChatMessage) => {
     const thread = threadRef();
-    if (!thread.ownerId) return;
+    if (!thread.ownerId || !historyReadyRef.current) return;
     const seq = allocateSeq(seqByIdRef.current, maxSeqRef, message.id);
     void chatHistoryService.put(
       chatMessageToStored(message, { ...thread, seq }, {
@@ -411,6 +413,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     hasOlderRef.current = false;
     hydrateGenerationRef.current += 1;
     hydratingRef.current = false;
+    historyReadyRef.current = false;
   }, []);
 
   const releaseSession = useCallback(
@@ -450,6 +453,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const handleNewChat = useCallback(() => {
     const thread = threadRef();
     releaseSession(true);
+    historyReadyRef.current = true;
     if (thread.ownerId) {
       void chatHistoryService.clear(thread);
     }
@@ -475,8 +479,10 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   useEffect(() => registerChatSessionFlush(drainSession), [drainSession]);
 
   useEffect(() => {
+    abortInFlight();
     const generation = ++hydrateGenerationRef.current;
     hydratingRef.current = true;
+    historyReadyRef.current = false;
     const thread = {
       ownerType: chatOwnerType,
       ownerId: chatOwnerId,
@@ -495,11 +501,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
     if (!thread.ownerId) {
       hydratingRef.current = false;
+      historyReadyRef.current = true;
       setIsHydrating(false);
       return;
     }
 
-    hydratingRef.current = true;
     setIsHydrating(true);
     let cancelled = false;
     void chatHistoryService
@@ -521,21 +527,39 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         setToolEventsByMessageId(mapped.toolEventsByMessageId);
         setErrorByMessageId(mapped.errorByMessageId);
         hydratingRef.current = false;
+        historyReadyRef.current = true;
         setIsHydrating(false);
       })
-      .catch(() => {
+      .catch(async () => {
+        if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) {
+          return;
+        }
+        try {
+          maxSeqRef.current = await chatHistoryService.maxSeq(thread);
+        } catch {
+          maxSeqRef.current = 0;
+        }
         if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) {
           return;
         }
         hydratingRef.current = false;
+        historyReadyRef.current = false;
         setIsHydrating(false);
+        setError('Could not load chat history.');
       });
     return () => {
       cancelled = true;
     };
-  }, [chatOwnerType, chatOwnerId, chatPanel]);
+  }, [abortInFlight, chatOwnerType, chatOwnerId, chatPanel]);
 
   const handleLoadOlder = useCallback(async () => {
+    if (
+      loadOlderLockRef.current
+      || hydratingRef.current
+      || !historyReadyRef.current
+    ) {
+      return;
+    }
     const generation = hydrateGenerationRef.current;
     const thread = threadRef();
     const oldest = chatHistoryRef.current[0];
@@ -543,46 +567,56 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     if (!thread.ownerId || beforeSeq == null) return;
     if (chatHistoryRef.current.length >= CHAT_UI_HARD_WINDOW) return;
 
-    const page = await chatHistoryService.loadBefore(thread, beforeSeq);
-    if (
-      !isMountedRef.current
-      || generation !== hydrateGenerationRef.current
-      || hydratingRef.current
-    ) {
-      return;
+    loadOlderLockRef.current = true;
+    try {
+      const page = await chatHistoryService.loadBefore(thread, beforeSeq);
+      if (
+        !isMountedRef.current
+        || generation !== hydrateGenerationRef.current
+        || hydratingRef.current
+      ) {
+        return;
+      }
+      if (page.messages.length === 0) {
+        hasOlderRef.current = page.hasMore;
+        setHasOlderMessages(page.hasMore);
+        return;
+      }
+      const mapped = storedToAgentThread(page.messages);
+      const seen = new Set(chatHistoryRef.current.map((message) => message.id));
+      const prepended = mapped.history.filter((message) => !seen.has(message.id));
+      const room = CHAT_UI_HARD_WINDOW - chatHistoryRef.current.length;
+      const keptHistory = prepended.slice(Math.max(0, prepended.length - room));
+      const keptIds = new Set(keptHistory.map((message) => message.id));
+      for (const [id, seq] of mapped.seqById) {
+        if (keptIds.has(id)) seqByIdRef.current.set(id, seq);
+      }
+      const nextHistory = [...keptHistory, ...chatHistoryRef.current];
+      pruneSeqById(seqByIdRef.current, nextHistory.map((message) => message.id));
+      chatHistoryRef.current = nextHistory;
+      setChatHistory(nextHistory);
+      const nextEvents: Record<string, AgentToolEvent[]> = { ...toolEventsRef.current };
+      for (const [id, events] of Object.entries(mapped.toolEventsByMessageId)) {
+        if (keptIds.has(id)) nextEvents[id] = events;
+      }
+      toolEventsRef.current = nextEvents;
+      setToolEventsByMessageId(nextEvents);
+      const nextErrors: Record<string, string> = { ...errorByMessageIdRef.current };
+      for (const [id, message] of Object.entries(mapped.errorByMessageId)) {
+        if (keptIds.has(id)) nextErrors[id] = message;
+      }
+      errorByMessageIdRef.current = nextErrors;
+      setErrorByMessageId(nextErrors);
+      hasOlderRef.current = page.hasMore || keptHistory.length < prepended.length;
+      setHasOlderMessages(hasOlderRef.current);
+    } catch (error) {
+      console.error('Failed to load earlier chat messages:', error);
+      if (isMountedRef.current && generation === hydrateGenerationRef.current) {
+        setError('Could not load earlier messages.');
+      }
+    } finally {
+      loadOlderLockRef.current = false;
     }
-    if (page.messages.length === 0) {
-      hasOlderRef.current = page.hasMore;
-      setHasOlderMessages(page.hasMore);
-      return;
-    }
-    const mapped = storedToAgentThread(page.messages);
-    const seen = new Set(chatHistoryRef.current.map((message) => message.id));
-    const prepended = mapped.history.filter((message) => !seen.has(message.id));
-    const room = CHAT_UI_HARD_WINDOW - chatHistoryRef.current.length;
-    const keptHistory = prepended.slice(Math.max(0, prepended.length - room));
-    const keptIds = new Set(keptHistory.map((message) => message.id));
-    for (const [id, seq] of mapped.seqById) {
-      if (keptIds.has(id)) seqByIdRef.current.set(id, seq);
-    }
-    const nextHistory = [...keptHistory, ...chatHistoryRef.current];
-    pruneSeqById(seqByIdRef.current, nextHistory.map((message) => message.id));
-    chatHistoryRef.current = nextHistory;
-    setChatHistory(nextHistory);
-    const nextEvents: Record<string, AgentToolEvent[]> = { ...toolEventsRef.current };
-    for (const [id, events] of Object.entries(mapped.toolEventsByMessageId)) {
-      if (keptIds.has(id)) nextEvents[id] = events;
-    }
-    toolEventsRef.current = nextEvents;
-    setToolEventsByMessageId(nextEvents);
-    const nextErrors: Record<string, string> = { ...errorByMessageIdRef.current };
-    for (const [id, message] of Object.entries(mapped.errorByMessageId)) {
-      if (keptIds.has(id)) nextErrors[id] = message;
-    }
-    errorByMessageIdRef.current = nextErrors;
-    setErrorByMessageId(nextErrors);
-    hasOlderRef.current = page.hasMore || keptHistory.length < prepended.length;
-    setHasOlderMessages(hasOlderRef.current);
   }, []);
 
   const handleDeleteMessage = useCallback((messageId: string) => {
@@ -620,7 +654,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const startRun = useCallback(
     async (question: string, priorHistory: ChatMessage[]) => {
       const run = (async () => {
-        if (leavingRef.current || hydratingRef.current) return;
+        if (leavingRef.current || hydratingRef.current || !historyReadyRef.current) return;
         if (!isAIConfigured) {
           const message = 'Please configure AI settings first';
           setError(message);
@@ -858,7 +892,14 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   );
 
   const handleRegenerate = useCallback(async () => {
-    if (leavingRef.current || isProcessingRef.current || hydratingRef.current) return;
+    if (
+      leavingRef.current
+      || isProcessingRef.current
+      || hydratingRef.current
+      || !historyReadyRef.current
+    ) {
+      return;
+    }
     const history = chatHistoryRef.current;
     const lastUserIndex = lastUserMessageIndex(history);
     if (lastUserIndex < 0) return;
@@ -890,7 +931,14 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
   const handleAsk = useCallback(
     async (question: string) => {
-      if (leavingRef.current || isProcessingRef.current || hydratingRef.current) return;
+      if (
+        leavingRef.current
+        || isProcessingRef.current
+        || hydratingRef.current
+        || !historyReadyRef.current
+      ) {
+        return;
+      }
       const trimmed = question.trim();
       if (!trimmed) {
         await handleRegenerate();
