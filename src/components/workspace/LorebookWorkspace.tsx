@@ -692,6 +692,8 @@ export function LorebookWorkspace(): React.ReactElement {
                   activeSection="lorebook"
                   onClose={() => setIsChatOpen(false)}
                   isMobile={isMobile}
+                  chatOwnerType="lorebook"
+                  chatOwnerId={currentLorebook.id}
                   headerActions={
                     <button
                       type="button"

@@ -6,7 +6,13 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { AIService, AIError } from '../../../services/AIService';
 import { getProviderSelectionId } from '../../../services/providers';
-import type { AIConfig, SamplerSettings, PromptSettings } from '../../../db/characterTypes';
+import type {
+  AIConfig,
+  ChatOwnerType,
+  ChatPanel,
+  PromptSettings,
+  SamplerSettings,
+} from '../../../db/characterTypes';
 import type { ChatMessage, ConversationMessage } from '../types';
 import {
   abortResponseStats,
@@ -19,8 +25,15 @@ import {
 } from '../utils';
 import { ChunkString } from '../../../utils/chunkString';
 import { registerChatSessionFlush } from '../../../utils/chatSessionFlush';
-
-export const MAX_CHAT_MESSAGES = 80;
+import { chatHistoryService, CHAT_UI_HARD_WINDOW } from '../../../services/ChatHistoryService';
+import {
+  allocateSeq,
+  chatMessageToStored,
+  clipVisibleHistory,
+  ingestStoredPage,
+  pruneSeqById,
+  storedToChatMessage,
+} from '../../../services/chatHistoryMap';
 
 export const ASSISTANT_TURN_START_DELAY_MS = 600;
 
@@ -34,6 +47,9 @@ export interface UseAIChatOptions {
   contextEntryIds: string[];
   /** When true, still resolve context even if no card sections are pinned */
   customContextIncluded?: boolean;
+  chatOwnerType: ChatOwnerType;
+  chatOwnerId: string;
+  chatPanel?: ChatPanel;
 }
 
 export interface UseAIChatReturn {
@@ -50,11 +66,9 @@ export interface UseAIChatReturn {
   handleAbort: () => void;
   clearError: () => void;
   isAIConfigured: boolean;
-}
-
-function trimHistory(messages: ChatMessage[]): ChatMessage[] {
-  if (messages.length <= MAX_CHAT_MESSAGES) return messages;
-  return messages.slice(messages.length - MAX_CHAT_MESSAGES);
+  isHydrating: boolean;
+  hasOlderMessages: boolean;
+  handleLoadOlder: () => Promise<void>;
 }
 
 export async function resolveContextAtCallTime(
@@ -154,9 +168,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     getContextContent,
     contextEntryIds,
     customContextIncluded = false,
+    chatOwnerType,
+    chatOwnerId,
+    chatPanel = 'orion',
   } = options;
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [isHydrating, setIsHydrating] = useState(Boolean(chatOwnerId));
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -185,6 +204,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const getContextContentRef = useRef(getContextContent);
   const contextEntryIdsRef = useRef(contextEntryIds);
   const customContextIncludedRef = useRef(customContextIncluded);
+  const seqByIdRef = useRef(new Map<string, number>());
+  const maxSeqRef = useRef(0);
+  const hasOlderRef = useRef(false);
+  const hydrateGenerationRef = useRef(0);
+  const hydratingRef = useRef(Boolean(chatOwnerId));
+  const chatOwnerTypeRef = useRef(chatOwnerType);
+  const chatOwnerIdRef = useRef(chatOwnerId);
+  const chatPanelRef = useRef(chatPanel);
 
   useEffect(() => {
     chatHistoryRef.current = chatHistory;
@@ -213,6 +240,123 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   useEffect(() => {
     customContextIncludedRef.current = customContextIncluded;
   }, [customContextIncluded]);
+  useEffect(() => {
+    chatOwnerTypeRef.current = chatOwnerType;
+  }, [chatOwnerType]);
+  useEffect(() => {
+    chatOwnerIdRef.current = chatOwnerId;
+  }, [chatOwnerId]);
+  useEffect(() => {
+    chatPanelRef.current = chatPanel;
+  }, [chatPanel]);
+
+  const threadRef = () => ({
+    ownerType: chatOwnerTypeRef.current,
+    ownerId: chatOwnerIdRef.current,
+    panel: chatPanelRef.current,
+  });
+
+  const applyVisible = useCallback((messages: ChatMessage[]): ChatMessage[] => {
+    const { history, clipped } = clipVisibleHistory(messages);
+    if (clipped) {
+      hasOlderRef.current = true;
+      setHasOlderMessages(true);
+    }
+    pruneSeqById(seqByIdRef.current, history.map((message) => message.id));
+    chatHistoryRef.current = history;
+    return history;
+  }, []);
+
+  const persistMessage = useCallback(
+    (message: ChatMessage) => {
+      const thread = threadRef();
+      if (!thread.ownerId) return;
+      const seq = allocateSeq(seqByIdRef.current, maxSeqRef, message.id);
+      void chatHistoryService.put(chatMessageToStored(message, { ...thread, seq }));
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const generation = ++hydrateGenerationRef.current;
+    hydratingRef.current = true;
+    const thread = {
+      ownerType: chatOwnerType,
+      ownerId: chatOwnerId,
+      panel: chatPanel,
+    };
+    seqByIdRef.current = new Map();
+    maxSeqRef.current = 0;
+    hasOlderRef.current = false;
+    setHasOlderMessages(false);
+    chatHistoryRef.current = [];
+    setChatHistory([]);
+
+    if (!thread.ownerId) {
+      hydratingRef.current = false;
+      setIsHydrating(false);
+      return;
+    }
+
+    hydratingRef.current = true;
+    setIsHydrating(true);
+    let cancelled = false;
+    void chatHistoryService.loadTail(thread).then((page) => {
+      if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) return;
+      const ingested = ingestStoredPage(page, seqByIdRef.current);
+      maxSeqRef.current = ingested.maxSeq;
+      hasOlderRef.current = page.hasMore;
+      setHasOlderMessages(page.hasMore);
+      const loaded = page.messages.map(storedToChatMessage);
+      chatHistoryRef.current = loaded;
+      setChatHistory(loaded);
+      hydratingRef.current = false;
+      setIsHydrating(false);
+    }).catch(() => {
+      if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) return;
+      hydratingRef.current = false;
+      setIsHydrating(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [chatOwnerType, chatOwnerId, chatPanel]);
+
+  const handleLoadOlder = useCallback(async () => {
+    const generation = hydrateGenerationRef.current;
+    const thread = threadRef();
+    const oldest = chatHistoryRef.current[0];
+    const beforeSeq = oldest ? seqByIdRef.current.get(oldest.id) : undefined;
+    if (!thread.ownerId || beforeSeq == null) return;
+    if (chatHistoryRef.current.length >= CHAT_UI_HARD_WINDOW) return;
+
+    const page = await chatHistoryService.loadBefore(thread, beforeSeq);
+    if (
+      !isMountedRef.current
+      || generation !== hydrateGenerationRef.current
+      || hydratingRef.current
+    ) {
+      return;
+    }
+    if (page.messages.length === 0) {
+      hasOlderRef.current = page.hasMore;
+      setHasOlderMessages(page.hasMore);
+      return;
+    }
+    const seen = new Set(chatHistoryRef.current.map((message) => message.id));
+    const prepended = page.messages
+      .map(storedToChatMessage)
+      .filter((message) => !seen.has(message.id));
+    const room = CHAT_UI_HARD_WINDOW - chatHistoryRef.current.length;
+    const kept = prepended.slice(Math.max(0, prepended.length - room));
+    const next = [...kept, ...chatHistoryRef.current];
+    ingestStoredPage({ messages: page.messages, hasMore: page.hasMore }, seqByIdRef.current);
+    pruneSeqById(seqByIdRef.current, next.map((message) => message.id));
+    chatHistoryRef.current = next;
+    hasOlderRef.current = page.hasMore || kept.length < prepended.length;
+    setHasOlderMessages(hasOlderRef.current);
+    setChatHistory(next);
+  }, []);
 
   const isAIConfigured = useMemo(() => {
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
@@ -316,10 +460,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       invalidateInFlight(reason);
       streamContentRef.current.clear();
       streamReasoningRef.current.clear();
-      chatHistoryRef.current = [];
       isProcessingRef.current = false;
+      chatHistoryRef.current = [];
+      seqByIdRef.current = new Map();
+      maxSeqRef.current = 0;
+      hasOlderRef.current = false;
       if (reason !== 'unmount' && isMountedRef.current) {
         setChatHistory([]);
+        setHasOlderMessages(false);
         setError(null);
         setIsProcessing(false);
         setIsStreaming(false);
@@ -334,7 +482,11 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   releaseSessionRef.current = releaseSession;
 
   const handleNewChat = useCallback(() => {
+    const thread = threadRef();
     releaseSession('new-chat');
+    if (thread.ownerId) {
+      void chatHistoryService.clear(thread);
+    }
   }, [releaseSession]);
 
   const drainSession = useCallback(async () => {
@@ -361,12 +513,18 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   const handleDeleteMessage = useCallback((messageId: string) => {
     if (isProcessingRef.current) return;
 
-    setChatHistory(prev => {
-      const index = prev.findIndex(m => m.id === messageId);
-      if (index === -1) return prev;
-      return prev.slice(0, index);
-    });
+    const history = chatHistoryRef.current;
+    const index = history.findIndex(m => m.id === messageId);
+    if (index === -1) return;
+    const fromSeq = seqByIdRef.current.get(messageId);
+    const nextHistory = history.slice(0, index);
+    chatHistoryRef.current = nextHistory;
+    pruneSeqById(seqByIdRef.current, nextHistory.map((message) => message.id));
+    setChatHistory(nextHistory);
     setError(null);
+    if (fromSeq != null) {
+      void chatHistoryService.deleteFrom(threadRef(), fromSeq);
+    }
   }, []);
 
   const finishTurn = useCallback(() => {
@@ -491,7 +649,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           firstTokenTime,
         });
 
-        setChatHistory(trimHistory([...historyToKeep, assistantMessage]));
+        persistMessage(assistantMessage);
+        setChatHistory(applyVisible([...historyToKeep, assistantMessage]));
       } catch (err) {
         if (
           !shouldCommitCancelledPartial(
@@ -520,7 +679,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
             }
           );
           if (partial) {
-            setChatHistory(trimHistory([...historyToKeep, partial]));
+            persistMessage(partial);
+            setChatHistory(applyVisible([...historyToKeep, partial]));
           }
         } else {
           console.error('AI request failed:', err);
@@ -553,11 +713,11 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       );
       await run;
     },
-    [appendStreamChunk, cancelStreamRaf, clearStreamDraft, finishTurn]
+    [appendStreamChunk, applyVisible, cancelStreamRaf, clearStreamDraft, finishTurn, persistMessage]
   );
 
   const handleRegenerate = useCallback(async () => {
-    if (leavingRef.current || isProcessingRef.current) return;
+    if (leavingRef.current || isProcessingRef.current || hydratingRef.current) return;
 
     const history = chatHistoryRef.current;
     if (history.length === 0) return;
@@ -575,8 +735,15 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
     const historyToKeep = history.slice(0, lastUserIndex.originalIndex + 1);
     const lastUserMessage = lastUserIndex.content;
+    const dropped = history[lastUserIndex.originalIndex + 1];
+    const fromSeq = dropped ? seqByIdRef.current.get(dropped.id) : undefined;
 
+    chatHistoryRef.current = historyToKeep;
+    pruneSeqById(seqByIdRef.current, historyToKeep.map((message) => message.id));
     setChatHistory(historyToKeep);
+    if (fromSeq != null) {
+      void chatHistoryService.deleteFrom(threadRef(), fromSeq);
+    }
 
     await runAssistantTurn({
       question: lastUserMessage,
@@ -587,7 +754,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
 
   const handleAsk = useCallback(
     async (question: string) => {
-      if (leavingRef.current || isProcessingRef.current) return;
+      if (leavingRef.current || isProcessingRef.current || hydratingRef.current) return;
 
       if (!question.trim()) {
         const lastMessage = chatHistoryRef.current[chatHistoryRef.current.length - 1];
@@ -615,7 +782,8 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         timestamp: Date.now(),
       };
 
-      const historyToKeep = trimHistory([...priorHistory, userMessage]);
+      persistMessage(userMessage);
+      const historyToKeep = applyVisible([...priorHistory, userMessage]);
       setChatHistory(historyToKeep);
 
       await runAssistantTurn({
@@ -624,7 +792,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         historyToKeep,
       });
     },
-    [isAIConfigured, handleRegenerate, runAssistantTurn]
+    [isAIConfigured, applyVisible, handleRegenerate, persistMessage, runAssistantTurn]
   );
 
   useEffect(() => {
@@ -651,6 +819,9 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     handleAbort,
     clearError,
     isAIConfigured,
+    isHydrating,
+    hasOlderMessages,
+    handleLoadOlder,
   };
 }
 

@@ -16,6 +16,9 @@ export function AIChatPanel({
   onClose,
   headerActions,
   isMobile: _isMobile = false,
+  chatOwnerType,
+  chatOwnerId,
+  chatPanel = 'orion',
 }: AIChatPanelProps): React.ReactElement {
   void _isMobile;
 
@@ -32,6 +35,9 @@ export function AIChatPanel({
     handleDeleteMessage,
     handleAbort,
     clearError,
+    isHydrating,
+    hasOlderMessages,
+    handleLoadOlder,
   } = useAIChat({
     aiConfig,
     samplerSettings,
@@ -41,6 +47,9 @@ export function AIChatPanel({
     getContextContent,
     contextEntryIds,
     customContextIncluded,
+    chatOwnerType,
+    chatOwnerId,
+    chatPanel,
   });
 
   const contextLabels = useMemo(() => {
@@ -84,6 +93,9 @@ export function AIChatPanel({
       handleDeleteMessage={handleDeleteMessage}
       handleAbort={handleAbort}
       clearError={clearError}
+      isHydrating={isHydrating}
+      hasOlderMessages={hasOlderMessages}
+      onLoadOlder={handleLoadOlder}
       onClose={onClose}
     />
   );

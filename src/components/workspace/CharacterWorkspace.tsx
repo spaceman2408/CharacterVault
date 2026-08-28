@@ -1139,6 +1139,8 @@ function CharacterWorkspaceInner({
               onClose={() => setIsChatOpen(false)}
               isMobile={isMobile}
               headerActions={agentToggle}
+              chatOwnerType="character"
+              chatOwnerId={currentCharacter?.id ?? ''}
             />
           )}
         </aside>

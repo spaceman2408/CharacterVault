@@ -14,6 +14,7 @@ import type { ChatMessage } from './types';
 import { ChatMessage as ChatMessageComponent, FoldedText } from './components';
 import { useAutoScroll } from './hooks';
 import { canRetryEmptySend } from './utils';
+import { CHAT_UI_HARD_WINDOW } from '../../services/ChatHistoryService';
 
 export interface AIChatViewProps {
   title: string;
@@ -39,6 +40,9 @@ export interface AIChatViewProps {
   handleAbort: () => void;
   clearError: () => void;
   onClose?: () => void;
+  isHydrating?: boolean;
+  hasOlderMessages?: boolean;
+  onLoadOlder?: () => void | Promise<void>;
   /** One-shot starter prompts in the empty state; clicking one sends it. */
   emptySuggestions?: readonly string[];
   renderMessage?: (message: ChatMessage, index: number) => ReactNode;
@@ -77,6 +81,9 @@ export function AIChatView({
   handleAbort,
   clearError,
   onClose,
+  isHydrating = false,
+  hasOlderMessages = false,
+  onLoadOlder,
   emptySuggestions,
   renderMessage,
   renderAfterMessage,
@@ -146,10 +153,19 @@ export function AIChatView({
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
           {headerActions}
-          {chatHistory.length > 0 && (
+          {(chatHistory.length > 0 || hasOlderMessages) && (
             <button
               type="button"
-              onClick={handleNewChat}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    'Start a new chat? This clears the saved conversation for this panel.',
+                  )
+                ) {
+                  return;
+                }
+                handleNewChat();
+              }}
               className="text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors"
               title="Start a new chat"
             >
@@ -260,7 +276,27 @@ export function AIChatView({
         data-chat-scroll
         className="flex flex-1 min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto px-3 py-3"
       >
-        {chatHistory.length === 0 && (
+        {isHydrating && chatHistory.length === 0 && (
+          <div className="flex justify-center py-10">
+            <Loader2 className="w-5 h-5 animate-spin text-fg-muted" />
+          </div>
+        )}
+
+        {hasOlderMessages && onLoadOlder && chatHistory.length > 0
+          && chatHistory.length < CHAT_UI_HARD_WINDOW && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => void onLoadOlder()}
+              disabled={isProcessing}
+              className="text-[11px] text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft disabled:opacity-40 disabled:pointer-events-none transition-colors"
+            >
+              Load earlier messages
+            </button>
+          </div>
+        )}
+
+        {!isHydrating && chatHistory.length === 0 && (
           <div className="flex flex-col items-center text-center px-4 py-10 text-fg-subtle">
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
               <Sparkles className="w-6 h-6 opacity-60" />

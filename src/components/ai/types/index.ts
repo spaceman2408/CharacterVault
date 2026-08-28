@@ -4,7 +4,13 @@
  */
 
 import type { ReactNode } from 'react';
-import type { SamplerSettings, AIConfig, PromptSettings } from '../../../db/characterTypes';
+import type {
+  SamplerSettings,
+  AIConfig,
+  PromptSettings,
+  ChatOwnerType,
+  ChatPanel,
+} from '../../../db/characterTypes';
 
 export interface ResponseStats {
   ttft?: number;
@@ -45,6 +51,9 @@ export interface AIChatPanelProps {
   onClose?: () => void;
   isMobile?: boolean;
   headerActions?: ReactNode;
+  chatOwnerType: ChatOwnerType;
+  chatOwnerId: string;
+  chatPanel?: ChatPanel;
 }
 
 export interface StreamingChunk {
