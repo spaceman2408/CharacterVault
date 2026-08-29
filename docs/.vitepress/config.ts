@@ -64,6 +64,7 @@ nav: [
           { text: 'FAQ', link: '/faq' },
           { text: 'Privacy', link: '/privacy' },
           { text: 'Changelog', link: '/changelog' },
+          { text: 'Release 1.4.5', link: '/releases/v1.4.5' },
           { text: 'Release 1.4.2', link: '/releases/v1.4.2' },
           { text: 'Release 1.4.1', link: '/releases/v1.4.1' },
           { text: 'Release 1.4.0', link: '/releases/v1.4.0' },

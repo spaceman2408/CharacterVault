@@ -6,6 +6,17 @@ Quick overview of recent updates to CharacterVault.
 
 ## August 2026
 
+### 1.4.5
+
+Orion and Agent chats stay with the card or lorebook you opened them on.
+
+- Separate saved threads for Orion and Agent, per character and per standalone lorebook
+- New chat confirms, then clears only that panel; leaving or closing the panel keeps the transcript
+- Load earlier messages pages older turns; chats are vault-local, not part of PNG/JSON export
+- Closing Ask AI unmounts character chat so a switch cannot leak the previous thread
+
+[Release 1.4.5 →](/releases/v1.4.5) · [AI Assistant →](/features/ai-assistant) · [AI Agent →](/features/ai-agent)
+
 ### 1.4.2
 
 Agent write recap and jump-to-target, plus leaner Settings and live streams.

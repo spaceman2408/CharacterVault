@@ -15,7 +15,7 @@ The workspace has two docked panels:
 - **Context Panel** (left) — Choose which character sections (and optional custom notes) the AI can see.
 - **Ask AI Panel** (right) — Chat with the AI assistant.
 
-Both panels can be toggled from the workspace header. In the chat header, **Agent** switches this panel to the writing Agent. Switch it off to come back to Orion. The two threads stay separate.
+Both panels can be toggled from the workspace header. In the chat header, **Agent** switches this panel to the writing Agent. Switch it off to come back to Orion. The two threads stay separate, and each is saved on the open character or lorebook.
 
 ## Using the Context Panel
 
@@ -40,6 +40,12 @@ The chat input supports multi-line text. Use **Shift+Enter** to insert line brea
 :::
 
 Orion uses a fixed system prompt that defines its persona: it knows about Character Vault's features, the V2/V3 character card spec, and is designed to be clear, beginner-friendly, and non-judgmental of all content types.
+
+### Saved chats
+
+The Orion thread for this character or standalone lorebook is stored in the browser. Close Ask AI, switch cards, or come back later and it is still there. **New chat** asks first, then clears only Orion’s saved thread for this owner — the Agent thread is untouched. Chats are not written into PNG/JSON export. Deleting the character or lorebook deletes its chats with it.
+
+**Load earlier messages** pages older turns back in. The on-screen window stays small; oldest rows drop past 500 saved messages per panel.
 
 ### Cancelling a Request
 

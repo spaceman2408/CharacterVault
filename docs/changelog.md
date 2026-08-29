@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.5 (2026-08-28)
+
+Orion and Agent chats persist per character and lorebook. Full notes: [v1.4.5 release notes](/releases/v1.4.5).
+
+### Highlights
+
+- Ask Orion and the Agent keep a thread per character and per standalone lorebook
+- New chat confirms, then clears only that panel; leaving keeps the saved transcript
+- Load earlier pages older turns; on-screen window stays small, disk cap is 500 per thread
+- Closing Ask AI unmounts character chat so a switch cannot leak the previous thread
+
+Details: [AI Assistant](/features/ai-assistant) · [AI Agent](/features/ai-agent) · [What's New](/whats-new)
+
+---
+
 ## 1.4.2 (2026-08-27)
 
 Agent write recap and jump-to-target, plus Settings and stream cleanup. Full notes: [v1.4.2 release notes](/releases/v1.4.2).

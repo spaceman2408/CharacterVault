@@ -22,7 +22,7 @@ When a run finishes, changes land in this card or book. A pulsing **Agent writin
 | **Model** | Always **Settings → AI Config** | **Settings → Prompts → Agent**, or AI Config if you leave Default |
 | **Where** | Character workspace and lorebook vault workspace | Same two workspaces, behind the **Agent** toggle |
 
-You can switch back to Orion at any time. The two chats do not share a thread.
+You can switch back to Orion at any time. The two chats do not share a thread. Each one is saved on that character or lorebook and comes back when you reopen Ask AI.
 
 To open Agent by default, set **Settings → Studio → Chat panel** to **Agent**. That applies the next time you open a character or lorebook. The header toggle still works for the current session.
 
@@ -103,13 +103,13 @@ Catalogs in the prompt are built at the **start** of the run. After names or key
 - **TTFT / t/s:** on the assistant message info tooltip when the reply finishes, same as Orion
 - Lookup-only reads do not add extra assistant turns; those bodies count in the live meter, then drop out of the transcript
 
-Long threads keep the last **100** messages in the panel so the tab stays light.
+The thread is stored in the browser with the vault. Long threads keep a small window on screen; **Load earlier messages** pages older turns back in. Oldest rows drop past **500** saved messages per panel.
 
 ### Chat controls
 
 - **Stop** (square while it is working) cancels the current run. Writes that already finished in that run still flush.
 - **Send** with an empty box retries the last request (same as the composer hint).
-- **New chat** clears the thread. The card stays as last written.
+- **New chat** asks first, then clears the saved thread for this panel only. The card stays as last written. Closing the panel or leaving the card keeps the conversation.
 - Delete a message to trim from that point; you cannot delete while a run is in progress.
 
 If you Stop while it is still thinking, Send is available again so you can retry or type a new ask.

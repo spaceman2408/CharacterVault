@@ -13,9 +13,9 @@ CharacterVault is open source under the [GNU General Public License v3.0](https:
 
 ## Local data
 
-When you create or edit characters and **standalone lorebooks**, data such as card fields, images, lorebook entries, snapshots, attachment links, app settings, and optional **custom AI context** notes is kept locally in your browser. It is not uploaded to a CharacterVault server, because the core app has no such server.
+When you create or edit characters and **standalone lorebooks**, data such as card fields, images, lorebook entries, snapshots, attachment links, app settings, optional **custom AI context** notes, and **Orion/Agent chat transcripts** is kept locally in your browser. It is not uploaded to a CharacterVault server, because the core app has no such server.
 
-Custom context and lorebook **links** (which library book a character uses) stay in this browser only. They are not written into PNG/JSON by themselves. The lorebook **text on the character** is what card export includes — and after you link a book, that text stays matched with the library book. Clearing site data, using a different browser or device, or uninstalling browser storage for this origin can remove local data. Export cards, lorebook JSON, or vault backups for portable copies; keep a separate copy of custom notes if you need them elsewhere.
+Custom context, chat transcripts, and lorebook **links** (which library book a character uses) stay in this browser only. They are not written into PNG/JSON by themselves. The lorebook **text on the character** is what card export includes — and after you link a book, that text stays matched with the library book. Clearing site data, using a different browser or device, or uninstalling browser storage for this origin can remove local data. Export cards, lorebook JSON, or vault backups for portable copies; keep a separate copy of custom notes and chat history if you need them elsewhere.
 
 ## Hosted site (Cloudflare Pages)
 
