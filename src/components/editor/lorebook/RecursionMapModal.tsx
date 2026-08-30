@@ -74,7 +74,7 @@ export function RecursionMapModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex h-full w-full flex-col overflow-hidden bg-surface"
+        className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-surface pt-[env(safe-area-inset-top)]"
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div className="min-w-0">
@@ -95,7 +95,7 @@ export function RecursionMapModal({
             ref={closeRef}
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+            className="rounded-lg p-2.5 text-fg-muted hover:bg-hover hover:text-fg touch-manipulation md:p-1.5"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -119,7 +119,7 @@ export function RecursionMapModal({
           />
         </div>
 
-        <div className="shrink-0 border-t border-border px-4 py-2.5 text-[11px] leading-snug text-fg-subtle">
+        <div className="shrink-0 border-t border-border px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] text-[11px] leading-snug text-fg-subtle">
           Authoring aid based on primary keys in entry content. Selective filters, probability, token
           budget, and multi-step depth are not simulated.
         </div>

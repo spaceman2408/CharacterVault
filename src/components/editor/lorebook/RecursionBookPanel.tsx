@@ -1,15 +1,16 @@
 /**
- * Whole-book recursion browser. Merged view: web (SVG graph) or list on the
- * left, inspector on the right, and a sticky selection bar for staged bulk
- * flag edits. Single-entry flag and primary-key edits apply immediately;
- * bulk flag changes still require an explicit Apply step.
+ * Whole-book recursion browser. On desktop: web or list, inspector overlay,
+ * sticky bulk-edit bar. On compact viewports the web is hidden and inspector
+ * plus selection dock in-flow under the list. Single-entry flag and primary-key
+ * edits apply immediately; bulk flag changes still require an explicit Apply.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
   CheckSquare,
+  ChevronDown,
   GitFork,
   List,
   Search,
@@ -66,6 +67,25 @@ const FLAG_ROWS: { key: FlagKey; label: string; hint: string }[] = [
 ];
 
 const ARM_THRESHOLD = 25;
+/** Phones: list-only. Tablets (`md` and up) keep the web. */
+const COMPACT_MAX_WIDTH_PX = 767;
+
+function useCompactViewport(): boolean {
+  const [compact, setCompact] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(`(max-width: ${COMPACT_MAX_WIDTH_PX}px)`).matches;
+  });
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${COMPACT_MAX_WIDTH_PX}px)`);
+    const onChange = () => setCompact(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+
+  return compact;
+}
 
 function flagState(
   selected: LorebookEntry[],
@@ -213,6 +233,378 @@ function FlagToggleRow({
   );
 }
 
+function InspectorBody({
+  inspectedEntry,
+  indexById,
+  entryById,
+  inbound,
+  outbound,
+  inspectedSelected,
+  onToggleSelect,
+  onClearInspected,
+  onPatchEntry,
+  onInspect,
+}: {
+  inspectedEntry: LorebookEntry;
+  indexById: Map<number, number>;
+  entryById: Map<number, LorebookEntry>;
+  inbound: RecursionEdge[];
+  outbound: RecursionEdge[];
+  inspectedSelected: boolean;
+  onToggleSelect: (id: number) => void;
+  onClearInspected: () => void;
+  onPatchEntry: (id: number, patch: RecursionEntryPatch) => void;
+  onInspect: (id: number) => void;
+}): React.ReactElement {
+  return (
+    <>
+      <div className="rounded-xl border border-accent/40 bg-accent-soft/30 p-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-accent">
+              Inspecting
+            </p>
+            <p className="truncate text-base font-semibold text-fg">
+              {entryDisplayName(inspectedEntry, indexById.get(inspectedEntry.id))}
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              <RecursionFlagChips entry={inspectedEntry} />
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onToggleSelect(inspectedEntry.id)}
+              className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+            >
+              {inspectedSelected ? 'Remove from selection' : 'Select'}
+            </button>
+            <button
+              type="button"
+              onClick={onClearInspected}
+              className="rounded-lg border border-border bg-surface p-1.5 text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+              aria-label="Stop inspecting"
+              title="Stop inspecting"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+        <div className="mt-2">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">
+            Keys
+          </p>
+          <RecursionKeyChips
+            keys={inspectedEntry.keys ?? []}
+            onChange={(nextKeys) => onPatchEntry(inspectedEntry.id, { keys: nextKeys })}
+            placeholder="Add a key"
+            aria-label="Primary keys for this entry"
+          />
+          <p className="mt-1 text-[10px] leading-snug text-fg-subtle">
+            Edits write to this entry and update the map immediately.
+          </p>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {FLAG_ROWS.map((row) => {
+            const on = inspectedEntry[row.key] === true;
+            return (
+              <button
+                key={row.key}
+                type="button"
+                aria-pressed={on}
+                title={row.hint}
+                onClick={() => onPatchEntry(inspectedEntry.id, { [row.key]: !on })}
+                className={`rounded-lg border px-2 py-1 text-[10px] font-medium touch-manipulation ${
+                  on
+                    ? 'border-accent bg-accent-soft text-accent'
+                    : 'border-border bg-surface text-fg-muted hover:bg-hover hover:text-fg'
+                }`}
+              >
+                {row.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-[10px] leading-snug text-fg-subtle">
+          These toggles apply immediately to this entry. Select entries below to stage a
+          change across many.
+        </p>
+      </div>
+
+      <section className="space-y-2">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+          <ArrowDownToLine className="h-3.5 w-3.5 text-accent" />
+          Unlocked by ({inbound.length})
+        </h3>
+        {inbound.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs leading-relaxed text-fg-muted">
+            {inspectedEntry.excludeRecursion
+              ? 'Non-recursable is on: nothing can unlock this via recursion.'
+              : 'No other entry’s content mentions this entry’s keys.'}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {inbound.map((edge) => {
+              const other = entryById.get(edge.fromId);
+              if (!other) return null;
+              return (
+                <li key={`in-${edge.fromId}`}>
+                  <LinkRow
+                    edge={edge}
+                    direction="in"
+                    other={other}
+                    otherIndex={indexById.get(other.id)}
+                    ownerKeys={inspectedEntry.keys ?? []}
+                    onInspect={() => onInspect(other.id)}
+                    onChangeOwnerKeys={(nextKeys) =>
+                      onPatchEntry(inspectedEntry.id, { keys: nextKeys })
+                    }
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+          <ArrowUpFromLine className="h-3.5 w-3.5 text-success" />
+          Unlocks ({outbound.length})
+        </h3>
+        {outbound.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs leading-relaxed text-fg-muted">
+            {inspectedEntry.preventRecursion
+              ? 'Prevent further recursion is on: this entry will not unlock others.'
+              : 'This entry’s content does not mention other entries’ keys.'}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {outbound.map((edge) => {
+              const other = entryById.get(edge.toId);
+              if (!other) return null;
+              return (
+                <li key={`out-${edge.toId}`}>
+                  <LinkRow
+                    edge={edge}
+                    direction="out"
+                    other={other}
+                    otherIndex={indexById.get(other.id)}
+                    ownerKeys={other.keys ?? []}
+                    onInspect={() => onInspect(other.id)}
+                    onChangeOwnerKeys={(nextKeys) => onPatchEntry(other.id, { keys: nextKeys })}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </>
+  );
+}
+
+function SelectionBarBody({
+  compact,
+  flagsExpanded,
+  selectedCount,
+  selectedEntries,
+  query,
+  filter,
+  visibleCount,
+  pendingPatch,
+  applyArmed,
+  onSelectAll,
+  onSelectVisible,
+  onSelectLinked,
+  onClearSelection,
+  onStageFlag,
+  onStageIsolate,
+  onApply,
+  onDiscard,
+  onOpenFlags,
+  onHideFlags,
+}: {
+  compact: boolean;
+  flagsExpanded: boolean;
+  selectedCount: number;
+  selectedEntries: LorebookEntry[];
+  query: string;
+  filter: ListFilter;
+  visibleCount: number;
+  pendingPatch: PendingPatch | null;
+  applyArmed: boolean;
+  onSelectAll: () => void;
+  onSelectVisible: () => void;
+  onSelectLinked: () => void;
+  onClearSelection: () => void;
+  onStageFlag: (key: FlagKey, value: boolean) => void;
+  onStageIsolate: () => void;
+  onApply: () => void;
+  onDiscard: () => void;
+  onOpenFlags: () => void;
+  onHideFlags: () => void;
+}): React.ReactElement {
+  const showFlags = !compact || flagsExpanded;
+  const noun = selectedCount === 1 ? 'entry' : 'entries';
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <p className="text-xs font-semibold text-fg">
+          {selectedCount} {noun} selected
+        </p>
+        <div className="flex flex-wrap gap-1">
+          <button
+            type="button"
+            onClick={onSelectAll}
+            className="rounded-md border border-border bg-surface px-2 py-1 text-[10px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+          >
+            All
+          </button>
+          {(query.trim() || filter !== 'all') && (
+            <button
+              type="button"
+              onClick={onSelectVisible}
+              disabled={visibleCount === 0}
+              className="rounded-md border border-border bg-surface px-2 py-1 text-[10px] text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-40 touch-manipulation"
+            >
+              Visible ({visibleCount})
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onSelectLinked}
+            className="rounded-md border border-border bg-surface px-2 py-1 text-[10px] text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+          >
+            Linked
+          </button>
+          <button
+            type="button"
+            onClick={onClearSelection}
+            className="inline-flex items-center gap-0.5 rounded-md border border-border bg-surface px-2 py-1 text-[10px] text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+          >
+            <X className="h-3 w-3" />
+            Clear
+          </button>
+        </div>
+        {compact && (
+          <button
+            type="button"
+            onClick={showFlags ? onHideFlags : onOpenFlags}
+            aria-expanded={showFlags}
+            className="ml-auto inline-flex items-center gap-0.5 rounded-md border border-border bg-surface px-2 py-1 text-[10px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+          >
+            {showFlags ? 'Hide flags' : 'Edit flags'}
+            <ChevronDown className={`h-3 w-3 transition-transform ${showFlags ? 'rotate-180' : ''}`} />
+          </button>
+        )}
+      </div>
+
+      {showFlags && (
+        <>
+          <div className="max-h-[min(40dvh,16rem)] space-y-3 divide-y divide-border/80 overflow-y-auto">
+            {FLAG_ROWS.map((row, i) => (
+              <div
+                key={row.key}
+                className={i === 0 ? 'pb-3' : i === FLAG_ROWS.length - 1 ? 'pt-3' : 'py-3'}
+              >
+                <FlagToggleRow
+                  label={row.label}
+                  hint={row.hint}
+                  state={flagState(selectedEntries, row.key)}
+                  pendingValue={pendingPatch?.key === row.key ? pendingPatch.value : null}
+                  onSet={(v) => onStageFlag(row.key, v)}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={onStageIsolate}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors touch-manipulation ${
+                pendingPatch?.key === 'both'
+                  ? 'border-accent bg-accent-soft text-accent'
+                  : 'border-border bg-muted/40 text-fg-muted hover:bg-hover hover:text-fg'
+              }`}
+              title="Stage Non-recursable ON + Prevent further recursion ON for the selection"
+            >
+              Isolate: block both directions
+            </button>
+            {pendingPatch ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-[11px] text-fg-muted">
+                  Pending: <span className="font-medium text-fg">{pendingLabel(pendingPatch)}</span>{' '}
+                  → {pendingPatch.value ? 'ON' : 'OFF'} for {selectedCount} {noun}
+                </p>
+                <button
+                  type="button"
+                  onClick={onApply}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold touch-manipulation ${
+                    applyArmed
+                      ? 'bg-warning text-fg-inverse'
+                      : 'bg-accent text-accent-fg hover:opacity-90'
+                  }`}
+                >
+                  {selectedCount > ARM_THRESHOLD && !applyArmed
+                    ? `Apply to ${selectedCount} entries…`
+                    : applyArmed
+                      ? 'Confirm apply'
+                      : 'Apply'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onDiscard}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+                >
+                  Discard
+                </button>
+              </div>
+            ) : (
+              <p className="text-[10px] text-fg-subtle">
+                Nothing staged; pick On/Off above, then Apply.
+              </p>
+            )}
+          </div>
+        </>
+      )}
+
+      {compact && !showFlags && pendingPatch && (
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[11px] text-fg-muted">
+            Pending: <span className="font-medium text-fg">{pendingLabel(pendingPatch)}</span> →{' '}
+            {pendingPatch.value ? 'ON' : 'OFF'}
+          </p>
+          <button
+            type="button"
+            onClick={onApply}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold touch-manipulation ${
+              applyArmed
+                ? 'bg-warning text-fg-inverse'
+                : 'bg-accent text-accent-fg hover:opacity-90'
+            }`}
+          >
+            {selectedCount > ARM_THRESHOLD && !applyArmed
+              ? `Apply to ${selectedCount} entries…`
+              : applyArmed
+                ? 'Confirm apply'
+                : 'Apply'}
+          </button>
+          <button
+            type="button"
+            onClick={onDiscard}
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function RecursionBookPanel({
   focusEntryId,
   entries,
@@ -230,6 +622,8 @@ export function RecursionBookPanel({
   const [showStandalone, setShowStandalone] = useState(false);
   const [pendingPatch, setPendingPatch] = useState<PendingPatch | null>(null);
   const [applyArmed, setApplyArmed] = useState(false);
+  const [flagsOpen, setFlagsOpen] = useState(false);
+  const isCompact = useCompactViewport();
 
   const entryIdSet = useMemo(() => new Set(entries.map((e) => e.id)), [entries]);
 
@@ -248,7 +642,9 @@ export function RecursionBookPanel({
   }, [entries]);
 
   const preferList = shouldPreferListLayout(entries.length, stats.edgeCount);
-  const viewMode: ViewMode = forcedView ?? (preferList ? 'list' : 'web');
+  const viewMode: ViewMode = isCompact
+    ? 'list'
+    : (forcedView ?? (preferList ? 'list' : 'web'));
 
   // Drop ids for deleted entries so bulk ops cannot act on ghosts.
   const activeSelectedIds = useMemo(() => {
@@ -349,6 +745,7 @@ export function RecursionBookPanel({
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
+    setFlagsOpen(false);
     clearPending();
   }, [clearPending]);
 
@@ -357,6 +754,7 @@ export function RecursionBookPanel({
       prev && prev.key === key && prev.value === value ? null : { key, value },
     );
     setApplyArmed(false);
+    setFlagsOpen(true);
   }, []);
 
   const stageIsolate = useCallback(() => {
@@ -364,6 +762,7 @@ export function RecursionBookPanel({
       prev && prev.key === 'both' ? null : { key: 'both', value: true },
     );
     setApplyArmed(false);
+    setFlagsOpen(true);
   }, []);
 
   const applyPending = useCallback(() => {
@@ -382,6 +781,8 @@ export function RecursionBookPanel({
   }, [pendingPatch, activeSelectedIds, applyArmed, onUpdateEntries]);
 
   const inspectedSelected = inspectedEntry != null && activeSelectedIds.has(inspectedEntry.id);
+  const compactFlagsExpanded =
+    isCompact && flagsOpen && inspectedEntry == null && activeSelectedIds.size > 0;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
@@ -435,29 +836,31 @@ export function RecursionBookPanel({
             </div>
           </>
         )}
-        <div className="ml-auto flex gap-1 rounded-lg border border-border p-0.5" role="group" aria-label="View mode">
-          {(
-            [
-              ['web', 'Web', GitFork],
-              ['list', 'List', List],
-            ] as const
-          ).map(([id, label, Icon]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setForcedView(id)}
-              aria-pressed={viewMode === id}
-              className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium touch-manipulation ${
-                viewMode === id
-                  ? 'bg-accent-soft text-accent'
-                  : 'text-fg-muted hover:bg-hover hover:text-fg'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
+        {!isCompact && (
+          <div className="ml-auto flex gap-1 rounded-lg border border-border p-0.5" role="group" aria-label="View mode">
+            {(
+              [
+                ['web', 'Web', GitFork],
+                ['list', 'List', List],
+              ] as const
+            ).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setForcedView(id)}
+                aria-pressed={viewMode === id}
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium touch-manipulation ${
+                  viewMode === id
+                    ? 'bg-accent-soft text-accent'
+                    : 'text-fg-muted hover:bg-hover hover:text-fg'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {preferList && viewMode === 'web' && (
@@ -501,7 +904,7 @@ export function RecursionBookPanel({
                         <button
                           type="button"
                           onClick={() => toggleSelect(entry.id)}
-                          className="flex shrink-0 items-center px-2 text-fg-muted hover:text-fg touch-manipulation"
+                          className="flex shrink-0 items-center px-2.5 text-fg-muted hover:text-fg touch-manipulation md:px-2"
                           aria-label={checked ? 'Deselect' : 'Select for bulk edit'}
                           aria-pressed={checked}
                           title="Select for bulk flag edit"
@@ -516,7 +919,7 @@ export function RecursionBookPanel({
                           type="button"
                           onClick={() => inspect(entry.id)}
                           aria-pressed={active}
-                          className="min-w-0 flex-1 px-1 py-2 text-left touch-manipulation"
+                          className="min-w-0 flex-1 px-1 py-2.5 text-left touch-manipulation md:py-2"
                         >
                           <p className="truncate text-sm font-medium text-fg">
                             {entryDisplayName(entry, indexById.get(entry.id))}
@@ -544,280 +947,110 @@ export function RecursionBookPanel({
                 })
               )}
             </ul>
+            {isCompact && inspectedEntry && (
+              <div className="min-h-0 shrink-0 space-y-3 overflow-y-auto border-t border-border bg-surface p-3 max-h-[min(60dvh,28rem)]">
+                <InspectorBody
+                  inspectedEntry={inspectedEntry}
+                  indexById={indexById}
+                  entryById={entryById}
+                  inbound={inbound}
+                  outbound={outbound}
+                  inspectedSelected={inspectedSelected}
+                  onToggleSelect={toggleSelect}
+                  onClearInspected={clearInspected}
+                  onPatchEntry={onPatchEntry}
+                  onInspect={inspect}
+                />
+              </div>
+            )}
+            {isCompact && !inspectedEntry && activeSelectedIds.size === 0 && (
+              <p className="shrink-0 border-t border-border px-3 py-2 text-[11px] text-fg-subtle">
+                Tap a row to inspect it
+              </p>
+            )}
+            {isCompact && activeSelectedIds.size > 0 && (
+              <div className="shrink-0 border-t border-border bg-surface p-3">
+                <SelectionBarBody
+                  compact
+                  flagsExpanded={compactFlagsExpanded}
+                  selectedCount={activeSelectedIds.size}
+                  selectedEntries={selectedEntries}
+                  query={query}
+                  filter={filter}
+                  visibleCount={sortedEntries.length}
+                  pendingPatch={pendingPatch}
+                  applyArmed={applyArmed}
+                  onSelectAll={selectAllEntries}
+                  onSelectVisible={selectAllVisible}
+                  onSelectLinked={selectAllLinked}
+                  onClearSelection={clearSelection}
+                  onStageFlag={stageFlag}
+                  onStageIsolate={stageIsolate}
+                  onApply={applyPending}
+                  onDiscard={clearPending}
+                  onOpenFlags={() => {
+                    clearInspected();
+                    setFlagsOpen(true);
+                  }}
+                  onHideFlags={() => setFlagsOpen(false)}
+                />
+              </div>
+            )}
           </div>
         )}
 
-        {/* Inspector — absolute overlay, never resizes the map */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex w-full max-w-sm flex-col gap-3 p-3 sm:w-96">
-          {!inspectedEntry ? (
-            <div className="flex flex-1 items-end justify-end">
-              <p className="rounded-lg border border-dashed border-border bg-surface/85 px-3 py-2 text-[11px] text-fg-subtle backdrop-blur-sm">
-                Click a {viewMode === 'web' ? 'node' : 'row'} to inspect it
-              </p>
-            </div>
-          ) : (
-            <div className="pointer-events-auto flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto rounded-2xl border border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-md">
-              <div className="rounded-xl border border-accent/40 bg-accent-soft/30 p-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-accent">
-                      Inspecting
-                    </p>
-                    <p className="truncate text-base font-semibold text-fg">
-                      {entryDisplayName(inspectedEntry, indexById.get(inspectedEntry.id))}
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      <RecursionFlagChips entry={inspectedEntry} />
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => toggleSelect(inspectedEntry.id)}
-                      className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-                    >
-                      {inspectedSelected ? 'Remove from selection' : 'Select'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={clearInspected}
-                      className="rounded-lg border border-border bg-surface p-1.5 text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-                      aria-label="Stop inspecting"
-                      title="Stop inspecting"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-fg-subtle">
-                    Keys
-                  </p>
-                  <RecursionKeyChips
-                    keys={inspectedEntry.keys ?? []}
-                    onChange={(nextKeys) => onPatchEntry(inspectedEntry.id, { keys: nextKeys })}
-                    placeholder="Add a key"
-                    aria-label="Primary keys for this entry"
-                  />
-                  <p className="mt-1 text-[10px] leading-snug text-fg-subtle">
-                    Edits write to this entry and update the map immediately.
-                  </p>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {FLAG_ROWS.map((row) => {
-                    const on = inspectedEntry[row.key] === true;
-                    return (
-                      <button
-                        key={row.key}
-                        type="button"
-                        aria-pressed={on}
-                        title={row.hint}
-                        onClick={() => onPatchEntry(inspectedEntry.id, { [row.key]: !on })}
-                        className={`rounded-lg border px-2 py-1 text-[10px] font-medium touch-manipulation ${
-                          on
-                            ? 'border-accent bg-accent-soft text-accent'
-                            : 'border-border bg-surface text-fg-muted hover:bg-hover hover:text-fg'
-                        }`}
-                      >
-                        {row.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-[10px] leading-snug text-fg-subtle">
-                  These toggles apply immediately to this entry. Select entries below to stage a
-                  change across many.
+        {!isCompact && (
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex w-full max-w-sm flex-col gap-3 p-3 sm:w-96">
+            {!inspectedEntry ? (
+              <div className="flex flex-1 items-end justify-end">
+                <p className="rounded-lg border border-dashed border-border bg-surface/85 px-3 py-2 text-[11px] text-fg-subtle backdrop-blur-sm">
+                  Click a {viewMode === 'web' ? 'node' : 'row'} to inspect it
                 </p>
-              </div>
-
-              <section className="space-y-2">
-                <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                  <ArrowDownToLine className="h-3.5 w-3.5 text-accent" />
-                  Unlocked by ({inbound.length})
-                </h3>
-                {inbound.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs leading-relaxed text-fg-muted">
-                    {inspectedEntry.excludeRecursion
-                      ? 'Non-recursable is on: nothing can unlock this via recursion.'
-                      : 'No other entry’s content mentions this entry’s keys.'}
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {inbound.map((edge) => {
-                      const other = entryById.get(edge.fromId);
-                      if (!other) return null;
-                      return (
-                        <li key={`in-${edge.fromId}`}>
-                          <LinkRow
-                            edge={edge}
-                            direction="in"
-                            other={other}
-                            otherIndex={indexById.get(other.id)}
-                            ownerKeys={inspectedEntry.keys ?? []}
-                            onInspect={() => inspect(other.id)}
-                            onChangeOwnerKeys={(nextKeys) =>
-                              onPatchEntry(inspectedEntry.id, { keys: nextKeys })
-                            }
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </section>
-
-              <section className="space-y-2">
-                <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                  <ArrowUpFromLine className="h-3.5 w-3.5 text-success" />
-                  Unlocks ({outbound.length})
-                </h3>
-                {outbound.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs leading-relaxed text-fg-muted">
-                    {inspectedEntry.preventRecursion
-                      ? 'Prevent further recursion is on: this entry will not unlock others.'
-                      : 'This entry’s content does not mention other entries’ keys.'}
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {outbound.map((edge) => {
-                      const other = entryById.get(edge.toId);
-                      if (!other) return null;
-                      return (
-                        <li key={`out-${edge.toId}`}>
-                          <LinkRow
-                            edge={edge}
-                            direction="out"
-                            other={other}
-                            otherIndex={indexById.get(other.id)}
-                            ownerKeys={other.keys ?? []}
-                            onInspect={() => inspect(other.id)}
-                            onChangeOwnerKeys={(nextKeys) =>
-                              onPatchEntry(other.id, { keys: nextKeys })
-                            }
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </section>
-            </div>
-          )}
-        </div>
-
-        {/* Selection bar — absolute overlay at map bottom, never resizes the map */}
-        {activeSelectedIds.size > 0 && (
-          <div className="absolute inset-x-3 bottom-3 z-10 space-y-3 rounded-xl border border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-md">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <p className="text-xs font-semibold text-fg">
-              {activeSelectedIds.size} {activeSelectedIds.size === 1 ? 'entry' : 'entries'} selected
-            </p>
-            <div className="flex flex-wrap gap-1">
-              <button
-                type="button"
-                onClick={selectAllEntries}
-                className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-              >
-                All
-              </button>
-              {(query.trim() || filter !== 'all') && (
-                <button
-                  type="button"
-                  onClick={selectAllVisible}
-                  disabled={sortedEntries.length === 0}
-                  className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-40 touch-manipulation"
-                >
-                  Visible ({sortedEntries.length})
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={selectAllLinked}
-                className="rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-              >
-                Linked
-              </button>
-              <button
-                type="button"
-                onClick={clearSelection}
-                className="inline-flex items-center gap-0.5 rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-              >
-                <X className="h-3 w-3" />
-                Clear
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-3 divide-y divide-border/80">
-            {FLAG_ROWS.map((row, i) => (
-              <div
-                key={row.key}
-                className={i === 0 ? 'pb-3' : i === FLAG_ROWS.length - 1 ? 'pt-3' : 'py-3'}
-              >
-                <FlagToggleRow
-                  label={row.label}
-                  hint={row.hint}
-                  state={flagState(selectedEntries, row.key)}
-                  pendingValue={
-                    pendingPatch?.key === row.key ? pendingPatch.value : null
-                  }
-                  onSet={(v) => stageFlag(row.key, v)}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <button
-              type="button"
-              onClick={stageIsolate}
-              className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors touch-manipulation ${
-                pendingPatch?.key === 'both'
-                  ? 'border-accent bg-accent-soft text-accent'
-                  : 'border-border bg-muted/40 text-fg-muted hover:bg-hover hover:text-fg'
-              }`}
-              title="Stage Non-recursable ON + Prevent further recursion ON for the selection"
-            >
-              Isolate: block both directions
-            </button>
-            {pendingPatch ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[11px] text-fg-muted">
-                  Pending: <span className="font-medium text-fg">{pendingLabel(pendingPatch)}</span>{' '}
-                  → {pendingPatch.value ? 'ON' : 'OFF'} for {activeSelectedIds.size}{' '}
-                  {activeSelectedIds.size === 1 ? 'entry' : 'entries'}
-                </p>
-                <button
-                  type="button"
-                  onClick={applyPending}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold touch-manipulation ${
-                    applyArmed
-                      ? 'bg-warning text-fg-inverse'
-                      : 'bg-accent text-accent-fg hover:opacity-90'
-                  }`}
-                >
-                  {activeSelectedIds.size > ARM_THRESHOLD && !applyArmed
-                    ? `Apply to ${activeSelectedIds.size} entries…`
-                    : applyArmed
-                      ? 'Confirm apply'
-                      : 'Apply'}
-                </button>
-                <button
-                  type="button"
-                  onClick={clearPending}
-                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg touch-manipulation"
-                >
-                  Discard
-                </button>
               </div>
             ) : (
-              <p className="text-[10px] text-fg-subtle">
-                Nothing staged; pick On/Off above, then Apply.
-              </p>
+              <div className="pointer-events-auto flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto rounded-2xl border border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-md">
+                <InspectorBody
+                  inspectedEntry={inspectedEntry}
+                  indexById={indexById}
+                  entryById={entryById}
+                  inbound={inbound}
+                  outbound={outbound}
+                  inspectedSelected={inspectedSelected}
+                  onToggleSelect={toggleSelect}
+                  onClearInspected={clearInspected}
+                  onPatchEntry={onPatchEntry}
+                  onInspect={inspect}
+                />
+              </div>
             )}
           </div>
-        </div>
-      )}
+        )}
+
+        {!isCompact && activeSelectedIds.size > 0 && (
+          <div className="absolute inset-x-3 bottom-3 z-10 rounded-xl border border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-md">
+            <SelectionBarBody
+              compact={false}
+              flagsExpanded
+              selectedCount={activeSelectedIds.size}
+              selectedEntries={selectedEntries}
+              query={query}
+              filter={filter}
+              visibleCount={sortedEntries.length}
+              pendingPatch={pendingPatch}
+              applyArmed={applyArmed}
+              onSelectAll={selectAllEntries}
+              onSelectVisible={selectAllVisible}
+              onSelectLinked={selectAllLinked}
+              onClearSelection={clearSelection}
+              onStageFlag={stageFlag}
+              onStageIsolate={stageIsolate}
+              onApply={applyPending}
+              onDiscard={clearPending}
+              onOpenFlags={() => setFlagsOpen(true)}
+              onHideFlags={() => setFlagsOpen(false)}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
