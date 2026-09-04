@@ -53,7 +53,8 @@ const AddCustomTagForm: React.FC<{
   categoryKey: string;
   isGenerating: boolean;
   onAdd: (categoryKey: string, raw: string) => Promise<{ ok: boolean; slug?: string; error?: string }>;
-}> = ({ categoryKey, isGenerating, onAdd }) => {
+  onAdded: (slug: string) => void;
+}> = ({ categoryKey, isGenerating, onAdd, onAdded }) => {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -66,6 +67,7 @@ const AddCustomTagForm: React.FC<{
     setIsAdding(false);
     if (result.ok) {
       setValue('');
+      if (result.slug) onAdded(result.slug);
     } else {
       setError(result.error ?? 'Could not add tag.');
     }
@@ -471,6 +473,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                       categoryKey={category.key}
                       isGenerating={isGenerating}
                       onAdd={onAddCustomTag}
+                      onAdded={(slug) => toggleTag(category.key, slug)}
                     />
                   )}
                 </div>

@@ -89,50 +89,50 @@ export function useStudioTags(): UseStudioTagsResult {
     };
   }, [applyPrefs]);
 
-  const persistCustomTags = useCallback(async (next: Record<string, string[]>) => {
+  const addCustomTag = useCallback(async (categoryKey: string, raw: string) => {
+    if (categoryKey === 'generation') {
+      return { ok: false, error: 'Custom tags cannot be added to Generation.' };
+    }
+    const slug = normalizeTagSlug(raw);
+    if (!slug) {
+      return { ok: false, error: 'Use letters and numbers — e.g. "space pirate".' };
+    }
+    const base = TAG_CATEGORIES.find((c) => c.key === categoryKey);
+    if (!base) return { ok: false, error: 'Unknown category.' };
+    // Merge against a fresh read so concurrent adds cannot clobber each other.
     const studio = await characterSettingsService.getStudioSettings();
+    const current = studio.tags.customTags ?? {};
+    const existing = [...base.tags, ...(current[categoryKey] ?? [])];
+    if (existing.includes(slug)) {
+      setCustomTags(current);
+      return { ok: false, error: 'That tag already exists in this category.' };
+    }
+    const next = {
+      ...current,
+      [categoryKey]: [...(current[categoryKey] ?? []), slug],
+    };
+    await characterSettingsService.saveStudioSettings({
+      ...studio,
+      tags: { ...studio.tags, customTags: next },
+    });
+    setCustomTags(next);
+    return { ok: true, slug };
+  }, []);
+
+  const removeCustomTag = useCallback(async (categoryKey: string, tag: string) => {
+    if (!isCustomTag(categoryKey, tag)) return;
+    // Merge against a fresh read so concurrent edits cannot clobber each other.
+    const studio = await characterSettingsService.getStudioSettings();
+    const current = studio.tags.customTags ?? {};
+    const next = { ...current };
+    next[categoryKey] = (next[categoryKey] ?? []).filter((t) => t !== tag);
+    if (next[categoryKey].length === 0) delete next[categoryKey];
     await characterSettingsService.saveStudioSettings({
       ...studio,
       tags: { ...studio.tags, customTags: next },
     });
     setCustomTags(next);
   }, []);
-
-  const addCustomTag = useCallback(
-    async (categoryKey: string, raw: string) => {
-      if (categoryKey === 'generation') {
-        return { ok: false, error: 'Custom tags cannot be added to Generation.' };
-      }
-      const slug = normalizeTagSlug(raw);
-      if (!slug) {
-        return { ok: false, error: 'Use letters and numbers — e.g. "space pirate".' };
-      }
-      const base = TAG_CATEGORIES.find((c) => c.key === categoryKey);
-      if (!base) return { ok: false, error: 'Unknown category.' };
-      const existing = [...base.tags, ...(customTags[categoryKey] ?? [])];
-      if (existing.includes(slug)) {
-        return { ok: false, error: 'That tag already exists in this category.' };
-      }
-      const next = {
-        ...customTags,
-        [categoryKey]: [...(customTags[categoryKey] ?? []), slug],
-      };
-      await persistCustomTags(next);
-      return { ok: true, slug };
-    },
-    [customTags, persistCustomTags]
-  );
-
-  const removeCustomTag = useCallback(
-    async (categoryKey: string, tag: string) => {
-      if (!isCustomTag(categoryKey, tag)) return;
-      const next = { ...customTags };
-      next[categoryKey] = (next[categoryKey] ?? []).filter((t) => t !== tag);
-      if (next[categoryKey].length === 0) delete next[categoryKey];
-      await persistCustomTags(next);
-    },
-    [customTags, persistCustomTags]
-  );
 
   const toggleFavorite = useCallback((category: string, tag: string) => {
     setFavorites(toggleFavoriteTag(category, tag));
