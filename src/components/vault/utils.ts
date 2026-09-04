@@ -32,3 +32,21 @@ export function formatRelativeTime(timestamp?: string): string {
 export function getVaultPageSize(): number {
   return 12;
 }
+
+export function getVisiblePageNumbers(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const windowPages = new Set<number>([1, 2, total - 1, total, current - 1, current, current + 1]);
+  const sorted = [...windowPages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const result: (number | 'ellipsis')[] = [];
+  let prev = 0;
+  for (const page of sorted) {
+    if (prev !== 0 && page - prev > 1) {
+      result.push('ellipsis');
+    }
+    result.push(page);
+    prev = page;
+  }
+  return result;
+}

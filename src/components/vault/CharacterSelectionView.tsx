@@ -10,6 +10,7 @@ import { VaultToolbar } from './VaultToolbar';
 import { VaultGrid } from './VaultGrid';
 import { VaultModals } from './VaultModals';
 import { LorebookVaultView } from './LorebookVaultView';
+import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 
 const VAULT_TAB_KEY = 'characterVaultActiveTab';
 
@@ -48,6 +49,7 @@ export function CharacterSelectionView({
   const [lorebookSearch, setLorebookSearch] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<ConfirmTarget | null>(null);
   const [copyConfirm, setCopyConfirm] = useState<ConfirmTarget | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const selectTab = (tab: VaultTab) => {
     setVaultTab(tab);
@@ -154,6 +156,7 @@ export function CharacterSelectionView({
         isDark={isDark}
         onToggleTheme={toggleTheme}
         onReplayTutorial={onReplayTutorial}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         onImportClick={io.openFilePicker}
         onBackupClick={io.handleBackupClick}
         onCreateClick={() => setIsCreating(true)}
@@ -352,6 +355,11 @@ export function CharacterSelectionView({
           </a>
         </nav>
       </footer>
+
+      <CharacterSettingsPanel
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }
