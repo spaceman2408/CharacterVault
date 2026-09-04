@@ -13,10 +13,11 @@ import type {
   PromptModelMap,
   CharacterSection,
   DefaultChatPanel,
+  StudioSettings,
 } from '../../db/characterTypes';
 import type { ModelProvider } from '../../services/providers';
 
-export type SettingsTabId = 'ai' | 'sampler' | 'prompts' | 'studio' | 'sections';
+export type SettingsTabId = 'ai' | 'sampler' | 'prompts' | 'studio' | 'workspace' | 'sections';
 
 export interface ToastNotification {
   id: string;
@@ -39,6 +40,7 @@ export interface SettingsDraft {
   spellcheckLanguage: string;
   sectionOrder: CharacterSection[];
   hiddenSections: CharacterSection[];
+  studio: StudioSettings;
 }
 
 export interface CharacterSettingsPanelProps {

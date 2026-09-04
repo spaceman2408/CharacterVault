@@ -18,6 +18,8 @@ import {
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_CHAT_PANEL,
   DEFAULT_REQUIRE_AGENT_REVIEW,
+  DEFAULT_STUDIO_SETTINGS,
+  normalizeStudioSettings,
   clampContextLength,
   normalizeDefaultChatPanel,
 } from '../../../db/characterTypes';
@@ -26,6 +28,7 @@ import {
   persistableAIConfig,
 } from '../../../services/CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from '../../../services/resolveOperationConfig';
+import { validateStudioPrompts } from '../../../pages/ai-creation-studio/generationPrompts';
 import { normalizeBaseUrl } from '../config/aiBaseUrlPresets';
 import type { AddToast, SettingsDraft } from '../types';
 
@@ -47,6 +50,15 @@ export function createDefaultDraft(): SettingsDraft {
     spellcheckLanguage: DEFAULT_SPELLCHECK_SETTINGS.language,
     sectionOrder: [...DEFAULT_SECTION_ORDER],
     hiddenSections: [],
+    studio: {
+      enabledFields: { ...DEFAULT_STUDIO_SETTINGS.enabledFields },
+      prompts: { ...DEFAULT_STUDIO_SETTINGS.prompts },
+      tags: {
+        hideNsfw: false,
+        hiddenCategories: [],
+        customTags: {},
+      },
+    },
   };
 }
 
@@ -171,7 +183,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     const loadSettings = async () => {
       setIsLoading(true);
       try {
-        const [config, sampler, prompts, promptModels, agentModel, fullSettings, secOrder, secHidden, spell] =
+        const [config, sampler, prompts, promptModels, agentModel, fullSettings, secOrder, secHidden, spell, studio] =
           await Promise.all([
             characterSettingsService.getAISettings(),
             characterSettingsService.getSamplerSettings(),
@@ -182,6 +194,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
             characterSettingsService.getSectionOrder(),
             characterSettingsService.getHiddenSections(),
             characterSettingsService.getSpellcheckSettings(),
+            characterSettingsService.getStudioSettings(),
           ]);
 
         if (cancelled || !mountedRef.current) return;
@@ -202,6 +215,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           spellcheckLanguage: spell.language,
           sectionOrder: secOrder,
           hiddenSections: secHidden,
+          studio: normalizeStudioSettings(studio),
         });
       } catch (err) {
         if (cancelled || !mountedRef.current) return;
@@ -240,6 +254,13 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     const agentModelError = validateAgentModel(draft.agentModel);
     if (agentModelError) {
       addToast('error', agentModelError);
+      setIsSaving(false);
+      return;
+    }
+
+    const studioPromptsError = validateStudioPrompts(draft.studio.prompts);
+    if (studioPromptsError) {
+      addToast('error', studioPromptsError);
       setIsSaving(false);
       return;
     }
@@ -289,6 +310,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         },
         sectionOrder: draft.sectionOrder,
         hiddenSections: draft.hiddenSections,
+        studio: normalizeStudioSettings(draft.studio),
       });
 
       await characterSettingsService.saveSpellcheckSettings({

@@ -11,6 +11,7 @@ import type {
   PromptModelBinding,
   PromptModelMap,
   SpellcheckSettings,
+  StudioSettings,
 } from '../db/characterTypes';
 import { DEFAULT_SETTINGS } from '../db/characterTypes';
 import {
@@ -18,6 +19,8 @@ import {
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_SECTION_ORDER,
   DEFAULT_SPELLCHECK_SETTINGS,
+  DEFAULT_STUDIO_SETTINGS,
+  normalizeStudioSettings,
 } from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
 import type { CharacterSection } from '../db/characterTypes';
@@ -284,6 +287,19 @@ export class CharacterSettingsService {
     return normalizeModelBinding(settings.agentModel);
   }
 
+  async getStudioSettings(): Promise<StudioSettings> {
+    const settings = await this.getSettings();
+    return normalizeStudioSettings(settings.studio ?? DEFAULT_STUDIO_SETTINGS);
+  }
+
+  async saveStudioSettings(studio: StudioSettings): Promise<void> {
+    const settings = await this.getSettings();
+    await characterDb.settings.put({
+      ...settings,
+      studio: normalizeStudioSettings(studio),
+    });
+  }
+
   /**
    * Save AI prompt settings
    */
@@ -375,6 +391,15 @@ export class CharacterSettingsService {
       prompts: DEFAULT_SETTINGS.prompts,
       promptModels: {},
       contextSectionIds: [],
+      studio: {
+        enabledFields: { ...DEFAULT_STUDIO_SETTINGS.enabledFields },
+        prompts: { ...DEFAULT_STUDIO_SETTINGS.prompts },
+        tags: {
+          hideNsfw: false,
+          hiddenCategories: [],
+          customTags: {},
+        },
+      },
     };
     
     await characterDb.settings.put(defaultSettings);
