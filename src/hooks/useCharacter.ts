@@ -17,6 +17,12 @@ import {
   dropOpenLorebookPayload,
   registerCharacterPayloadDrop,
 } from '../utils/workspaceExclusive';
+import { discardPendingSavesForCharacter } from '../utils/characterPendingSaveDiscard';
+import { flushChatSessions } from '../utils/chatSessionFlush';
+import {
+  dropPendingChatWritesForOwner,
+  pendingChatWritesForOwner,
+} from '../services/ChatHistoryService';
 
 const IMPORTED_CHARACTER_FLAG = 'character_vault_imported';
 
@@ -191,23 +197,29 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
    */
   const deleteCharacter = useCallback(async (characterId: string): Promise<void> => {
     try {
+      discardPendingSavesForCharacter(characterId);
+      for (const key of [...specUpdateSequenceRef.current.keys()]) {
+        if (key.startsWith(`${characterId}:`)) specUpdateSequenceRef.current.delete(key);
+      }
+      await flushChatSessions().catch(() => undefined);
+      await pendingChatWritesForOwner('character', characterId);
       await characterDb.deleteCharacter(characterId);
+      dropPendingChatWritesForOwner('character', characterId);
       setCharacters((prev) => prev.filter((c) => c.id !== characterId));
       setCharacterListItems((prev) => prev.filter((c) => c.id !== characterId));
 
       if (currentCharacterId === characterId) {
         setCurrentCharacterId(null);
         setCharacters([]);
-        if (settings) {
-          await characterDb.updateSettings({ lastActiveCharacterId: undefined });
-          setSettings({ ...settings, lastActiveCharacterId: undefined });
-        }
+      }
+      if (settingsRef.current?.lastActiveCharacterId === characterId) {
+        setSettings({ ...settingsRef.current, lastActiveCharacterId: undefined });
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to delete character'));
       throw err;
     }
-  }, [currentCharacterId, settings]);
+  }, [currentCharacterId]);
 
   /**
    * Update a character

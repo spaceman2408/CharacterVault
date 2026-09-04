@@ -91,6 +91,26 @@ export function chatWriteQueuePendingCount(): number {
   return writeQueues.size;
 }
 
+function queueKeysForOwner(ownerType: ChatOwnerType, ownerId: string): string[] {
+  const prefix = `${ownerType}:${ownerId}:`;
+  return [...writeQueues.keys()].filter((key) => key.startsWith(prefix));
+}
+
+/** Await in-flight per-thread writes for an owner (both panels). */
+export function pendingChatWritesForOwner(
+  ownerType: ChatOwnerType,
+  ownerId: string,
+): Promise<void> {
+  return Promise.all(queueKeysForOwner(ownerType, ownerId).map((key) => writeQueues.get(key))).then(() => undefined);
+}
+
+/** Drop queued (not yet started) write chains for an owner so post-delete puts cannot resurrect rows. */
+export function dropPendingChatWritesForOwner(ownerType: ChatOwnerType, ownerId: string): void {
+  for (const key of queueKeysForOwner(ownerType, ownerId)) {
+    writeQueues.delete(key);
+  }
+}
+
 function seqRange(
   thread: ChatThreadRef,
   seqLo: unknown,

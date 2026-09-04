@@ -726,8 +726,15 @@ export class CharacterDatabase extends Dexie {
         this.characterCustomContext,
         this.characterLorebookAttachments,
         this.chatMessages,
+        this.storedImages,
+        this.settings,
       ],
       async () => {
+        const victimHashes = new Set(
+          (await this.snapshotIndex.where('characterId').equals(id).toArray())
+            .map(entry => entry.imageHash)
+            .filter((hash): hash is string => hash !== null),
+        );
         await this.characters.delete(id);
         await this.characterListIndex.delete(id);
         await this.snapshots.where('characterId').equals(id).delete();
@@ -735,6 +742,19 @@ export class CharacterDatabase extends Dexie {
         await this.characterCustomContext.delete(id);
         await this.characterLorebookAttachments.delete(id);
         await this.chatMessages.where('[ownerType+ownerId]').equals(['character', id]).delete();
+        const prefs = await this.settings.get('app-settings');
+        if (prefs?.lastActiveCharacterId === id) {
+          await this.settings.put({ ...prefs, lastActiveCharacterId: undefined });
+        }
+        if (victimHashes.size > 0) {
+          const referencedHashes = new Set(
+            (await this.snapshotIndex.toArray())
+              .map(entry => entry.imageHash)
+              .filter((hash): hash is string => hash !== null),
+          );
+          const orphaned = [...victimHashes].filter(hash => !referencedHashes.has(hash));
+          await Promise.all(orphaned.map(hash => this.storedImages.delete(hash)));
+        }
       }
     );
   }

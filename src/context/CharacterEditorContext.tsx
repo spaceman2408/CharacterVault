@@ -37,6 +37,7 @@ import {
 import { lorebookAttachmentService } from '../services/LorebookAttachmentService';
 import { loadSnapshotDiff, openHistoryAfterFlush } from '../services/historyLifecycle';
 import { generateThumbnail } from '../utils/thumbnail';
+import { registerPendingSaveDiscard } from '../utils/characterPendingSaveDiscard';
 
 const CENTRAL_SAVE_DEBOUNCE_MS = 500;
 
@@ -276,6 +277,31 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     const results = await Promise.all(updates);
     return results.filter((result): result is Character => result !== null).at(-1) ?? character;
   }, [commitQueuedCharacterUpdate, commitQueuedSpecFieldUpdate]);
+
+  const discardPendingSaves = useCallback((characterId: string): void => {
+    const prefix = `${characterId}:`;
+    const rejection = new Error('Character deleted');
+    for (const [requestKey, timerId] of updateCharacterSaveTimerRef.current.entries()) {
+      if (!requestKey.startsWith(prefix)) continue;
+      window.clearTimeout(timerId);
+      updateCharacterSaveTimerRef.current.delete(requestKey);
+      updateCharacterPendingInputRef.current.delete(requestKey);
+      const resolvers = updateCharacterPendingResolversRef.current.get(requestKey);
+      updateCharacterPendingResolversRef.current.delete(requestKey);
+      resolvers?.reject.forEach(fn => fn(rejection));
+    }
+    for (const [requestKey, timerId] of specSaveTimerRef.current.entries()) {
+      if (!requestKey.startsWith(prefix)) continue;
+      window.clearTimeout(timerId);
+      specSaveTimerRef.current.delete(requestKey);
+      specPendingValueRef.current.delete(requestKey);
+      const resolvers = specPendingResolversRef.current.get(requestKey);
+      specPendingResolversRef.current.delete(requestKey);
+      resolvers?.reject.forEach(fn => fn(rejection));
+    }
+  }, []);
+
+  useEffect(() => registerPendingSaveDiscard(discardPendingSaves), [discardPendingSaves]);
 
   /**
    * Visible sections: sectionOrder minus hiddenSections.
