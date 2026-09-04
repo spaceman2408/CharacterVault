@@ -1,10 +1,10 @@
 /**
- * @fileoverview Studio preferences tab (vortex, default chat, editor links, spellcheck).
- * @module components/settings/tabs/StudioTab
+ * @fileoverview Character workspace preferences tab (default chat, agent edits, editor links, spellcheck).
+ * @module components/settings/tabs/WorkspaceTab
  */
 
 import React from 'react';
-import { Bot, ExternalLink, Languages, MessageSquare, ShieldCheck, Wand2 } from 'lucide-react';
+import { Bot, ExternalLink, Languages, MessageSquare, ShieldCheck } from 'lucide-react';
 import type { DefaultChatPanel } from '../../../db/characterTypes';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
@@ -20,29 +20,9 @@ const CHAT_PANEL_OPTIONS: Array<{
   { id: 'agent', label: 'Agent', hint: 'Chat that writes the open card or book', Icon: Bot },
 ];
 
-export const StudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
+export const WorkspaceTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   return (
     <div className="space-y-5">
-      <SettingsCard>
-        <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Wand2 className="w-4 h-4" />
-          AI Creation Studio
-        </h3>
-        <SettingsToggle
-          stacked
-          checked={draft.showLuckyVortex}
-          onChange={(checked) => setDraft((prev) => ({ ...prev, showLuckyVortex: checked }))}
-          label={'Show "I\'m Feeling Lucky" vortex animation'}
-          description={
-            <>
-              When enabled, pressing the &quot;I&apos;m Feeling Lucky&quot; button plays a swirling
-              tag vortex animation before generating. When disabled, random tags are chosen
-              instantly without any visual effect.
-            </>
-          }
-        />
-      </SettingsCard>
-
       <SettingsCard>
         <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
           <MessageSquare className="w-4 h-4" />

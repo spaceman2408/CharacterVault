@@ -264,6 +264,11 @@ export function CharacterSettingsPanel({
           <div
             className="flex min-h-12 sm:min-h-14 overflow-x-auto overflow-y-hidden border-b border-border px-2 sm:px-6 pt-1 sm:pt-2 bg-bg/50 scrollbar-thin scrollbar-thumb-fg-subtle shrink-0"
             role="tablist"
+            onWheel={(e) => {
+              if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                e.currentTarget.scrollLeft += e.deltaY;
+              }
+            }}
           >
             {SETTINGS_TABS.map((tab) => {
               const Icon = tab.icon;
