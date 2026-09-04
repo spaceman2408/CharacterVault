@@ -1,6 +1,7 @@
 import type { CharacterBook, CharacterSpec } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
 import type { ActionResult, AgentHost, AgentToolMode, ParsedAction } from '../../core/types';
+import type { CharacterReviewPayload } from '../../review/types';
 import { createLorebookHost } from '../lorebook/createHost';
 import { LOREBOOK_TOOL_SPECS } from '../lorebook/schemas';
 import { LOREBOOK_TOOL_NAMES } from '../lorebook/tools';
@@ -52,12 +53,17 @@ export interface CharacterHostIO {
   takeSnapshot?: () => Promise<void>;
   maxFieldUpdates?: number;
   maxGreetingMutations?: number;
+  /** When true, flush() stages edits for review instead of persisting them. */
+  shouldReview?: () => boolean;
+  onPendingReview?: (pending: CharacterReviewPayload) => void;
 }
 
 export function createCharacterHost(io: CharacterHostIO): AgentHost {
   const maxFieldUpdates = io.maxFieldUpdates ?? MAX_FIELD_UPDATES_PER_RUN;
   const maxGreetingMutations = io.maxGreetingMutations ?? MAX_GREETING_MUTATIONS_PER_RUN;
-  let spec = cloneSpec(io.getSpec());
+  const originalSpec = cloneSpec(io.getSpec());
+  const originalBook = structuredClone(io.getBook());
+  let spec = cloneSpec(originalSpec);
   let specDirty = false;
   let pendingBook: CharacterBook | null = null;
   let fieldUpdatesThisRun = 0;
@@ -336,6 +342,17 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
     async flush(): Promise<void> {
       await loreHost.flush?.();
       if (!specDirty && pendingBook == null) return;
+      if (io.shouldReview?.()) {
+        io.onPendingReview?.({
+          originalSpec: cloneSpec(originalSpec),
+          proposedSpec: specDirty ? cloneSpec(spec) : undefined,
+          originalBook: structuredClone(originalBook),
+          proposedBook: pendingBook ? structuredClone(pendingBook) : undefined,
+        });
+        specDirty = false;
+        pendingBook = null;
+        return;
+      }
       if (!snapshotTaken) {
         await io.takeSnapshot?.();
         snapshotTaken = true;

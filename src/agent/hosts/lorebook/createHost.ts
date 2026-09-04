@@ -1,6 +1,7 @@
 import type { CharacterBook } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
 import type { ActionResult, AgentHost, AgentToolMode, ParsedAction } from '../../core/types';
+import type { LorebookReviewPayload } from '../../review/types';
 import { MAX_REPLACE_ACROSS_PER_RUN } from '../search';
 import { formatEntryCatalog } from './catalog';
 import { buildLorebookAgentSystemPrompt } from './prompt';
@@ -39,11 +40,15 @@ export interface LorebookHostIO {
   getCustomContext: () => Promise<string | null>;
   takeSnapshot?: () => Promise<void>;
   maxNewEntries?: number;
+  /** When true, flush() stages edits for review instead of persisting them. */
+  shouldReview?: () => boolean;
+  onPendingReview?: (pending: LorebookReviewPayload) => void;
 }
 
 export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
   const maxNewEntries = io.maxNewEntries ?? MAX_NEW_ENTRIES_PER_RUN;
-  let book = io.getBook();
+  const originalBook = structuredClone(io.getBook());
+  let book = structuredClone(originalBook);
   let dirty = false;
   let addedThisRun = 0;
   let updatedThisRun = 0;
@@ -237,6 +242,14 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
 
     async flush(): Promise<void> {
       if (!dirty) return;
+      if (io.shouldReview?.()) {
+        io.onPendingReview?.({
+          originalBook: structuredClone(originalBook),
+          proposedBook: structuredClone(book),
+        });
+        dirty = false;
+        return;
+      }
       if (!snapshotTaken) {
         await io.takeSnapshot?.();
         snapshotTaken = true;
