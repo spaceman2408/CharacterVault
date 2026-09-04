@@ -85,9 +85,62 @@ export function VaultGrid({
     });
   };
 
+  const pagination = (label: string) => (
+    <nav aria-label={label} className="flex flex-wrap items-center justify-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => goToPage((prev) => Math.max(1, prev - 1))}
+        disabled={safeCurrentPage === 1}
+        aria-label="Go to previous page"
+        className="inline-flex items-center gap-1 px-3 py-2 bg-surface border border-border rounded-full hover:border-accent/40 hover:bg-accent-soft hover:text-accent transition-all text-sm font-medium text-fg-muted disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-surface disabled:hover:text-fg-muted"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        <span className="hidden sm:inline">Previous</span>
+      </button>
+      {pageNumbers.map((page, index) =>
+        page === 'ellipsis' ? (
+          <span key={`ellipsis-${index}`} aria-hidden="true" className="px-1 text-sm text-fg-subtle">
+            …
+          </span>
+        ) : (
+          <button
+            key={page}
+            type="button"
+            onClick={() => goToPage(page)}
+            disabled={page === safeCurrentPage}
+            aria-label={`Go to page ${page}`}
+            aria-current={page === safeCurrentPage ? 'page' : undefined}
+            className={`min-w-9 px-2.5 py-2 rounded-full text-sm font-medium transition-all border ${
+              page === safeCurrentPage
+                ? 'bg-accent text-accent-fg border-accent shadow-sm'
+                : 'bg-surface border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
+            }`}
+          >
+            {page}
+          </button>
+        )
+      )}
+      <button
+        type="button"
+        onClick={() => goToPage((prev) => Math.min(totalPages, prev + 1))}
+        disabled={safeCurrentPage === totalPages}
+        aria-label="Go to next page"
+        className="inline-flex items-center gap-1 px-3 py-2 bg-surface border border-border rounded-full hover:border-accent/40 hover:bg-accent-soft hover:text-accent transition-all text-sm font-medium text-fg-muted disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-surface disabled:hover:text-fg-muted"
+      >
+        <span className="hidden sm:inline">Next</span>
+        <ChevronRight className="w-4 h-4" />
+      </button>
+    </nav>
+  );
+
   return (
     <>
       <div id="vault-grid-top" className="scroll-mt-20" />
+      {totalPages > 1 && (
+        <div className="flex flex-col items-center gap-3 pb-6">
+          {pagination('Library pages (top)')}
+        </div>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 md:gap-6">
         {visibleCharacters.map((char) => (
           <CharacterCard
@@ -112,51 +165,7 @@ export function VaultGrid({
             Showing {rangeStart}–{rangeEnd} of {totalCount} characters
             <span className="text-fg-subtle"> · Page {safeCurrentPage} of {totalPages}</span>
           </p>
-          <nav aria-label="Library pages" className="flex flex-wrap items-center justify-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => goToPage((prev) => Math.max(1, prev - 1))}
-              disabled={safeCurrentPage === 1}
-              aria-label="Go to previous page"
-              className="inline-flex items-center gap-1 px-3 py-2 bg-surface border border-border rounded-full hover:border-accent/40 hover:bg-accent-soft hover:text-accent transition-all text-sm font-medium text-fg-muted disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-surface disabled:hover:text-fg-muted"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Previous</span>
-            </button>
-            {pageNumbers.map((page, index) =>
-              page === 'ellipsis' ? (
-                <span key={`ellipsis-${index}`} aria-hidden="true" className="px-1 text-sm text-fg-subtle">
-                  …
-                </span>
-              ) : (
-                <button
-                  key={page}
-                  type="button"
-                  onClick={() => goToPage(page)}
-                  disabled={page === safeCurrentPage}
-                  aria-label={`Go to page ${page}`}
-                  aria-current={page === safeCurrentPage ? 'page' : undefined}
-                  className={`min-w-9 px-2.5 py-2 rounded-full text-sm font-medium transition-all border ${
-                    page === safeCurrentPage
-                      ? 'bg-accent text-accent-fg border-accent shadow-sm'
-                      : 'bg-surface border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
-                  }`}
-                >
-                  {page}
-                </button>
-              )
-            )}
-            <button
-              type="button"
-              onClick={() => goToPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={safeCurrentPage === totalPages}
-              aria-label="Go to next page"
-              className="inline-flex items-center gap-1 px-3 py-2 bg-surface border border-border rounded-full hover:border-accent/40 hover:bg-accent-soft hover:text-accent transition-all text-sm font-medium text-fg-muted disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-surface disabled:hover:text-fg-muted"
-            >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </nav>
+          {pagination('Library pages')}
         </div>
       )}
     </>
