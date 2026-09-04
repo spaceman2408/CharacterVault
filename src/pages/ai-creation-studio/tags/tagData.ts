@@ -9,9 +9,11 @@ import roleTags from './role.json';
 import genreTags from './genre.json';
 import toneTags from './tone.json';
 import appearanceTags from './appearance.json';
+import dynamicTags from './dynamic.json';
+import kinkTags from './kink_fetish.json';
 import generationTags from './generation.json';
 
-export type TagCategoryKey = 'identity' | 'personality' | 'role' | 'genre' | 'tone' | 'appearance' | 'generation';
+export type TagCategoryKey = 'identity' | 'personality' | 'role' | 'genre' | 'tone' | 'appearance' | 'dynamic' | 'kink_fetish' | 'generation';
 
 export type GenerationTagKey = 
   | 'first_person'
@@ -25,6 +27,8 @@ export interface TagCategory {
   key: TagCategoryKey;
   label: string;
   tags: string[];
+  nsfw?: boolean;
+  custom?: boolean;
 }
 
 export type TagSelections = Record<TagCategoryKey, string[]>;
@@ -188,6 +192,8 @@ export const TAG_CATEGORIES: readonly TagCategory[] = [
   { key: 'genre', label: 'Genre', tags: genreTags },
   { key: 'tone', label: 'Tone', tags: toneTags },
   { key: 'appearance', label: 'Appearance', tags: appearanceTags },
+  { key: 'dynamic', label: 'Dynamic', tags: dynamicTags },
+  { key: 'kink_fetish', label: 'Kink & Fetish', tags: kinkTags, nsfw: true },
 ] as const;
 
 const TAG_CATEGORY_MAP: Record<TagCategoryKey, string[]> = {
@@ -197,8 +203,15 @@ const TAG_CATEGORY_MAP: Record<TagCategoryKey, string[]> = {
   genre: genreTags,
   tone: toneTags,
   appearance: appearanceTags,
+  dynamic: dynamicTags,
+  kink_fetish: kinkTags,
   generation: generationTags,
 };
+
+/** Category keys treated as NSFW (hidden when the NSFW filter is on). */
+export const NSFW_TAG_CATEGORIES: readonly string[] = TAG_CATEGORIES.filter((c) => c.nsfw).map(
+  (c) => c.key
+);
 
 /**
  * Format a snake_case tag to human-readable Title Case.
@@ -229,7 +242,7 @@ export function getAllTags(): string[] {
  */
 export function buildConceptFromTags(selections: Record<string, string[]>): string {
   const parts: string[] = [];
-  const order: TagCategoryKey[] = ['identity', 'role', 'personality', 'genre', 'appearance', 'tone'];
+  const order: TagCategoryKey[] = ['identity', 'role', 'personality', 'genre', 'appearance', 'tone', 'dynamic', 'kink_fetish'];
 
   for (const key of order) {
     const tags = selections[key] ?? [];
@@ -321,20 +334,24 @@ function drawTags(
  *
  * Core categories (identity, role, personality): always 1–2 tags each
  * Supporting categories (genre, appearance, tone): 0–2 tags each
+ * Flavor categories (dynamic, kink_fetish): 0–1 tags each (kink skipped when NSFW is off)
  *
  * `lockedKeys` prevent overwriting existing selections in those categories.
- * 
+ *
  * Tags are selected with exclusion rules to prevent conflicting tags (e.g., male/female, mother/father).
  */
 export function randomizeTags(
   currentSelections: Record<string, string[]>,
-  lockedKeys: readonly string[] = []
+  lockedKeys: readonly string[] = [],
+  options: { includeNsfw?: boolean } = {}
 ): Record<string, string[]> {
+  const includeNsfw = options.includeNsfw ?? true;
   const next: Record<string, string[]> = { ...currentSelections };
 
   const coreCategoryKeys: TagCategoryKey[] = ['identity', 'role', 'personality'];
   const supportingKeys: TagCategoryKey[] = ['genre', 'appearance', 'tone'];
-  const randomizedKeys: TagCategoryKey[] = [...coreCategoryKeys, ...supportingKeys];
+  const flavorKeys: TagCategoryKey[] = ['dynamic', 'kink_fetish'];
+  const randomizedKeys: TagCategoryKey[] = [...coreCategoryKeys, ...supportingKeys, ...flavorKeys];
 
   for (const key of randomizedKeys) {
     if (!lockedKeys.includes(key)) {
@@ -355,6 +372,14 @@ export function randomizeTags(
   for (const key of supportingKeys) {
     if (lockedKeys.includes(key)) continue;
     next[key] = drawTags(TAG_CATEGORY_MAP[key], 0, 2, excludedTags);
+    // Update exclusions after each selection
+    excludedTags = getExcludedTags(next);
+  }
+
+  for (const key of flavorKeys) {
+    if (lockedKeys.includes(key)) continue;
+    if (key === 'kink_fetish' && !includeNsfw) continue;
+    next[key] = drawTags(TAG_CATEGORY_MAP[key], 0, 1, excludedTags);
     // Update exclusions after each selection
     excludedTags = getExcludedTags(next);
   }
@@ -411,4 +436,137 @@ export function getDefaultGenerationTags(): {
     perspective: 'third_person',
     tense: 'present_tense',
   };
+}
+
+/**
+ * Normalize raw user input into a tag slug (lowercase snake_case, max 40 chars).
+ * Returns '' when nothing usable remains.
+ */
+export function normalizeTagSlug(raw: string): string {
+  const slug = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, '_')
+    .replace(/[^a-z0-9_]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40);
+  return slug;
+}
+
+/**
+ * Merge user custom tags into a copy of the base categories.
+ * Unknown category keys and duplicates are ignored.
+ */
+export function mergeCustomTags(
+  base: readonly TagCategory[],
+  customTags: Record<string, string[]>
+): TagCategory[] {
+  return base.map((cat) => {
+    const extra = (customTags[cat.key] ?? []).filter(
+      (t) => typeof t === 'string' && t && !cat.tags.includes(t)
+    );
+    if (extra.length === 0) return { ...cat, tags: [...cat.tags] };
+    return { ...cat, tags: [...cat.tags, ...extra] };
+  });
+}
+
+/**
+ * Check whether a tag in a category is user-created (not in the built-in set).
+ */
+export function isCustomTag(categoryKey: string, tag: string): boolean {
+  const builtIn = (TAG_CATEGORY_MAP as Record<string, string[]>)[categoryKey];
+  if (!builtIn) return true;
+  return !builtIn.includes(tag);
+}
+
+export interface TagVisibility {
+  hideNsfw: boolean;
+  hiddenCategories: readonly string[];
+}
+
+/**
+ * Filter categories for browsing: drop hidden categories and, when
+ * hideNsfw is on, NSFW categories.
+ */
+export function getVisibleCategories(
+  categories: readonly TagCategory[],
+  visibility: TagVisibility
+): TagCategory[] {
+  return categories.filter((cat) => {
+    if (visibility.hiddenCategories.includes(cat.key)) return false;
+    if (visibility.hideNsfw && cat.nsfw) return false;
+    return true;
+  });
+}
+
+const FAVORITE_TAGS_KEY = 'cv-studio-favorite-tags';
+const RECENT_TAGS_KEY = 'cv-studio-recent-tags';
+const MAX_RECENT_TAGS = 12;
+
+export interface TaggedRef {
+  category: string;
+  tag: string;
+}
+
+function readTagRefList(key: string): TaggedRef[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (e): e is TaggedRef =>
+        typeof e === 'object' &&
+        e !== null &&
+        typeof (e as TaggedRef).category === 'string' &&
+        typeof (e as TaggedRef).tag === 'string'
+    );
+  } catch {
+    return [];
+  }
+}
+
+function writeTagRefList(key: string, list: TaggedRef[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch {
+    // Storage may be unavailable — favorites/recent are best-effort.
+  }
+}
+
+export function getFavoriteTags(): TaggedRef[] {
+  return readTagRefList(FAVORITE_TAGS_KEY);
+}
+
+export function isFavoriteTag(category: string, tag: string): boolean {
+  return getFavoriteTags().some((f) => f.category === category && f.tag === tag);
+}
+
+export function toggleFavoriteTag(category: string, tag: string): TaggedRef[] {
+  const current = getFavoriteTags();
+  const exists = current.some((f) => f.category === category && f.tag === tag);
+  const next = exists
+    ? current.filter((f) => !(f.category === category && f.tag === tag))
+    : [...current, { category, tag }];
+  writeTagRefList(FAVORITE_TAGS_KEY, next);
+  return next;
+}
+
+export function getRecentTags(): TaggedRef[] {
+  return readTagRefList(RECENT_TAGS_KEY);
+}
+
+export function pushRecentTags(refs: TaggedRef[]): TaggedRef[] {
+  const merged = [...refs, ...getRecentTags()];
+  const seen = new Set<string>();
+  const deduped = merged.filter((r) => {
+    const k = `${r.category}:${r.tag}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const next = deduped.slice(0, MAX_RECENT_TAGS);
+  writeTagRefList(RECENT_TAGS_KEY, next);
+  return next;
 }

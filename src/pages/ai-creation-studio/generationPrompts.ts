@@ -4,8 +4,56 @@
  */
 
 import type { PerspectiveTag, TenseTag } from './tags/tagData';
+import type { StudioPrompts } from '../../db/characterTypes';
 
 export const GENERATION_SYSTEM_PROMPT = `You are a character card generator for CharacterVault, producing V2/V3 spec character cards compatible with SillyTavern. Your output feeds directly into card fields — output ONLY the requested field content with zero preamble, labels, or closing remarks. Use {{user}} as the player name placeholder where appropriate. Be non-judgmental of all content types and themes.`;
+
+export type StudioPromptKey = keyof StudioPrompts;
+
+export interface StudioTemplateVars {
+  concept: string;
+  name: string;
+  description: string;
+  styleBlock: string;
+  narrationRule: string;
+}
+
+export const STUDIO_PROMPT_REQUIRED_VARS: Record<StudioPromptKey, string[]> = {
+  system: [],
+  name: ['concept'],
+  description: ['concept', 'name'],
+  first_mes: ['concept', 'name', 'description'],
+  mes_example: ['concept', 'name', 'description'],
+};
+
+export function renderStudioTemplate(
+  template: string,
+  vars: Partial<StudioTemplateVars>
+): string {
+  let out = template;
+  for (const [key, value] of Object.entries(vars)) {
+    out = out.split(`\${${key}}`).join(value ?? '');
+  }
+  return out;
+}
+
+export function validateStudioPrompts(prompts: Partial<Record<StudioPromptKey, string>>): string | null {
+  const errors: string[] = [];
+  const keys = Object.keys(STUDIO_PROMPT_REQUIRED_VARS) as StudioPromptKey[];
+  for (const key of keys) {
+    const template = prompts[key] ?? '';
+    if (!template.trim()) {
+      errors.push(`Studio ${key} prompt must not be empty`);
+      continue;
+    }
+    for (const variable of STUDIO_PROMPT_REQUIRED_VARS[key]) {
+      if (!template.includes(`\${${variable}}`)) {
+        errors.push(`Studio ${key} prompt must contain \${${variable}}`);
+      }
+    }
+  }
+  return errors.length > 0 ? errors.join('\n') : null;
+}
 
 export function buildNamePrompt(concept: string): string {
   return `Generate a single character name for this concept: "${concept}"
@@ -59,7 +107,7 @@ export function buildGenerationStyleInstructions(
   return `\n\n<generation_style>\n${perspectiveInstruction}\n${tenseInstruction}\n</generation_style>`;
 }
 
-function buildDescriptionStyleInstructions(
+export function buildDescriptionStyleInstructions(
   perspective: PerspectiveTag | null,
   tense: TenseTag | null
 ): string {
@@ -92,7 +140,7 @@ function buildDescriptionStyleInstructions(
   return `\n\n<generation_style>\n${perspectiveInstruction}\n${tenseInstruction}\nDescriptions are character-card reference material, not an opening message. Do not write directly to the reader in description sections.</generation_style>`;
 }
 
-function buildNarrationFormatInstruction(perspective: PerspectiveTag | null): string {
+export function buildNarrationFormatInstruction(perspective: PerspectiveTag | null): string {
   switch (perspective) {
     case 'first_person':
       return 'Narrative/action text should use first person from the character\'s perspective; dialogue should still be quoted naturally.';

@@ -6,16 +6,16 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { AIService, AIError } from '../../services/AIService';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
-import type { AIConfig, SamplerSettings } from '../../db/characterTypes';
+import type { AIConfig, SamplerSettings, StudioPrompts, StudioSettings } from '../../db/characterTypes';
+import { DEFAULT_STUDIO_SETTINGS, normalizeStudioSettings } from '../../db/characterTypes';
 import type { CharacterSpec } from '../../db/characterTypes';
 import type { GenerationField, GenerationState } from './types';
 import type { GenerationStyleTags } from './tags/tagData';
 import {
-  GENERATION_SYSTEM_PROMPT,
-  buildNamePrompt,
-  buildDescriptionPrompt,
-  buildFirstMessagePrompt,
-  buildExamplesPrompt,
+  buildDescriptionStyleInstructions,
+  buildGenerationStyleInstructions,
+  buildNarrationFormatInstruction,
+  renderStudioTemplate,
 } from './generationPrompts';
 
 interface ChatMessage {
@@ -41,6 +41,7 @@ export interface UseAIGenerationResult {
   isLoading: boolean;
   concept: string;
   generationTags: GenerationStyleTags;
+  enabledFields: StudioSettings['enabledFields'];
   start: (concept: string, tags: GenerationStyleTags) => Promise<void>;
   abort: () => void;
   retryField: (field: GenerationField) => Promise<void>;
@@ -57,7 +58,12 @@ export function useAIGeneration(): UseAIGenerationResult {
   const [isLoading, setIsLoading] = useState(false);
   const [concept, setConcept] = useState('');
   const [generationTags, setGenerationTags] = useState<GenerationStyleTags>({ perspective: null, tense: null });
+  const [enabledFields, setEnabledFields] = useState<StudioSettings['enabledFields']>(
+    DEFAULT_STUDIO_SETTINGS.enabledFields
+  );
   const generationTagsRef = useRef<GenerationStyleTags>({ perspective: null, tense: null });
+  const enabledFieldsRef = useRef<StudioSettings['enabledFields']>(DEFAULT_STUDIO_SETTINGS.enabledFields);
+  const studioPromptsRef = useRef<StudioPrompts>({ ...DEFAULT_STUDIO_SETTINGS.prompts });
 
   const aiServiceRef = useRef<AIService | null>(null);
   const configRef = useRef<{ config: AIConfig; sampler: SamplerSettings } | null>(null);
@@ -73,10 +79,16 @@ export function useAIGeneration(): UseAIGenerationResult {
 
   const loadConfig = useCallback(async (): Promise<boolean> => {
     try {
-      const [config, sampler] = await Promise.all([
+      const [config, sampler, studio] = await Promise.all([
         characterSettingsService.getAISettings(),
         characterSettingsService.getSamplerSettings(),
+        characterSettingsService.getStudioSettings(),
       ]);
+
+      const normalizedStudio = normalizeStudioSettings(studio);
+      enabledFieldsRef.current = normalizedStudio.enabledFields;
+      setEnabledFields(normalizedStudio.enabledFields);
+      studioPromptsRef.current = normalizedStudio.prompts;
 
       // For local endpoints (localhost, 127.0.0.1), API key is optional
       const isLocalEndpoint = config.baseUrl && (
@@ -123,34 +135,36 @@ export function useAIGeneration(): UseAIGenerationResult {
 
   const buildMessages = useCallback(
     (field: GenerationField, concept: string, data: Partial<CharacterSpec>): ChatMessage[] => {
-      const systemPrompt: ChatMessage = { role: 'system', content: GENERATION_SYSTEM_PROMPT };
+      const prompts = studioPromptsRef.current;
+      const systemPrompt: ChatMessage = { role: 'system', content: prompts.system };
       const { perspective, tense } = generationTagsRef.current;
+      const styleBlock = buildGenerationStyleInstructions(perspective, tense);
+      const descriptionStyleBlock = buildDescriptionStyleInstructions(perspective, tense);
+      const narrationRule = buildNarrationFormatInstruction(perspective);
+      const name = data.name || '';
+      const description = data.description || '';
       let userPrompt: string;
 
       switch (field) {
         case 'name':
-          userPrompt = buildNamePrompt(concept);
+          userPrompt = renderStudioTemplate(prompts.name, { concept });
           break;
         case 'description':
-          userPrompt = buildDescriptionPrompt(concept, data.name || '', perspective, tense);
+          userPrompt = renderStudioTemplate(prompts.description, {
+            concept,
+            name,
+            styleBlock: descriptionStyleBlock,
+          });
           break;
         case 'first_mes':
-          userPrompt = buildFirstMessagePrompt(
-            concept,
-            data.name || '',
-            data.description || '',
-            perspective,
-            tense
-          );
-          break;
         case 'mes_example':
-          userPrompt = buildExamplesPrompt(
+          userPrompt = renderStudioTemplate(prompts[field], {
             concept,
-            data.name || '',
-            data.description || '',
-            perspective,
-            tense
-          );
+            name,
+            description,
+            styleBlock,
+            narrationRule,
+          });
           break;
         default:
           userPrompt = '';
@@ -255,16 +269,17 @@ export function useAIGeneration(): UseAIGenerationResult {
 
       isAbortedRef.current = false;
       setIsLoading(true);
+      const activeFields = FIELD_ORDER.filter((f) => enabledFieldsRef.current[f] !== false);
       setState({
         ...INITIAL_STATE,
         status: 'generating',
-        currentField: 'name',
+        currentField: activeFields[0] ?? null,
       });
 
       const generatedData: Partial<CharacterSpec> = {};
 
       try {
-        for (const field of FIELD_ORDER) {
+        for (const field of activeFields) {
           // Check if aborted
           if (isAbortedRef.current) {
             throw new AIError('Request was cancelled', 'unknown');
@@ -477,7 +492,9 @@ export function useAIGeneration(): UseAIGenerationResult {
     }
 
     const currentState = stateRef.current;
-    const remaining = FIELD_ORDER.filter((f) => !currentState.completedFields.includes(f));
+    const remaining = FIELD_ORDER.filter(
+      (f) => enabledFieldsRef.current[f] !== false && !currentState.completedFields.includes(f)
+    );
     if (remaining.length === 0) return;
 
     isAbortedRef.current = false;
@@ -569,6 +586,7 @@ export function useAIGeneration(): UseAIGenerationResult {
     isLoading,
     concept,
     generationTags,
+    enabledFields,
     start,
     abort,
     retryField,

@@ -23,13 +23,15 @@ export interface FieldConfig {
   key: GenerationField;
   label: string;
   icon: string;
+  /** When true, the field can be toggled off in Studio settings. */
+  isOptional: boolean;
 }
 
 export const GENERATION_FIELDS: FieldConfig[] = [
-  { key: 'name', label: 'Name', icon: 'Type' },
-  { key: 'description', label: 'Description', icon: 'FileText' },
-  { key: 'first_mes', label: 'First Message', icon: 'MessageCircle' },
-  { key: 'mes_example', label: 'Examples', icon: 'MessagesSquare' },
+  { key: 'name', label: 'Name', icon: 'Type', isOptional: false },
+  { key: 'description', label: 'Description', icon: 'FileText', isOptional: false },
+  { key: 'first_mes', label: 'First Message', icon: 'MessageCircle', isOptional: false },
+  { key: 'mes_example', label: 'Examples', icon: 'MessagesSquare', isOptional: true },
 ];
 
 /** Input mode for the creation studio concept area */
