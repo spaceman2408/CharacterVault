@@ -14,13 +14,19 @@ import {
   AlertCircle,
   Settings2,
   Loader2,
+  Star,
+  Plus,
+  Trash2,
+  Clock,
 } from 'lucide-react';
 import {
-  TAG_CATEGORIES,
   formatTag,
   getExcludedTagsForUI,
   hasRequiredGenerationTags,
+  isCustomTag,
   toggleGenerationTagSelection,
+  type TagCategory,
+  type TaggedRef,
 } from './tags/tagData';
 
 interface TagSelectorProps {
@@ -31,8 +37,71 @@ interface TagSelectorProps {
   onAbort: () => void;
   isGenerating: boolean;
   isConfigured: boolean;
+  minApiCalls?: number;
   onOpenSettings: () => void;
+  categories: TagCategory[];
+  allCategories: TagCategory[];
+  hiddenCategoryCount: number;
+  favorites: TaggedRef[];
+  recent: TaggedRef[];
+  onToggleFavorite: (category: string, tag: string) => void;
+  onAddCustomTag: (categoryKey: string, raw: string) => Promise<{ ok: boolean; slug?: string; error?: string }>;
+  onRemoveCustomTag: (categoryKey: string, tag: string) => void;
 }
+
+const AddCustomTagForm: React.FC<{
+  categoryKey: string;
+  isGenerating: boolean;
+  onAdd: (categoryKey: string, raw: string) => Promise<{ ok: boolean; slug?: string; error?: string }>;
+}> = ({ categoryKey, isGenerating, onAdd }) => {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const submit = async () => {
+    if (!value.trim() || isAdding) return;
+    setIsAdding(true);
+    setError(null);
+    const result = await onAdd(categoryKey, value);
+    setIsAdding(false);
+    if (result.ok) {
+      setValue('');
+    } else {
+      setError(result.error ?? 'Could not add tag.');
+    }
+  };
+
+  return (
+    <div className="w-full pt-2 mt-1 border-t border-border">
+      <div className="flex gap-1.5">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            if (error) setError(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void submit();
+          }}
+          placeholder="Add your own tag..."
+          disabled={isGenerating || isAdding}
+          maxLength={40}
+          className="flex-1 min-w-0 px-2.5 py-1 bg-bg/50 border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-accent/50 focus:bg-surface disabled:opacity-50 disabled:cursor-not-allowed transition-all placeholder:text-fg-subtle"
+        />
+        <button
+          onClick={() => void submit()}
+          disabled={isGenerating || isAdding || !value.trim()}
+          className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg border border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+          Add
+        </button>
+      </div>
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+    </div>
+  );
+};
 
 export const TagSelector: React.FC<TagSelectorProps> = ({
   selections,
@@ -42,12 +111,27 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   onAbort,
   isGenerating,
   isConfigured,
+  minApiCalls = 4,
   onOpenSettings,
+  categories,
+  allCategories,
+  hiddenCategoryCount,
+  favorites,
+  recent,
+  onToggleFavorite,
+  onAddCustomTag,
+  onRemoveCustomTag,
 }) => {
   const [search, setSearch] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     () => new Set(['generation'])
   );
+
+  const categoryByKey = useMemo(() => {
+    const map = new Map<string, TagCategory>();
+    for (const cat of allCategories) map.set(cat.key, cat);
+    return map;
+  }, [allCategories]);
 
   const toggleCategory = useCallback((key: string) => {
     setExpandedCategories((prev) => {
@@ -116,6 +200,22 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     [selections]
   );
 
+  const favoriteTags = useMemo(
+    () => favorites.filter((f) => categoryByKey.get(f.category)?.tags.includes(f.tag)),
+    [favorites, categoryByKey]
+  );
+
+  const recentTags = useMemo(
+    () =>
+      recent.filter(
+        (r) =>
+          r.category !== 'generation' &&
+          categoryByKey.get(r.category)?.tags.includes(r.tag) &&
+          !(selections[r.category] ?? []).includes(r.tag)
+      ),
+    [recent, categoryByKey, selections]
+  );
+
   const canGenerate = isConfigured && hasConceptSelection && hasGenerationTags && !isGenerating;
 
   return (
@@ -182,23 +282,37 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         </div>
         {hasSelection ? (
           <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-            {TAG_CATEGORIES.flatMap((cat) =>
-              (selections[cat.key] ?? []).map((tag) => (
-                <span
-                  key={`${cat.key}-${tag}`}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border bg-accent-soft text-accent border-accent"
-                >
-                  {formatTag(tag)}
-                  <button
-                    onClick={() => removeTag(cat.key, tag)}
-                    disabled={isGenerating}
-                    className="ml-0.5 hover:opacity-75 transition-opacity disabled:opacity-40"
-                    aria-label={`Remove ${formatTag(tag)}`}
+            {Object.entries(selections).flatMap(([key, tags]) =>
+              tags.map((tag) => {
+                const isFav = favorites.some((f) => f.category === key && f.tag === tag);
+                return (
+                  <span
+                    key={`${key}-${tag}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border bg-accent-soft text-accent border-accent"
                   >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))
+                    {formatTag(tag)}
+                    {key !== 'generation' && (
+                      <button
+                        onClick={() => onToggleFavorite(key, tag)}
+                        disabled={isGenerating}
+                        className="ml-0.5 hover:opacity-75 transition-opacity disabled:opacity-40"
+                        aria-label={isFav ? `Unfavorite ${formatTag(tag)}` : `Favorite ${formatTag(tag)}`}
+                        title={isFav ? 'Remove from favorites' : 'Add to favorites'}
+                      >
+                        <Star className={`w-3 h-3 ${isFav ? 'fill-current' : ''}`} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => removeTag(key, tag)}
+                      disabled={isGenerating}
+                      className="ml-0.5 hover:opacity-75 transition-opacity disabled:opacity-40"
+                      aria-label={`Remove ${formatTag(tag)}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                );
+              })
             )}
           </div>
         ) : (
@@ -208,9 +322,60 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         )}
       </div>
 
+      {/* Favorites */}
+      {favoriteTags.length > 0 && (
+        <div className="space-y-2 p-4 bg-bg/50 border border-border rounded-xl">
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-fg-muted uppercase tracking-wider">
+            <Star className="w-3.5 h-3.5" />
+            Favorites
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {favoriteTags.map(({ category, tag }) => {
+              const isSelected = (selections[category] ?? []).includes(tag);
+              return (
+                <button
+                  key={`fav-${category}-${tag}`}
+                  onClick={() => toggleTag(category, tag)}
+                  disabled={isGenerating}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                    isSelected
+                      ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
+                      : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
+                  }`}
+                >
+                  {formatTag(tag)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recent */}
+      {recentTags.length > 0 && (
+        <div className="space-y-2 p-4 bg-bg/50 border border-border rounded-xl">
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-fg-muted uppercase tracking-wider">
+            <Clock className="w-3.5 h-3.5" />
+            Recent
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {recentTags.map(({ category, tag }) => (
+              <button
+                key={`recent-${category}-${tag}`}
+                onClick={() => toggleTag(category, tag)}
+                disabled={isGenerating}
+                className="px-2.5 py-1 text-xs font-medium rounded-lg border border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {formatTag(tag)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Category sections */}
       <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-        {TAG_CATEGORIES.map((category) => {
+        {categories.map((category) => {
           const isExpanded = expandedCategories.has(category.key);
           const selectedInCat = selections[category.key] ?? [];
 
@@ -240,6 +405,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                       Required
                     </span>
                   )}
+                  {category.nsfw && (
+                    <span className="font-bold px-1.5 py-0.5 rounded-full bg-danger-soft text-danger-soft-fg">
+                      NSFW
+                    </span>
+                  )}
                   {selectedInCat.length > 0 && (
                     <span className="font-bold px-1.5 py-0.5 rounded-full bg-accent-soft text-accent">
                       {selectedInCat.length}
@@ -258,28 +428,50 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                   {filteredTags.map((tag) => {
                     const isSelected = selectedInCat.includes(tag);
                     const isExcluded = !isSelected && excludedTags.has(tag);
+                    const custom = isCustomTag(category.key, tag);
                     return (
-                      <button
-                        key={tag}
-                        onClick={() => toggleTag(category.key, tag)}
-                        disabled={isGenerating || isExcluded}
-                        title={isExcluded ? 'This tag conflicts with your current selection' : undefined}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed ${
-                          isSelected
-                            ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
-                            : isExcluded
-                            ? 'opacity-30 border-border text-fg-subtle line-through'
-                            : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
-                        }`}
-                      >
-                        {formatTag(tag)}
-                      </button>
+                      <span key={tag} className="inline-flex items-center gap-0.5">
+                        <button
+                          onClick={() => toggleTag(category.key, tag)}
+                          disabled={isGenerating || isExcluded}
+                          title={isExcluded ? 'This tag conflicts with your current selection' : undefined}
+                          className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed ${
+                            isSelected
+                              ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
+                              : isExcluded
+                              ? 'opacity-30 border-border text-fg-subtle line-through'
+                              : custom
+                              ? 'border-dashed border-accent/60 text-fg-muted hover:border-accent hover:bg-accent-soft hover:text-accent'
+                              : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
+                          }`}
+                        >
+                          {formatTag(tag)}
+                        </button>
+                        {custom && (
+                          <button
+                            onClick={() => onRemoveCustomTag(category.key, tag)}
+                            disabled={isGenerating}
+                            className="p-1 text-fg-subtle hover:text-danger transition-colors disabled:opacity-40"
+                            aria-label={`Delete custom tag ${formatTag(tag)}`}
+                            title="Delete this custom tag"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </span>
                     );
                   })}
                   {filteredTags.length === 0 && searchLower && (
                     <span className="text-xs text-fg-subtle italic">
                       No matching tags
                     </span>
+                  )}
+                  {category.key !== 'generation' && !searchLower && (
+                    <AddCustomTagForm
+                      categoryKey={category.key}
+                      isGenerating={isGenerating}
+                      onAdd={onAddCustomTag}
+                    />
                   )}
                 </div>
               )}
@@ -288,9 +480,18 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
         })}
       </div>
 
+      {hiddenCategoryCount > 0 && (
+        <p className="text-xs text-fg-subtle text-center">
+          {hiddenCategoryCount} {hiddenCategoryCount === 1 ? 'category' : 'categories'} hidden.{' '}
+          <button onClick={onOpenSettings} className="text-accent hover:underline">
+            Manage in Settings
+          </button>
+        </p>
+      )}
+
       {/* API call cost notice */}
       <p className="text-xs text-fg-subtle text-center">
-        Generation uses a minimum of 4 API calls. At least one per field.
+        Generation uses a minimum of {minApiCalls} API call{minApiCalls === 1 ? '' : 's'}. At least one per field.
       </p>
 
       {isConfigured && !isGenerating && !hasGenerationTags && (

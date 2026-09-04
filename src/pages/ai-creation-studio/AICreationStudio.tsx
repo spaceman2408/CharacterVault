@@ -21,12 +21,13 @@ import { useCharacterContext, useLorebookContext } from '../../context';
 import { CharacterSettingsPanel } from '../../components/settings/CharacterSettingsPanel';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { useAIGeneration } from './useAIGeneration';
+import { useStudioTags } from './useStudioTags';
 import { ConceptInput } from './ConceptInput';
 import { GenerationProgress } from './GenerationProgress';
 import { GeneratedCardPreview } from './GeneratedCardPreview';
 import { TagVortexOverlay } from './TagVortexOverlay';
 import { randomizeTags } from './tags/tagData';
-import { buildConceptFromTags, formatTag, getGenerationTags, hasRequiredGenerationTags, TAG_CATEGORIES } from './tags/tagData';
+import { buildConceptFromTags, formatTag, getGenerationTags, hasRequiredGenerationTags } from './tags/tagData';
 import type { GenerationField } from './types';
 import type { InputMode } from './types';
 import { GENERATION_FIELDS } from './types';
@@ -46,6 +47,7 @@ export const AICreationStudio: React.FC = () => {
     state,
     isConfigured,
     isLoading,
+    enabledFields,
     start,
     abort,
     retryField,
@@ -59,6 +61,19 @@ export const AICreationStudio: React.FC = () => {
   const [concept, setConcept] = useState('');
   const [inputMode, setInputMode] = useState<InputMode>('write');
   const [tagSelections, setTagSelections] = useState<Record<string, string[]>>({});
+  const {
+    allCategories,
+    visibleCategories,
+    hideNsfw,
+    favorites,
+    recent,
+    addCustomTag,
+    removeCustomTag,
+    toggleFavorite,
+    trackUsed,
+    reload: reloadTagPrefs,
+  } = useStudioTags();
+  const hiddenCategoryCount = allCategories.length - visibleCategories.length;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -77,9 +92,10 @@ export const AICreationStudio: React.FC = () => {
 
   const handleReloadSettings = useCallback(async () => {
     await reloadConfig();
+    await reloadTagPrefs();
     const settings = await characterSettingsService.getSettings();
     setShowLuckyVortexSetting(settings.ui?.showLuckyVortex ?? true);
-  }, [reloadConfig]);
+  }, [reloadConfig, reloadTagPrefs]);
 
   const handleInputModeChange = useCallback(
     (mode: InputMode) => {
@@ -100,8 +116,9 @@ export const AICreationStudio: React.FC = () => {
     }
     const text = inputMode === 'tags' ? buildConceptFromTags(tagSelections) : concept;
     const tags = getGenerationTags(tagSelections);
+    trackUsed(tagSelections);
     void start(text, tags);
-  }, [start, concept, tagSelections, inputMode, saveSuccess]);
+  }, [start, concept, tagSelections, inputMode, saveSuccess, trackUsed]);
 
   const handleAbort = useCallback(() => {
     abort();
@@ -109,7 +126,7 @@ export const AICreationStudio: React.FC = () => {
 
   const handleFeelingLucky = useCallback(() => {
     if (!hasRequiredGenerationTags(tagSelections)) return;
-    const randomized = randomizeTags(tagSelections);
+    const randomized = randomizeTags(tagSelections, [], { includeNsfw: !hideNsfw });
     setTagSelections(randomized);
 
     if (showLuckyVortexSetting) {
@@ -130,7 +147,7 @@ export const AICreationStudio: React.FC = () => {
         void start(text, tags);
       }
     }
-  }, [tagSelections, showLuckyVortexSetting, start, saveSuccess]);
+  }, [tagSelections, showLuckyVortexSetting, start, saveSuccess, hideNsfw]);
 
   const handleVortexAnimationStart = useCallback(() => {
     setFadeInputModal(true);
@@ -151,8 +168,18 @@ export const AICreationStudio: React.FC = () => {
     }
   }, [tagSelections, start, saveSuccess]);
 
-  const handleRetryField = useCallback(
-    (field: GenerationField) => {
+  const handleRemoveCustomTag = useCallback(
+    (categoryKey: string, tag: string) => {
+      void removeCustomTag(categoryKey, tag);
+      setTagSelections((prev) => ({
+        ...prev,
+        [categoryKey]: (prev[categoryKey] ?? []).filter((t) => t !== tag),
+      }));
+    },
+    [removeCustomTag]
+  );
+
+  const handleRetryField = useCallback(    (field: GenerationField) => {
       void retryField(field);
     },
     [retryField]
@@ -182,10 +209,11 @@ export const AICreationStudio: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const conceptTags = TAG_CATEGORIES
+      const conceptTags = allCategories
         .filter((cat) => cat.key !== 'generation')
         .flatMap((cat) => (tagSelections[cat.key] ?? []).map(formatTag));
 
+      const mesExampleEnabled = enabledFields.mes_example !== false;
       const character = await createCharacter({
         name: state.generatedData.name,
         data: {
@@ -195,7 +223,7 @@ export const AICreationStudio: React.FC = () => {
             personality: '',
             scenario: '',
             first_mes: state.generatedData.first_mes || '',
-            mes_example: state.generatedData.mes_example || '',
+            mes_example: mesExampleEnabled ? state.generatedData.mes_example || '' : '',
             system_prompt: '',
             post_history_instructions: '',
             alternate_greetings: [],
@@ -212,7 +240,7 @@ export const AICreationStudio: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [state.generatedData, createCharacter, tagSelections]);
+  }, [state.generatedData, createCharacter, tagSelections, enabledFields, allCategories]);
 
   const handleOpenCharacter = useCallback(() => {
     if (savedCharacterId) {
@@ -255,9 +283,8 @@ export const AICreationStudio: React.FC = () => {
       abort();
     }
     reset();
-    setConcept('');
-    setTagSelections({});
-    setInputMode('write');
+    // Keep concept, tag selections, and input mode so the user returns
+    // to exactly what they generated from.
     setVortexActive(false);
     setVortexTags([]);
     setFadeInputModal(false);
@@ -266,8 +293,10 @@ export const AICreationStudio: React.FC = () => {
   const hasGeneratedContent = Object.keys(state.generatedData).length > 0;
   const canSave = state.status === 'complete' || (hasGeneratedContent && state.generatedData.name);
   const showEmptyState = state.status === 'idle' && !saveSuccess;
-  const remainingFields = GENERATION_FIELDS.filter((f) => !state.completedFields.includes(f.key));
+  const activeFields = GENERATION_FIELDS.filter((f) => enabledFields[f.key] !== false);
+  const remainingFields = activeFields.filter((f) => !state.completedFields.includes(f.key));
   const hasRemainingFields = remainingFields.length > 0;
+  const minApiCalls = activeFields.length;
 
   return (
     <div className="h-dvh flex flex-col bg-bg text-fg overflow-hidden">
@@ -376,7 +405,16 @@ export const AICreationStudio: React.FC = () => {
                       onAbort={handleAbort}
                       isConfigured={isConfigured}
                       isGenerating={isLoading}
+                      minApiCalls={minApiCalls}
                       onOpenSettings={handleOpenSettings}
+                      categories={visibleCategories}
+                      allCategories={allCategories}
+                      hiddenCategoryCount={hiddenCategoryCount}
+                      favorites={favorites}
+                      recent={recent}
+                      onToggleFavorite={toggleFavorite}
+                      onAddCustomTag={addCustomTag}
+                      onRemoveCustomTag={handleRemoveCustomTag}
                     />
                   </div>
                 )}
@@ -420,7 +458,7 @@ export const AICreationStudio: React.FC = () => {
                           Tags used
                         </p>
                         <div className="flex flex-wrap gap-1.5">
-                          {TAG_CATEGORIES.flatMap((cat) =>
+                          {allCategories.flatMap((cat) =>
                             (tagSelections[cat.key] ?? []).map((tag) => (
                               <span
                                 key={`${cat.key}-${tag}`}
@@ -510,7 +548,7 @@ export const AICreationStudio: React.FC = () => {
                           Tags used
                         </p>
                         <div className="flex flex-wrap gap-1.5">
-                          {TAG_CATEGORIES.flatMap((cat) =>
+                          {allCategories.flatMap((cat) =>
                             (tagSelections[cat.key] ?? []).map((tag) => (
                               <span
                                 key={`${cat.key}-${tag}`}
@@ -541,6 +579,7 @@ export const AICreationStudio: React.FC = () => {
                     <GenerationProgress
                       state={state}
                       isLoading={isLoading}
+                      enabledFields={enabledFields}
                       onGenerateField={handleRetryField}
                       onRegenerateField={handleRegenerateField}
                     />
@@ -555,6 +594,7 @@ export const AICreationStudio: React.FC = () => {
                     <GeneratedCardPreview
                       generatedData={state.generatedData}
                       generatedReasoning={state.generatedReasoning}
+                      enabledFields={enabledFields}
                       onFieldChange={updateGeneratedField}
                     />
                   </div>

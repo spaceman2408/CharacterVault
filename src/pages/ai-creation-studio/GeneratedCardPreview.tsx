@@ -7,6 +7,7 @@ import React, { useRef, useEffect, useState, memo } from 'react';
 import { Type, FileText, MessageCircle, MessagesSquare, Sparkles } from 'lucide-react';
 import type { GenerationField } from './types';
 import { GENERATION_FIELDS } from './types';
+import type { StudioSettings } from '../../db/characterTypes';
 import { estimateTokens } from '../../services/AIService';
 
 const FieldReasoning: React.FC<{ reasoning: string }> = memo(({ reasoning }) => {
@@ -60,6 +61,7 @@ FieldReasoning.displayName = 'FieldReasoning';
 interface GeneratedCardPreviewProps {
   generatedData: Record<string, string | undefined>;
   generatedReasoning: Partial<Record<GenerationField, string>>;
+  enabledFields?: StudioSettings['enabledFields'];
   onFieldChange: (field: GenerationField, value: string) => void;
 }
 
@@ -119,15 +121,19 @@ const StreamingTextarea: React.FC<{
 export const GeneratedCardPreview: React.FC<GeneratedCardPreviewProps> = ({
   generatedData,
   generatedReasoning,
+  enabledFields,
   onFieldChange,
 }) => {
+  const visibleFields = enabledFields
+    ? GENERATION_FIELDS.filter((f) => enabledFields[f.key] !== false)
+    : GENERATION_FIELDS;
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-fg-muted mb-3">
         Generated Card
       </h3>
 
-      {GENERATION_FIELDS.map((field) => {
+      {visibleFields.map((field) => {
         const value = generatedData[field.key] || '';
         const tokenCount = estimateTokens(value);
         const reasoning = generatedReasoning[field.key];

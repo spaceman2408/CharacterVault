@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { TagSelector } from './TagSelector';
 import type { InputMode } from './types';
+import type { TagCategory, TaggedRef } from './tags/tagData';
 import {
   formatTag,
   getGenerationTags,
@@ -39,7 +40,16 @@ interface ConceptInputProps {
   onAbort: () => void;
   isConfigured: boolean;
   isGenerating: boolean;
+  minApiCalls?: number;
   onOpenSettings: () => void;
+  categories: TagCategory[];
+  allCategories: TagCategory[];
+  hiddenCategoryCount: number;
+  favorites: TaggedRef[];
+  recent: TaggedRef[];
+  onToggleFavorite: (category: string, tag: string) => void;
+  onAddCustomTag: (categoryKey: string, raw: string) => Promise<{ ok: boolean; slug?: string; error?: string }>;
+  onRemoveCustomTag: (categoryKey: string, tag: string) => void;
 }
 
 const WORD_COUNT_MIN = 3;
@@ -135,7 +145,16 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
   onAbort,
   isConfigured,
   isGenerating,
+  minApiCalls = 4,
   onOpenSettings,
+  categories,
+  allCategories,
+  hiddenCategoryCount,
+  favorites,
+  recent,
+  onToggleFavorite,
+  onAddCustomTag,
+  onRemoveCustomTag,
 }) => {
   const trimmed = concept.trim();
   const wordCount = trimmed ? trimmed.split(/\s+/).length : 0;
@@ -239,7 +258,7 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
 
           {/* API call cost notice */}
           <p className="text-xs text-fg-subtle text-center">
-            Generation uses a minimum of 4 API calls. At least one per field.
+            Generation uses a minimum of {minApiCalls} API call{minApiCalls === 1 ? '' : 's'}. At least one per field.
           </p>
 
           {/* Action Bar */}
@@ -289,7 +308,16 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
           onAbort={onAbort}
           isGenerating={isGenerating}
           isConfigured={isConfigured}
+          minApiCalls={minApiCalls}
           onOpenSettings={onOpenSettings}
+          categories={categories}
+          allCategories={allCategories}
+          hiddenCategoryCount={hiddenCategoryCount}
+          favorites={favorites}
+          recent={recent}
+          onToggleFavorite={onToggleFavorite}
+          onAddCustomTag={onAddCustomTag}
+          onRemoveCustomTag={onRemoveCustomTag}
         />
       )}
     </div>

@@ -7,10 +7,12 @@ import React from 'react';
 import { Loader2, Check, AlertCircle, RotateCcw, Sparkles, RefreshCw } from 'lucide-react';
 import type { GenerationField, GenerationState } from './types';
 import { GENERATION_FIELDS } from './types';
+import type { StudioSettings } from '../../db/characterTypes';
 
 interface GenerationProgressProps {
   state: GenerationState;
   isLoading: boolean;
+  enabledFields?: StudioSettings['enabledFields'];
   onGenerateField: (field: GenerationField) => void;
   onRegenerateField: (field: GenerationField) => void;
 }
@@ -18,12 +20,16 @@ interface GenerationProgressProps {
 export const GenerationProgress: React.FC<GenerationProgressProps> = ({
   state,
   isLoading,
+  enabledFields,
   onGenerateField,
   onRegenerateField,
 }) => {
   const { status, currentField, completedFields, error, failedField } = state;
 
   const hasError = status === 'error';
+  const visibleFields = enabledFields
+    ? GENERATION_FIELDS.filter((f) => enabledFields[f.key] !== false)
+    : GENERATION_FIELDS;
 
   return (
     <div className="space-y-2">
@@ -31,7 +37,7 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
         Generation Progress
       </h3>
 
-      {GENERATION_FIELDS.map((field) => {
+      {visibleFields.map((field) => {
         const isDone = completedFields.includes(field.key);
         const isActive = currentField === field.key;
         const isFailed = failedField === field.key;
