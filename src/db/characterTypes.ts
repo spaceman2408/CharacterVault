@@ -488,6 +488,8 @@ export interface CharacterVaultSettings {
     markdownImageOpenLinks?: boolean;
     /** Ask AI opens on this chat. Missing = Orion. */
     defaultChatPanel?: DefaultChatPanel;
+    /** When true, Agent tool-loop edits need review before they are applied. */
+    requireAgentReview?: boolean;
     spellcheck?: SpellcheckSettings;
   };
   ai?: AIConfig;
@@ -528,6 +530,9 @@ export const DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS = true;
 export type DefaultChatPanel = 'orion' | 'agent';
 
 export const DEFAULT_CHAT_PANEL: DefaultChatPanel = 'orion';
+
+/** Default for Studio → Agent review gate (auto-apply preserves legacy behavior). */
+export const DEFAULT_REQUIRE_AGENT_REVIEW = false;
 
 export function normalizeDefaultChatPanel(value: unknown): DefaultChatPanel {
   return value === 'agent' ? 'agent' : 'orion';

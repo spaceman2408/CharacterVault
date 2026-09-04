@@ -17,6 +17,7 @@ import {
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_CHAT_PANEL,
+  DEFAULT_REQUIRE_AGENT_REVIEW,
   clampContextLength,
   normalizeDefaultChatPanel,
 } from '../../../db/characterTypes';
@@ -41,6 +42,7 @@ export function createDefaultDraft(): SettingsDraft {
     showLuckyVortex: true,
     markdownImageOpenLinks: DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
     defaultChatPanel: DEFAULT_CHAT_PANEL,
+    requireAgentReview: DEFAULT_REQUIRE_AGENT_REVIEW,
     spellcheckEnabled: DEFAULT_SPELLCHECK_SETTINGS.enabled,
     spellcheckLanguage: DEFAULT_SPELLCHECK_SETTINGS.language,
     sectionOrder: [...DEFAULT_SECTION_ORDER],
@@ -194,6 +196,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           markdownImageOpenLinks:
             fullSettings.ui?.markdownImageOpenLinks ?? DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
           defaultChatPanel: normalizeDefaultChatPanel(fullSettings.ui?.defaultChatPanel),
+          requireAgentReview:
+            fullSettings.ui?.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
           spellcheckEnabled: spell.enabled,
           spellcheckLanguage: spell.language,
           sectionOrder: secOrder,
@@ -281,6 +285,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           showLuckyVortex: draft.showLuckyVortex,
           markdownImageOpenLinks: draft.markdownImageOpenLinks,
           defaultChatPanel: draft.defaultChatPanel,
+          requireAgentReview: draft.requireAgentReview,
         },
         sectionOrder: draft.sectionOrder,
         hiddenSections: draft.hiddenSections,

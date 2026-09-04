@@ -109,6 +109,8 @@ export interface CharacterEditorContextValue {
   markdownImageOpenLinks: boolean;
   /** Studio default for Ask AI: Orion or Agent. Header toggle still works. */
   defaultChatPanel: DefaultChatPanel;
+  /** Studio gate: review Agent edits before they are applied. */
+  requireAgentReview: boolean;
   /** Update a spellcheck field (e.g. enabled, language) */
   updateSpellcheck: (updates: Partial<SpellcheckSettings>) => void;
   /** Add a word to the user's ignore list */

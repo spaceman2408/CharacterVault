@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Bot, ExternalLink, Languages, MessageSquare, Wand2 } from 'lucide-react';
+import { Bot, ExternalLink, Languages, MessageSquare, ShieldCheck, Wand2 } from 'lucide-react';
 import type { DefaultChatPanel } from '../../../db/characterTypes';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
@@ -84,6 +84,29 @@ export const StudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             );
           })}
         </div>
+      </SettingsCard>
+
+      <SettingsCard>
+        <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4" />
+          Agent edits
+        </h3>
+        <SettingsToggle
+          stacked
+          checked={draft.requireAgentReview}
+          onChange={(checked) =>
+            setDraft((prev) => ({ ...prev, requireAgentReview: checked }))
+          }
+          label="Review agent edits before applying"
+          description={
+            <>
+              When enabled, the Agent stages its card and lorebook edits instead of writing
+              them directly. You can review each change, edit the proposed text, and approve
+              or deny changes before anything is applied. Snapshots are still taken when you
+              apply.
+            </>
+          }
+        />
       </SettingsCard>
 
       <SettingsCard>

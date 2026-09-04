@@ -34,6 +34,7 @@ export interface SettingsDraft {
   showLuckyVortex: boolean;
   markdownImageOpenLinks: boolean;
   defaultChatPanel: DefaultChatPanel;
+  requireAgentReview: boolean;
   spellcheckEnabled: boolean;
   spellcheckLanguage: string;
   sectionOrder: CharacterSection[];

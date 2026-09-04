@@ -19,6 +19,7 @@ import {
   CHARACTER_SECTIONS,
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
+  DEFAULT_REQUIRE_AGENT_REVIEW,
   EMPTY_CUSTOM_CONTEXT_META,
   normalizeDefaultChatPanel,
 } from '../db/characterTypes';
@@ -77,6 +78,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [markdownImageOpenLinks, setMarkdownImageOpenLinks] = useState(DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS);
   const [defaultChatPanel, setDefaultChatPanel] = useState(() =>
     normalizeDefaultChatPanel(settings?.ui.defaultChatPanel),
+  );
+  const [requireAgentReview, setRequireAgentReview] = useState(
+    () => settings?.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
   );
   
   // AI-related state
@@ -312,6 +316,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
         settings.ui.markdownImageOpenLinks ?? DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
       );
       setDefaultChatPanel(normalizeDefaultChatPanel(settings.ui.defaultChatPanel));
+      setRequireAgentReview(settings.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW);
       setContextSectionIdsState(contextIds);
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -1159,6 +1164,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     spellcheck,
     markdownImageOpenLinks,
     defaultChatPanel,
+    requireAgentReview,
     setActiveSection,
     updateCharacter,
     updateSpecField,
