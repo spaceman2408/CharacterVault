@@ -7,6 +7,7 @@ import type {
   SamplerSettings,
 } from '../../db/characterTypes';
 import { createLorebookHost } from '../hosts/lorebook/createHost';
+import type { LorebookReviewPayload } from '../review/types';
 import { LOREBOOK_LOOKUP_TOOLS } from './notices';
 import {
   lastUserMessageIndex,
@@ -25,6 +26,8 @@ export interface UseLorebookAgentOptions {
   getCustomContext: () => Promise<string | null>;
   flushDraft: () => void | Promise<void>;
   takeSnapshot: () => Promise<void>;
+  shouldReview?: () => boolean;
+  onPendingReview?: (pending: LorebookReviewPayload) => void;
   onRunningChange?: (running: boolean) => void;
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
@@ -42,10 +45,18 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     getCustomContext,
     flushDraft,
     takeSnapshot,
+    shouldReview,
+    onPendingReview,
     onRunningChange,
     chatOwnerType,
     chatOwnerId,
   } = options;
+
+  const checkShouldReview = useCallback(() => shouldReview?.() ?? false, [shouldReview]);
+  const forwardPendingReview = useCallback(
+    (pending: LorebookReviewPayload) => onPendingReview?.(pending),
+    [onPendingReview],
+  );
 
   const createHost = useCallback(
     () =>
@@ -54,8 +65,10 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
         setBook,
         getCustomContext,
         takeSnapshot,
+        shouldReview: checkShouldReview,
+        onPendingReview: forwardPendingReview,
       }),
-    [getBook, getCustomContext, setBook, takeSnapshot],
+    [getBook, getCustomContext, setBook, takeSnapshot, checkShouldReview, forwardPendingReview],
   );
 
   return useAgentSession({

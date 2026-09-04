@@ -163,6 +163,7 @@ export function LorebookWorkspace(): React.ReactElement {
   );
   const spellcheck = settings?.ui?.spellcheck;
   const markdownImageOpenLinks = settings?.ui?.markdownImageOpenLinks;
+  const requireAgentReview = settings?.ui?.requireAgentReview ?? false;
 
   const entryCount = currentLorebook?.book?.entries?.length ?? 0;
   const totalTokens = useMemo(() => {
@@ -678,6 +679,7 @@ export function LorebookWorkspace(): React.ReactElement {
                   onClose={() => setIsChatOpen(false)}
                   onRunningChange={setAgentRunning}
                   onOpenTarget={openAgentTarget}
+                  requireReview={requireAgentReview}
                 />
               ) : (
                 <AIChatPanel

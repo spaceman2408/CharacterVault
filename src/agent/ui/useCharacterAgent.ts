@@ -9,6 +9,7 @@ import type {
 } from '../../db/characterTypes';
 import { createCharacterHost } from '../hosts/character/createHost';
 import type { CharacterHostPersist } from '../hosts/character/createHost';
+import type { CharacterReviewPayload } from '../review/types';
 import { CHARACTER_LOOKUP_TOOLS } from './notices';
 import { useAgentSession, type UseAgentSessionReturn } from './useAgentSession';
 
@@ -22,6 +23,8 @@ export interface UseCharacterAgentOptions {
   getCustomContext: () => Promise<string | null>;
   flushDraft: () => void | Promise<void>;
   takeSnapshot: () => Promise<void>;
+  shouldReview?: () => boolean;
+  onPendingReview?: (pending: CharacterReviewPayload) => void;
   onRunningChange?: (running: boolean) => void;
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
@@ -40,10 +43,18 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
     getCustomContext,
     flushDraft,
     takeSnapshot,
+    shouldReview,
+    onPendingReview,
     onRunningChange,
     chatOwnerType,
     chatOwnerId,
   } = options;
+
+  const checkShouldReview = useCallback(() => shouldReview?.() ?? false, [shouldReview]);
+  const forwardPendingReview = useCallback(
+    (pending: CharacterReviewPayload) => onPendingReview?.(pending),
+    [onPendingReview],
+  );
 
   const createHost = useCallback(
     () =>
@@ -53,8 +64,10 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
         persist,
         getCustomContext,
         takeSnapshot,
+        shouldReview: checkShouldReview,
+        onPendingReview: forwardPendingReview,
       }),
-    [getBook, getCustomContext, getSpec, persist, takeSnapshot],
+    [getBook, getCustomContext, getSpec, persist, takeSnapshot, checkShouldReview, forwardPendingReview],
   );
 
   return useAgentSession({

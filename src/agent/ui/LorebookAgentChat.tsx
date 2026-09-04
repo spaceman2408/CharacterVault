@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, type ReactNode } from 'react';
-import { Loader2 } from 'lucide-react';
+import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { Loader2, ShieldCheck } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
 import type { ChatMessage } from '../../components/ai/types';
 import type {
@@ -11,6 +11,9 @@ import type {
 } from '../../db/characterTypes';
 import { stripFences } from '../core/stripFences';
 import { computeAgentContextUsage, usageStatus } from '../hosts/lorebook/contextUsage';
+import { AgentReviewModal } from '../review/AgentReviewModal';
+import { applyBookDecisions, applyLorebookReview, diffLorebookReview } from '../review/diff';
+import type { LorebookReviewPayload, ReviewDecisions } from '../review/types';
 import { AgentChatMessage } from './AgentChatMessage';
 import { AgentToolModeChip } from './AgentToolModeChip';
 import { formatAgentBusyLabel } from './busyLabel';
@@ -40,6 +43,7 @@ export interface LorebookAgentChatProps {
   onClose?: () => void;
   onRunningChange?: (running: boolean) => void;
   onOpenTarget?: (target: AgentToolTarget) => void;
+  requireReview?: boolean;
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
   title?: string;
@@ -73,9 +77,50 @@ export function LorebookAgentChat({
   contextEmptyHint = 'Custom context is optional. Enable it in the lorebook sidebar to give the agent source notes.',
   composerHint = 'Stop, then Send to retry · Writes go into this book',
   onOpenTarget,
+  requireReview = false,
   chatOwnerType,
   chatOwnerId,
 }: LorebookAgentChatProps): React.ReactElement {
+  const [review, setReview] = useState<LorebookReviewPayload | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [isApplyingReview, setIsApplyingReview] = useState(false);
+  const shouldReview = useCallback(() => requireReview, [requireReview]);
+
+  const handlePendingReview = useCallback((pending: LorebookReviewPayload) => {
+    if (diffLorebookReview(pending).length === 0) return;
+    setReview(pending);
+    setReviewOpen(true);
+  }, []);
+
+  const handleApplyReview = useCallback(
+    async (decisions: ReviewDecisions) => {
+      if (!review) return;
+      const staged = applyLorebookReview(review, decisions);
+      if (!staged) {
+        setReview(null);
+        setReviewOpen(false);
+        return;
+      }
+      const changes = diffLorebookReview(review);
+      setIsApplyingReview(true);
+      try {
+        await takeSnapshot();
+        const merged = applyBookDecisions(getBook(), review.proposedBook, changes, decisions);
+        if (merged) await setBook(merged);
+      } finally {
+        setIsApplyingReview(false);
+        setReview(null);
+        setReviewOpen(false);
+      }
+    },
+    [getBook, review, setBook, takeSnapshot],
+  );
+
+  const handleDiscardReview = useCallback(() => {
+    setReview(null);
+    setReviewOpen(false);
+  }, []);
+
   const session = useLorebookAgent({
     aiConfig,
     samplerSettings,
@@ -85,10 +130,31 @@ export function LorebookAgentChat({
     getCustomContext,
     flushDraft,
     takeSnapshot,
+    shouldReview,
+    onPendingReview: handlePendingReview,
     onRunningChange,
     chatOwnerType,
     chatOwnerId,
   });
+
+  const handleAskGuarded = useCallback(
+    (question: string) => {
+      if (review) {
+        setReviewOpen(true);
+        return Promise.resolve();
+      }
+      return session.handleAsk(question);
+    },
+    [review, session],
+  );
+
+  const handleRegenerateGuarded = useCallback(() => {
+    if (review) {
+      setReviewOpen(true);
+      return Promise.resolve();
+    }
+    return session.handleRegenerate();
+  }, [review, session]);
 
   const contextLabels = useMemo(() => {
     const labels = ['Entry catalog'];
@@ -173,7 +239,13 @@ export function LorebookAgentChat({
     ],
   );
 
+  const reviewChanges = useMemo(
+    () => (review ? diffLorebookReview(review) : []),
+    [review],
+  );
+
   return (
+    <>
     <AIChatView
       title={title}
       emptyTitle={title}
@@ -185,6 +257,26 @@ export function LorebookAgentChat({
       headerActions={
         <>
           <AgentToolModeChip mode={session.toolMode} />
+          {requireReview && (
+            <span
+              className="inline-flex items-center gap-1 rounded-lg bg-accent-soft px-2 py-1 text-xs text-accent"
+              title="Agent edits need your review before they are applied (Studio settings)"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Review
+            </span>
+          )}
+          {review && !reviewOpen && (
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className="inline-flex items-center gap-1 rounded-lg bg-warning-soft px-2 py-1 text-xs font-medium text-warning-soft-fg"
+              title={`${reviewChanges.length} agent edits waiting for review`}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Review ({reviewChanges.length})
+            </button>
+          )}
           {headerActions}
         </>
       }
@@ -198,8 +290,8 @@ export function LorebookAgentChat({
       isStreaming={session.isStreaming}
       streamingContent={session.streamingContent}
       streamingReasoning={session.streamingReasoning}
-      handleAsk={session.handleAsk}
-      handleRegenerate={session.handleRegenerate}
+      handleAsk={handleAskGuarded}
+      handleRegenerate={handleRegenerateGuarded}
       handleNewChat={session.handleNewChat}
       handleDeleteMessage={session.handleDeleteMessage}
       handleAbort={session.handleAbort}
@@ -225,5 +317,15 @@ export function LorebookAgentChat({
         </div>
       }
     />
+    {review && reviewOpen && (
+      <AgentReviewModal
+        changes={reviewChanges}
+        isApplying={isApplyingReview}
+        onApply={(decisions) => void handleApplyReview(decisions)}
+        onDiscard={handleDiscardReview}
+        onMinimize={() => setReviewOpen(false)}
+      />
+    )}
+    </>
   );
 }
