@@ -24,6 +24,9 @@ export interface AIChatViewProps {
   contextLabels: string[];
   contextEmptyHint: string;
   composerHint?: string;
+  composerDisabled?: boolean;
+  composerDisabledPlaceholder?: string;
+  composerDisabledHint?: string;
   headerActions?: ReactNode;
   showReasoning?: boolean;
   showRegenerate?: boolean;
@@ -65,6 +68,9 @@ export function AIChatView({
   contextLabels,
   contextEmptyHint,
   composerHint = 'Enter to send · Shift+Enter for a new line',
+  composerDisabled = false,
+  composerDisabledPlaceholder,
+  composerDisabledHint,
   headerActions,
   showReasoning = true,
   showRegenerate = true,
@@ -103,6 +109,12 @@ export function AIChatView({
   const hasContext = contextLabels.length > 0;
   const contextSourceCount = contextLabels.length;
   const hasStreamDraft = Boolean(streamingContent || streamingReasoning);
+  const effectivePlaceholder = composerDisabled
+    ? (composerDisabledPlaceholder ?? placeholder)
+    : placeholder;
+  const effectiveHint = composerDisabled
+    ? (composerDisabledHint ?? composerHint)
+    : composerHint;
 
   const resetComposerHeight = useCallback(() => {
     if (inputRef.current) {
@@ -115,6 +127,7 @@ export function AIChatView({
   }, []);
 
   const handleSubmit = async () => {
+    if (composerDisabled) return;
     if (!askQuestion.trim()) {
       if (canRetryEmptySend(chatHistory, showRegenerate)) {
         const retry = handleRegenerate();
@@ -135,8 +148,8 @@ export function AIChatView({
 
   const canSend =
     isProcessing ||
-    !!askQuestion.trim() ||
-    canRetryEmptySend(chatHistory, showRegenerate);
+    (!composerDisabled &&
+      (!!askQuestion.trim() || canRetryEmptySend(chatHistory, showRegenerate)));
 
   const onComposerInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;
@@ -166,8 +179,9 @@ export function AIChatView({
                 }
                 handleNewChat();
               }}
-              className="text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors"
-              title="Start a new chat"
+              disabled={composerDisabled}
+              className="text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              title={composerDisabled ? effectiveHint : 'Start a new chat'}
             >
               New chat
             </button>
@@ -309,7 +323,7 @@ export function AIChatView({
                   <button
                     key={suggestion}
                     type="button"
-                    disabled={isProcessing}
+                    disabled={isProcessing || composerDisabled}
                     onClick={() => void handleAsk(suggestion)}
                     className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium border border-border-strong text-fg-muted hover:border-accent hover:text-accent hover:bg-accent-soft disabled:opacity-40 disabled:pointer-events-none transition-colors"
                   >
@@ -384,11 +398,14 @@ export function AIChatView({
             ref={inputRef}
             value={askQuestion}
             onChange={(e) => setAskQuestion(e.target.value)}
-            placeholder={placeholder}
+            placeholder={effectivePlaceholder}
             rows={1}
-            className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-40 transition-all"
+            disabled={composerDisabled}
+            aria-disabled={composerDisabled}
+            title={composerDisabled ? effectiveHint : undefined}
+            className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-40 transition-all disabled:cursor-not-allowed disabled:opacity-60"
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !isProcessing && askQuestion.trim()) {
+              if (e.key === 'Enter' && !e.shiftKey && !isProcessing && !composerDisabled && askQuestion.trim()) {
                 e.preventDefault();
                 void handleSubmit();
               }
@@ -415,12 +432,12 @@ export function AIChatView({
                   : 'bg-accent text-accent-fg hover:opacity-90 active:scale-[0.98]'
               }
             `}
-            title={isProcessing ? 'Stop' : 'Send'}
+            title={isProcessing ? 'Stop' : composerDisabled ? effectiveHint : 'Send'}
           >
             {isProcessing ? <Square className="w-4 h-4" /> : <Send className="w-4 h-4" />}
           </button>
         </div>
-        <p className="mt-1.5 text-[11px] text-fg-subtle px-0.5">{composerHint}</p>
+        <p className="mt-1.5 text-[11px] text-fg-subtle px-0.5">{effectiveHint}</p>
       </div>
     </div>
   );

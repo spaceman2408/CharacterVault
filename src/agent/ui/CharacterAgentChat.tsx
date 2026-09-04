@@ -235,7 +235,7 @@ export function CharacterAgentChat({
           notices={notices}
           toolEvents={toolEvents}
           recapLine={recapLine}
-          onRegenerate={session.handleRegenerate}
+          onRegenerate={handleRegenerateGuarded}
           onDelete={session.handleDeleteMessage}
           onOpenTarget={onOpenTarget}
         />
@@ -243,11 +243,11 @@ export function CharacterAgentChat({
     },
     [
       aiConfig.showReasoning,
+      handleRegenerateGuarded,
       onOpenTarget,
       session.chatHistory.length,
       session.errorByMessageId,
       session.handleDeleteMessage,
-      session.handleRegenerate,
       session.isProcessing,
       session.toolEventsByMessageId,
     ],
@@ -257,6 +257,7 @@ export function CharacterAgentChat({
     () => (review ? diffCharacterReview(review) : []),
     [review],
   );
+  const hasPendingReview = review != null;
 
   return (
     <>
@@ -268,6 +269,9 @@ export function CharacterAgentChat({
       contextLabels={contextLabels}
       contextEmptyHint="Custom context is optional. Enable it in the AI Context panel to give the agent source notes."
       composerHint="Stop, then Send to retry · Writes go into this card"
+      composerDisabled={hasPendingReview}
+      composerDisabledPlaceholder="Pending agent writes. Accept or reject via the yellow Review button…"
+      composerDisabledHint="Review pending. Accept or reject via the yellow Review button above"
       headerActions={
         <>
           <AgentToolModeChip mode={session.toolMode} />

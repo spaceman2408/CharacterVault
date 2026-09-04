@@ -221,7 +221,7 @@ export function LorebookAgentChat({
           notices={notices}
           toolEvents={toolEvents}
           recapLine={recapLine}
-          onRegenerate={session.handleRegenerate}
+          onRegenerate={handleRegenerateGuarded}
           onDelete={session.handleDeleteMessage}
           onOpenTarget={onOpenTarget}
         />
@@ -229,11 +229,11 @@ export function LorebookAgentChat({
     },
     [
       aiConfig.showReasoning,
+      handleRegenerateGuarded,
       onOpenTarget,
       session.chatHistory.length,
       session.errorByMessageId,
       session.handleDeleteMessage,
-      session.handleRegenerate,
       session.isProcessing,
       session.toolEventsByMessageId,
     ],
@@ -243,6 +243,7 @@ export function LorebookAgentChat({
     () => (review ? diffLorebookReview(review) : []),
     [review],
   );
+  const hasPendingReview = review != null;
 
   return (
     <>
@@ -254,6 +255,9 @@ export function LorebookAgentChat({
       contextLabels={contextLabels}
       contextEmptyHint={contextEmptyHint}
       composerHint={composerHint}
+      composerDisabled={hasPendingReview}
+      composerDisabledPlaceholder="Pending agent writes. Accept or reject via the yellow Review button…"
+      composerDisabledHint="Review pending. Accept or reject via the yellow Review button above"
       headerActions={
         <>
           <AgentToolModeChip mode={session.toolMode} />
