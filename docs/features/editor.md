@@ -112,14 +112,14 @@ This is available in every text editor that uses the shared CodeMirror toolbar, 
 
 - **Spellcheck** — A custom in-editor spellchecker (Hunspell-backed) underlines
   misspellings and offers quick-fix suggestions. Toggle on/off and pick the
-  language from **Studio → Spellcheck** in Settings. The English dictionary is
+  language from **Character Workspace → Spellcheck** in Settings. The English dictionary is
   fetched from `/dictionary/en.{aff,dic}` on first use and cached in IndexedDB
   for offline access. Hover or focus over a flagged word to see suggestions
   plus "Ignore word" and "Add to dictionary".
 - **Name macros** — `{{char}}` and `{{user}}` are syntax-colored so they stand
   out while you write (case-insensitive; optional spaces inside the braces).
 - **Markdown image links** — Image syntax is highlighted; optional click-to-open
-  is controlled under **Settings → Studio → Editor links**.
+  is controlled under **Settings → Character Workspace → Editor links**.
 
 ### Markdown image links
 
@@ -127,7 +127,7 @@ Markdown image syntax such as `![alt](https://example.com/art.png)` is
 highlighted in every shared text editor.
 
 - **Highlight** — Always on so image marks and URLs are easy to spot.
-- **Click to open** — When **Settings → Studio → Editor links → Open Markdown
+- **Click to open** — When **Settings → Character Workspace → Editor links → Open Markdown
   image links on click** is enabled, clicking an openable `http`/`https` URL
   shows a leave-app safety warning, then opens the link in a new tab.
 - **Select without opening** — Drag to select text; a small movement cancels
@@ -172,7 +172,7 @@ How it works:
 - **Offline** — The English Hunspell dictionary is fetched once on first use
   and cached in IndexedDB for subsequent visits.
 
-Toggle or switch language in **Settings → Studio → Spellcheck**. Currently the
+Toggle or switch language in **Settings → Character Workspace → Spellcheck**. Currently the
 only bundled language is **English (en-US)**; additional languages can be added
 by dropping `public/dictionary/<lang>.aff` and `public/dictionary/<lang>.dic`
 into the project and listing the code in

@@ -83,9 +83,13 @@ Click **Import** in the header to open a file picker, or **drag and drop** one o
 
 Click **Backup** in the header to download a ZIP of every character in your vault. Cards with images export as PNG (embedded data); cards without an image export as JSON. This is the recommended way to back up local IndexedDB storage.
 
+## Settings from the vault
+
+The vault header includes **Settings** (also under **More** on a narrow screen). The same panel as in the workspace: AI Config, Sampler, Prompts, Character Workspace, Creation Studio, and Sections.
+
 ## Pagination
 
-The character library paginates automatically (12 cards per page on mobile, 18 on desktop). Use the **Previous** and **Next** buttons at the bottom to navigate.
+The character library paginates automatically (12 cards per page on mobile, 18 on desktop). Page numbers sit **above and below** the grid, with **Previous** / **Next**. Changing page scrolls back to the top of the grid.
 
 ## Lorebook library
 

@@ -11,12 +11,12 @@ Generate a complete character card from scratch using AI:
 1. Click the **✨ AI Creation Studio** button in the vault header.
 2. Choose your input mode:
    - **Write Mode** — Describe your character concept in free-form text
-   - **Tags Mode** — Select from curated tags across 6 categories
+   - **Tags Mode** — Select from curated tags (Identity, Personality, Role, Genre, Tone, Appearance, Dynamic, Kink & Fetish)
 3. Click **Generate Character** (or **🎲 Feeling Lucky** for random tags).
 4. Review and edit the generated fields in the preview panel.
 5. Click **Save to Vault** when ready.
 
-The AI generates a name, description, first message, and example dialogue automatically.
+The AI always writes a name and description. First message and example dialogue run unless you turn them off in **Settings → Creation Studio**.
 
 [Learn more about AI Creation Studio →](/features/ai-creation-studio)
 

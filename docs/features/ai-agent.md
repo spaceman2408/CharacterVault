@@ -9,7 +9,7 @@ It can use the **global** model from **Settings → AI Config**, or its own mapp
 :::
 
 ::: warning It writes for real
-When a run finishes, changes land in this card or book. A pulsing **Agent writing** label in the workspace header is the cue. Use [Snapshots](/features/snapshots-history) if you need to roll back.
+When a run finishes, changes land in this card or book — unless [review](#review-edits) is on, in which case they wait for you. A pulsing **Agent writing** label in the workspace header is the cue. Use [Snapshots](/features/snapshots-history) if you need to roll back.
 :::
 
 ## Orion vs Agent
@@ -17,14 +17,14 @@ When a run finishes, changes land in this card or book. A pulsing **Agent writin
 | | **Orion** | **Agent** |
 | :--- | :--- | :--- |
 | **Job** | Brainstorm, Q&A, drafts in chat | Fill and revise the open card or book |
-| **Writes the card?** | No | Yes, when the run finishes |
+| **Writes the card?** | No | Yes, when the run finishes (or after you apply a [review](#review-edits)) |
 | **Context** | Sections you pin, plus optional custom notes | Field and entry catalogs, plus optional custom notes. It reads bodies with tools. |
 | **Model** | Always **Settings → AI Config** | **Settings → Prompts → Agent**, or AI Config if you leave Default |
 | **Where** | Character workspace and lorebook vault workspace | Same two workspaces, behind the **Agent** toggle |
 
 You can switch back to Orion at any time. The two chats do not share a thread. Each one is saved on that character or lorebook and comes back when you reopen Ask AI.
 
-To open Agent by default, set **Settings → Studio → Chat panel** to **Agent**. That applies the next time you open a character or lorebook. The header toggle still works for the current session.
+To open Agent by default, set **Settings → Character Workspace → Chat panel** to **Agent**. That applies the next time you open a character or lorebook. The header toggle still works for the current session.
 
 ## Opening the Agent
 
@@ -83,9 +83,9 @@ Details: [AI Context → Custom Context](/features/ai-context#custom-context).
 1. You send a request.
 2. The Agent sees **catalogs** (field ids and sizes; lorebook ids, names, and keys) plus custom context if enabled. It reads full bodies only for what it is about to change.
 3. It calls tools (list, read, update, replace, add, delete). The chat shows short colored tool lines, not the full field text.
-4. When it is done (or you **Stop**), CharacterVault **writes once** and takes **one snapshot** first.
+4. When it is done (or you **Stop**), CharacterVault **writes once** and takes **one snapshot** first — or, if [review](#review-edits) is on, it stages those writes for you to approve.
 
-Until that write, the editor keeps the previous text. A pulsing **Agent writing** label in the workspace header is the cue.
+Until that write (or until you apply a review), the editor keeps the previous text. A pulsing **Agent writing** label in the workspace header is the cue.
 
 Snippet edits match a unique stretch of existing text instead of rewriting the whole field or entry. Matching tolerates quote styles and multi-section spans. If the snippet is not unique, ask it to re-read and copy a longer stretch.
 
@@ -110,6 +110,7 @@ The thread is stored in the browser with the vault. Long threads keep a small wi
 - **Stop** (square while it is working) cancels the current run. Writes that already finished in that run still flush.
 - **Send** with an empty box retries the last request (same as the composer hint).
 - **New chat** asks first, then clears the saved thread for this panel only. The card stays as last written. Closing the panel or leaving the card keeps the conversation.
+- While a review is pending, the composer is disabled. Apply or discard the proposal first.
 - Delete a message to trim from that point; you cannot delete while a run is in progress.
 
 If you Stop while it is still thinking, Send is available again so you can retry or type a new ask.
@@ -151,9 +152,31 @@ If a job is huge, send a second ask for the rest.
 
 Duplicate lorebook **names** in one run revise the new entry instead of adding a second copy. Names that already existed in the book are rejected; ask it to update that id.
 
+## Review edits {#review-edits}
+
+By default the Agent applies writes when the run finishes. To inspect them first:
+
+1. Open **Settings → Character Workspace**.
+2. Enable **Review agent edits before applying**.
+3. Save Settings.
+
+The chat header shows a **Review** chip while this is on. Character Agent and lorebook Agent share the same preference.
+
+When a run that changed something finishes, **Review agent edits** opens instead of writing:
+
+- Each field, greeting, and lorebook change is a row with a word-level **Original / Agent** diff and `+added` / `−removed` counts. Very large texts fall back to side-by-side full text.
+- Approve or deny per change. **Approve all** / **Deny all** set every row. Denied rows stay in the list but are not applied.
+- Expand an approved change to **edit** the proposed text (and lorebook keys) before it lands.
+- **Apply N edits** takes **one snapshot**, then writes only the approved rows. **Discard** throws the whole proposal away (with a confirm).
+- Close the modal or click outside to **decide later**. A yellow **Review (N)** chip in the chat header reopens it. Send is blocked until you apply or discard.
+
+Edits you make in the editor to fields the Agent did **not** touch are kept when you apply. New lorebook entries get a free id if you added one yourself while the review was open.
+
+Turn the toggle off to restore 1.4.x auto-apply.
+
 ## Snapshots
 
-Before the Agent writes, CharacterVault stores one snapshot of the current card or book (if something actually changed). **Opened card** / **Opened** stays last in the list and cannot be deleted.
+Before the Agent writes (or when you **Apply** a review), CharacterVault stores one snapshot of the current card or book (if something actually changed). **Opened card** / **Opened** stays last in the list and cannot be deleted.
 
 Open **Snapshots** (character) or **History** (vault book) to compare and restore. Linked characters follow a restored library book, same as a manual restore.
 
@@ -164,7 +187,7 @@ Open **Snapshots** (character) or **History** (vault book) to compare and restor
 - Put source notes in **custom context**, then ask for a fill or a pass (thin description, rename keys, add missing entries).
 - Prefer one clear job per Send. Split “rewrite description” and “rebuild the lorebook” if either is large.
 - **Stop**, then empty **Send**, retries the last user message.
-- After a run, skim Snapshots if the write was bigger than you meant.
+- After a run, skim Snapshots if the write was bigger than you meant. Turn on [review](#review-edits) if you want that skim *before* the write.
 
 ## Troubleshooting {#troubleshooting}
 
@@ -230,7 +253,9 @@ Raise **Settings → Sampler → Context Length**. Huge books plus custom contex
 
 ### Changes never appear in the editor
 
-The Agent writes **once**, when the run finishes (or you **Stop**, for tools that already completed). The **Agent writing** header label is the cue. If the run ends with no tool lines, nothing was applied. That is a model/tool failure, not a delayed save.
+The Agent writes **once**, when the run finishes (or you **Stop**, for tools that already completed) — unless review is on, in which case nothing lands until you **Apply**. The **Agent writing** header label is the cue. If the run ends with no tool lines, nothing was applied. That is a model/tool failure, not a delayed save.
+
+If Send is locked and you see a yellow **Review (N)** chip, a proposal is waiting. Open it and apply or discard.
 
 ### Lorebook writes did not reach the vault book
 

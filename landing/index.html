@@ -40,8 +40,8 @@
       <div class="hero-stars" aria-hidden="true"></div>
       <div class="container hero-inner">
         <div class="hero-copy">
-          <a class="hero-pill reveal" href="https://vault.charactervault.app/docs/releases/v1.4.0" target="_blank" rel="noopener">
-            New in 1.4.0: the Agent edits your card for real
+          <a class="hero-pill reveal" href="https://vault.charactervault.app/docs/releases/v1.5.0" target="_blank" rel="noopener">
+            New in 1.5.0: Studio overhaul and Agent review diff
             <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
           <p class="hero-eyebrow reveal">Free and open source</p>
@@ -264,9 +264,9 @@
 
     <section class="section" id="agent">
       <div class="container">
-        <p class="section-label reveal">New in 1.4.0 — the Agent</p>
+        <p class="section-label reveal">The Agent</p>
         <h2 class="reveal">Describe the edit.<br>The Agent writes the card.</h2>
-        <p class="section-sub reveal">Orion talks back. The Agent rolls up its sleeves: it reads your open character or lorebook through tools, then fills, rewrites, and cuts for real — while you watch the tool calls live.</p>
+        <p class="section-sub reveal">Orion talks back. The Agent rolls up its sleeves: it reads your open character or lorebook through tools, then fills, rewrites, and cuts for real — while you watch the tool calls live. Optional review puts those writes in a word-level diff until you approve them.</p>
         <div class="agent-demo reveal" id="agent-demo">
           <div class="window-bar" aria-hidden="true">
             <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
@@ -293,6 +293,7 @@
           <li>Snippet edits match existing text — no rewriting the whole field</li>
           <li>Whole-book and whole-card tools: search, replace-everywhere, audit</li>
           <li>Own model slot, native function calling, writes once per run</li>
+          <li>Optional review diff: approve, edit, or deny before anything lands</li>
         </ul>
         <a class="section-link reveal" href="https://vault.charactervault.app/docs/features/ai-agent" target="_blank" rel="noopener" style="display:flex;justify-content:center;margin-top:1.8rem">
           Read the Agent docs
@@ -416,17 +417,18 @@
           <img src="assets/screenshots/ai-studio.png" alt="AI Creation Studio generating a character from a concept" class="zoomable" loading="lazy">
         </figure>
         <div class="studio-copy">
-          <p class="section-label reveal">AI Creation Studio</p>
+          <p class="section-label reveal">New in 1.5.0 — AI Creation Studio</p>
           <h2 class="reveal">From a sentence<br>to a full character.</h2>
           <p class="ctx-sub reveal">
             Describe who you are imagining, or pick from guided trait tags, and the studio
-            drafts the whole card in front of you. Stop it mid-stream, reroll what you
-            don't like, then save straight to your library.
+            drafts the card in front of you. Edit the prompts, skip fields you do not need,
+            star tags you reuse. Stop it mid-stream, reroll what you don't like, then save
+            straight to your library.
           </p>
           <ul class="ctx-points reveal">
-            <li>Free-text concept or guided tag picker</li>
-            <li>Each field generates live, in order</li>
-            <li>Nothing saves until you approve it</li>
+            <li>Free-text concept or guided tag picker, including Dynamic and NSFW tags</li>
+            <li>Custom prompts and toggles for First Message and Examples</li>
+            <li>Favorites, recents, custom tags — nothing saves until you approve it</li>
           </ul>
           <a class="btn btn-primary btn-lg studio-cta reveal" href="https://vault.charactervault.app/#/ai-create" target="_blank" rel="noopener">
             Try the Studio

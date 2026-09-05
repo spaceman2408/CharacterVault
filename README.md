@@ -25,7 +25,8 @@
 - **Lorebook Vault** - Standalone World Info library: create, search, import, export, duplicate, and link one book across characters
 - **Full Card Editor** - Edit every V2/V3 field: name, description, personality, scenario, greetings, lorebook, creator notes, and more
 - **AI Assistant Orion** - Built-in chat to help brainstorm and write character and lorebook content
-- **AI Agent** - Chat that writes the open character card or lorebook (toggle Agent in the Ask AI panel)
+- **AI Agent** - Chat that writes the open character card or lorebook (optional review diff before writes land)
+- **AI Creation Studio** - Generate a full card from a concept or tags, with custom prompts and field toggles
 - **AI Toolbar** - Enhance, rephrase, shorten, lengthen, or fix selected text inline
 - **Lorebook Editor** - Shared editor for card books and vault books: ST fields, content-first layout, AI-generated keys
 - **Recursion Map** - Fullscreen web of unlock paths; inspect entries, edit keys in place, and bulk-edit flags

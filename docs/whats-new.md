@@ -4,6 +4,21 @@ Quick overview of recent updates to CharacterVault.
 
 ---
 
+## September 2026
+
+### 1.5.0
+
+AI Creation Studio overhaul and an optional Agent review diff.
+
+- Custom generation prompts, skip First Message / Examples, Dynamic and Kink & Fetish tags, hide NSFW, favorites / recents / custom tags
+- **Go Back** stays on screen during and after generation
+- **Review agent edits** stages writes into a word-level Original / Agent diff until you apply or discard
+- Settings split: **Creation Studio** vs **Character Workspace**; Settings from the vault header
+
+[Release 1.5.0 →](/releases/v1.5.0) · [AI Creation Studio →](/features/ai-creation-studio) · [AI Agent →](/features/ai-agent)
+
+---
+
 ## August 2026
 
 ### 1.4.5

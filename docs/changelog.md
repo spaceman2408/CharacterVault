@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.5.0 (2026-09-05)
+
+AI Creation Studio overhaul and optional Agent review diff. Full notes: [v1.5.0 release notes](/releases/v1.5.0).
+
+### Highlights
+
+- Studio: custom field prompts, First Message / Examples toggles, Dynamic and Kink & Fetish tags, favorites / recents / custom tags, sticky Go Back
+- Agent: optional review modal with word-level Original / Agent diff; approve, edit, or deny before writes land
+- Settings split into **Creation Studio** and **Character Workspace**; vault header Settings and top pagination
+
+Details: [AI Creation Studio](/features/ai-creation-studio) · [AI Agent](/features/ai-agent) · [What's New](/whats-new)
+
+---
+
 ## 1.4.5 (2026-08-28)
 
 Orion and Agent chats persist per character and lorebook. Full notes: [v1.4.5 release notes](/releases/v1.4.5).

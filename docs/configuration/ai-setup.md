@@ -6,7 +6,7 @@ Character Vault's AI features (Orion, the Agent, and the AI toolbar) require an 
 
 1. Open a character in the workspace.
 2. Click **Settings** in the workspace header.
-3. The settings modal opens with five tabs: **AI Config**, **Sampler**, **Prompts**, **Studio**, and **Sections**.
+3. The settings modal opens with six tabs: **AI Config**, **Sampler**, **Prompts**, **Character Workspace**, **Creation Studio**, and **Sections**.
 4. Click **Save Settings** at the bottom when you're done. Changes don't take effect until you save.
 
 You can close the panel with **Cancel** or `Escape` to discard changes.
@@ -219,13 +219,22 @@ Sampler, streaming, and reasoning settings remain global (Sampler / AI Config ta
 
 For full details on placeholders and the toolbar, see [Customizing AI Operation Prompts](/features/editor#customizing-ai-operation-prompts).
 
-## Studio Tab
+## Character Workspace Tab
 
-The Studio tab holds UI preferences.
+Workspace UI preferences (this used to share a **Studio** tab with Creation Studio).
 
-- **AI Creation Studio:** the **I'm Feeling Lucky** vortex animation. Toggle it off if the visual effect gets distracting or slows down your device.
 - **Chat panel:** default Ask AI chat when you open a character or lorebook: **Orion** (talks, does not write the card) or **Agent** (writes the open card or book). You can still switch in the chat header. See [AI Agent](/features/ai-agent).
+- **Agent edits:** **Review agent edits before applying** stages Agent writes into a diff modal instead of applying them when the run finishes. See [AI Agent → Review edits](/features/ai-agent#review-edits).
 - **Editor links** and **Spellcheck:** covered under [Editor](/features/editor).
+
+## Creation Studio Tab
+
+Preferences for [AI Creation Studio](/features/ai-creation-studio):
+
+- **Generation Fields:** Name and Description always run. Toggle **First Message** and **Examples** independently.
+- **Tag Browser:** hide NSFW (Kink & Fetish) and hide individual tag categories.
+- **Generation Prompts:** editable templates per field, with `${concept}` / `${name}` / `${description}` required where listed. **Reset to defaults** restores stock prompts.
+- **Lucky vortex:** the **I'm Feeling Lucky** animation. Toggle it off if the visual effect gets distracting or slows down your device.
 
 ## Sections Tab
 
@@ -270,6 +279,7 @@ Pin fewer sections, trim custom context, or raise **Context Length** on the Samp
 - [AI Context Panel](/features/ai-context) — sections, custom context, tokens
 - [Use the AI assistant](/features/ai-assistant)
 - [AI Agent](/features/ai-agent)
+- [AI Creation Studio](/features/ai-creation-studio)
 - [Adjust sampler settings](/configuration/sampler-settings)
 - [Customize AI operation prompts & model routing](/features/editor#customizing-ai-operation-prompts)
 

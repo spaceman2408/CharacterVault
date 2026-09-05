@@ -23,13 +23,13 @@ Yes. The shared editor runs a Hunspell-backed spellchecker (the same engine Libr
 
 The checker automatically skips code fences (`` ``` ``), inline `` `code` `` spans, `{{macro}}` placeholders, Markdown image constructs, URLs/emails, HTML tags, numeric tokens, and ALL-CAPS acronyms — so JSON in Extensions and macros in Greetings won't be wrongly flagged. Hyphenated compounds pass when each segment is a valid word.
 
-Toggle it on or off in **Settings → Studio → Spellcheck**. The English dictionary is fetched once on first use and cached locally, so it works offline. Additional languages can be added by bundling new `.aff`/`.dic` pairs.
+Toggle it on or off in **Settings → Character Workspace → Spellcheck**. The English dictionary is fetched once on first use and cached locally, so it works offline. Additional languages can be added by bundling new `.aff`/`.dic` pairs.
 
 [Learn more →](/features/editor#spellcheck)
 :::
 
 ::: details Can I open Markdown image links from the editor?
-Yes. Syntax like `![alt](https://…)` is always highlighted. To open the URL on click, enable **Settings → Studio → Editor links → Open Markdown image links on click**. You’ll get a leave-app safety warning first. Drag to select text without opening.
+Yes. Syntax like `![alt](https://…)` is always highlighted. To open the URL on click, enable **Settings → Character Workspace → Editor links → Open Markdown image links on click**. You’ll get a leave-app safety warning first. Drag to select text without opening.
 
 [Learn more →](/features/editor#markdown-image-links)
 :::
@@ -39,7 +39,7 @@ You can:
 
 - **Edit every field** of a V2/V3 character card: description, personality, greetings, lorebook, creator notes, and extensions
 - **Keep standalone lorebooks** in a second vault library (World Info), with import/export, snapshots, and optional linking to characters (linked books stay in sync)
-- **Use AI to help you write** through Orion (chat), the **Agent** (writes the open card or lorebook), and an AI toolbar with enhance, rephrase, shorten, fix, and other operations
+- **Use AI to help you write** through Orion (chat), the **Agent** (writes the open card or lorebook, with an optional review diff), **AI Creation Studio** (generate a card from a concept or tags), and an AI toolbar with enhance, rephrase, shorten, fix, and other operations
 - **Save snapshots** at any point and roll back to previous versions, either the entire card or individual sections
 - **Import and export** PNG cards with embedded data and JSON files, compatible with SillyTavern, TavernAI, and other tools
 - **Stay in control** with local IndexedDB storage, dark and light themes
@@ -122,10 +122,18 @@ The **Agent** is a chat that **writes** the character or lorebook you have open.
 
 1. Open **Ask AI** and click **Agent** in the chat header
 2. Optionally enable [custom context](/features/ai-context#custom-context) as source notes
-3. Send a request. Changes appear when the run finishes
+3. Send a request. Changes appear when the run finishes (or after you apply a review, if that setting is on)
 4. Use **Snapshots** if you need to roll back
 
-It can use a separate model on **Settings → Prompts → Agent**. Set **Settings → Studio → Chat panel** to **Agent** if you want Ask AI to open there. See [AI Agent](/features/ai-agent).
+It can use a separate model on **Settings → Prompts → Agent**. Set **Settings → Character Workspace → Chat panel** to **Agent** if you want Ask AI to open there.
+
+Optional: enable **Settings → Character Workspace → Review agent edits before applying**. Writes then open in a word-level diff so you can approve, edit, or deny them before they land. See [AI Agent](/features/ai-agent).
+:::
+
+::: details What is AI Creation Studio?
+A full-screen flow that generates a new character from a written concept or from tags. Name and description always run; you can skip first message and examples. Prompts, tag categories, favorites, and custom tags live under **Settings → Creation Studio**.
+
+See [AI Creation Studio](/features/ai-creation-studio).
 :::
 
 ::: details What is custom context?
