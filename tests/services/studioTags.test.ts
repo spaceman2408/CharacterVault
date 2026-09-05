@@ -3,10 +3,12 @@ import {
   TAG_CATEGORIES,
   buildConceptFromTags,
   getVisibleCategories,
+  findTagCategory,
   isCustomTag,
   mergeCustomTags,
   normalizeTagSlug,
   randomizeTags,
+  resolveNewCustomTag,
 } from '../../src/pages/ai-creation-studio/tags/tagData';
 
 describe('normalizeTagSlug', () => {
@@ -37,6 +39,49 @@ describe('new built-in categories', () => {
       kink_fetish: ['bondage'],
     });
     expect(concept).toBe('Elf, Enemies To Lovers, Bondage');
+  });
+});
+
+describe('findTagCategory', () => {
+  it('finds built-in tags and custom tags across categories', () => {
+    expect(findTagCategory('elf')?.key).toBe('identity');
+    expect(findTagCategory('space_pirate', { role: ['space_pirate'] })?.key).toBe('role');
+    expect(findTagCategory('missing')).toBeNull();
+  });
+});
+
+describe('resolveNewCustomTag', () => {
+  it('rejects a slug that already exists in another category', () => {
+    const result = resolveNewCustomTag('personality', 'Elf');
+    expect(result).toEqual({
+      ok: false,
+      error: 'This tag already exists in Identity category.',
+    });
+  });
+
+  it('rejects a slug already saved as a custom tag elsewhere', () => {
+    const result = resolveNewCustomTag('genre', 'space pirate', {
+      identity: ['space_pirate'],
+    });
+    expect(result).toEqual({
+      ok: false,
+      error: 'This tag already exists in Identity category.',
+    });
+  });
+
+  it('rejects a duplicate in the same category', () => {
+    const result = resolveNewCustomTag('identity', 'elf');
+    expect(result).toEqual({
+      ok: false,
+      error: 'This tag already exists in Identity category.',
+    });
+  });
+
+  it('accepts a unique slug', () => {
+    expect(resolveNewCustomTag('identity', 'Space Pirate')).toEqual({
+      ok: true,
+      slug: 'space_pirate',
+    });
   });
 });
 

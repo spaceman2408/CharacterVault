@@ -13,8 +13,8 @@ import {
   getVisibleCategories,
   isCustomTag,
   mergeCustomTags,
-  normalizeTagSlug,
   pushRecentTags,
+  resolveNewCustomTag,
   toggleFavoriteTag,
   type TagCategory,
   type TaggedRef,
@@ -90,33 +90,26 @@ export function useStudioTags(): UseStudioTagsResult {
   }, [applyPrefs]);
 
   const addCustomTag = useCallback(async (categoryKey: string, raw: string) => {
-    if (categoryKey === 'generation') {
-      return { ok: false, error: 'Custom tags cannot be added to Generation.' };
-    }
-    const slug = normalizeTagSlug(raw);
-    if (!slug) {
-      return { ok: false, error: 'Use letters and numbers — e.g. "space pirate".' };
-    }
-    const base = TAG_CATEGORIES.find((c) => c.key === categoryKey);
-    if (!base) return { ok: false, error: 'Unknown category.' };
+    const early = resolveNewCustomTag(categoryKey, raw);
+    if (!early.ok) return early;
     // Merge against a fresh read so concurrent adds cannot clobber each other.
     const studio = await characterSettingsService.getStudioSettings();
     const current = studio.tags.customTags ?? {};
-    const existing = [...base.tags, ...(current[categoryKey] ?? [])];
-    if (existing.includes(slug)) {
+    const resolved = resolveNewCustomTag(categoryKey, raw, current);
+    if (!resolved.ok) {
       setCustomTags(current);
-      return { ok: false, error: 'That tag already exists in this category.' };
+      return resolved;
     }
     const next = {
       ...current,
-      [categoryKey]: [...(current[categoryKey] ?? []), slug],
+      [categoryKey]: [...(current[categoryKey] ?? []), resolved.slug],
     };
     await characterSettingsService.saveStudioSettings({
       ...studio,
       tags: { ...studio.tags, customTags: next },
     });
     setCustomTags(next);
-    return { ok: true, slug };
+    return { ok: true, slug: resolved.slug };
   }, []);
 
   const removeCustomTag = useCallback(async (categoryKey: string, tag: string) => {

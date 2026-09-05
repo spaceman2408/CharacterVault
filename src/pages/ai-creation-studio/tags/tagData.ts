@@ -455,6 +455,48 @@ export function normalizeTagSlug(raw: string): string {
 }
 
 /**
+ * Find the category that already owns a tag slug, checking built-in tags
+ * then custom tags. Returns the first match in TAG_CATEGORIES order.
+ */
+export function findTagCategory(
+  slug: string,
+  customTags: Record<string, string[]> = {}
+): TagCategory | null {
+  if (!slug) return null;
+  for (const cat of TAG_CATEGORIES) {
+    if (cat.tags.includes(slug)) return cat;
+    const extras = customTags[cat.key] ?? [];
+    if (extras.includes(slug)) return cat;
+  }
+  return null;
+}
+
+/**
+ * Validate and slugify a new custom tag. Rejects empty input, unknown or
+ * Generation categories, and slugs that already exist in any category.
+ */
+export function resolveNewCustomTag(
+  categoryKey: string,
+  raw: string,
+  customTags: Record<string, string[]> = {}
+): { ok: true; slug: string } | { ok: false; error: string } {
+  if (categoryKey === 'generation') {
+    return { ok: false, error: 'Custom tags cannot be added to Generation.' };
+  }
+  const slug = normalizeTagSlug(raw);
+  if (!slug) {
+    return { ok: false, error: 'Use letters and numbers — e.g. "space pirate".' };
+  }
+  const base = TAG_CATEGORIES.find((c) => c.key === categoryKey);
+  if (!base) return { ok: false, error: 'Unknown category.' };
+  const owner = findTagCategory(slug, customTags);
+  if (owner) {
+    return { ok: false, error: `This tag already exists in ${owner.label} category.` };
+  }
+  return { ok: true, slug };
+}
+
+/**
  * Merge user custom tags into a copy of the base categories.
  * Unknown category keys and duplicates are ignored.
  */
