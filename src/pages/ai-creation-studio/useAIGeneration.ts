@@ -25,6 +25,13 @@ interface ChatMessage {
 
 const FIELD_ORDER: GenerationField[] = ['name', 'description', 'first_mes', 'mes_example'];
 
+function isEnabledField(
+  enabled: StudioSettings['enabledFields'],
+  field: GenerationField
+): boolean {
+  return enabled[field] !== false;
+}
+
 const INITIAL_STATE: GenerationState = {
   status: 'idle',
   currentField: null,
@@ -66,6 +73,8 @@ export function useAIGeneration(): UseAIGenerationResult {
   const studioPromptsRef = useRef<StudioPrompts>({ ...DEFAULT_STUDIO_SETTINGS.prompts });
 
   const aiServiceRef = useRef<AIService | null>(null);
+  const inFlightServiceRef = useRef<AIService | null>(null);
+  const currentFieldRef = useRef<GenerationField | null>(null);
   const configRef = useRef<{ config: AIConfig; sampler: SamplerSettings } | null>(null);
   const stateRef = useRef<GenerationState>(state);
   const isAbortedRef = useRef<boolean>(false);
@@ -74,6 +83,7 @@ export function useAIGeneration(): UseAIGenerationResult {
   /** Cancel any in-flight request on the AIService and mark the current run as aborted. */
   const abortCurrent = useCallback(() => {
     isAbortedRef.current = true;
+    inFlightServiceRef.current?.abort();
     aiServiceRef.current?.abort();
   }, []);
 
@@ -89,6 +99,11 @@ export function useAIGeneration(): UseAIGenerationResult {
       enabledFieldsRef.current = normalizedStudio.enabledFields;
       setEnabledFields(normalizedStudio.enabledFields);
       studioPromptsRef.current = normalizedStudio.prompts;
+
+      const currentField = currentFieldRef.current;
+      if (currentField && !isEnabledField(enabledFieldsRef.current, currentField)) {
+        inFlightServiceRef.current?.abort();
+      }
 
       // For local endpoints (localhost, 127.0.0.1), API key is optional
       const isLocalEndpoint = config.baseUrl && (
@@ -188,6 +203,7 @@ export function useAIGeneration(): UseAIGenerationResult {
 
       let accumulatedContent = '';
       let accumulatedReasoning = '';
+      inFlightServiceRef.current = service;
 
       try {
         const response = await service.chat(
@@ -195,7 +211,11 @@ export function useAIGeneration(): UseAIGenerationResult {
           undefined,
           (chunk: { content?: string; reasoning?: string }) => {
             if (isAbortedRef.current) return;
-            
+            if (!isEnabledField(enabledFieldsRef.current, field)) {
+              service.abort();
+              return;
+            }
+
             if (chunk.content) {
               accumulatedContent += chunk.content;
             }
@@ -211,6 +231,10 @@ export function useAIGeneration(): UseAIGenerationResult {
           }
         );
 
+        if (!isEnabledField(enabledFieldsRef.current, field)) {
+          throw new AIError('Request was cancelled', 'unknown');
+        }
+
         const content = response.content || '';
         if (!content.trim()) {
           throw new AIError(
@@ -221,8 +245,8 @@ export function useAIGeneration(): UseAIGenerationResult {
 
         return content;
       } catch (err) {
-        // Don't update state if aborted
-        if (!isAbortedRef.current) {
+        const skipped = !isEnabledField(enabledFieldsRef.current, field);
+        if (!isAbortedRef.current && !skipped) {
           setState((prev) => ({
             ...prev,
             failedField: field,
@@ -231,9 +255,89 @@ export function useAIGeneration(): UseAIGenerationResult {
           }));
         }
         throw err;
+      } finally {
+        if (inFlightServiceRef.current === service) {
+          inFlightServiceRef.current = null;
+        }
       }
     },
     [buildMessages]
+  );
+
+  const discardFieldOutput = useCallback((
+    generatedData: Partial<CharacterSpec>,
+    field: GenerationField
+  ) => {
+    delete generatedData[field];
+    setState((prev) => {
+      const nextData = { ...prev.generatedData };
+      const nextReasoning = { ...prev.generatedReasoning };
+      delete nextData[field];
+      delete nextReasoning[field];
+      return {
+        ...prev,
+        generatedData: nextData,
+        generatedReasoning: nextReasoning,
+        completedFields: prev.completedFields.filter((f) => f !== field),
+      };
+    });
+  }, []);
+
+  const runFieldSequence = useCallback(
+    async (
+      fields: GenerationField[],
+      generatedData: Partial<CharacterSpec>,
+      trimmedConcept: string
+    ) => {
+      for (const field of fields) {
+        if (isAbortedRef.current) {
+          throw new AIError('Request was cancelled', 'unknown');
+        }
+        if (!isEnabledField(enabledFieldsRef.current, field)) {
+          discardFieldOutput(generatedData, field);
+          continue;
+        }
+
+        currentFieldRef.current = field;
+        setState((prev) => ({
+          ...prev,
+          currentField: field,
+          generatedData: { ...generatedData },
+        }));
+
+        try {
+          const result = await generateField(field, trimmedConcept, generatedData);
+          if (isAbortedRef.current) {
+            throw new AIError('Request was cancelled', 'unknown');
+          }
+          if (!isEnabledField(enabledFieldsRef.current, field)) {
+            discardFieldOutput(generatedData, field);
+            continue;
+          }
+
+          generatedData[field] = result;
+          setState((prev) => ({
+            ...prev,
+            completedFields: Array.from(new Set([...prev.completedFields, field])),
+            generatedData: { ...generatedData },
+          }));
+        } catch (err) {
+          if (isAbortedRef.current) {
+            throw new AIError('Request was cancelled', 'unknown');
+          }
+          if (!isEnabledField(enabledFieldsRef.current, field)) {
+            discardFieldOutput(generatedData, field);
+            continue;
+          }
+          throw err;
+        } finally {
+          if (currentFieldRef.current === field) {
+            currentFieldRef.current = null;
+          }
+        }
+      }
+    },
+    [generateField, discardFieldOutput]
   );
 
   const start = useCallback(
@@ -269,7 +373,7 @@ export function useAIGeneration(): UseAIGenerationResult {
 
       isAbortedRef.current = false;
       setIsLoading(true);
-      const activeFields = FIELD_ORDER.filter((f) => enabledFieldsRef.current[f] !== false);
+      const activeFields = FIELD_ORDER.filter((f) => isEnabledField(enabledFieldsRef.current, f));
       setState({
         ...INITIAL_STATE,
         status: 'generating',
@@ -279,35 +383,8 @@ export function useAIGeneration(): UseAIGenerationResult {
       const generatedData: Partial<CharacterSpec> = {};
 
       try {
-        for (const field of activeFields) {
-          // Check if aborted
-          if (isAbortedRef.current) {
-            throw new AIError('Request was cancelled', 'unknown');
-          }
+        await runFieldSequence(activeFields, generatedData, trimmedConcept);
 
-          setState((prev) => ({
-            ...prev,
-            currentField: field,
-            generatedData: { ...generatedData },
-          }));
-
-          const result = await generateField(field, trimmedConcept, generatedData);
-          
-          // Check again after async operation
-          if (isAbortedRef.current) {
-            throw new AIError('Request was cancelled', 'unknown');
-          }
-          
-          generatedData[field] = result;
-
-          setState((prev) => ({
-            ...prev,
-            completedFields: [...prev.completedFields, field],
-            generatedData: { ...generatedData },
-          }));
-        }
-
-        // Don't update to complete if aborted
         if (!isAbortedRef.current) {
           setState((prev) => ({
             ...prev,
@@ -316,7 +393,6 @@ export function useAIGeneration(): UseAIGenerationResult {
           }));
         }
       } catch (err) {
-        // Don't update state if aborted
         if (!isAbortedRef.current) {
           const errorMessage =
             err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
@@ -333,11 +409,12 @@ export function useAIGeneration(): UseAIGenerationResult {
         setIsLoading(false);
       }
     },
-    [loadConfig, generateField, abortCurrent]
+    [loadConfig, runFieldSequence, abortCurrent]
   );
 
   const abort = useCallback(() => {
     abortCurrent();
+    currentFieldRef.current = null;
     setIsLoading(false);
     setState((prev) => ({
       ...prev,
@@ -362,8 +439,13 @@ export function useAIGeneration(): UseAIGenerationResult {
         return;
       }
 
+      if (!isEnabledField(enabledFieldsRef.current, field)) {
+        return;
+      }
+
       isAbortedRef.current = false;
       setIsLoading(true);
+      currentFieldRef.current = field;
       setState((prev) => ({
         ...prev,
         status: 'generating',
@@ -377,7 +459,13 @@ export function useAIGeneration(): UseAIGenerationResult {
         const effectiveConcept = concept || currentData.name || 'Character';
         const result = await generateField(field, effectiveConcept, currentData);
 
-        // Don't update state if aborted
+        if (isAbortedRef.current) return;
+        if (!isEnabledField(enabledFieldsRef.current, field)) {
+          discardFieldOutput({ ...stateRef.current.generatedData }, field);
+          setState((prev) => ({ ...prev, currentField: null, status: 'complete' }));
+          return;
+        }
+
         if (!isAbortedRef.current) {
           setState((prev) => ({
             ...prev,
@@ -390,7 +478,12 @@ export function useAIGeneration(): UseAIGenerationResult {
           }));
         }
       } catch (err) {
-        // Don't update state if aborted
+        if (isAbortedRef.current) return;
+        if (!isEnabledField(enabledFieldsRef.current, field)) {
+          discardFieldOutput({ ...stateRef.current.generatedData }, field);
+          setState((prev) => ({ ...prev, currentField: null, status: 'complete' }));
+          return;
+        }
         if (!isAbortedRef.current) {
           const errorMessage =
             err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
@@ -404,10 +497,11 @@ export function useAIGeneration(): UseAIGenerationResult {
           }));
         }
       } finally {
+        if (currentFieldRef.current === field) currentFieldRef.current = null;
         setIsLoading(false);
       }
     },
-    [loadConfig, generateField, concept, abortCurrent]
+    [loadConfig, generateField, concept, abortCurrent, discardFieldOutput]
   );
 
   const regenerateField = useCallback(
@@ -425,8 +519,13 @@ export function useAIGeneration(): UseAIGenerationResult {
         return;
       }
 
+      if (!isEnabledField(enabledFieldsRef.current, field)) {
+        return;
+      }
+
       isAbortedRef.current = false;
       setIsLoading(true);
+      currentFieldRef.current = field;
       setState((prev) => ({
         ...prev,
         status: 'generating',
@@ -444,7 +543,13 @@ export function useAIGeneration(): UseAIGenerationResult {
         const contextData = { ...currentData, [field]: undefined };
         const result = await generateField(field, effectiveConcept, contextData);
 
-        // Don't update state if aborted
+        if (isAbortedRef.current) return;
+        if (!isEnabledField(enabledFieldsRef.current, field)) {
+          discardFieldOutput({ ...stateRef.current.generatedData }, field);
+          setState((prev) => ({ ...prev, currentField: null, status: 'complete' }));
+          return;
+        }
+
         if (!isAbortedRef.current) {
           setState((prev) => ({
             ...prev,
@@ -457,7 +562,12 @@ export function useAIGeneration(): UseAIGenerationResult {
           }));
         }
       } catch (err) {
-        // Don't update state if aborted
+        if (isAbortedRef.current) return;
+        if (!isEnabledField(enabledFieldsRef.current, field)) {
+          discardFieldOutput({ ...stateRef.current.generatedData }, field);
+          setState((prev) => ({ ...prev, currentField: null, status: 'complete' }));
+          return;
+        }
         if (!isAbortedRef.current) {
           const errorMessage =
             err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
@@ -471,10 +581,11 @@ export function useAIGeneration(): UseAIGenerationResult {
           }));
         }
       } finally {
+        if (currentFieldRef.current === field) currentFieldRef.current = null;
         setIsLoading(false);
       }
     },
-    [loadConfig, generateField, concept, abortCurrent]
+    [loadConfig, generateField, concept, abortCurrent, discardFieldOutput]
   );
 
   const continueGeneration = useCallback(async () => {
@@ -493,7 +604,7 @@ export function useAIGeneration(): UseAIGenerationResult {
 
     const currentState = stateRef.current;
     const remaining = FIELD_ORDER.filter(
-      (f) => enabledFieldsRef.current[f] !== false && !currentState.completedFields.includes(f)
+      (f) => isEnabledField(enabledFieldsRef.current, f) && !currentState.completedFields.includes(f)
     );
     if (remaining.length === 0) return;
 
@@ -510,34 +621,8 @@ export function useAIGeneration(): UseAIGenerationResult {
     const trimmedConcept = concept || currentState.generatedData.name || 'Character';
 
     try {
-      for (const field of remaining) {
-        if (isAbortedRef.current) {
-          throw new AIError('Request was cancelled', 'unknown');
-        }
+      await runFieldSequence(remaining, generatedData, trimmedConcept);
 
-        setState((prev) => ({
-          ...prev,
-          currentField: field,
-          generatedData: { ...generatedData },
-        }));
-
-        const result = await generateField(field, trimmedConcept, generatedData);
-        
-        // Check again after async operation
-        if (isAbortedRef.current) {
-          throw new AIError('Request was cancelled', 'unknown');
-        }
-        
-        generatedData[field] = result;
-
-        setState((prev) => ({
-          ...prev,
-          completedFields: Array.from(new Set([...prev.completedFields, field])),
-          generatedData: { ...generatedData },
-        }));
-      }
-
-      // Don't update to complete if aborted
       if (!isAbortedRef.current) {
         setState((prev) => ({
           ...prev,
@@ -546,7 +631,6 @@ export function useAIGeneration(): UseAIGenerationResult {
         }));
       }
     } catch (err) {
-      // Don't update state if aborted
       if (!isAbortedRef.current) {
         const errorMessage =
           err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
@@ -562,7 +646,7 @@ export function useAIGeneration(): UseAIGenerationResult {
     } finally {
       setIsLoading(false);
     }
-  }, [loadConfig, generateField, concept, abortCurrent]);
+  }, [loadConfig, runFieldSequence, concept, abortCurrent]);
 
   const updateGeneratedField = useCallback((field: GenerationField, value: string) => {
     setState((prev) => ({
@@ -573,6 +657,7 @@ export function useAIGeneration(): UseAIGenerationResult {
 
   const reset = useCallback(() => {
     abortCurrent();
+    currentFieldRef.current = null;
     setState(INITIAL_STATE);
     setIsLoading(false);
     setConcept('');
