@@ -216,6 +216,7 @@ export const AICreationStudio: React.FC = () => {
         .filter((cat) => cat.key !== 'generation')
         .flatMap((cat) => (tagSelections[cat.key] ?? []).map(formatTag));
 
+      const firstMesEnabled = enabledFields.first_mes !== false;
       const mesExampleEnabled = enabledFields.mes_example !== false;
       const character = await createCharacter({
         name: state.generatedData.name,
@@ -225,7 +226,7 @@ export const AICreationStudio: React.FC = () => {
             description: state.generatedData.description || '',
             personality: '',
             scenario: '',
-            first_mes: state.generatedData.first_mes || '',
+            first_mes: firstMesEnabled ? state.generatedData.first_mes || '' : '',
             mes_example: mesExampleEnabled ? state.generatedData.mes_example || '' : '',
             system_prompt: '',
             post_history_instructions: '',

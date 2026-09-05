@@ -49,6 +49,16 @@ describe('normalizeStudioSettings', () => {
     expect(normalized.prompts.system).toBe(DEFAULT_STUDIO_PROMPTS.system);
   });
 
+  it('keeps name and description required and allows first_mes and examples off', () => {
+    const normalized = normalizeStudioSettings({
+      enabledFields: { name: false, description: false, first_mes: false, mes_example: false },
+    });
+    expect(normalized.enabledFields.name).toBe(true);
+    expect(normalized.enabledFields.description).toBe(true);
+    expect(normalized.enabledFields.first_mes).toBe(false);
+    expect(normalized.enabledFields.mes_example).toBe(false);
+  });
+
   it('falls back to defaults for empty prompt strings', () => {
     const normalized = normalizeStudioSettings({ prompts: { system: '' } });
     expect(normalized.prompts.system).toBe(DEFAULT_STUDIO_PROMPTS.system);

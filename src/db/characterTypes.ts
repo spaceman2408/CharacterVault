@@ -818,8 +818,8 @@ export function normalizeStudioSettings(value: unknown): StudioSettings {
   }
   return {
     enabledFields: {
-      name: enabled.name ?? true,
-      description: enabled.description ?? true,
+      name: true,
+      description: true,
       first_mes: enabled.first_mes ?? true,
       mes_example: enabled.mes_example ?? true,
     },

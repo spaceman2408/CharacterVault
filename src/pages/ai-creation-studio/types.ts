@@ -30,7 +30,7 @@ export interface FieldConfig {
 export const GENERATION_FIELDS: FieldConfig[] = [
   { key: 'name', label: 'Name', icon: 'Type', isOptional: false },
   { key: 'description', label: 'Description', icon: 'FileText', isOptional: false },
-  { key: 'first_mes', label: 'First Message', icon: 'MessageCircle', isOptional: false },
+  { key: 'first_mes', label: 'First Message', icon: 'MessageCircle', isOptional: true },
   { key: 'mes_example', label: 'Examples', icon: 'MessagesSquare', isOptional: true },
 ];
 

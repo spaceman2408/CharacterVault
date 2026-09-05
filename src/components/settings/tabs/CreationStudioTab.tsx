@@ -14,11 +14,9 @@ import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
 import type { SettingsTabProps } from '../types';
 
-const STUDIO_FIELD_META: Array<{ key: StudioGenerationField; label: string; hint: string; toggleable: boolean }> = [
-  { key: 'name', label: 'Name', hint: 'Always generated — required for the card.', toggleable: false },
-  { key: 'description', label: 'Description', hint: 'Always generated — core card body.', toggleable: false },
-  { key: 'first_mes', label: 'First Message', hint: 'Always generated — opening message.', toggleable: false },
-  { key: 'mes_example', label: 'Example Messages', hint: 'Toggle off to skip dialogue examples and save an API call.', toggleable: true },
+const STUDIO_OPTIONAL_FIELDS: Array<{ key: StudioGenerationField; label: string; hint: string }> = [
+  { key: 'first_mes', label: 'First Message', hint: 'Toggle off to skip the opening greeting and save an API call.' },
+  { key: 'mes_example', label: 'Examples', hint: 'Toggle off to skip dialogue examples and save an API call.' },
 ];
 
 const STUDIO_PROMPT_META: Array<{ key: StudioPromptKey; label: string; hint: string }> = [
@@ -103,36 +101,28 @@ export const CreationStudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft 
           <SlidersHorizontal className="w-4 h-4" />
           Generation Fields
         </h3>
+        <p className="text-xs text-fg-muted mb-4 leading-relaxed">
+          Name and Description are always generated.
+        </p>
         <div className="space-y-4">
-          {STUDIO_FIELD_META.map(({ key, label, hint, toggleable }) => {
-            const checked = draft.studio.enabledFields[key];
-            return (
-              <SettingsToggle
-                key={key}
-                stacked
-                checked={checked}
-                disabled={!toggleable}
-                onChange={(next) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    studio: {
-                      ...prev.studio,
-                      enabledFields: { ...prev.studio.enabledFields, [key]: next },
-                    },
-                  }))
-                }
-                label={label}
-                description={
-                  <>
-                    {hint}
-                    {!toggleable && (
-                      <> More field toggles will appear here as new sections are added.</>
-                    )}
-                  </>
-                }
-              />
-            );
-          })}
+          {STUDIO_OPTIONAL_FIELDS.map(({ key, label, hint }) => (
+            <SettingsToggle
+              key={key}
+              stacked
+              checked={draft.studio.enabledFields[key]}
+              onChange={(next) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  studio: {
+                    ...prev.studio,
+                    enabledFields: { ...prev.studio.enabledFields, [key]: next },
+                  },
+                }))
+              }
+              label={label}
+              description={hint}
+            />
+          ))}
         </div>
       </SettingsCard>
 
