@@ -78,22 +78,37 @@ export function useAIGeneration(): UseAIGenerationResult {
   const configRef = useRef<{ config: AIConfig; sampler: SamplerSettings } | null>(null);
   const stateRef = useRef<GenerationState>(state);
   const isAbortedRef = useRef<boolean>(false);
+  const mountedRef = useRef(true);
+  const loadIdRef = useRef(0);
   stateRef.current = state;
 
   /** Cancel any in-flight request on the AIService and mark the current run as aborted. */
   const abortCurrent = useCallback(() => {
     isAbortedRef.current = true;
-    inFlightServiceRef.current?.abort();
-    aiServiceRef.current?.abort();
+    const inFlight = inFlightServiceRef.current;
+    const current = aiServiceRef.current;
+    inFlight?.dispose();
+    if (current && current !== inFlight) current.dispose();
+  }, []);
+
+  const adoptAIService = useCallback((next: AIService | null) => {
+    const prev = aiServiceRef.current;
+    aiServiceRef.current = next;
+    if (prev && prev !== next && prev !== inFlightServiceRef.current) {
+      prev.dispose();
+    }
   }, []);
 
   const loadConfig = useCallback(async (): Promise<boolean> => {
+    const loadId = ++loadIdRef.current;
     try {
       const [config, sampler, studio] = await Promise.all([
         characterSettingsService.getAISettings(),
         characterSettingsService.getSamplerSettings(),
         characterSettingsService.getStudioSettings(),
       ]);
+
+      if (loadId !== loadIdRef.current || !mountedRef.current) return false;
 
       const normalizedStudio = normalizeStudioSettings(studio);
       enabledFieldsRef.current = normalizedStudio.enabledFields;
@@ -102,7 +117,7 @@ export function useAIGeneration(): UseAIGenerationResult {
 
       const currentField = currentFieldRef.current;
       if (currentField && !isEnabledField(enabledFieldsRef.current, currentField)) {
-        inFlightServiceRef.current?.abort();
+        inFlightServiceRef.current?.dispose();
       }
 
       // For local endpoints (localhost, 127.0.0.1), API key is optional
@@ -121,32 +136,37 @@ export function useAIGeneration(): UseAIGenerationResult {
 
       if (hasConfig) {
         configRef.current = { config, sampler };
-        aiServiceRef.current = new AIService(config, sampler);
+        adoptAIService(new AIService(config, sampler));
+      } else {
+        configRef.current = null;
+        adoptAIService(null);
       }
 
       return hasConfig;
     } catch (err) {
+      if (loadId !== loadIdRef.current || !mountedRef.current) return false;
       console.error('[useAIGeneration] Failed to load config:', err);
       setIsConfigured(false);
       return false;
     }
-  }, []);
+  }, [adoptAIService]);
 
   const reloadConfig = useCallback(async () => {
     await loadConfig();
   }, [loadConfig]);
 
-  // Pre-check saved config on mount so `isConfigured` reflects reality immediately
+  // Pre-check saved config on mount; drop services on unmount so streams cannot linger.
   useEffect(() => {
+    mountedRef.current = true;
     void loadConfig();
-  }, [loadConfig]);
-
-  // Abort any in-flight generation when the hook unmounts (e.g. navigating away)
-  useEffect(() => {
     return () => {
+      mountedRef.current = false;
+      loadIdRef.current += 1;
       abortCurrent();
+      inFlightServiceRef.current = null;
+      aiServiceRef.current = null;
     };
-  }, [abortCurrent]);
+  }, [loadConfig, abortCurrent]);
 
   const buildMessages = useCallback(
     (field: GenerationField, concept: string, data: Partial<CharacterSpec>): ChatMessage[] => {
@@ -210,7 +230,7 @@ export function useAIGeneration(): UseAIGenerationResult {
           messages,
           undefined,
           (chunk: { content?: string; reasoning?: string }) => {
-            if (isAbortedRef.current) return;
+            if (!mountedRef.current || isAbortedRef.current) return;
             if (!isEnabledField(enabledFieldsRef.current, field)) {
               service.abort();
               return;
@@ -258,6 +278,9 @@ export function useAIGeneration(): UseAIGenerationResult {
       } finally {
         if (inFlightServiceRef.current === service) {
           inFlightServiceRef.current = null;
+        }
+        if (aiServiceRef.current !== service) {
+          service.dispose();
         }
       }
     },
