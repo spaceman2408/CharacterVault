@@ -137,6 +137,7 @@ export class CharacterImportService {
         system_prompt: String(cardData.system_prompt || ''),
         post_history_instructions: String(cardData.post_history_instructions || ''),
         alternate_greetings: Array.isArray(cardData.alternate_greetings) ? cardData.alternate_greetings : [],
+        physical_description: typeof cardData.physical_description === 'string' ? cardData.physical_description : undefined,
         extensions: (cardData.extensions as CharacterExtensions) || {},
         character_book: cardData.character_book as import('../db/characterTypes').CharacterBook | undefined,
         // V3 fields - may be present in v2 files too
@@ -212,6 +213,7 @@ export class CharacterImportService {
       system_prompt: getString('system_prompt'),
       post_history_instructions: getString('post_history_instructions'),
       alternate_greetings: getArray('alternate_greetings') || [],
+      physical_description: getString('physical_description'),
       extensions: (inner && inner.extensions as CharacterExtensions) || 
                   outer.extensions as CharacterExtensions || {},
       character_book: (inner && inner.character_book as import('../db/characterTypes').CharacterBook) || 
@@ -593,7 +595,7 @@ export class CharacterImportService {
       system_prompt: data.system_prompt || '',
       post_history_instructions: data.post_history_instructions || '',
       alternate_greetings: data.alternate_greetings || [],
-      physical_description: '',
+      physical_description: data.physical_description || '',
       // V3 spec fields
       avatar: data.avatar,
       creator_notes: data.creator_notes,
@@ -725,6 +727,7 @@ export class CharacterImportService {
         system_prompt: String(cardData.system_prompt || ''),
         post_history_instructions: String(cardData.post_history_instructions || ''),
         alternate_greetings: Array.isArray(cardData.alternate_greetings) ? cardData.alternate_greetings : [],
+        physical_description: typeof cardData.physical_description === 'string' ? cardData.physical_description : undefined,
         extensions: (cardData.extensions as CharacterExtensions) || {},
         character_book: cardData.character_book as import('../db/characterTypes').CharacterBook | undefined,
         // V3 fields - may be present in v2 files too
@@ -774,6 +777,7 @@ export class CharacterImportService {
       system_prompt: String(data.system_prompt || ''),
       post_history_instructions: String(data.post_history_instructions || ''),
       alternate_greetings: Array.isArray(data.alternate_greetings) ? data.alternate_greetings : [],
+      physical_description: typeof data.physical_description === 'string' ? data.physical_description : undefined,
       extensions: (data.extensions as CharacterExtensions) || {},
       character_book: data.character_book as import('../db/characterTypes').CharacterBook | undefined,
       // V3 fields

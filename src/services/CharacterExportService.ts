@@ -294,6 +294,7 @@ export class CharacterExportService {
       system_prompt: spec.system_prompt,
       post_history_instructions: spec.post_history_instructions,
       alternate_greetings: spec.alternate_greetings,
+      physical_description: spec.physical_description || '',
       character_book: this.sanitizeLorebookForExport(character.data.characterBook),
       extensions: character.data.extensions || {},
       // V3 spec fields - use stored values or defaults
