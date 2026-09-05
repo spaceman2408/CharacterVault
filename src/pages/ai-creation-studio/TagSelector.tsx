@@ -335,18 +335,31 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
             {favoriteTags.map(({ category, tag }) => {
               const isSelected = (selections[category] ?? []).includes(tag);
               return (
-                <button
+                <span
                   key={`fav-${category}-${tag}`}
-                  onClick={() => toggleTag(category, tag)}
-                  disabled={isGenerating}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border transition-all ${
                     isSelected
                       ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
                       : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
                   }`}
                 >
-                  {formatTag(tag)}
-                </button>
+                  <button
+                    onClick={() => toggleTag(category, tag)}
+                    disabled={isGenerating}
+                    className="disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {formatTag(tag)}
+                  </button>
+                  <button
+                    onClick={() => onToggleFavorite(category, tag)}
+                    disabled={isGenerating}
+                    className="ml-0.5 hover:opacity-75 hover:text-danger transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label={`Remove ${formatTag(tag)} from favorites`}
+                    title="Remove from favorites"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
               );
             })}
           </div>
