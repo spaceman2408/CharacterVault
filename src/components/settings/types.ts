@@ -17,7 +17,7 @@ import type {
 } from '../../db/characterTypes';
 import type { ModelProvider } from '../../services/providers';
 
-export type SettingsTabId = 'ai' | 'sampler' | 'prompts' | 'studio' | 'workspace' | 'sections';
+export type SettingsTabId = 'ai' | 'sampler' | 'prompts' | 'studio' | 'workspace' | 'sections' | 'backup';
 
 export interface ToastNotification {
   id: string;
@@ -38,8 +38,11 @@ export interface SettingsDraft {
   requireAgentReview: boolean;
   spellcheckEnabled: boolean;
   spellcheckLanguage: string;
+  spellcheckIgnoredWords: string[];
+  spellcheckCustomWords: string[];
   sectionOrder: CharacterSection[];
   hiddenSections: CharacterSection[];
+  contextSectionIds: CharacterSection[];
   studio: StudioSettings;
 }
 
@@ -79,6 +82,7 @@ export interface SettingsTabProps {
   draft: SettingsDraft;
   setDraft: React.Dispatch<React.SetStateAction<SettingsDraft>>;
   helpers?: SettingsPanelHelpers;
+  addToast?: AddToast;
 }
 
 export interface SettingsTabModule {

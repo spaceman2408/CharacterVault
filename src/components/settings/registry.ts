@@ -3,8 +3,9 @@
  * @module components/settings/registry
  */
 
-import { Brain, LayoutGrid, MessageSquare, Palette, Sliders, Wand2 } from 'lucide-react';
+import { Brain, Download, LayoutGrid, MessageSquare, Palette, Sliders, Wand2 } from 'lucide-react';
 import { AIConfigTab } from './tabs/AIConfigTab';
+import { BackupTab } from './tabs/BackupTab';
 import { PromptsTab } from './tabs/PromptsTab';
 import { SamplerTab } from './tabs/SamplerTab';
 import { SectionsTab } from './tabs/SectionsTab';
@@ -23,4 +24,5 @@ export const SETTINGS_TABS: SettingsTabModule[] = [
   { id: 'workspace', label: 'Character Workspace', icon: Palette, Component: WorkspaceTab },
   { id: 'studio', label: 'Creation Studio', icon: Wand2, Component: CreationStudioTab },
   { id: 'sections', label: 'Sections', icon: LayoutGrid, Component: SectionsTab },
+  { id: 'backup', label: 'Backup', icon: Download, Component: BackupTab },
 ];

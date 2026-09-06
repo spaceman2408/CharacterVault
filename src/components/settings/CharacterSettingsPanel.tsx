@@ -307,7 +307,12 @@ export function CharacterSettingsPanel({
             )}
 
             {(!isLoading || activeTab === 'sampler') && ActiveTabComponent && (
-              <ActiveTabComponent draft={draft} setDraft={setDraft} helpers={helpers} />
+              <ActiveTabComponent
+                draft={draft}
+                setDraft={setDraft}
+                helpers={helpers}
+                addToast={addToast}
+              />
             )}
           </div>
 

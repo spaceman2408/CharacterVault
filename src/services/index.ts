@@ -58,6 +58,19 @@ export {
 } from './CharacterSettingsService';
 export { CharacterImportService, characterImportService } from './CharacterImportService';
 export { CharacterExportService, characterExportService } from './CharacterExportService';
+export {
+  SETTINGS_BACKUP_KIND,
+  SETTINGS_BACKUP_VERSION,
+  applyBackupToDraft,
+  buildBackupFilename,
+  buildSettingsBackup,
+  downloadSettingsBackup,
+  normalizeBackupData,
+  parseSettingsBackup,
+  type BackupDraftTarget,
+  type SettingsBackupData,
+  type SettingsBackupFile,
+} from './SettingsBackupService';
 export { CharacterSnapshotService, characterSnapshotService, type SnapshotRestoreAction } from './CharacterSnapshotService';
 export {
   CustomContextService,

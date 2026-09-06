@@ -48,8 +48,11 @@ export function createDefaultDraft(): SettingsDraft {
     requireAgentReview: DEFAULT_REQUIRE_AGENT_REVIEW,
     spellcheckEnabled: DEFAULT_SPELLCHECK_SETTINGS.enabled,
     spellcheckLanguage: DEFAULT_SPELLCHECK_SETTINGS.language,
+    spellcheckIgnoredWords: [],
+    spellcheckCustomWords: [],
     sectionOrder: [...DEFAULT_SECTION_ORDER],
     hiddenSections: [],
+    contextSectionIds: [],
     studio: {
       enabledFields: { ...DEFAULT_STUDIO_SETTINGS.enabledFields },
       prompts: { ...DEFAULT_STUDIO_SETTINGS.prompts },
@@ -167,6 +170,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const mountedRef = useRef(true);
+  const loadedContextRef = useRef<SettingsDraft['contextSectionIds']>([]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -183,7 +187,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     const loadSettings = async () => {
       setIsLoading(true);
       try {
-        const [config, sampler, prompts, promptModels, agentModel, fullSettings, secOrder, secHidden, spell, studio] =
+        const [config, sampler, prompts, promptModels, agentModel, fullSettings, secOrder, secHidden, spell, studio, contextIds] =
           await Promise.all([
             characterSettingsService.getAISettings(),
             characterSettingsService.getSamplerSettings(),
@@ -195,9 +199,12 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
             characterSettingsService.getHiddenSections(),
             characterSettingsService.getSpellcheckSettings(),
             characterSettingsService.getStudioSettings(),
+            characterSettingsService.getContextSectionIds(),
           ]);
 
         if (cancelled || !mountedRef.current) return;
+
+        loadedContextRef.current = [...contextIds];
 
         setDraft({
           ai: mergeLoadedAIConfig(config),
@@ -213,8 +220,11 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
             fullSettings.ui?.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
           spellcheckEnabled: spell.enabled,
           spellcheckLanguage: spell.language,
+          spellcheckIgnoredWords: [...(spell.ignoredWords ?? [])],
+          spellcheckCustomWords: [...(spell.customWords ?? [])],
           sectionOrder: secOrder,
           hiddenSections: secHidden,
+          contextSectionIds: [...contextIds],
           studio: normalizeStudioSettings(studio),
         });
       } catch (err) {
@@ -299,6 +309,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       );
 
       const currentSettings = await characterSettingsService.getSettings();
+      const contextChanged =
+        JSON.stringify(draft.contextSectionIds) !== JSON.stringify(loadedContextRef.current);
       await characterSettingsService.saveSettings({
         ...currentSettings,
         ui: {
@@ -310,12 +322,17 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         },
         sectionOrder: draft.sectionOrder,
         hiddenSections: draft.hiddenSections,
+        ...(contextChanged ? { contextSectionIds: draft.contextSectionIds } : {}),
         studio: normalizeStudioSettings(draft.studio),
       });
+      if (contextChanged) loadedContextRef.current = [...draft.contextSectionIds];
 
+      const storedSpell = await characterSettingsService.getSpellcheckSettings();
       await characterSettingsService.saveSpellcheckSettings({
         enabled: draft.spellcheckEnabled,
         language: draft.spellcheckLanguage,
+        ignoredWords: [...new Set([...storedSpell.ignoredWords, ...draft.spellcheckIgnoredWords])],
+        customWords: [...new Set([...storedSpell.customWords, ...draft.spellcheckCustomWords])],
       });
 
       if (!mountedRef.current) return;
