@@ -175,6 +175,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
   const [draft, setDraft] = useState<SettingsDraft>(createDefaultDraft);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const mountedRef = useRef(true);
   const loadedContextRef = useRef<SettingsDraft['contextSectionIds']>([]);
   const loadedFavoritesRef = useRef<SettingsDraft['studioFavorites']>([]);
@@ -354,6 +355,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       if (!mountedRef.current) return;
       await reloadSettings();
       if (!mountedRef.current) return;
+      setLastSavedAt(Date.now());
       addToast('success', 'Settings saved successfully!');
     } catch {
       if (!mountedRef.current) return;
@@ -379,6 +381,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     setDraft,
     isLoading,
     isSaving,
+    lastSavedAt,
     save,
     clearAISettings,
   };

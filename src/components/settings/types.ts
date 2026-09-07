@@ -85,6 +85,7 @@ export interface SettingsTabProps {
   setDraft: React.Dispatch<React.SetStateAction<SettingsDraft>>;
   helpers?: SettingsPanelHelpers;
   addToast?: AddToast;
+  lastSavedAt?: number | null;
 }
 
 export interface SettingsTabModule {

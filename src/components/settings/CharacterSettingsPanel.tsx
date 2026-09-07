@@ -55,11 +55,12 @@ export function CharacterSettingsPanel({
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const { draft, setDraft, isLoading, isSaving, save, clearAISettings } = useSettingsDraft({
-    isOpen,
-    reloadSettings,
-    addToast,
-  });
+  const { draft, setDraft, isLoading, isSaving, lastSavedAt, save, clearAISettings } =
+    useSettingsDraft({
+      isOpen,
+      reloadSettings,
+      addToast,
+    });
 
   const modelCatalog = useModelCatalog({
     isOpen,
@@ -312,6 +313,7 @@ export function CharacterSettingsPanel({
                 setDraft={setDraft}
                 helpers={helpers}
                 addToast={addToast}
+                lastSavedAt={lastSavedAt}
               />
             )}
           </div>

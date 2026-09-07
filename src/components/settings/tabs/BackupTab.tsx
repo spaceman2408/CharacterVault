@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Check, Download, Loader2, Upload } from 'lucide-react';
 import { characterSettingsService } from '../../../services/CharacterSettingsService';
 import {
@@ -13,13 +13,23 @@ import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
 import type { SettingsTabProps } from '../types';
 
-export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast }) => {
+export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast, lastSavedAt }) => {
   const [includeKeys, setIncludeKeys] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [importNotice, setImportNotice] = useState<string | null>(null);
+  const [pendingNotice, setPendingNotice] = useState<string | null>(null);
+  const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const importedAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (lastSavedAt == null || importedAtRef.current == null) return;
+    if (lastSavedAt < importedAtRef.current) return;
+    importedAtRef.current = null;
+    setPendingNotice(null);
+    setAppliedNotice('Backup applied.');
+  }, [lastSavedAt]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -43,17 +53,20 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast }) =>
   const handleFile = async (file: File) => {
     setIsImporting(true);
     setImportError(null);
-    setImportNotice(null);
+    setPendingNotice(null);
+    setAppliedNotice(null);
+    importedAtRef.current = null;
     try {
       const backup = parseSettingsBackup(JSON.parse(await file.text()));
       setDraft((prev) => applyBackupToDraft(prev, backup));
       const when = Number.isNaN(Date.parse(backup.exportedAt))
         ? 'unknown date'
         : new Date(backup.exportedAt).toLocaleString();
-      setImportNotice(
-        `Loaded backup from ${when}${backup.includeKeys ? ' (contains API keys)' : ' (no API keys)'}. Review the tabs, then Save Settings to apply.`
+      setPendingNotice(
+        `Backup from ${when}${backup.includeKeys ? ' (contains API keys)' : ' (no API keys)'} is staged. Press Save Settings to apply it.`
       );
-      addToast?.('success', 'Backup loaded into the draft. Save to apply.');
+      importedAtRef.current = Date.now();
+      addToast?.('warning', 'Backup staged. Press Save Settings to apply it.');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not read that backup file.';
       setImportError(message);
@@ -144,10 +157,16 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast }) =>
           )}
           Choose backup file
         </button>
-        {importNotice && (
+        {pendingNotice && (
+          <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-danger">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {pendingNotice}
+          </p>
+        )}
+        {appliedNotice && (
           <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-success">
             <Check className="h-4 w-4 shrink-0" />
-            {importNotice}
+            {appliedNotice}
           </p>
         )}
         {importError && (
