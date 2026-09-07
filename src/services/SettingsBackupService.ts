@@ -25,6 +25,11 @@ import { normalizeModelBinding, normalizePromptModelMap } from './resolveOperati
 export const SETTINGS_BACKUP_KIND = 'charactervault-settings';
 export const SETTINGS_BACKUP_VERSION = 1;
 
+export interface StudioFavoriteRef {
+  category: string;
+  tag: string;
+}
+
 export interface SettingsBackupData {
   ai: AIConfig;
   sampler: SamplerSettings;
@@ -32,6 +37,7 @@ export interface SettingsBackupData {
   promptModels: PromptModelMap;
   agentModel: PromptModelBinding | null;
   studio: StudioSettings;
+  studioFavorites: StudioFavoriteRef[];
   ui: CharacterVaultSettings['ui'];
   sectionOrder: CharacterSection[];
   hiddenSections: CharacterSection[];
@@ -101,6 +107,23 @@ function normalizeSectionOrder(value: unknown): CharacterSection[] {
   const kept = normalizeSectionList(value);
   const missing = DEFAULT_SECTION_ORDER.filter((id) => !kept.includes(id));
   return [...kept, ...missing];
+}
+
+function normalizeFavoriteRefs(value: unknown): StudioFavoriteRef[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const out: StudioFavoriteRef[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const { category, tag } = entry;
+    if (typeof category !== 'string' || typeof tag !== 'string') continue;
+    if (!category || !tag) continue;
+    const key = `${category}:${tag}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ category, tag });
+  }
+  return out;
 }
 
 function normalizeBackupAI(value: unknown): AIConfig {
@@ -200,6 +223,7 @@ export function normalizeBackupData(value: unknown): SettingsBackupData {
       isRecord(raw.agentModel) ? (raw.agentModel as unknown as PromptModelBinding) : undefined
     ) ?? null,
     studio: normalizeStudioSettings(isRecord(raw.studio) ? raw.studio : undefined),
+    studioFavorites: normalizeFavoriteRefs(raw.studioFavorites),
     ui: normalizeBackupUi(raw.ui),
     sectionOrder: normalizeSectionOrder(raw.sectionOrder),
     hiddenSections: normalizeSectionList(raw.hiddenSections),
@@ -209,7 +233,8 @@ export function normalizeBackupData(value: unknown): SettingsBackupData {
 
 export function buildSettingsBackup(
   saved: CharacterVaultSettings,
-  includeKeys: boolean
+  includeKeys: boolean,
+  favorites: readonly StudioFavoriteRef[] = []
 ): SettingsBackupFile {
   const ai = persistableAIConfig(saved.ai ?? DEFAULT_SETTINGS.ai);
   const data = normalizeBackupData({
@@ -221,6 +246,7 @@ export function buildSettingsBackup(
     promptModels: saved.promptModels,
     agentModel: saved.agentModel,
     studio: saved.studio,
+    studioFavorites: [...favorites],
     ui: saved.ui,
     sectionOrder: saved.sectionOrder,
     hiddenSections: saved.hiddenSections,
@@ -289,6 +315,7 @@ export interface BackupDraftTarget {
   sectionOrder: CharacterSection[];
   hiddenSections: CharacterSection[];
   contextSectionIds: CharacterSection[];
+  studioFavorites: StudioFavoriteRef[];
   studio: StudioSettings;
 }
 
@@ -322,6 +349,7 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
     sectionOrder: [...settings.sectionOrder],
     hiddenSections: [...settings.hiddenSections],
     contextSectionIds: [...settings.contextSectionIds],
+    studioFavorites: settings.studioFavorites.map((f) => ({ ...f })),
     studio: {
       enabledFields: { ...settings.studio.enabledFields },
       prompts: { ...settings.studio.prompts },

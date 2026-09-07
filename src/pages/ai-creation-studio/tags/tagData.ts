@@ -546,6 +546,14 @@ const FAVORITE_TAGS_KEY = 'cv-studio-favorite-tags';
 const RECENT_TAGS_KEY = 'cv-studio-recent-tags';
 const MAX_RECENT_TAGS = 12;
 
+export const STUDIO_FAVORITES_CHANGED_EVENT = 'charactervault:studio-favorites-changed';
+
+export function notifyFavoritesChanged(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(STUDIO_FAVORITES_CHANGED_EVENT));
+  }
+}
+
 export interface TaggedRef {
   category: string;
   tag: string;
@@ -579,6 +587,20 @@ function writeTagRefList(key: string, list: TaggedRef[]): void {
 
 export function getFavoriteTags(): TaggedRef[] {
   return readTagRefList(FAVORITE_TAGS_KEY);
+}
+
+export function setFavoriteTags(refs: TaggedRef[]): TaggedRef[] {
+  const seen = new Set<string>();
+  const next = refs.filter((r) => {
+    if (typeof r?.category !== 'string' || typeof r?.tag !== 'string') return false;
+    if (!r.category || !r.tag) return false;
+    const key = `${r.category}:${r.tag}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  writeTagRefList(FAVORITE_TAGS_KEY, next);
+  return next;
 }
 
 export function isFavoriteTag(category: string, tag: string): boolean {

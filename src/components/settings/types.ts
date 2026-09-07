@@ -16,6 +16,7 @@ import type {
   StudioSettings,
 } from '../../db/characterTypes';
 import type { ModelProvider } from '../../services/providers';
+import type { StudioFavoriteRef } from '../../services/SettingsBackupService';
 
 export type SettingsTabId = 'ai' | 'sampler' | 'prompts' | 'studio' | 'workspace' | 'sections' | 'backup';
 
@@ -43,6 +44,7 @@ export interface SettingsDraft {
   sectionOrder: CharacterSection[];
   hiddenSections: CharacterSection[];
   contextSectionIds: CharacterSection[];
+  studioFavorites: StudioFavoriteRef[];
   studio: StudioSettings;
 }
 

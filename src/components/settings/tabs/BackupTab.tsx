@@ -8,6 +8,7 @@ import {
   downloadSettingsBackup,
   parseSettingsBackup,
 } from '../../../services/SettingsBackupService';
+import { getFavoriteTags } from '../../../pages/ai-creation-studio/tags/tagData';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
 import type { SettingsTabProps } from '../types';
@@ -24,7 +25,7 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast }) =>
     setIsExporting(true);
     try {
       const saved = await characterSettingsService.getSettings();
-      const file = buildSettingsBackup(saved, includeKeys);
+      const file = buildSettingsBackup(saved, includeKeys, getFavoriteTags());
       downloadSettingsBackup(file, buildBackupFilename());
       addToast?.(
         'success',
@@ -71,8 +72,9 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast }) =>
           Export settings
         </h3>
         <p className="text-xs text-fg-muted mb-4 leading-relaxed">
-          Downloads AI config, sampler, prompts, studio, workspace, and layout preferences as a
-          JSON file. Export uses your saved settings. Save first if you changed anything.
+          Downloads AI config, sampler, prompts, studio, favorited studio tags, workspace,
+          and layout preferences as a JSON file. Export uses your saved settings. Save first
+          if you changed anything.
         </p>
         <SettingsToggle
           stacked

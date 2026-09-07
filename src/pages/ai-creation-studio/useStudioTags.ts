@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import {
   TAG_CATEGORIES,
+  STUDIO_FAVORITES_CHANGED_EVENT,
   getFavoriteTags,
   getRecentTags,
   getVisibleCategories,
@@ -88,6 +89,12 @@ export function useStudioTags(): UseStudioTagsResult {
       cancelled = true;
     };
   }, [applyPrefs]);
+
+  useEffect(() => {
+    const refresh = () => setFavorites(getFavoriteTags());
+    window.addEventListener(STUDIO_FAVORITES_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(STUDIO_FAVORITES_CHANGED_EVENT, refresh);
+  }, []);
 
   const addCustomTag = useCallback(async (categoryKey: string, raw: string) => {
     const early = resolveNewCustomTag(categoryKey, raw);

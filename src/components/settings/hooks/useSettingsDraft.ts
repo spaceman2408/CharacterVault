@@ -29,6 +29,11 @@ import {
 } from '../../../services/CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from '../../../services/resolveOperationConfig';
 import { validateStudioPrompts } from '../../../pages/ai-creation-studio/generationPrompts';
+import {
+  getFavoriteTags,
+  notifyFavoritesChanged,
+  setFavoriteTags,
+} from '../../../pages/ai-creation-studio/tags/tagData';
 import { normalizeBaseUrl } from '../config/aiBaseUrlPresets';
 import type { AddToast, SettingsDraft } from '../types';
 
@@ -53,6 +58,7 @@ export function createDefaultDraft(): SettingsDraft {
     sectionOrder: [...DEFAULT_SECTION_ORDER],
     hiddenSections: [],
     contextSectionIds: [],
+    studioFavorites: [],
     studio: {
       enabledFields: { ...DEFAULT_STUDIO_SETTINGS.enabledFields },
       prompts: { ...DEFAULT_STUDIO_SETTINGS.prompts },
@@ -171,6 +177,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
   const [isSaving, setIsSaving] = useState(false);
   const mountedRef = useRef(true);
   const loadedContextRef = useRef<SettingsDraft['contextSectionIds']>([]);
+  const loadedFavoritesRef = useRef<SettingsDraft['studioFavorites']>([]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -205,6 +212,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         if (cancelled || !mountedRef.current) return;
 
         loadedContextRef.current = [...contextIds];
+        loadedFavoritesRef.current = getFavoriteTags();
 
         setDraft({
           ai: mergeLoadedAIConfig(config),
@@ -225,6 +233,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           sectionOrder: secOrder,
           hiddenSections: secHidden,
           contextSectionIds: [...contextIds],
+          studioFavorites: loadedFavoritesRef.current,
           studio: normalizeStudioSettings(studio),
         });
       } catch (err) {
@@ -326,6 +335,13 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         studio: normalizeStudioSettings(draft.studio),
       });
       if (contextChanged) loadedContextRef.current = [...draft.contextSectionIds];
+
+      const favoritesChanged =
+        JSON.stringify(draft.studioFavorites) !== JSON.stringify(loadedFavoritesRef.current);
+      if (favoritesChanged) {
+        loadedFavoritesRef.current = setFavoriteTags(draft.studioFavorites);
+        notifyFavoritesChanged();
+      }
 
       const storedSpell = await characterSettingsService.getSpellcheckSettings();
       await characterSettingsService.saveSpellcheckSettings({

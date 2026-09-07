@@ -59,6 +59,7 @@ function makeDraft(): BackupDraftTarget {
     sectionOrder: [],
     hiddenSections: [],
     contextSectionIds: [],
+    studioFavorites: [],
     studio: { ...DEFAULT_STUDIO_SETTINGS },
   };
 }
@@ -128,10 +129,28 @@ describe('parseSettingsBackup', () => {
   });
 
   it('round-trips through JSON', () => {
-    const built = buildSettingsBackup(makeSaved(), true);
+    const built = buildSettingsBackup(makeSaved(), true, [{ category: 'mood', tag: 'brooding' }]);
     const parsed = parseSettingsBackup(JSON.parse(JSON.stringify(built)));
     expect(parsed.settings.ai.apiKey).toBe('sk-live');
     expect(parsed.settings.ui.theme).toBe('dark');
+    expect(parsed.settings.studioFavorites).toEqual([{ category: 'mood', tag: 'brooding' }]);
+  });
+
+  it('drops invalid and duplicate favorite refs', () => {
+    const file = parseSettingsBackup({
+      kind: 'charactervault-settings',
+      version: 1,
+      settings: {
+        studioFavorites: [
+          { category: 'mood', tag: 'brooding' },
+          { category: 'mood', tag: 'brooding' },
+          { category: '', tag: 'empty' },
+          { category: 'mood' },
+          'nope',
+        ],
+      },
+    });
+    expect(file.settings.studioFavorites).toEqual([{ category: 'mood', tag: 'brooding' }]);
   });
 });
 
@@ -151,11 +170,12 @@ describe('applyBackupToDraft', () => {
   });
 
   it('maps backup sections onto the draft', () => {
-    const backup = buildSettingsBackup(makeSaved(), false);
+    const backup = buildSettingsBackup(makeSaved(), false, [{ category: 'mood', tag: 'brooding' }]);
     const next = applyBackupToDraft(makeDraft(), backup);
     expect(next.hiddenSections).toEqual(['tags']);
     expect(next.contextSectionIds).toEqual(['description']);
     expect(next.spellcheckIgnoredWords).toEqual(['foo']);
+    expect(next.studioFavorites).toEqual([{ category: 'mood', tag: 'brooding' }]);
     expect(next.agentModel).toBeUndefined();
   });
 });

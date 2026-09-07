@@ -70,6 +70,7 @@ export {
   type BackupDraftTarget,
   type SettingsBackupData,
   type SettingsBackupFile,
+  type StudioFavoriteRef,
 } from './SettingsBackupService';
 export { CharacterSnapshotService, characterSnapshotService, type SnapshotRestoreAction } from './CharacterSnapshotService';
 export {
