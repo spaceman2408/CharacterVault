@@ -136,7 +136,7 @@ export function CharacterCardDetailsSheet({
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-fg">Active</p>
                   <p className="text-xs text-fg-muted mt-0.5">
-                    Always-on RP fields (name, description, personality, scenario, system, etc.)
+                    Sent every message: name, description, appearance, personality, scenario, system, post-history, examples
                   </p>
                 </div>
                 <div className="text-right shrink-0">
@@ -152,7 +152,7 @@ export function CharacterCardDetailsSheet({
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-fg">Total</p>
                   <p className="text-xs text-fg-muted mt-0.5">
-                    Active plus greetings, lorebook, and other metadata
+                    Active + greetings + lorebook entries. Excludes creator notes, version, tags, and other metadata never sent to chat
                   </p>
                 </div>
                 <div className="text-right shrink-0">

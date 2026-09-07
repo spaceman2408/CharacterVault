@@ -354,9 +354,9 @@ export interface CharacterListItem {
   thumbnailData: string;
   lastOpenedAt?: Timestamp;
   updatedAt: Timestamp;
-  /** Tokens typically always in an RP prompt (core fields, not greetings/lore) */
+  /** Tokens sent with every chat message (core definition fields) */
   activeTokens: number;
-  /** Full-card estimate including greetings, lorebook, and metadata */
+  /** Chat-relevant max: active plus greetings and lorebook entry bodies. Excludes metadata never sent to chat. */
   totalTokens: number;
   /** Search only — not rendered as tag chips on the card */
   tags: string[];

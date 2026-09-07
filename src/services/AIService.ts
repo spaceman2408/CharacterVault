@@ -133,14 +133,19 @@ export function fitContextChunks(context: string[], availableTokens: number): st
 }
 
 /**
- * Token breakdown for vault cards.
+ * Token breakdown for vault cards. Both numbers count only text that can
+ * reach a chat prompt.
  *
- * - **active**: fields typically always present in an RP prompt
- *   (name, description, appearance, personality, scenario, system, post-history, examples)
- * - **total**: everything on the card, including greetings, lorebook, and metadata
+ * - **active**: fields sent with every message
+ *   (name, description, appearance, personality, scenario, system,
+ *   post-history, examples)
+ * - **total**: active plus conditional chat content:
+ *   first message, alternate greetings, and lorebook entry bodies
  *
- * Not counted as active: first message, alternate greetings, lorebook,
- * creator/notes/tags/version (those still count toward total).
+ * Deliberately omitted (never sent to chat): creator, creator notes,
+ * character version, tags, lorebook book name/description, and per-entry
+ * keys/names/comments/secondary keys (match triggers and author notes,
+ * not inserted text).
  */
 export interface CharacterTokenEstimate {
   active: number;
@@ -148,8 +153,11 @@ export interface CharacterTokenEstimate {
 }
 
 /**
- * Estimate active + total tokens for a character card.
+ * Estimate active + total chat-relevant tokens for a character card.
  * Uses the same byte-based heuristic as {@link estimateTokens}.
+ * Metadata that never reaches chat (creator, creator notes, version, tags,
+ * lorebook names/descriptions, entry keys/names/comments) is excluded from
+ * both numbers.
  */
 export function estimateCharacterCardTokens(
   data: { spec: CharacterSpec; characterBook?: CharacterBook | null },
@@ -180,30 +188,18 @@ export function estimateCharacterCardTokens(
   addActive(spec.post_history_instructions);
   addActive(spec.mes_example);
 
-  // Total-only: greetings / one-shot / conditional / metadata
+  // Total-only: conditional chat content (one greeting is used per chat;
+  // lorebook entries insert on key match up to the token budget, so this
+  // sums all entry bodies as the upper bound)
   addTotalOnly(spec.first_mes);
   if (spec.alternate_greetings?.length) {
     addTotalOnly(spec.alternate_greetings.join('\n---\n'));
   }
-  addTotalOnly(spec.creator);
-  addTotalOnly(spec.creator_notes);
-  addTotalOnly(spec.character_version);
-  if (spec.tags?.length) {
-    addTotalOnly(spec.tags.join(', '));
-  }
 
   const book = data.characterBook;
   if (book) {
-    addTotalOnly(book.name);
-    addTotalOnly(book.description);
     for (const entry of book.entries ?? []) {
       addTotalOnly(entry.content);
-      if (entry.keys?.length) addTotalOnly(entry.keys.join(','));
-      addTotalOnly(entry.name);
-      addTotalOnly(entry.comment);
-      if (entry.secondary_keys?.length) {
-        addTotalOnly(entry.secondary_keys.join(','));
-      }
     }
   }
 

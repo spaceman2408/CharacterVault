@@ -76,7 +76,7 @@ describe('estimateCharacterCardTokens', () => {
     );
   });
 
-  it('counts lorebook toward total only, not active', () => {
+  it('counts lorebook entry bodies toward total only, not active', () => {
     const book: CharacterBook = {
       name: 'World',
       description: 'A place',
@@ -89,6 +89,7 @@ describe('estimateCharacterCardTokens', () => {
           extensions: {},
           enabled: true,
           name: 'Dragons',
+          comment: 'Author note',
         },
       ],
     };
@@ -98,14 +99,41 @@ describe('estimateCharacterCardTokens', () => {
     });
     const activeExpected = estimateTokens('Hero') + estimateTokens('Brave');
     expect(active).toBe(activeExpected);
-    expect(total).toBe(
-      activeExpected +
-        estimateTokens('World') +
-        estimateTokens('A place') +
-        estimateTokens('Dragons are rare.') +
-        estimateTokens('dragon,drake') +
-        estimateTokens('Dragons')
-    );
+    expect(total).toBe(activeExpected + estimateTokens('Dragons are rare.'));
+  });
+
+  it('omits metadata never sent to chat from both numbers', () => {
+    const book: CharacterBook = {
+      name: 'World',
+      description: 'A place',
+      extensions: {},
+      entries: [
+        {
+          id: 1,
+          keys: ['dragon'],
+          secondary_keys: ['drake'],
+          content: '',
+          extensions: {},
+          enabled: true,
+          name: 'Dragons',
+          comment: 'Author note',
+        },
+      ],
+    };
+    const { active, total } = estimateCharacterCardTokens({
+      spec: emptySpec({
+        name: 'Hero',
+        description: 'Brave',
+        creator: 'Someone',
+        creator_notes: 'Notes that never reach chat',
+        character_version: '1.0',
+        tags: ['fantasy'],
+      }),
+      characterBook: book,
+    });
+    const expected = estimateTokens('Hero') + estimateTokens('Brave');
+    expect(active).toBe(expected);
+    expect(total).toBe(expected);
   });
 
   it('includes mes_example as active (style examples stay in prompt)', () => {
