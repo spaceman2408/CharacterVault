@@ -9,6 +9,7 @@ import { CharacterProvider, useCharacterContext, LorebookProvider, useLorebookCo
 import { CharacterWorkspace, LorebookWorkspace } from './components/workspace';
 import { WelcomeTutorial } from './components/WelcomeTutorial';
 import { CharacterSelectionView } from './components/vault';
+import { StagingTesterNotes } from './components/StagingTesterNotes';
 import { ImportPage } from './pages/ImportPage';
 import { AICreationStudio } from './pages/ai-creation-studio/AICreationStudio';
 
@@ -93,6 +94,7 @@ function App(): React.ReactElement {
           <Route path="/import" element={<ImportPage />} />
           <Route path="/ai-create" element={<AICreationStudio />} />
         </Routes>
+        <StagingTesterNotes />
       </LorebookProvider>
     </CharacterProvider>
   );
