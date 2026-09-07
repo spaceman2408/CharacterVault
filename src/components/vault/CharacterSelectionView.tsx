@@ -28,7 +28,8 @@ export function CharacterSelectionView({
     duplicateCharacter,
     refreshCharacters,
   } = useCharacterContext();
-  const { lorebookListItems, createLorebook, importLorebookFile } = useLorebookContext();
+  const { lorebookListItems, createLorebook, importLorebookFile, refreshLorebooks } =
+    useLorebookContext();
 
   const handleOpenCharacter = async (id: string) => {
     // openCharacter drops any open lorebook payload (exclusive workspace)
@@ -77,6 +78,7 @@ export function CharacterSelectionView({
     lorebookCount: lorebookListItems.length,
     vaultTab,
     refreshCharacters,
+    refreshLorebooks,
     importLorebookFile,
   });
 
@@ -167,9 +169,11 @@ export function CharacterSelectionView({
         onImportChange={io.handleImport}
         searchPlaceholder={isLorebooksTab ? 'Search lorebooks...' : 'Search name or tags...'}
         importAccept={
-          isLorebooksTab ? '.json,application/json' : '.png,.json,image/png,application/json'
+          isLorebooksTab
+            ? '.json,.zip,application/json,application/zip'
+            : '.png,.json,.zip,image/png,application/json,application/zip'
         }
-        importTitle={isLorebooksTab ? 'Import lorebook JSON' : 'Import character cards'}
+        importTitle={isLorebooksTab ? 'Import lorebook JSON or backup ZIP' : 'Import character cards or backup ZIP'}
         createLabel={isLorebooksTab ? 'New Lorebook' : 'Create'}
       />
 
@@ -235,6 +239,15 @@ export function CharacterSelectionView({
           isExportingVault={io.isExportingVault}
           onBackupConfirm={() => void io.handleExportVault()}
           onBackupCancel={io.handleBackupCancel}
+          includeBackupKeys={io.includeBackupKeys}
+          onIncludeBackupKeysChange={io.setIncludeBackupKeys}
+          restorePreview={io.restoreLoaded?.preview ?? null}
+          isRestoring={io.isRestoring}
+          restoreProgress={io.restoreProgress}
+          restoreResult={io.restoreResult}
+          onRestoreConfirm={() => void io.confirmRestore()}
+          onRestoreCancel={io.cancelRestore}
+          onRestoreDismiss={io.dismissRestoreResult}
         />
 
         {vaultTab === 'characters' ? (

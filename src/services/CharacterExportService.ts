@@ -13,6 +13,21 @@ import type {
   VaultLorebook,
 } from '../db/characterTypes';
 import { lorebookService } from './LorebookService';
+import type { SettingsBackupFile } from './SettingsBackupService';
+
+export const FULL_BACKUP_KIND = 'charactervault-full-backup';
+export const FULL_BACKUP_VERSION = 1;
+
+export interface FullBackupManifest {
+  kind: typeof FULL_BACKUP_KIND;
+  version: typeof FULL_BACKUP_VERSION;
+  exportedAt: string;
+  includeKeys: boolean;
+  counts: {
+    characters: number;
+    lorebooks: number;
+  };
+}
 
 /**
  * Character Export Service
@@ -126,41 +141,15 @@ export class CharacterExportService {
 
       for await (const character of characters) {
         characterTotal += 1;
-        const hasImage = Boolean(character.imageData);
-        const result = hasImage
-          ? await this.exportAsPNG(character)
-          : await this.exportAsJSON(character);
-
-        const finalResult =
-          result.success && result.blob
-            ? result
-            : hasImage
-              ? await this.exportAsJSON(character)
-              : result;
-
-        if (!finalResult.success || !finalResult.blob || !finalResult.filename) {
-          failures.push(character.name);
-          continue;
+        if (await this.addCharacterToZip(zip, character, '', usedNames, failures)) {
+          exported += 1;
         }
-
-        zip.file(
-          this.uniqueZipFilename(finalResult.filename, usedNames),
-          await finalResult.blob.arrayBuffer(),
-        );
-        exported += 1;
       }
 
       for await (const lorebook of lorebooks) {
         lorebookTotal += 1;
-        try {
-          const { blob, filename } = lorebookService.exportToSTBlob(lorebook);
-          zip.file(
-            this.uniqueZipFilename(`lorebooks/${filename}`, usedNames),
-            await blob.arrayBuffer(),
-          );
+        if (await this.addLorebookToZip(zip, lorebook, 'lorebooks/', usedNames, failures)) {
           exported += 1;
-        } catch {
-          failures.push(lorebook.name || 'lorebook');
         }
       }
 
@@ -200,6 +189,123 @@ export class CharacterExportService {
         success: false,
         error: error instanceof Error ? error.message : 'Error exporting vault backup',
       };
+    }
+  }
+
+  /**
+   * Export the full vault: cards under `characters/`, lorebooks under
+   * `lorebooks/`, plus `settings.json` and a `manifest.json` at the root.
+   * Settings carry API keys only when the backup was built with them.
+   */
+  async exportFullVaultAsZip(
+    characters: AsyncIterable<Character> | Iterable<Character>,
+    lorebooks: AsyncIterable<VaultLorebook> | Iterable<VaultLorebook>,
+    settings: SettingsBackupFile,
+  ): Promise<ExportCharacterResult> {
+    try {
+      const zip = new JSZip();
+      const usedNames = new Map<string, number>();
+      let characterTotal = 0;
+      let lorebookTotal = 0;
+      let charactersExported = 0;
+      let lorebooksExported = 0;
+      const failures: string[] = [];
+
+      for await (const character of characters) {
+        characterTotal += 1;
+        if (await this.addCharacterToZip(zip, character, 'characters/', usedNames, failures)) {
+          charactersExported += 1;
+        }
+      }
+
+      for await (const lorebook of lorebooks) {
+        lorebookTotal += 1;
+        if (await this.addLorebookToZip(zip, lorebook, 'lorebooks/', usedNames, failures)) {
+          lorebooksExported += 1;
+        }
+      }
+
+      zip.file('settings.json', JSON.stringify(settings, null, 2));
+
+      const manifest: FullBackupManifest = {
+        kind: FULL_BACKUP_KIND,
+        version: FULL_BACKUP_VERSION,
+        exportedAt: settings.exportedAt,
+        includeKeys: settings.includeKeys,
+        counts: { characters: charactersExported, lorebooks: lorebooksExported },
+      };
+      zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      const note =
+        failures.length > 0
+          ? `Exported ${charactersExported + lorebooksExported} of ${characterTotal + lorebookTotal}; skipped: ${failures.join(', ')}`
+          : undefined;
+
+      return {
+        success: true,
+        blob,
+        filename: `charactervault-full-backup-${dateStamp}.zip`,
+        error: note,
+      };
+    } catch (error) {
+      console.error('Full vault export error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error exporting full vault backup',
+      };
+    }
+  }
+
+  private async addCharacterToZip(
+    zip: JSZip,
+    character: Character,
+    prefix: string,
+    usedNames: Map<string, number>,
+    failures: string[],
+  ): Promise<boolean> {
+    const hasImage = Boolean(character.imageData);
+    const result = hasImage
+      ? await this.exportAsPNG(character)
+      : await this.exportAsJSON(character);
+
+    const finalResult =
+      result.success && result.blob
+        ? result
+        : hasImage
+          ? await this.exportAsJSON(character)
+          : result;
+
+    if (!finalResult.success || !finalResult.blob || !finalResult.filename) {
+      failures.push(character.name);
+      return false;
+    }
+
+    zip.file(
+      this.uniqueZipFilename(`${prefix}${finalResult.filename}`, usedNames),
+      await finalResult.blob.arrayBuffer(),
+    );
+    return true;
+  }
+
+  private async addLorebookToZip(
+    zip: JSZip,
+    lorebook: VaultLorebook,
+    prefix: string,
+    usedNames: Map<string, number>,
+    failures: string[],
+  ): Promise<boolean> {
+    try {
+      const { blob, filename } = lorebookService.exportToSTBlob(lorebook);
+      zip.file(
+        this.uniqueZipFilename(`${prefix}${filename}`, usedNames),
+        await blob.arrayBuffer(),
+      );
+      return true;
+    } catch {
+      failures.push(lorebook.name || 'lorebook');
+      return false;
     }
   }
 

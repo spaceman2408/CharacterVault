@@ -153,7 +153,7 @@ export function VaultHeader({
                   onClick={onBackupClick}
                   disabled={!canBackup || isExportingVault}
                   className="hidden lg:inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors disabled:opacity-50"
-                  title="Download a ZIP backup of characters and lorebooks"
+                  title="Download a full backup of cards, lorebooks, and settings"
                 >
                   {isExportingVault ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                   Backup

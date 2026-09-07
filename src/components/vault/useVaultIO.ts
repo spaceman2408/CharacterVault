@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { characterImportService } from '../../services/CharacterImportService';
 import { characterExportService } from '../../services/CharacterExportService';
+import { characterSettingsService } from '../../services/CharacterSettingsService';
+import { buildSettingsBackup } from '../../services/SettingsBackupService';
+import {
+  vaultRestoreService,
+  type LoadedRestore,
+  type RestoreResult,
+} from '../../services/VaultRestoreService';
+import { getFavoriteTags } from '../../pages/ai-creation-studio/tags/tagData';
 import { characterDb } from '../../db/CharacterDatabase';
 import type { CardExportFormat, VaultTab } from './types';
 import { downloadBlob } from './utils';
@@ -10,7 +18,16 @@ interface UseVaultIOOptions {
   lorebookCount: number;
   vaultTab: VaultTab;
   refreshCharacters: () => Promise<void>;
+  refreshLorebooks: () => Promise<void>;
   importLorebookFile: (file: File) => Promise<unknown>;
+}
+
+function isZipFile(file: File): boolean {
+  return (
+    file.type === 'application/zip' ||
+    file.type === 'application/x-zip-compressed' ||
+    file.name.toLowerCase().endsWith('.zip')
+  );
 }
 
 function isJsonFile(file: File): boolean {
@@ -30,6 +47,7 @@ export function useVaultIO({
   lorebookCount,
   vaultTab,
   refreshCharacters,
+  refreshLorebooks,
   importLorebookFile,
 }: UseVaultIOOptions) {
   const [isImporting, setIsImporting] = useState(false);
@@ -38,6 +56,11 @@ export function useVaultIO({
   const [isDragOver, setIsDragOver] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [backupConfirmOpen, setBackupConfirmOpen] = useState(false);
+  const [includeBackupKeys, setIncludeBackupKeys] = useState(false);
+  const [restoreLoaded, setRestoreLoaded] = useState<LoadedRestore | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreProgress, setRestoreProgress] = useState<{ done: number; total: number } | null>(null);
+  const [restoreResult, setRestoreResult] = useState<RestoreResult | null>(null);
   const dragDepthRef = useRef(0);
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -147,16 +170,72 @@ export function useVaultIO({
     [importLorebookFile, showStatus]
   );
 
+  const openRestore = useCallback(
+    async (file: File) => {
+      setIsImporting(true);
+      try {
+        const loaded = await vaultRestoreService.loadPreview(file);
+        setRestoreResult(null);
+        setRestoreProgress(null);
+        setRestoreLoaded(loaded);
+      } catch (err) {
+        showStatus(err instanceof Error ? err.message : 'Could not read that backup file.', 7000);
+      } finally {
+        setIsImporting(false);
+      }
+    },
+    [showStatus]
+  );
+
+  const cancelRestore = useCallback(() => {
+    if (isRestoring) return;
+    setRestoreLoaded(null);
+    setRestoreProgress(null);
+  }, [isRestoring]);
+
+  const dismissRestoreResult = useCallback(() => {
+    setRestoreResult(null);
+    setRestoreLoaded(null);
+    setRestoreProgress(null);
+  }, []);
+
+  const confirmRestore = useCallback(async () => {
+    if (!restoreLoaded || isRestoring) return;
+    setIsRestoring(true);
+    setRestoreProgress({ done: 0, total: 1 });
+    try {
+      const result = await vaultRestoreService.restore(restoreLoaded, (done, total) =>
+        setRestoreProgress({ done, total })
+      );
+      await refreshCharacters();
+      await refreshLorebooks();
+      setRestoreLoaded(null);
+      setRestoreProgress(null);
+      setRestoreResult(result);
+    } catch {
+      showStatus('Restore failed.', 7000);
+      setRestoreLoaded(null);
+      setRestoreProgress(null);
+    } finally {
+      setIsRestoring(false);
+    }
+  }, [restoreLoaded, isRestoring, refreshCharacters, refreshLorebooks, showStatus]);
+
   const importFiles = useCallback(
     async (files: FileList | File[]) => {
       const list = Array.from(files);
+      const zip = list.find(isZipFile);
+      if (zip) {
+        await openRestore(zip);
+        return;
+      }
       if (vaultTabRef.current === 'lorebooks') {
         await importLorebookFiles(list);
         return;
       }
       await importCharacterFiles(list);
     },
-    [importCharacterFiles, importLorebookFiles]
+    [importCharacterFiles, importLorebookFiles, openRestore]
   );
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,10 +245,10 @@ export function useVaultIO({
     e.target.value = '';
   };
 
-  const canBackup = characterCount > 0 || lorebookCount > 0;
+  const canBackup = true;
 
   const handleBackupClick = () => {
-    if (!canBackup || isExportingVault) return;
+    if (isExportingVault) return;
     setBackupConfirmOpen(true);
   };
 
@@ -179,12 +258,15 @@ export function useVaultIO({
   };
 
   const handleExportVault = async () => {
-    if (!canBackup || isExportingVault) return;
+    if (isExportingVault) return;
     setIsExportingVault(true);
     try {
-      const result = await characterExportService.exportVaultAsZip(
+      const saved = await characterSettingsService.getSettings();
+      const settings = buildSettingsBackup(saved, includeBackupKeys, getFavoriteTags());
+      const result = await characterExportService.exportFullVaultAsZip(
         characterDb.iterateAllCharacters(),
         characterDb.iterateAllLorebooks(),
+        settings,
       );
       if (result.success && result.blob && result.filename) {
         downloadBlob(result.blob, result.filename);
@@ -195,11 +277,12 @@ export function useVaultIO({
         if (lorebookCount > 0) {
           parts.push(`${lorebookCount} lorebook${lorebookCount === 1 ? '' : 's'}`);
         }
+        parts.push('settings');
         showStatus(
           result.error
             ? `Backup downloaded. ${result.error}`
-            : `Vault backup downloaded (${parts.join(', ')}).`,
-          6000
+            : `Full backup downloaded (${parts.join(', ')})${includeBackupKeys ? '. It includes API keys, so store it somewhere private.' : '.'}`,
+          7000
         );
         setBackupConfirmOpen(false);
       } else {
@@ -259,13 +342,19 @@ export function useVaultIO({
     if (!items || items.length === 0) return true;
     return Array.from(items).some((item) => {
       if (item.kind !== 'file') return false;
+      if (
+        item.type === 'application/zip' ||
+        item.type === 'application/x-zip-compressed' ||
+        item.type === ''
+      ) {
+        return true;
+      }
       if (vaultTabRef.current === 'lorebooks') {
-        return item.type === 'application/json' || item.type === '';
+        return item.type === 'application/json';
       }
       return (
         item.type === 'application/json' ||
         item.type === 'image/png' ||
-        item.type === '' ||
         item.type.startsWith('image/')
       );
     });
@@ -316,11 +405,20 @@ export function useVaultIO({
     setStatusMessage,
     canBackup,
     backupConfirmOpen,
+    includeBackupKeys,
+    setIncludeBackupKeys,
+    restoreLoaded,
+    isRestoring,
+    restoreProgress,
+    restoreResult,
     showStatus,
     handleImport,
     handleBackupClick,
     handleBackupCancel,
     handleExportVault,
+    confirmRestore,
+    cancelRestore,
+    dismissRestoreResult,
     handleCardExport,
     handleDragEnter,
     handleDragLeave,

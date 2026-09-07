@@ -57,7 +57,20 @@ export {
   persistableAIConfig,
 } from './CharacterSettingsService';
 export { CharacterImportService, characterImportService } from './CharacterImportService';
-export { CharacterExportService, characterExportService } from './CharacterExportService';
+export {
+  CharacterExportService,
+  characterExportService,
+  FULL_BACKUP_KIND,
+  FULL_BACKUP_VERSION,
+  type FullBackupManifest,
+} from './CharacterExportService';
+export {
+  VaultRestoreService,
+  vaultRestoreService,
+  type LoadedRestore,
+  type RestorePreview,
+  type RestoreResult,
+} from './VaultRestoreService';
 export {
   SETTINGS_BACKUP_KIND,
   SETTINGS_BACKUP_VERSION,
