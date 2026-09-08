@@ -14,6 +14,7 @@ import { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { useAIEditor } from '../../hooks';
 import { creatorNotesExtensions } from '../../editor/extensions';
+import { estimateTokens } from '../../services/AIService';
 import { json } from '@codemirror/lang-json';
 import type { Extension } from '@codemirror/state';
 
@@ -268,9 +269,14 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     return getSectionValue(currentCharacter, section);
   }, [currentCharacter, section]);
   const [livePreviewValue, setLivePreviewValue] = React.useState(currentValue);
+  const [liveStatsValue, setLiveStatsValue] = React.useState(currentValue);
 
   React.useEffect(() => {
     setLivePreviewValue(currentValue);
+  }, [currentValue]);
+
+  React.useEffect(() => {
+    setLiveStatsValue(currentValue);
   }, [currentValue]);
 
   React.useEffect(() => {
@@ -332,6 +338,21 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     }
   }, [section, updateSpecField, currentCharacter, updateCharacter]);
 
+  const handleImmediateChange = useCallback((value: string) => {
+    setLiveStatsValue(value);
+    if (section === 'creator_notes') {
+      setLivePreviewValue(value);
+    }
+  }, [section]);
+
+  const liveStats = React.useMemo(() => {
+    const chars = liveStatsValue.length;
+    const trimmed = liveStatsValue.trim();
+    const words = trimmed === '' ? 0 : trimmed.split(/\s+/).length;
+    const tokens = estimateTokens(liveStatsValue);
+    return { chars, words, tokens };
+  }, [liveStatsValue]);
+
   const sectionExtensions = React.useMemo<Extension[] | undefined>(() => {
     if (section === 'creator_notes') return creatorNotesExtensions();
     if (section === 'extensions') return [json()];
@@ -348,7 +369,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
   const { editorRef, payloadPreviewModal } = useAIEditor({
     key: `${section}-${isSplitPreviewOpen ? 'split' : 'single'}`,
     value: currentValue,
-    onImmediateChange: section === 'creator_notes' ? setLivePreviewValue : undefined,
+    onImmediateChange: handleImmediateChange,
     onPersistChange: handlePersistChange,
     setSelectedText,
     aiConfig,
@@ -428,6 +449,9 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
           </h2>
           <p className="text-sm text-fg-muted">
             Extension data (JSON format)
+          </p>
+          <p className="mt-1 text-xs text-fg-subtle" aria-live="off">
+            {liveStats.chars} chars · ~{liveStats.tokens} tokens
           </p>
         </div>
         <div
@@ -533,12 +557,15 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     <div className="h-full flex flex-col min-h-0 overflow-hidden animate-fade-in-slow">
       <div className="mb-4 shrink-0 space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-fg">
               {sectionMeta?.label}
             </h2>
             <p className="text-sm text-fg-muted">
               {sectionMeta?.description}
+            </p>
+            <p className="mt-1 text-xs text-fg-subtle" aria-live="off">
+              {liveStats.chars} chars · {liveStats.words} words · ~{liveStats.tokens} tokens
             </p>
           </div>
 
