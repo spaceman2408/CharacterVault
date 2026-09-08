@@ -16,6 +16,7 @@ import type { CharacterSection } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
 import { estimateTokens } from '../../services/AIService';
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface GreetingsEditorProps {
   greetings: string[];
@@ -262,6 +263,7 @@ export function GreetingsEditor({
   const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(0);
   const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+  const [pendingDuplicateIndex, setPendingDuplicateIndex] = useState<number | null>(null);
 
   // Sync list from persisted state
   useEffect(() => {
@@ -274,6 +276,7 @@ export function GreetingsEditor({
       // External list changed while a delete dialog was open — cancel it so the
       // stored index can't resolve to a different greeting.
       setPendingDeleteIndex(null);
+      setPendingDuplicateIndex(null);
     }, 0);
     return () => clearTimeout(timeoutId);
   }, [greetings]);
@@ -298,13 +301,21 @@ export function GreetingsEditor({
 
   // Handle duplicate greeting
   const handleDuplicateGreeting = useCallback((index: number) => {
+    setPendingDuplicateIndex(index);
+  }, []);
+
+  const handleConfirmDuplicateGreeting = useCallback(() => {
+    if (pendingDuplicateIndex === null) return;
+    const index = pendingDuplicateIndex;
+    setPendingDuplicateIndex(null);
+    if (index < 0 || index >= greetingsList.length) return;
     const newList = [...greetingsList];
     newList.splice(index + 1, 0, greetingsList[index]);
     setGreetingsList(newList);
     setSelectedGreetingIndex(index + 1);
     setIsMobileViewOpen(true);
     onChange(newList);
-  }, [greetingsList, onChange]);
+  }, [greetingsList, onChange, pendingDuplicateIndex]);
 
   // Handle move greeting up/down
   const handleMoveGreeting = useCallback((index: number, direction: -1 | 1) => {
@@ -500,6 +511,14 @@ export function GreetingsEditor({
         message="This cannot be undone. The greeting will be removed immediately."
         onConfirm={handleConfirmDeleteGreeting}
         onCancel={() => setPendingDeleteIndex(null)}
+      />
+      <ConfirmDialog
+        open={pendingDuplicateIndex !== null}
+        title={`Duplicate greeting ${(pendingDuplicateIndex ?? 0) + 1}?`}
+        message="A copy will be inserted right after this greeting."
+        confirmLabel="Duplicate"
+        onConfirm={handleConfirmDuplicateGreeting}
+        onCancel={() => setPendingDuplicateIndex(null)}
       />
     </div>
   );

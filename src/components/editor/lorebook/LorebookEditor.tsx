@@ -34,6 +34,7 @@ import {
 } from '../CharacterLorebookAttachments';
 import { LorebookEntryDetail } from './LorebookEntryDetail';
 import { ConfirmDeleteDialog } from '../ConfirmDeleteDialog';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { MemoizedLorebookEntryListItem } from './LorebookEntryListItem';
 import { RecursionMapModal } from './RecursionMapModal';
 import {
@@ -94,6 +95,7 @@ function LorebookEditorInner({
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [pendingDuplicateId, setPendingDuplicateId] = useState<number | null>(null);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -102,6 +104,11 @@ function LorebookEditorInner({
         prev >= (normalizedPropLorebook.entries.length || 0) ? 0 : prev,
       );
       setPendingDeleteId((pending) =>
+        pending !== null && normalizedPropLorebook.entries.some((entry) => entry.id === pending)
+          ? pending
+          : null,
+      );
+      setPendingDuplicateId((pending) =>
         pending !== null && normalizedPropLorebook.entries.some((entry) => entry.id === pending)
           ? pending
           : null,
@@ -206,22 +213,32 @@ function LorebookEditorInner({
     (index: number) => {
       const entry = entries[index];
       if (!entry) return;
-      const newId = nextAvailableEntryId(entries);
-      const duplicated: LorebookEntry = {
-        ...entry,
-        id: newId,
-        keys: [...(entry.keys || [])],
-        secondary_keys: entry.secondary_keys ? [...entry.secondary_keys] : undefined,
-        extensions: entry.extensions ? { ...entry.extensions } : {},
-      };
-      const newEntries = [...entries];
-      newEntries.splice(index + 1, 0, duplicated);
-      persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
-      setSelectedEntryIndex(index + 1);
-      setIsMobileViewOpen(true);
+      setPendingDuplicateId(entry.id);
     },
-    [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook],
+    [entries],
   );
+
+  const handleConfirmDuplicateEntry = useCallback(() => {
+    if (pendingDuplicateId === null) return;
+    const id = pendingDuplicateId;
+    setPendingDuplicateId(null);
+    const index = entries.findIndex((entry) => entry.id === id);
+    if (index < 0) return;
+    const entry = entries[index];
+    const newId = nextAvailableEntryId(entries);
+    const duplicated: LorebookEntry = {
+      ...entry,
+      id: newId,
+      keys: [...(entry.keys || [])],
+      secondary_keys: entry.secondary_keys ? [...entry.secondary_keys] : undefined,
+      extensions: entry.extensions ? { ...entry.extensions } : {},
+    };
+    const newEntries = [...entries];
+    newEntries.splice(index + 1, 0, duplicated);
+    persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
+    setSelectedEntryIndex(index + 1);
+    setIsMobileViewOpen(true);
+  }, [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook, pendingDuplicateId]);
 
   const handleDeleteEntry = useCallback(
     (index: number) => {
@@ -862,6 +879,21 @@ function LorebookEditorInner({
         }
         onConfirm={handleConfirmDeleteEntry}
         onCancel={() => setPendingDeleteId(null)}
+      />
+      <ConfirmDialog
+        open={pendingDuplicateId !== null}
+        title="Duplicate lorebook entry?"
+        message={
+          (() => {
+            const pending = pendingDuplicateId !== null ? entries.find((entry) => entry.id === pendingDuplicateId) : undefined;
+            return pending
+              ? `A copy of “${pending.comment || pending.name || `Entry ${pending.id}`}” will be inserted right after it.`
+              : 'A copy will be inserted right after this entry.';
+          })()
+        }
+        confirmLabel="Duplicate"
+        onConfirm={handleConfirmDuplicateEntry}
+        onCancel={() => setPendingDuplicateId(null)}
       />
     </div>
   );
