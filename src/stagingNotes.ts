@@ -24,11 +24,18 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.6.0 staging 1';
+export const STAGING_VERSION = 'v1.6.0 staging 2';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
   'Vault backup and restore from the library header.',
   'Settings backup with optional API keys.',
   'Card details sheet: Active versus Total token counts.',
+  'Editor header save status: Saving / Saved / Save failed.',
+  'Section headers show live chars, words and token estimates.',
+  'Extensions JSON is editable with an invalid-JSON warning.',
+  'Cmd+S flushes pending editor saves.',
+  'Greetings: duplicate with confirm, plus move up/down.',
+  'Lorebook entries: duplicate with confirm creates the next available entry ID.',
+  'Deletes and replaces use styled confirms, failures use toasts (no browser popups).',
 ];
