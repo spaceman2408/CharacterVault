@@ -412,8 +412,22 @@ function CharacterHeader({
   agentRunning = false,
 }: CharacterHeaderProps): React.ReactElement {
   const { currentCharacter } = useCharacterContext();
+  const { saveStatus, isDirty } = useCharacterEditorContext();
 
   if (!currentCharacter) return <></>;
+
+  const saveLabel =
+    saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? 'Save failed' : isDirty ? 'Unsaved' : 'Saved';
+  const saveDotClass =
+    saveStatus === 'saving'
+      ? 'bg-warning animate-pulse'
+      : saveStatus === 'error'
+        ? 'bg-danger'
+        : isDirty
+          ? 'bg-warning'
+          : 'bg-success';
+  const saveTextClass =
+    saveStatus === 'error' ? 'text-danger' : saveStatus === 'saving' || isDirty ? 'text-fg-muted' : 'text-fg-subtle';
 
   const handleExportJSON = async () => {
     if (!currentCharacter) return;
@@ -478,9 +492,24 @@ function CharacterHeader({
             <h1 className="font-semibold text-fg text-sm md:text-base truncate">
               {currentCharacter.name}
             </h1>
-            <p className={`text-xs ${agentRunning ? 'block' : 'hidden sm:block'}`}>
-              <span className={`text-fg-muted ${agentRunning ? 'hidden sm:inline' : ''}`}>
+            <p className="flex items-center gap-2 text-xs">
+              <span className="hidden text-fg-muted sm:inline">
                 Editing character
+              </span>
+              <span
+                role="status"
+                aria-live="polite"
+                title={
+                  saveStatus === 'error'
+                    ? 'Saving failed. Edits stay local and will retry on next change.'
+                    : saveStatus === 'saving' || isDirty
+                      ? 'Saving changes locally…'
+                      : 'All changes saved locally'
+                }
+                className={`inline-flex items-center gap-1 ${saveTextClass}`}
+              >
+                <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${saveDotClass}`} />
+                <span className="hidden sm:inline">{saveLabel}</span>
               </span>
               {agentRunning ? (
                 <span
