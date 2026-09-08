@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Plus, Trash2, MessageSquare, ChevronLeft } from 'lucide-react';
+import { Plus, Trash2, MessageSquare, ChevronLeft, Copy, ChevronUp, ChevronDown } from 'lucide-react';
 import type {
   SamplerSettings,
   AIConfig,
@@ -39,8 +39,13 @@ interface GreetingListItemProps {
   index: number;
   tokenCount: number | null;
   isSelected: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }
 
 interface GreetingDetailProps {
@@ -67,12 +72,29 @@ function GreetingListItem({
   index,
   tokenCount,
   isSelected,
+  canMoveUp,
+  canMoveDown,
   onSelect,
   onDelete,
+  onDuplicate,
+  onMoveUp,
+  onMoveDown,
 }: GreetingListItemProps): React.ReactElement {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete();
+  };
+  const handleDuplicate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDuplicate();
+  };
+  const handleMoveUp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onMoveUp();
+  };
+  const handleMoveDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onMoveDown();
   };
 
   const hasContent = greeting.trim().length > 0;
@@ -113,15 +135,46 @@ function GreetingListItem({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleDelete}
-          className="shrink-0 rounded-lg p-2 text-fg-muted transition-colors hover:bg-danger-soft hover:text-danger touch-manipulation"
-          title="Delete greeting"
-          aria-label={`Delete greeting ${index + 1}`}
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button
+            type="button"
+            onClick={handleMoveUp}
+            disabled={!canMoveUp}
+            className="rounded-lg p-1.5 text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-30 touch-manipulation"
+            title="Move up"
+            aria-label={`Move greeting ${index + 1} up`}
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleMoveDown}
+            disabled={!canMoveDown}
+            className="rounded-lg p-1.5 text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-30 touch-manipulation"
+            title="Move down"
+            aria-label={`Move greeting ${index + 1} down`}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            className="rounded-lg p-2 text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent touch-manipulation"
+            title="Duplicate greeting"
+            aria-label={`Duplicate greeting ${index + 1}`}
+          >
+            <Copy className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="shrink-0 rounded-lg p-2 text-fg-muted transition-colors hover:bg-danger-soft hover:text-danger touch-manipulation"
+            title="Delete greeting"
+            aria-label={`Delete greeting ${index + 1}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -238,6 +291,27 @@ export function GreetingsEditor({
     onChange(newList);
   }, [greetingsList, onChange]);
 
+  // Handle duplicate greeting
+  const handleDuplicateGreeting = useCallback((index: number) => {
+    const newList = [...greetingsList];
+    newList.splice(index + 1, 0, greetingsList[index]);
+    setGreetingsList(newList);
+    setSelectedGreetingIndex(index + 1);
+    setIsMobileViewOpen(true);
+    onChange(newList);
+  }, [greetingsList, onChange]);
+
+  // Handle move greeting up/down
+  const handleMoveGreeting = useCallback((index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= greetingsList.length) return;
+    const newList = [...greetingsList];
+    [newList[index], newList[target]] = [newList[target], newList[index]];
+    setGreetingsList(newList);
+    setSelectedGreetingIndex(target);
+    onChange(newList);
+  }, [greetingsList, onChange]);
+
   // Handle delete greeting
   const handleDeleteGreeting = useCallback((index: number) => {
     const shouldDelete = window.confirm(`Delete greeting ${index + 1}?`);
@@ -313,8 +387,13 @@ export function GreetingsEditor({
                 index={index}
                 tokenCount={index === safeSelectedIndex ? selectedGreetingTokenCount : null}
                 isSelected={index === safeSelectedIndex}
+                canMoveUp={index > 0}
+                canMoveDown={index < greetingsList.length - 1}
                 onSelect={() => handleSelectGreeting(index)}
                 onDelete={() => handleDeleteGreeting(index)}
+                onDuplicate={() => handleDuplicateGreeting(index)}
+                onMoveUp={() => handleMoveGreeting(index, -1)}
+                onMoveDown={() => handleMoveGreeting(index, 1)}
               />
             ))
           )}
@@ -358,15 +437,26 @@ export function GreetingsEditor({
                   </p>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => handleDeleteGreeting(safeSelectedIndex)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation"
-                title="Delete greeting"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span className="sm:inline">Delete</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleDuplicateGreeting(safeSelectedIndex)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-accent/40 hover:bg-accent-soft hover:text-accent touch-manipulation"
+                  title="Duplicate greeting"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Duplicate</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteGreeting(safeSelectedIndex)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger touch-manipulation"
+                  title="Delete greeting"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="sm:inline">Delete</span>
+                </button>
+              </div>
             </div>
             <GreetingDetail
               greeting={selectedGreeting}

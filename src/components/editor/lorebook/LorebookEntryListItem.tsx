@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Copy, Eye, EyeOff, Trash2 } from 'lucide-react';
 import type { LorebookEntryListItemProps } from './types';
 
 function LorebookEntryListItem({
@@ -9,11 +9,16 @@ function LorebookEntryListItem({
   isContextEnabled,
   onSelect,
   onDelete,
+  onDuplicate,
   onToggleContext,
 }: LorebookEntryListItemProps): React.ReactElement {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete();
+  };
+  const handleDuplicate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDuplicate();
   };
   const handleToggleContext = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -74,6 +79,16 @@ function LorebookEntryListItem({
             aria-label={isContextEnabled ? 'Exclude from context' : 'Include in context'}
           >
             {isContextEnabled ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            className="rounded-lg p-2 text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent touch-manipulation"
+            title="Duplicate entry"
+            aria-label="Duplicate entry"
+          >
+            <Copy className="h-4 w-4" />
           </button>
 
           <button

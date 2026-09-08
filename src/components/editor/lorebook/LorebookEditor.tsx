@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronUp,
+  Copy,
   Download,
   Eye,
   EyeOff,
@@ -193,6 +194,27 @@ function LorebookEditorInner({
     setSelectedEntryIndex(newEntries.length - 1);
     setIsMobileViewOpen(true);
   }, [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook]);
+
+  const handleDuplicateEntry = useCallback(
+    (index: number) => {
+      const entry = entries[index];
+      if (!entry) return;
+      const newId = nextAvailableEntryId(entries);
+      const duplicated: LorebookEntry = {
+        ...entry,
+        id: newId,
+        keys: [...(entry.keys || [])],
+        secondary_keys: entry.secondary_keys ? [...entry.secondary_keys] : undefined,
+        extensions: entry.extensions ? { ...entry.extensions } : {},
+      };
+      const newEntries = [...entries];
+      newEntries.splice(index + 1, 0, duplicated);
+      persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
+      setSelectedEntryIndex(index + 1);
+      setIsMobileViewOpen(true);
+    },
+    [entries, bookName, bookDescription, buildUpdatedLorebook, persistLorebook],
+  );
 
   const handleDeleteEntry = useCallback(
     (index: number) => {
@@ -632,6 +654,7 @@ function LorebookEditorInner({
                     setIsMobileViewOpen(true);
                   }}
                   onDelete={() => handleDeleteEntry(originalIndex)}
+                  onDuplicate={() => handleDuplicateEntry(originalIndex)}
                   onToggleContext={() => {
                     const updatedEntry = {
                       ...entry,
@@ -733,6 +756,16 @@ function LorebookEditorInner({
                       aria-label="Non-default options"
                     />
                   ) : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDuplicateEntry(safeSelectedIndex)}
+                  className="inline-flex shrink-0 items-center justify-center gap-0 rounded-lg border p-2 text-xs font-medium text-fg-muted transition-colors hover:border-accent/40 hover:bg-accent-soft hover:text-accent touch-manipulation md:gap-1.5 md:px-2.5 md:py-1.5"
+                  aria-label="Duplicate entry"
+                  title="Duplicate entry"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  <span className="hidden md:inline">Duplicate</span>
                 </button>
                 <button
                   type="button"

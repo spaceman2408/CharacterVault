@@ -58,6 +58,7 @@ export interface LorebookEntryListItemProps {
   isContextEnabled: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
   onToggleContext: () => void;
 }
 
