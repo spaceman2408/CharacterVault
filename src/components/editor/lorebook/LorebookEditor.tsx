@@ -33,6 +33,7 @@ import {
   LorebookAttachmentProvider,
 } from '../CharacterLorebookAttachments';
 import { LorebookEntryDetail } from './LorebookEntryDetail';
+import { ConfirmDeleteDialog } from '../ConfirmDeleteDialog';
 import { MemoizedLorebookEntryListItem } from './LorebookEntryListItem';
 import { RecursionMapModal } from './RecursionMapModal';
 import {
@@ -92,6 +93,7 @@ function LorebookEditorInner({
   const [isRecursionMapOpen, setIsRecursionMapOpen] = useState(false);
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -218,11 +220,16 @@ function LorebookEditorInner({
 
   const handleDeleteEntry = useCallback(
     (index: number) => {
-      const entry = entries[index];
-      const shouldDelete = window.confirm(
-        `Delete lorebook entry "${entry.comment || entry.name || `Entry ${index}`}"?`,
-      );
-      if (!shouldDelete) return;
+      setPendingDeleteIndex(index);
+    },
+    [],
+  );
+
+  const handleConfirmDeleteEntry = useCallback(
+    () => {
+      if (pendingDeleteIndex === null) return;
+      const index = pendingDeleteIndex;
+      setPendingDeleteIndex(null);
 
       const newEntries = entries.filter((_, i) => i !== index);
       persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
@@ -233,7 +240,7 @@ function LorebookEditorInner({
         setSelectedEntryIndex(selectedEntryIndex - 1);
       }
     },
-    [entries, selectedEntryIndex, bookName, bookDescription, buildUpdatedLorebook, persistLorebook],
+    [entries, selectedEntryIndex, bookName, bookDescription, buildUpdatedLorebook, persistLorebook, pendingDeleteIndex],
   );
 
   const filteredEntries = useMemo(() => {
@@ -832,6 +839,18 @@ function LorebookEditorInner({
           onPatchEntry={handlePatchRecursionEntry}
         />
       )}
+
+      <ConfirmDeleteDialog
+        open={pendingDeleteIndex !== null}
+        title="Delete lorebook entry?"
+        message={
+          pendingDeleteIndex !== null && entries[pendingDeleteIndex]
+            ? `“${entries[pendingDeleteIndex].comment || entries[pendingDeleteIndex].name || `Entry ${entries[pendingDeleteIndex].id}`}” will be removed immediately. This cannot be undone.`
+            : 'This entry will be removed immediately. This cannot be undone.'
+        }
+        onConfirm={handleConfirmDeleteEntry}
+        onCancel={() => setPendingDeleteIndex(null)}
+      />
     </div>
   );
 

@@ -24,6 +24,7 @@ import { characterExportService } from '../../services/CharacterExportService';
 import { characterSnapshotService } from '../../services/CharacterSnapshotService';
 import { customContextService } from '../../services/CustomContextService';
 import { lorebookAttachmentService } from '../../services/LorebookAttachmentService';
+import { showEphemeralToast } from '../../utils/ephemeralToast';
 import {
   ArrowLeft,
   Check,
@@ -283,7 +284,7 @@ function ImageEditor(): React.ReactElement {
 
   const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      showEphemeralToast({ type: 'error', title: 'Invalid file', message: 'Please select an image file.' });
       return;
     }
 
@@ -443,7 +444,7 @@ function CharacterHeader({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } else {
-      alert(result.error || 'Failed to export character');
+      showEphemeralToast({ type: 'error', title: 'Export failed', message: result.error || 'Failed to export character.' });
     }
   };
 
@@ -461,7 +462,7 @@ function CharacterHeader({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } else {
-      alert(result.error || 'Failed to export character');
+      showEphemeralToast({ type: 'error', title: 'Export failed', message: result.error || 'Failed to export character.' });
     }
   };
 

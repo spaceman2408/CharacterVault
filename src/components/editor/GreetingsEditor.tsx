@@ -15,6 +15,7 @@ import type {
 import type { CharacterSection } from '../../db/characterTypes';
 import { useAIEditor } from '../../hooks';
 import { estimateTokens } from '../../services/AIService';
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 
 interface GreetingsEditorProps {
   greetings: string[];
@@ -260,6 +261,7 @@ export function GreetingsEditor({
   const [greetingsList, setGreetingsList] = useState<string[]>(greetings);
   const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(0);
   const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
 
   // Sync list from persisted state
   useEffect(() => {
@@ -314,8 +316,13 @@ export function GreetingsEditor({
 
   // Handle delete greeting
   const handleDeleteGreeting = useCallback((index: number) => {
-    const shouldDelete = window.confirm(`Delete greeting ${index + 1}?`);
-    if (!shouldDelete) return;
+    setPendingDeleteIndex(index);
+  }, []);
+
+  const handleConfirmDeleteGreeting = useCallback(() => {
+    if (pendingDeleteIndex === null) return;
+    const index = pendingDeleteIndex;
+    setPendingDeleteIndex(null);
 
     const newList = greetingsList.filter((_, i) => i !== index);
     setGreetingsList(newList);
@@ -327,7 +334,7 @@ export function GreetingsEditor({
     } else if (selectedGreetingIndex > index) {
       setSelectedGreetingIndex(selectedGreetingIndex - 1);
     }
-  }, [greetingsList, selectedGreetingIndex, onChange]);
+  }, [greetingsList, selectedGreetingIndex, onChange, pendingDeleteIndex]);
 
   // Handle select greeting with mobile view
   const handleSelectGreeting = useCallback((index: number) => {
@@ -484,6 +491,13 @@ export function GreetingsEditor({
           </div>
         )}
       </div>
+      <ConfirmDeleteDialog
+        open={pendingDeleteIndex !== null}
+        title={`Delete greeting ${(pendingDeleteIndex ?? 0) + 1}?`}
+        message="This cannot be undone. The greeting will be removed immediately."
+        onConfirm={handleConfirmDeleteGreeting}
+        onCancel={() => setPendingDeleteIndex(null)}
+      />
     </div>
   );
 }
