@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Book, Upload, User, X } from 'lucide-react';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { PromoBanner } from '../PromoBanner';
+import { showEphemeralToast } from '../../utils/ephemeralToast';
 import type { ConfirmTarget, VaultTab } from './types';
 import { useVaultLibrary } from './useVaultLibrary';
 import { useVaultIO } from './useVaultIO';
@@ -109,7 +110,11 @@ export function CharacterSelectionView({
       setNewItemName('');
       setIsCreating(false);
     } catch {
-      alert(vaultTab === 'lorebooks' ? 'Failed to create lorebook' : 'Failed to create character');
+      showEphemeralToast({
+        type: 'error',
+        title: vaultTab === 'lorebooks' ? 'Failed to create lorebook' : 'Failed to create character',
+        message: 'Please try again.',
+      });
     }
   };
 

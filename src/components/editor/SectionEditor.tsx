@@ -270,14 +270,24 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
   }, [currentCharacter, section]);
   const [livePreviewValue, setLivePreviewValue] = React.useState(currentValue);
   const [liveStatsValue, setLiveStatsValue] = React.useState(currentValue);
+  const lastSyncedValueRef = React.useRef(currentValue);
+  const lastSectionRef = React.useRef(section);
 
   React.useEffect(() => {
     setLivePreviewValue(currentValue);
   }, [currentValue]);
 
   React.useEffect(() => {
-    setLiveStatsValue(currentValue);
-  }, [currentValue]);
+    const sectionChanged = lastSectionRef.current !== section;
+    lastSectionRef.current = section;
+    const previous = lastSyncedValueRef.current;
+    lastSyncedValueRef.current = currentValue;
+    if (sectionChanged) {
+      setLiveStatsValue(currentValue);
+      return;
+    }
+    setLiveStatsValue((prev) => (prev === previous ? currentValue : prev));
+  }, [currentValue, section]);
 
   React.useEffect(() => {
     if (section !== 'creator_notes') {

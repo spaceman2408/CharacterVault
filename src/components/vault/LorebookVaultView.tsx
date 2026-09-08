@@ -16,6 +16,8 @@ import {
 import type { CharacterListItem, LorebookListItem } from '../../db/characterTypes';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { lorebookAttachmentService } from '../../services/LorebookAttachmentService';
+import { showEphemeralToast } from '../../utils/ephemeralToast';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 function formatRelative(iso?: string): string {
   if (!iso) return '—';
@@ -108,6 +110,7 @@ export function LorebookVaultView({
   const { characterListItems, openCharacter } = useCharacterContext();
 
   const [linksByBook, setLinksByBook] = useState<Record<string, string[]>>({});
+  const [pendingDelete, setPendingDelete] = useState<LorebookListItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,8 +167,19 @@ export function LorebookVaultView({
   }, [lorebookListItems, searchQuery, linkedByBook]);
 
   const handleDelete = async (item: LorebookListItem) => {
-    if (!window.confirm(`Delete lorebook "${item.name}"? This cannot be undone.`)) return;
-    await deleteLorebook(item.id);
+    setPendingDelete(item);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    const id = pendingDelete.id;
+    setPendingDelete(null);
+    try {
+      await deleteLorebook(id);
+    } catch (error) {
+      console.error('Failed to delete lorebook:', error);
+      showEphemeralToast({ type: 'error', title: 'Delete failed', message: 'The lorebook could not be deleted.' });
+    }
   };
 
   return (
@@ -270,6 +284,14 @@ export function LorebookVaultView({
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={`Delete lorebook "${pendingDelete?.name ?? ''}"?`}
+        message="This cannot be undone."
+        variant="danger"
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

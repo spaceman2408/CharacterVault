@@ -15,6 +15,7 @@ import { ChatMessage as ChatMessageComponent, FoldedText } from './components';
 import { useAutoScroll } from './hooks';
 import { canRetryEmptySend } from './utils';
 import { CHAT_UI_HARD_WINDOW } from '../../services/ChatHistoryService';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 export interface AIChatViewProps {
   title: string;
@@ -100,6 +101,7 @@ export function AIChatView({
   const [askQuestion, setAskQuestion] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [contextExpanded, setContextExpanded] = useState(true);
+  const [isConfirmingNewChat, setIsConfirmingNewChat] = useState(false);
 
   const { containerRef: chatContainerRef } = useAutoScroll({
     isStreaming,
@@ -169,16 +171,7 @@ export function AIChatView({
           {(chatHistory.length > 0 || hasOlderMessages) && (
             <button
               type="button"
-              onClick={() => {
-                if (
-                  !window.confirm(
-                    'Start a new chat? This clears the saved conversation for this panel.',
-                  )
-                ) {
-                  return;
-                }
-                handleNewChat();
-              }}
+              onClick={() => setIsConfirmingNewChat(true)}
               disabled={composerDisabled}
               className="text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors disabled:opacity-40 disabled:pointer-events-none"
               title={composerDisabled ? effectiveHint : 'Start a new chat'}
@@ -439,6 +432,17 @@ export function AIChatView({
         </div>
         <p className="mt-1.5 text-[11px] text-fg-subtle px-0.5">{effectiveHint}</p>
       </div>
+      <ConfirmDialog
+        open={isConfirmingNewChat}
+        title="Start a new chat?"
+        message="This clears the saved conversation for this panel."
+        confirmLabel="New chat"
+        onConfirm={() => {
+          setIsConfirmingNewChat(false);
+          handleNewChat();
+        }}
+        onCancel={() => setIsConfirmingNewChat(false)}
+      />
     </div>
   );
 }

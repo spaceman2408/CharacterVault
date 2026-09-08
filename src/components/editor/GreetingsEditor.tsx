@@ -271,6 +271,9 @@ export function GreetingsEditor({
       setSelectedGreetingIndex(prev =>
         prev >= (greetings.length || 0) ? 0 : prev
       );
+      // External list changed while a delete dialog was open — cancel it so the
+      // stored index can't resolve to a different greeting.
+      setPendingDeleteIndex(null);
     }, 0);
     return () => clearTimeout(timeoutId);
   }, [greetings]);

@@ -9,6 +9,7 @@ import type { CustomContextMeta } from '../../db/characterTypes';
 import type { CustomContextOwner } from '../../services/CustomContextService';
 import { estimateCustomContextTokensFromCharLength } from '../../services/CustomContextService';
 import { CustomContextModal } from './CustomContextModal';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 export interface CustomContextBlockProps {
   ownerId: string;
@@ -36,6 +37,7 @@ export function CustomContextBlock({
   density = 'default',
 }: CustomContextBlockProps): React.ReactElement {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   const compact = density === 'compact';
   const noun = ownerNoun(owner);
 
@@ -49,15 +51,13 @@ export function CustomContextBlock({
 
   const handleClear = useCallback(() => {
     if (!hasCustomContext) return;
-    if (
-      !window.confirm(
-        `Remove custom context for this ${noun}? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    setIsConfirmingClear(true);
+  }, [hasCustomContext]);
+
+  const handleConfirmClear = useCallback(() => {
+    setIsConfirmingClear(false);
     void onClear();
-  }, [hasCustomContext, noun, onClear]);
+  }, [onClear]);
 
   const padClass = compact ? 'px-2 py-1.5' : 'px-2.5 py-2';
   const titleClass = compact ? 'text-xs' : 'text-sm';
@@ -150,6 +150,14 @@ export function CustomContextBlock({
         contextLength={contextLength}
         onClose={() => setIsModalOpen(false)}
         onSave={onSave}
+      />
+      <ConfirmDialog
+        open={isConfirmingClear}
+        title={`Remove custom context?`}
+        message={`Remove custom context for this ${noun}? This cannot be undone.`}
+        variant="danger"
+        onConfirm={handleConfirmClear}
+        onCancel={() => setIsConfirmingClear(false)}
       />
     </div>
   );

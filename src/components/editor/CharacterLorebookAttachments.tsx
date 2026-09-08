@@ -19,22 +19,18 @@ import { useCharacterEditorContext, useLorebookContext } from '../../context';
 import { flushChatSessions } from '../../utils/chatSessionFlush';
 import { flushLorebookDraft } from './lorebook/draftFlush';
 import { FieldInfoTip } from './lorebook/FieldInfoTip';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { showEphemeralToast } from '../../utils/ephemeralToast';
 import type { LorebookAttachmentControls } from './lorebook/types';
 
 const ATTACH_HELP =
   'One library book per character. Open in vault writes this lorebook to the linked book (or creates one), then opens it. Edits in the library update every linked character. Linking asks to copy entries onto the character (replaces what\'s already there).';
 
-function promptCopyIntoEmbedded(
-  lorebook: VaultLorebook,
-  embeddedBook: CharacterBook | undefined,
-): boolean {
-  const entryCount = lorebook.book.entries?.length ?? 0;
-  const existing = embeddedBook?.entries?.length ?? 0;
-  const message =
-    existing > 0
-      ? `Copy ${entryCount} entries from "${lorebook.name}" into this character's embedded lorebook? This replaces the current ${existing} embedded entries.`
-      : `Copy ${entryCount} entries from "${lorebook.name}" into this character's embedded lorebook?`;
-  return window.confirm(message);
+interface PendingConfirm {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  variant: 'danger' | 'default';
 }
 
 interface AttachmentApi {
@@ -79,6 +75,8 @@ export function LorebookAttachmentProvider({
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  const confirmResolverRef = useRef<((value: boolean) => void) | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const onMenuOpenRef = useRef(onMenuOpen);
   onMenuOpenRef.current = onMenuOpen;
@@ -90,8 +88,41 @@ export function LorebookAttachmentProvider({
     return () => {
       mountedRef.current = false;
       resolveGenRef.current += 1;
+      confirmResolverRef.current?.(false);
+      confirmResolverRef.current = null;
     };
   }, []);
+
+  const requestConfirm = useCallback((confirm: PendingConfirm): Promise<boolean> => {
+    if (confirmResolverRef.current) return Promise.resolve(false);
+    setPendingConfirm(confirm);
+    return new Promise<boolean>((resolve) => {
+      confirmResolverRef.current = resolve;
+    });
+  }, []);
+
+  const resolvePendingConfirm = useCallback((value: boolean) => {
+    setPendingConfirm(null);
+    confirmResolverRef.current?.(value);
+    confirmResolverRef.current = null;
+  }, []);
+
+  const promptCopyIntoEmbedded = useCallback(
+    (lorebook: VaultLorebook, embedded: CharacterBook | undefined): Promise<boolean> => {
+      const entryCount = lorebook.book.entries?.length ?? 0;
+      const existing = embedded?.entries?.length ?? 0;
+      return requestConfirm({
+        title: `Copy ${entryCount} entries?`,
+        message:
+          existing > 0
+            ? `Copy ${entryCount} entries from "${lorebook.name}" into this character's embedded lorebook? This replaces the current ${existing} embedded entries.`
+            : `Copy ${entryCount} entries from "${lorebook.name}" into this character's embedded lorebook?`,
+        confirmLabel: 'Copy',
+        variant: 'default',
+      });
+    },
+    [requestConfirm],
+  );
 
   const reload = useCallback(async () => {
     const gen = ++resolveGenRef.current;
@@ -163,9 +194,12 @@ export function LorebookAttachmentProvider({
         const currentName = attached?.missing
           ? 'the current attachment'
           : `"${attached?.lorebook?.name || 'Untitled'}"`;
-        const replaceOk = window.confirm(
-          `Only one lorebook can be attached. Replace ${currentName} with this book?`,
-        );
+        const replaceOk = await requestConfirm({
+          title: 'Replace attached lorebook?',
+          message: `Only one lorebook can be attached. Replace ${currentName} with this book?`,
+          confirmLabel: 'Replace',
+          variant: 'default',
+        });
         if (!replaceOk) return;
       }
 
@@ -179,14 +213,14 @@ export function LorebookAttachmentProvider({
         setPickerOpen(false);
 
         const linked = next.find((item) => item.lorebookId === lorebookId)?.lorebook;
-        if (linked && promptCopyIntoEmbedded(linked, embeddedBook)) {
+        if (linked && (await promptCopyIntoEmbedded(linked, embeddedBook))) {
           onCopyIntoEmbedded(cloneBookForEmbed(linked));
         }
       } finally {
         if (mountedRef.current) setBusy(false);
       }
     },
-    [busy, attachedId, attached, characterId, embeddedBook, onCopyIntoEmbedded],
+    [busy, attachedId, attached, characterId, embeddedBook, onCopyIntoEmbedded, promptCopyIntoEmbedded, requestConfirm],
   );
 
   const handleDetach = useCallback(async () => {
@@ -241,9 +275,11 @@ export function LorebookAttachmentProvider({
         await pushEmbeddedAndOpen(lorebookId);
       } catch (err) {
         console.error('Failed to open lorebook in vault:', err);
-        window.alert(
-          err instanceof Error ? err.message : 'Could not open the vault lorebook.',
-        );
+        showEphemeralToast({
+          type: 'error',
+          title: 'Could not open vault lorebook',
+          message: err instanceof Error ? err.message : 'Could not open the vault lorebook.',
+        });
       } finally {
         if (mountedRef.current) setBusy(false);
       }
@@ -260,9 +296,11 @@ export function LorebookAttachmentProvider({
         await pushEmbeddedAndOpen(attached.lorebookId);
       } catch (err) {
         console.error('Failed to open lorebook in vault:', err);
-        window.alert(
-          err instanceof Error ? err.message : 'Could not open the vault lorebook.',
-        );
+        showEphemeralToast({
+          type: 'error',
+          title: 'Could not open vault lorebook',
+          message: err instanceof Error ? err.message : 'Could not open the vault lorebook.',
+        });
       } finally {
         if (mountedRef.current) setBusy(false);
       }
@@ -273,9 +311,12 @@ export function LorebookAttachmentProvider({
     if (entryCount === 0) return;
 
     const fallbackName = fallbackVaultName(embeddedBook);
-    const createOk = window.confirm(
-      `Open in the lorebook vault editor? A vault copy will be created from this character's embedded lorebook (${entryCount} entries), attached to the character, and opened.`,
-    );
+    const createOk = await requestConfirm({
+      title: 'Open in the lorebook vault editor?',
+      message: `A vault copy will be created from this character's embedded lorebook (${entryCount} entries), attached to the character, and opened.`,
+      confirmLabel: 'Create and open',
+      variant: 'default',
+    });
     if (!createOk) return;
 
     setBusy(true);
@@ -293,9 +334,11 @@ export function LorebookAttachmentProvider({
       await openLorebook(created.id);
     } catch (err) {
       console.error('Failed to open lorebook in vault:', err);
-      window.alert(
-        err instanceof Error ? err.message : 'Could not create or open the vault lorebook.',
-      );
+      showEphemeralToast({
+        type: 'error',
+        title: 'Could not create vault lorebook',
+        message: err instanceof Error ? err.message : 'Could not create or open the vault lorebook.',
+      });
     } finally {
       if (mountedRef.current) setBusy(false);
     }
@@ -308,14 +351,17 @@ export function LorebookAttachmentProvider({
     flushPendingSaves,
     openLorebook,
     characterId,
+    requestConfirm,
   ]);
 
   const handleCopy = useCallback(
     (lorebook: VaultLorebook) => {
-      if (!promptCopyIntoEmbedded(lorebook, embeddedBook)) return;
-      onCopyIntoEmbedded(cloneBookForEmbed(lorebook));
+      void (async () => {
+        if (!(await promptCopyIntoEmbedded(lorebook, embeddedBook))) return;
+        onCopyIntoEmbedded(cloneBookForEmbed(lorebook));
+      })();
     },
-    [embeddedBook, onCopyIntoEmbedded],
+    [embeddedBook, onCopyIntoEmbedded, promptCopyIntoEmbedded],
   );
 
   const api = useMemo<AttachmentApi>(
@@ -374,6 +420,15 @@ export function LorebookAttachmentProvider({
             document.body,
           )
         : null}
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        title={pendingConfirm?.title ?? ''}
+        message={pendingConfirm?.message ?? ''}
+        confirmLabel={pendingConfirm?.confirmLabel ?? 'Confirm'}
+        variant={pendingConfirm?.variant ?? 'default'}
+        onConfirm={() => resolvePendingConfirm(true)}
+        onCancel={() => resolvePendingConfirm(false)}
+      />
     </AttachmentContext.Provider>
   );
 }
@@ -564,20 +619,16 @@ export function DeleteEmbeddedLorebookButton({
   onDelete: () => void;
 }): React.ReactElement {
   const api = useContext(AttachmentContext);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const handleClick = () => {
+    setIsConfirming(true);
+  };
+
+  const handleConfirm = () => {
     const linked = Boolean(api?.attached);
     const unlink = api?.removeVaultLink;
-    const entryClause =
-      entryCount > 0
-        ? `Delete this lorebook and all ${entryCount} entries?`
-        : 'Delete this lorebook?';
-    const linkClause = linked
-      ? ' This also removes the link to the lorebook vault.'
-      : '';
-    const message = `${entryClause}${linkClause} This cannot be undone.`;
-    if (!window.confirm(message)) return;
-
+    setIsConfirming(false);
     void (async () => {
       if (linked && unlink) {
         await unlink();
@@ -586,15 +637,34 @@ export function DeleteEmbeddedLorebookButton({
     })();
   };
 
+  const linked = Boolean(api?.attached);
+  const entryClause =
+    entryCount > 0
+      ? `Delete this lorebook and all ${entryCount} entries?`
+      : 'Delete this lorebook?';
+  const linkClause = linked
+    ? ' This also removes the link to the lorebook vault.'
+    : '';
+
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className="flex w-full items-center justify-center gap-2 rounded-lg border border-danger/30 px-2.5 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-soft touch-manipulation"
-      title="Delete the entire lorebook"
-    >
-      <Trash2 className="h-3.5 w-3.5" />
-      Delete Lorebook
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-danger/30 px-2.5 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger-soft touch-manipulation"
+        title="Delete the entire lorebook"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        Delete Lorebook
+      </button>
+      <ConfirmDialog
+        open={isConfirming}
+        title="Delete this lorebook?"
+        message={`${entryClause}${linkClause} This cannot be undone.`}
+        variant="danger"
+        onConfirm={handleConfirm}
+        onCancel={() => setIsConfirming(false)}
+      />
+    </>
   );
 }

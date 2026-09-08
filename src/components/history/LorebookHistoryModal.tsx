@@ -11,6 +11,7 @@ import type {
 } from '../../db/characterTypes';
 import { useLorebookContext } from '../../context';
 import { lorebookSnapshotService } from '../../services/LorebookSnapshotService';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 const SOURCE_LABELS: Record<string, string> = {
   open: 'Opened',
@@ -43,6 +44,12 @@ export function LorebookHistoryModal({
   const [selected, setSelected] = useState<LorebookSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState<
+    | { kind: 'restore' }
+    | { kind: 'delete'; id: string }
+    | { kind: 'baseline' }
+    | null
+  >(null);
 
   const reload = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
@@ -70,6 +77,11 @@ export function LorebookHistoryModal({
     };
   }, [lorebookId]);
 
+  useEffect(() => {
+    setPendingConfirm(null);
+    setSelected(null);
+  }, [lorebookId]);
+
   const handleSelect = async (id: string) => {
     const snap = await lorebookSnapshotService.getById(id);
     setSelected(snap ?? null);
@@ -77,10 +89,15 @@ export function LorebookHistoryModal({
 
   const handleRestore = async () => {
     if (!selected) return;
-    const confirmed = window.confirm(
-      'Restore this snapshot? Current lorebook content will be replaced.',
-    );
-    if (!confirmed) return;
+    setPendingConfirm({ kind: 'restore' });
+  };
+
+  const handleConfirmRestore = async () => {
+    if (!selected) {
+      setPendingConfirm(null);
+      return;
+    }
+    setPendingConfirm(null);
     setBusy(true);
     try {
       await lorebookSnapshotService.restore(selected.id);
@@ -99,7 +116,13 @@ export function LorebookHistoryModal({
   const handleDelete = async (id: string) => {
     const target = items.find((item) => item.id === id);
     if (target?.source === 'open') return;
-    if (!window.confirm('Delete this snapshot?')) return;
+    setPendingConfirm({ kind: 'delete', id });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (pendingConfirm?.kind !== 'delete') return;
+    const id = pendingConfirm.id;
+    setPendingConfirm(null);
     setBusy(true);
     try {
       await lorebookSnapshotService.delete(id);
@@ -115,10 +138,15 @@ export function LorebookHistoryModal({
 
   const handleUpdateBaseline = async () => {
     if (!selected || selected.source !== 'open') return;
-    const confirmed = window.confirm(
-      'Replace the opened baseline with the current lorebook? The original baseline cannot be recovered.',
-    );
-    if (!confirmed) return;
+    setPendingConfirm({ kind: 'baseline' });
+  };
+
+  const handleConfirmUpdateBaseline = async () => {
+    if (!selected || selected.source !== 'open') {
+      setPendingConfirm(null);
+      return;
+    }
+    setPendingConfirm(null);
     setBusy(true);
     try {
       const book = await onFlushPending();
@@ -301,6 +329,32 @@ export function LorebookHistoryModal({
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={pendingConfirm?.kind === 'restore'}
+        title="Restore this snapshot?"
+        message="Current lorebook content will be replaced."
+        confirmLabel="Restore"
+        onConfirm={() => void handleConfirmRestore()}
+        onCancel={() => setPendingConfirm(null)}
+      />
+      <ConfirmDialog
+        open={pendingConfirm?.kind === 'delete'}
+        title="Delete this snapshot?"
+        message="This revision will be removed from local history."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setPendingConfirm(null)}
+      />
+      <ConfirmDialog
+        open={pendingConfirm?.kind === 'baseline'}
+        title="Replace the opened baseline?"
+        message="Replace the opened baseline with the current lorebook? The original baseline cannot be recovered."
+        confirmLabel="Replace"
+        variant="danger"
+        onConfirm={() => void handleConfirmUpdateBaseline()}
+        onCancel={() => setPendingConfirm(null)}
+      />
     </div>
   );
 }

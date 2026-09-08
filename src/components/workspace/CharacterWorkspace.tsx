@@ -1015,6 +1015,7 @@ function CharacterWorkspaceInner({
     setToasts(prev => [...prev, { id, type, title, message }]);
     const timeoutId = window.setTimeout(() => {
       setToasts(prev => prev.filter(toast => toast.id !== id));
+      toastTimeoutsRef.current = toastTimeoutsRef.current.filter((entry) => entry !== timeoutId);
     }, 3500);
     toastTimeoutsRef.current.push(timeoutId);
   };
