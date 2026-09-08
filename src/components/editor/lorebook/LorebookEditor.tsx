@@ -886,9 +886,10 @@ function LorebookEditorInner({
         message={
           (() => {
             const pending = pendingDuplicateId !== null ? entries.find((entry) => entry.id === pendingDuplicateId) : undefined;
+            const nextId = nextAvailableEntryId(entries);
             return pending
-              ? `A copy of “${pending.comment || pending.name || `Entry ${pending.id}`}” will be inserted right after it.`
-              : 'A copy will be inserted right after this entry.';
+              ? `A copy of “${pending.comment || pending.name || `Entry ${pending.id}`}” will be created as entry #${nextId}.`
+              : 'A copy will be created with the next available entry ID.';
           })()
         }
         confirmLabel="Duplicate"
