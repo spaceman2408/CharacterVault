@@ -260,6 +260,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
   } = useCharacterEditorContext();
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
+  const [extensionsError, setExtensionsError] = React.useState<string | null>(null);
 
   // Get current value based on section
   const currentValue = React.useMemo(() => {
@@ -279,9 +280,47 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     }
   }, [section]);
 
+  React.useEffect(() => {
+    if (section !== 'extensions') {
+      setExtensionsError(null);
+    }
+  }, [section]);
+
   // Handle value change
   const handlePersistChange = useCallback((value: string) => {
-    if (section === 'image' || section === 'extensions' || section === 'lorebook') return;
+    if (section === 'image' || section === 'lorebook') return;
+
+    if (section === 'extensions') {
+      if (!currentCharacter) return;
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        setExtensionsError(null);
+        void updateCharacter({
+          data: {
+            ...currentCharacter.data,
+            extensions: {},
+          },
+        });
+        return;
+      }
+      try {
+        const parsed: unknown = JSON.parse(value);
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+          setExtensionsError('Extensions must be a JSON object.');
+          return;
+        }
+        setExtensionsError(null);
+        void updateCharacter({
+          data: {
+            ...currentCharacter.data,
+            extensions: parsed as Record<string, unknown>,
+          },
+        });
+      } catch (error) {
+        setExtensionsError(error instanceof Error ? error.message : 'Invalid JSON.');
+      }
+      return;
+    }
 
     if (section === 'alternate_greetings') {
       void updateSpecField(section, value.split('\n---\n').filter(g => g.trim()));
@@ -291,7 +330,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     } else {
       void updateSpecField(section, value);
     }
-  }, [section, updateSpecField]);
+  }, [section, updateSpecField, currentCharacter, updateCharacter]);
 
   const sectionExtensions = React.useMemo<Extension[] | undefined>(() => {
     if (section === 'creator_notes') return creatorNotesExtensions();
@@ -395,6 +434,12 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
           ref={editorRef}
           className="flex-1 min-h-0 border border-border rounded-xl overflow-hidden"
         />
+        {extensionsError ? (
+          <p role="alert" className="mt-2 shrink-0 text-sm text-danger">
+            Invalid JSON — changes not saved: {extensionsError}
+          </p>
+        ) : null}
+        {payloadPreviewModal}
       </div>
     );
   }
