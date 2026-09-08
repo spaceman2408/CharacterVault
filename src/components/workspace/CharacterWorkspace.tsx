@@ -1025,6 +1025,18 @@ function CharacterWorkspaceInner({
     };
   }, []);
 
+  useEffect(() => {
+    const handleSaveShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        flushLorebookDraft();
+        void flushPendingSaves();
+      }
+    };
+    document.addEventListener('keydown', handleSaveShortcut);
+    return () => document.removeEventListener('keydown', handleSaveShortcut);
+  }, [flushPendingSaves]);
+
   return (
     <div className="h-dvh w-full flex flex-col bg-bg overflow-hidden">
       
