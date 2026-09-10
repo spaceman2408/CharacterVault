@@ -180,7 +180,8 @@ into the project and listing the code in
 - **Undo/Redo** — Standard `Ctrl+Z` / `Ctrl+Shift+Z` support.
 - **Line wrapping** — Long lines wrap automatically.
 - **Theme sync** — The editor follows the app's dark/light mode.
-- **Auto-save** — Changes are saved as you type. No manual save needed.
+- **Auto-save** — Changes are saved as you type. The character workspace header shows **Saving…**, **Saved**, **Unsaved**, or **Save failed**. A failed save stays local and retries on the next change. Press `Ctrl+S` / `⌘+S` to flush pending saves immediately (including a lorebook draft) instead of the browser’s Save Page dialog.
+- **Live counts** — Section headers show characters, words, and an estimated token count as you type (same byte-based estimator as the AI context panel).
 
 ## Section Layout
 
@@ -192,10 +193,10 @@ Each section tab shows a title, description, and the editor. Some sections have 
 | **Tags** | Tag chips with quick add, paste, and remove controls |
 | **Description**, **Personality**, **Scenario**, etc. | Standard single editor |
 | **Creator Notes** | Editor with a **Preview CSS** button — opens a sandboxed preview modal, or click again for a side-by-side split view. See [Creator Notes Preview](/features/creator-notes). |
-| **Greetings** | Special multi-greeting editor. See [Creating & Editing Characters](/getting-started/creating-characters). |
+| **Greetings** | Special multi-greeting editor. Duplicate and reorder from the sidebar. See [Greetings Editor](/features/greetings-editor). |
 | **Lorebook** | Two-panel editor with ST fields, recursion map, search, and AI key generation. Same UI for embedded books and the [Lorebook Vault](/features/lorebook-vault). See [Lorebook Editor](/features/lorebook-editor). |
 | **Image** | Image upload panel (not a text editor) |
-| **Extensions** | Raw JSON editor |
+| **Extensions** | JSON editor with validation. Invalid JSON shows a warning and is not saved; empty JSON writes `{}`. |
 
 ## Name, Creator, and Tags
 

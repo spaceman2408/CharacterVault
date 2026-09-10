@@ -15,13 +15,15 @@ CharacterVault is open source under the [GNU General Public License v3.0](https:
 
 When you create or edit characters and **standalone lorebooks**, data such as card fields, images, lorebook entries, snapshots, attachment links, app settings, optional **custom AI context** notes, and **Orion/Agent chat transcripts** is kept locally in your browser. It is not uploaded to a CharacterVault server, because the core app has no such server.
 
-Custom context, chat transcripts, and lorebook **links** (which library book a character uses) stay in this browser only. They are not written into PNG/JSON by themselves. The lorebook **text on the character** is what card export includes — and after you link a book, that text stays matched with the library book. Clearing site data, using a different browser or device, or uninstalling browser storage for this origin can remove local data. Export cards, lorebook JSON, or vault backups for portable copies; keep a separate copy of custom notes and chat history if you need them elsewhere.
+Custom context, chat transcripts, snapshots, and lorebook **links** (which library book a character uses) stay in this browser only. They are not written into PNG/JSON by themselves and are not included in vault ZIP backups. The lorebook **text on the character** is what card export includes — and after you link a book, that text stays matched with the library book. Clearing site data, using a different browser or device, or uninstalling browser storage for this origin can remove local data. Export cards, lorebook JSON, or a vault backup for portable copies; keep a separate copy of custom notes and chat history if you need them elsewhere.
+
+A vault or settings backup can include **API keys** only if you opt in on export. Treat that file as a secret: anyone with it can use your provider quota.
 
 ## Hosted site (Cloudflare Pages)
 
 The official app is [vault.charactervault.app](https://vault.charactervault.app). The marketing site is [charactervault.app](https://charactervault.app). Both are hosted on **Cloudflare Pages**. CharacterVault’s maintainers do not operate a separate application server for the core product.
 
-Browser storage is **origin-scoped**. Cards and settings saved on an older GitHub Pages URL (`spaceman2408.github.io`) stay there; they do not appear on `vault.charactervault.app`. Export a vault backup from the old origin and import the files on the current app if you need to move a library.
+Browser storage is **origin-scoped**. Cards and settings saved on an older GitHub Pages URL (`spaceman2408.github.io`) stay there; they do not appear on `vault.charactervault.app`. Export a vault backup from the old origin and **Import** that ZIP on the current app if you need to move a library.
 
 Like most static sites, hosting may involve normal web request metadata (for example IP address, user agent, and requested URLs). That processing is governed by [Cloudflare’s Privacy Policy](https://www.cloudflare.com/privacypolicy/), not by a CharacterVault database of user accounts.
 

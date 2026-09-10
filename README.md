@@ -32,6 +32,7 @@
 - **Recursion Map** - Fullscreen web of unlock paths; inspect entries, edit keys in place, and bulk-edit flags
 - **Creator Notes** - HTML/CSS support with live preview
 - **Import & Export** - PNG cards with embedded data or JSON files, plus standalone lorebook JSON, compatible with SillyTavern and any frontend that accepts the same formats
+- **Vault Backup** - ZIP of cards, lorebooks, and settings; restore by importing the ZIP. Optional settings-only backup in Settings
 - **Snapshots & Rollback** - Save manual snapshots and restore a full card, individual sections, or a standalone lorebook
 - **Offline Storage** - All data stays in your browser via IndexedDB
 

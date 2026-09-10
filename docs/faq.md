@@ -15,7 +15,7 @@ If you prefer to run locally or develop on the codebase, see the [Installation g
 ::: details I used the old GitHub Pages URL. Where did my characters go?
 The current app is **[https://vault.charactervault.app](https://vault.charactervault.app)**. Browser storage is tied to the site origin, so a library on `spaceman2408.github.io` does not appear on `vault.charactervault.app`.
 
-To move cards and lorebooks: on the old site, use the vault header backup (ZIP). Unzip it, then on the new app use **Import** and select the PNG/JSON files. The GitHub Pages build may still load, but it is frozen and no longer updated.
+To move cards and lorebooks: on the old site, use the vault header **Backup** (ZIP). On the new app, **Import** that ZIP — CharacterVault restores it in place. A 1.6.0 full backup can also bring settings (API keys only if you opted in). The GitHub Pages build may still load, but it is frozen and no longer updated.
 :::
 
 ::: details Does the editor have spellcheck?
@@ -42,6 +42,7 @@ You can:
 - **Use AI to help you write** through Orion (chat), the **Agent** (writes the open card or lorebook, with an optional review diff), **AI Creation Studio** (generate a card from a concept or tags), and an AI toolbar with enhance, rephrase, shorten, fix, and other operations
 - **Save snapshots** at any point and roll back to previous versions, either the entire card or individual sections
 - **Import and export** PNG cards with embedded data and JSON files, compatible with SillyTavern, TavernAI, and other tools
+- **Back up the vault** as a ZIP of cards, lorebooks, and settings, and restore it later
 - **Stay in control** with local IndexedDB storage, dark and light themes
 :::
 
@@ -247,15 +248,25 @@ Storage notes:
 ## Storage & Data
 
 ::: details Where is my data stored?
-All character data is stored locally in your browser using IndexedDB. No data is sent to external servers. This includes character cards and images, snapshot history, AI configuration and settings, and UI preferences.
+All character data is stored locally in your browser using IndexedDB. No data is sent to external servers. This includes character cards and images, standalone lorebooks, snapshot history, AI configuration and settings, and UI preferences.
+:::
+
+::: details How do I back up my vault?
+Use **Backup** in the library header for a ZIP of every card, standalone lorebook, and your settings. **Import** that ZIP later to restore — cards and lorebooks are added as copies; settings in the backup replace settings on this device. API keys are not included unless you check **Include API keys**.
+
+For settings only, use **Settings → Backup**. Chats, custom AI context, and snapshots are not in either backup.
+
+See [Import & Export → Vault backup](/features/import-export#vault-backup).
 :::
 
 ::: details What happens if I clear my browser data?
 ::: warning What happens when you clear your browser data:
-Your cache, local storage, IndexedDB will remove all your characters, settings, and snapshot history.
+Your cache, local storage, IndexedDB will remove all your characters, lorebooks, settings, chats, and snapshot history.
+:::
 
-::: danger BACKUP YOUR CHARACTERS
-For important characters, export a PNG backup before clearing browser data. See [Import & Export](/features/import-export).
+::: danger BACKUP YOUR VAULT
+Use the library **Backup** ZIP before clearing browser data. See [Import & Export](/features/import-export#vault-backup).
+:::
 :::
 
 ::: details Can I use Character Vault offline?

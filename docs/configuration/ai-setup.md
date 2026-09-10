@@ -6,7 +6,7 @@ Character Vault's AI features (Orion, the Agent, and the AI toolbar) require an 
 
 1. Open a character in the workspace.
 2. Click **Settings** in the workspace header.
-3. The settings modal opens with six tabs: **AI Config**, **Sampler**, **Prompts**, **Character Workspace**, **Creation Studio**, and **Sections**.
+3. The settings modal opens with seven tabs: **AI Config**, **Sampler**, **Prompts**, **Character Workspace**, **Creation Studio**, **Sections**, and **Backup**.
 4. Click **Save Settings** at the bottom when you're done. Changes don't take effect until you save.
 
 You can close the panel with **Cancel** or `Escape` to discard changes.
@@ -240,6 +240,23 @@ Preferences for [AI Creation Studio](/features/ai-creation-studio):
 
 The Sections tab lets you customize the editor's section tab strip. Hide tabs you don't use, reorder the rest, and reset to defaults at any time. See [Section Tab Layout](/configuration/section-layout) for the full guide.
 
+## Backup Tab {#backup-tab}
+
+Export or import **settings only** (no character cards or lorebooks). For a ZIP of the whole vault, use the library header **Backup** instead. See [Import & Export → Vault backup](/features/import-export#vault-backup).
+
+### Export settings
+
+Downloads AI config, sampler, prompts (including per-prompt and Agent model mappings), studio preferences and favorite tags, workspace UI, and section layout as a JSON file.
+
+- Export uses your **saved** settings. Save first if you changed anything in this session.
+- **Include API keys** is off by default. Turn it on only to move your own setup between browsers. That file contains live keys.
+
+### Import settings
+
+Choosing a backup file loads it into the settings **draft**. Nothing is overwritten until you click **Save Settings**.
+
+- A backup **without** keys keeps the API keys already on this device.
+- After import, a notice stays until you save. Saving clears it.
 
 ## Missing /v1 Detection
 

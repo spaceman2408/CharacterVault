@@ -19,10 +19,20 @@ Each greeting card shows:
 - **Label** — "Greeting 1", "Greeting 2", etc.
 - **Token count** — Shown for the currently selected greeting.
 - **Delete button** — Appears on hover. Removing a greeting requires confirmation.
+- **Duplicate** — Copies the greeting and inserts it immediately after. Confirm first.
+- **Move up / down** — Reorder alternate greetings.
 
 ### Adding Greetings
 
 Click **New Greeting** at the bottom of the sidebar to add a blank greeting. The new greeting is automatically selected for editing.
+
+### Duplicating Greetings
+
+Use the copy control on a greeting row, or **Duplicate** in the detail header. A confirmation dialog inserts a copy right after the original and selects it.
+
+### Reordering Greetings
+
+Use the up/down controls on a greeting row. The first greeting cannot move up; the last cannot move down.
 
 ### Deleting Greetings
 

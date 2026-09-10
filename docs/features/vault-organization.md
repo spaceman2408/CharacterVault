@@ -49,9 +49,9 @@ Each card shows two compact estimates: **active / total**.
 | Value | What it counts |
 | :--- | :--- |
 | **Active** | Fields typically always in an RP prompt: name, description, appearance, personality, scenario, system, post-history, message examples |
-| **Total** | Active fields plus first message, alternate greetings, lorebook, and metadata (creator, tags, etc.) |
+| **Total** | Active fields plus first message, alternate greetings, and lorebook entries. Excludes creator notes, version, tags, and other metadata never sent to chat |
 
-Uses the same byte-based estimator as the AI context panel. Hover the value for exact counts.
+Uses the same byte-based estimator as the AI context panel. Click the **active / total** chip (or the opened/edited timestamps) for a breakdown with exact counts.
 
 ## Continue
 
@@ -81,11 +81,13 @@ Click **Import** in the header to open a file picker, or **drag and drop** one o
 
 ## Vault backup
 
-Click **Backup** in the header to download a ZIP of every character in your vault. Cards with images export as PNG (embedded data); cards without an image export as JSON. This is the recommended way to back up local IndexedDB storage.
+Click **Backup** in the header to download a ZIP of every character, standalone lorebook, and your settings. Cards with images export as PNG (embedded data); cards without an image export as JSON. Lorebooks export as SillyTavern JSON. API keys are off unless you opt in.
+
+**Import** that ZIP (or drop it on the library) to restore. Cards and lorebooks are added as copies; settings in the backup replace settings on this device. See [Import & Export → Vault backup](/features/import-export#vault-backup).
 
 ## Settings from the vault
 
-The vault header includes **Settings** (also under **More** on a narrow screen). The same panel as in the workspace: AI Config, Sampler, Prompts, Character Workspace, Creation Studio, and Sections.
+The vault header includes **Settings** (also under **More** on a narrow screen). The same panel as in the workspace: AI Config, Sampler, Prompts, Character Workspace, Creation Studio, Sections, and Backup.
 
 ## Pagination
 

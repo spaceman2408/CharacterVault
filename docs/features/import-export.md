@@ -24,18 +24,32 @@ All three load cleanly into your vault.
 
 The **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)** adds an "Export to CharacterVault" button right inside SillyTavern's export menu. When you use it, the extension copies the character to your clipboard in a format CharacterVault understands — no need to save files manually.
 
-## Vault backup
+## Vault backup {#vault-backup}
 
-::: tip Custom AI context is not exported
-Notes you paste under **AI Context → Custom** stay in this browser only. They are not written into PNG/JSON cards and are not included in vault Backup ZIPs. See [Custom Context](/features/ai-context#custom-context).
+::: tip What is not in a vault ZIP
+Orion/Agent **chats**, notes under **AI Context → Custom**, **snapshots**, and lorebook **links** stay in this browser only. They are not written into PNG/JSON cards and are not included in vault Backup ZIPs. See [Custom Context](/features/ai-context#custom-context) and [Privacy](/privacy).
 :::
 
-From the library header, click **Backup** to download a ZIP of every character:
+From the library header, click **Backup** to download a ZIP of the whole vault:
 
-- Cards **with** an image → PNG with embedded data
-- Cards **without** an image → JSON (V3)
+| Path | Contents |
+| :--- | :--- |
+| `characters/` | Cards **with** an image as PNG (embedded data); cards **without** as JSON (V3) |
+| `lorebooks/` | Standalone vault lorebooks as SillyTavern-oriented JSON |
+| `settings.json` | App settings (AI config, sampler, prompts, studio including favorite tags, workspace, layout) |
+| `manifest.json` | Backup kind, date, counts, and whether API keys were included |
 
-Use this periodically so a browser wipe does not erase your vault.
+**Include API keys** is off by default. Turn it on only when you are moving your own setup between browsers. Anyone with that file can spend your AI quota.
+
+### Restore
+
+**Import** a `.zip` (or drag it onto the library). CharacterVault previews how many cards and lorebooks it found, and whether settings (and keys) are present.
+
+- **Cards and lorebooks are added as copies.** Nothing already in the vault is deleted.
+- **Settings in a full backup replace settings on this device.** A backup without keys keeps the keys already here.
+- Older cards-only ZIPs (before 1.6.0) still restore as content only.
+
+Use this periodically so a browser wipe does not erase your vault. For settings alone, see [Settings → Backup](/configuration/ai-setup#backup-tab).
 
 ## Exporting Characters
 

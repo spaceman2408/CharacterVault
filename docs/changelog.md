@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.6.0 (2026-09-10)
+
+Full vault backup and restore, Settings backup, and editor quality-of-life. Full notes: [v1.6.0 release notes](/releases/v1.6.0).
+
+### Highlights
+
+- Vault **Backup** ZIP includes cards, standalone lorebooks, and settings; **Import** a ZIP to restore (cards/books as copies; settings replace on this device)
+- **Settings → Backup** exports/imports config as JSON; keys optional; import is a draft until Save
+- Editor: header save status, live chars/words/tokens, editable Extensions JSON, `Ctrl+S` / `⌘+S` to flush pending saves
+- Greetings duplicate + reorder; lorebook entry duplicate (next available ID); in-app confirms and toasts
+
+Details: [Import & Export](/features/import-export) · [Text Editor](/features/editor) · [What's New](/whats-new)
+
+---
+
 ## 1.5.0 (2026-09-05)
 
 AI Creation Studio overhaul and optional Agent review diff. Full notes: [v1.5.0 release notes](/releases/v1.5.0).

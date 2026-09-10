@@ -6,6 +6,17 @@ Quick overview of recent updates to CharacterVault.
 
 ## September 2026
 
+### 1.6.0
+
+Full vault backup and restore, plus editor quality-of-life.
+
+- Library **Backup** ZIP now includes cards, standalone lorebooks, and settings; import the ZIP to restore (copies of content; settings replace on this device)
+- **Settings → Backup** for config-only export/import, with optional API keys
+- Header save status, live section counts, editable Extensions JSON, `Ctrl+S` / `⌘+S`
+- Duplicate greetings (and reorder) and lorebook entries
+
+[Release 1.6.0 →](/releases/v1.6.0) · [Import & Export →](/features/import-export) · [Editor →](/features/editor)
+
 ### 1.5.0
 
 AI Creation Studio overhaul and an optional Agent review diff.

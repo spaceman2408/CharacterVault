@@ -99,7 +99,7 @@ The [Agent](/features/ai-agent) takes **one snapshot** before it writes the card
 
 - **Save a snapshot before big changes** – Click **Save snapshot** before overhauling a description or rewriting a greeting.
 - **Use section restore for surgical fixes** – If only one field was accidentally changed, restore just that section instead of rolling back the entire card.
-- **Export as backup** – For important characters, [export a PNG copy](/features/import-export) as an external backup in addition to relying on local snapshots.
+- **Export as backup** – For important characters, [export a PNG copy](/features/import-export) as an external backup in addition to relying on local snapshots. For the whole library, use [vault Backup](/features/import-export#vault-backup).
 
 ## Standalone lorebook snapshots
 

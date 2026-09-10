@@ -38,7 +38,9 @@ Expand **Lorebook** at the top of the sidebar:
 
 ## Entry list
 
-Each row shows a title (entry title / memo, or a fallback), key count, optional token count for the selected row, context eye, and delete.
+Each row shows a title (entry title / memo, or a fallback), key count, optional token count for the selected row, context eye, **Duplicate**, and delete.
+
+**Duplicate** asks for confirmation, then inserts a copy immediately after the original. The copy gets the **next available entry ID** (SillyTavern entry ids are unique integers, not a list index). Title, keys, content, flags, and other fields are copied.
 
 ### Search
 

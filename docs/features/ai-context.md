@@ -80,7 +80,7 @@ Custom context is appended **after** pinned card sections when building a reques
 - Switching characters does not leave the previous character's text in the open editor; the full body is loaded only when you open the modal or when an AI request needs it.
 
 ::: warning Export and backup
-Vault **Backup** / card export does **not** include custom context. If you rely on those notes, keep a separate copy or re-paste after moving machines. See [Privacy](/privacy) for how local storage works.
+Vault **Backup** / card export does **not** include custom context, chats, or snapshots. If you rely on those notes, keep a separate copy or re-paste after moving machines. See [Privacy](/privacy) for how local storage works.
 :::
 
 ## Token Estimation

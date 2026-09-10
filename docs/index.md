@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.5.0
-AI Creation Studio is rebuilt: custom prompts, field toggles, favorites, and more tag categories. The Agent can now stage a **review diff** so you approve, edit, or deny writes before they land.
+::: tip CharacterVault 1.6.0
+Full vault backup and restore, a Settings backup tab, and editor quality-of-life: save status, live counts, duplicate greetings and lorebook entries, and `Ctrl+S` / `⌘+S` to flush pending saves.
 
-[Try it](https://vault.charactervault.app) · [Studio](/features/ai-creation-studio) · [Agent review](/features/ai-agent#review-edits)
+[Try it](https://vault.charactervault.app) · [Backup](/features/import-export#vault-backup) · [Editor](/features/editor)
 :::
 
 # CharacterVault
@@ -19,6 +19,7 @@ CharacterVault is a browser-based tool for building character cards with the V2/
 - **Use AI to help you write** with Orion (chat that does not change the card), an **Agent** that can fill and revise the open character or lorebook (optional review diff before writes land), and an AI toolbar that can enhance, rephrase, shorten, and fix text with an in-editor ghost preview, plus search, resize text, and normalize HTML entities
 - **Save snapshots** at any point and roll back to them later, section by section
 - **Import and export** PNG cards with embedded data and JSON files, compatible with SillyTavern, TavernAI, and other tools
+- **Back up the vault** as a ZIP of cards, lorebooks, and settings, and restore it later without wiping what you already have
 - **Stay in control** with local IndexedDB storage, dark and light themes, and no cloud dependencies
 
 ## Next Steps

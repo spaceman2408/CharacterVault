@@ -40,7 +40,7 @@ The workspace organizes character fields into tabs. Click any tab to navigate to
 | **Name** | Your character's name |
 | **Description** | How the character looks, acts, and behaves |
 | **First Message** | The opening greeting users see when starting a conversation |
-| **Greetings** | Alternate opening messages (V2/V3 spec `alternate_greetings`) |
+| **Greetings** | Alternate opening messages (V2/V3 spec `alternate_greetings`). Duplicate and reorder from the greetings sidebar. |
 | **Examples** | Sample dialogue showing how the character talks (`mes_example`) |
 | **Scenario** | The setting or situation for roleplay |
 | **Appearance** | Physical description details (V3 `physical_description`) |
@@ -65,7 +65,7 @@ The **Tags** tab is built for quick editing:
 
 ## Auto-Save
 
-All changes are saved automatically as you type. There's no need to click a save button.
+All changes are saved automatically as you type. There's no need to click a save button. The workspace header shows **Saving…** / **Saved** (or **Save failed** if IndexedDB rejects a write). Press `Ctrl+S` / `⌘+S` to flush pending saves immediately.
 
 ## Image Support
 

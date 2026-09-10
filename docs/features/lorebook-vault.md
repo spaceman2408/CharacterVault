@@ -41,7 +41,7 @@ Opening a book shows a full workspace:
 - **Main** – Shared [Lorebook Editor](/features/lorebook-editor) (entry list + detail)
 - **Chat** – Optional side panel: **Orion** to talk about the book, or **Agent** to add and revise entries in this book ([AI Agent](/features/ai-agent))
 
-Data stays in **IndexedDB** on this device. No account is required.
+Data stays in **IndexedDB** on this device. No account is required. Library header **Backup** includes standalone lorebooks in the vault ZIP. Restore by importing that ZIP; books are added as copies. See [Import & Export → Vault backup](/features/import-export#vault-backup).
 
 ### Deep links
 
