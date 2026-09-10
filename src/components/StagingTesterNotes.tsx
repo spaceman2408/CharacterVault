@@ -1,9 +1,32 @@
-import { useCallback, useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { createPortal } from 'react-dom';
 import { FlaskConical, X } from 'lucide-react';
 import { STAGING_TEST_NOTES, STAGING_VERSION, isStagingHost, shouldShowStagingNotes } from '../stagingNotes';
 
 const STORAGE_KEY = 'characterVaultStagingNotesSeen';
+const POS_STORAGE_KEY = 'characterVaultStagingNotesPos';
+const DRAG_THRESHOLD_PX = 5;
+const EDGE_MARGIN_PX = 8;
+
+interface NotesButtonPos {
+  left: number;
+  top: number;
+}
+
+function readStoredPos(): NotesButtonPos | null {
+  try {
+    const raw = localStorage.getItem(POS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const { left, top } = parsed as Partial<NotesButtonPos>;
+    if (typeof left !== 'number' || typeof top !== 'number') return null;
+    if (!Number.isFinite(left) || !Number.isFinite(top)) return null;
+    return { left, top };
+  } catch {
+    return null;
+  }
+}
 
 function readSeenVersion(): string | null {
   try {
@@ -22,6 +45,59 @@ export function StagingTesterNotes(): ReactElement | null {
     }
   });
   const [open, setOpen] = useState(() => shouldShowStagingNotes(readSeenVersion(), STAGING_VERSION));
+  const [pos, setPos] = useState<NotesButtonPos | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startLeft: number;
+    startTop: number;
+  } | null>(null);
+  const didDragRef = useRef(false);
+
+  const clampPos = useCallback((left: number, top: number): NotesButtonPos => {
+    if (typeof window === 'undefined') return { left, top };
+    const button = buttonRef.current;
+    const width = button?.offsetWidth ?? 120;
+    const height = button?.offsetHeight ?? 36;
+    const maxLeft = Math.max(EDGE_MARGIN_PX, window.innerWidth - width - EDGE_MARGIN_PX);
+    const maxTop = Math.max(EDGE_MARGIN_PX, window.innerHeight - height - EDGE_MARGIN_PX);
+    return {
+      left: Math.min(Math.max(EDGE_MARGIN_PX, left), maxLeft),
+      top: Math.min(Math.max(EDGE_MARGIN_PX, top), maxTop),
+    };
+  }, []);
+
+  useEffect(() => {
+    const stored = readStoredPos();
+    if (stored === null) return;
+    const frame = requestAnimationFrame(() => {
+      setPos(clampPos(stored.left, stored.top));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [clampPos]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setPos((prev) => {
+        if (prev === null) return prev;
+        const button = buttonRef.current;
+        const width = button?.offsetWidth ?? 120;
+        const height = button?.offsetHeight ?? 36;
+        const maxLeft = Math.max(EDGE_MARGIN_PX, window.innerWidth - width - EDGE_MARGIN_PX);
+        const maxTop = Math.max(EDGE_MARGIN_PX, window.innerHeight - height - EDGE_MARGIN_PX);
+        const clamped = {
+          left: Math.min(Math.max(EDGE_MARGIN_PX, prev.left), maxLeft),
+          top: Math.min(Math.max(EDGE_MARGIN_PX, prev.top), maxTop),
+        };
+        return clamped.left === prev.left && clamped.top === prev.top ? prev : clamped;
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const dismiss = useCallback(() => {
     try {
@@ -30,6 +106,81 @@ export function StagingTesterNotes(): ReactElement | null {
       // ignore
     }
     setOpen(false);
+  }, []);
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.isPrimary === false) return;
+    if (event.button !== 0 && event.pointerType === 'mouse') return;
+    const button = buttonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLeft: pos?.left ?? rect.left,
+      startTop: pos?.top ?? rect.top,
+    };
+    didDragRef.current = false;
+    try {
+      button.setPointerCapture(event.pointerId);
+    } catch {
+      // ignore
+    }
+  }, [pos]);
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
+      didDragRef.current = true;
+    }
+    if (didDragRef.current) {
+      setPos(clampPos(drag.startLeft + dx, drag.startTop + dy));
+    }
+  }, [clampPos]);
+
+  const endDrag = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    dragRef.current = null;
+    try {
+      buttonRef.current?.releasePointerCapture(event.pointerId);
+    } catch {
+      // ignore
+    }
+    if (didDragRef.current) {
+      setPos((prev) => {
+        if (prev === null) return prev;
+        try {
+          localStorage.setItem(POS_STORAGE_KEY, JSON.stringify(prev));
+        } catch {
+          // ignore
+        }
+        return prev;
+      });
+    }
+  }, []);
+
+  const handleButtonClick = useCallback(() => {
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
+    }
+    setOpen(true);
+  }, []);
+
+  const handleResetPos = useCallback(() => {
+    didDragRef.current = false;
+    dragRef.current = null;
+    setPos(null);
+    try {
+      localStorage.removeItem(POS_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
@@ -46,10 +197,17 @@ export function StagingTesterNotes(): ReactElement | null {
   return (
     <>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-surface px-3 py-2 text-xs font-semibold text-accent shadow-lg transition-colors hover:bg-accent-soft"
-        title={`Staging test notes (${STAGING_VERSION})`}
+        onClick={handleButtonClick}
+        onDoubleClick={handleResetPos}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        style={pos !== null ? { left: pos.left, top: pos.top, touchAction: 'none' } : { touchAction: 'none' }}
+        className={`fixed z-40 inline-flex cursor-grab items-center gap-1.5 rounded-full border border-accent/30 bg-surface px-3 py-2 text-xs font-semibold text-accent shadow-lg transition-colors select-none hover:bg-accent-soft active:cursor-grabbing ${pos !== null ? '' : 'bottom-4 right-4'}`}
+        title={`Staging test notes (${STAGING_VERSION}) — drag to move, double-click to reset`}
         aria-label="Open staging test notes"
       >
         <FlaskConical className="h-3.5 w-3.5" aria-hidden />
