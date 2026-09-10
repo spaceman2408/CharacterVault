@@ -183,6 +183,11 @@ export function StagingTesterNotes(): ReactElement | null {
     }
   }, []);
 
+  const handleContextMenu = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    handleResetPos();
+  }, [handleResetPos]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -200,14 +205,14 @@ export function StagingTesterNotes(): ReactElement | null {
         ref={buttonRef}
         type="button"
         onClick={handleButtonClick}
-        onDoubleClick={handleResetPos}
+        onContextMenu={handleContextMenu}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
         style={pos !== null ? { left: pos.left, top: pos.top, touchAction: 'none' } : { touchAction: 'none' }}
         className={`fixed z-40 inline-flex cursor-grab items-center gap-1.5 rounded-full border border-accent/30 bg-surface px-3 py-2 text-xs font-semibold text-accent shadow-lg transition-colors select-none hover:bg-accent-soft active:cursor-grabbing ${pos !== null ? '' : 'bottom-4 right-4'}`}
-        title={`Staging test notes (${STAGING_VERSION}) — drag to move, double-click to reset`}
+        title={`Staging test notes (${STAGING_VERSION}) — drag to move, right-click to reset`}
         aria-label="Open staging test notes"
       >
         <FlaskConical className="h-3.5 w-3.5" aria-hidden />
@@ -266,6 +271,15 @@ export function StagingTesterNotes(): ReactElement | null {
               >
                 Got it
               </button>
+              {pos !== null && (
+                <button
+                  type="button"
+                  onClick={handleResetPos}
+                  className="mt-2 w-full rounded-xl px-4 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent"
+                >
+                  Reset floating button position
+                </button>
+              )}
             </div>
           </div>,
           document.body
