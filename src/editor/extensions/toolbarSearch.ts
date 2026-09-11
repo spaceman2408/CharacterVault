@@ -50,10 +50,26 @@ function getSelectedText(view: EditorView): string | null {
   return view.state.doc.sliceString(selection.from, selection.to);
 }
 
-export function openToolbarSearch(view: EditorView): boolean {
+let pendingSearchFocus: 'search' | 'replace' = 'search';
+
+function focusPanelInput(view: EditorView, target: 'search' | 'replace'): void {
+  window.setTimeout(() => {
+    const selector =
+      target === 'replace'
+        ? '.cm-toolbar-search-panel .replace-input'
+        : '.cm-toolbar-search-panel .search-input';
+    const input = view.dom.querySelector<HTMLInputElement>(selector);
+    if (!input) return;
+    input.focus();
+    input.select();
+  }, 0);
+}
+
+function openToolbarSearchWithFocus(view: EditorView, target: 'search' | 'replace'): boolean {
+  pendingSearchFocus = target;
   const selectedText = getSelectedText(view);
   const currentQuery = getSearchQuery(view.state);
-  
+
   // Update search query with selected text if there is a selection
   // This also updates when panel is already open with a new selection
   if (selectedText !== null) {
@@ -64,18 +80,27 @@ export function openToolbarSearch(view: EditorView): boolean {
       regexp: currentQuery.regexp,
       replace: currentQuery.replace,
     });
-    view.dispatch({ 
+    view.dispatch({
       effects: [
         setSearchQuery.of(newQuery),
         setSearchPanelOpen.of(true)
-      ] 
+      ]
     });
   } else {
     view.dispatch({ effects: setSearchPanelOpen.of(true) });
   }
-  
+
   openSearchPanel(view);
+  focusPanelInput(view, target);
   return true;
+}
+
+export function openToolbarSearch(view: EditorView): boolean {
+  return openToolbarSearchWithFocus(view, 'search');
+}
+
+export function openToolbarSearchReplace(view: EditorView): boolean {
+  return openToolbarSearchWithFocus(view, 'replace');
 }
 
 export function closeToolbarSearch(view: EditorView): boolean {
@@ -237,10 +262,11 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   searchInput.className = 'search-input';
   searchInput.placeholder = 'Find...';
   searchInput.setAttribute('main-field', 'true');
+  searchInput.setAttribute('aria-label', 'Find in editor');
   searchInput.style.cssText = `
     flex: 1;
     padding: 6px 10px;
-    font-size: 14px;
+    font-size: 16px;
     border: 1px solid var(--ai-toolbar-input-border);
     border-radius: 6px;
     background-color: var(--ai-toolbar-input-bg);
@@ -428,6 +454,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   replaceInput.type = 'text';
   replaceInput.className = 'replace-input';
   replaceInput.placeholder = 'Replace...';
+  replaceInput.setAttribute('aria-label', 'Replace in editor');
   replaceInput.style.cssText = searchInput.style.cssText;
   replaceRow.appendChild(replaceInput);
 
@@ -491,7 +518,13 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   };
 
   syncControlsFromState();
-  setTimeout(() => searchInput.focus(), 0);
+  const initialFocus = pendingSearchFocus;
+  pendingSearchFocus = 'search';
+  setTimeout(() => {
+    const target = initialFocus === 'replace' ? replaceInput : searchInput;
+    target.focus();
+    target.select();
+  }, 0);
 
   const updateQuery = () => {
     const newQuery = new SearchQuery({
@@ -585,6 +618,14 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
 
 function createSearchPanel(view: EditorView) {
   const controls = createSearchPanelControls(view);
+  let countRaf = 0;
+  const scheduleCount = () => {
+    if (countRaf) return;
+    countRaf = requestAnimationFrame(() => {
+      countRaf = 0;
+      controls.refreshCount();
+    });
+  };
   return {
     dom: controls.dom,
     top: true,
@@ -598,10 +639,11 @@ function createSearchPanel(view: EditorView) {
       }
 
       if (queryChanged || update.docChanged || update.selectionSet) {
-        controls.refreshCount();
+        scheduleCount();
       }
     },
     destroy() {
+      if (countRaf) cancelAnimationFrame(countRaf);
       controls.dom.remove();
     },
   };
@@ -616,7 +658,7 @@ export function toolbarSearch() {
     searchPanelOpen,
     keymap.of([
       { key: 'Mod-f', run: openToolbarSearch },
-      { key: 'Mod-h', run: openToolbarSearch },
+      { key: 'Mod-h', run: openToolbarSearchReplace },
       { key: 'Escape', run: closeToolbarSearch },
     ]),
   ];
@@ -657,7 +699,7 @@ export function toolbarSearchTheme() {
     '& .cm-toolbar-search-panel .search-input, & .cm-toolbar-search-panel .replace-input': {
       flex: '1',
       padding: '6px 10px',
-      fontSize: '14px',
+      fontSize: '16px',
       border: '1px solid var(--ai-toolbar-input-border)',
       borderRadius: '6px',
       backgroundColor: 'var(--ai-toolbar-input-bg)',
