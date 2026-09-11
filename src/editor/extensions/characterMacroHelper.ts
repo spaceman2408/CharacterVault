@@ -11,6 +11,15 @@ const MACROS: Record<string, string> = {
   char: '{{char}}',
 };
 
+/**
+ * Resolve a typed word to its `{{macro}}` replacement, case-insensitively.
+ * Returns null for anything that is not a bare `char` / `user` word.
+ */
+export function resolveMacroReplacement(word: string): string | null {
+  if (!word) return null;
+  return MACROS[word.toLowerCase()] ?? null;
+}
+
 const WORD_CHAR = /[A-Za-z0-9_]/;
 const COMPLETION_CHAR = /[\s.,!?;:)\]}>"'`]/;
 const DOCUMENT_END_DELAY_MS = 300;
@@ -51,7 +60,7 @@ function findCandidate(view: EditorView): { from: number; to: number; replacemen
   }
 
   const word = doc.sliceString(wordStart, wordEnd);
-  const replacement = MACROS[word];
+  const replacement = resolveMacroReplacement(word);
   if (!replacement) return null;
 
   const before = wordStart > 0 ? doc.sliceString(wordStart - 1, wordStart) : '';
@@ -82,7 +91,7 @@ function findCandidateBeforeInput(
   }
 
   const word = doc.sliceString(wordStart, from);
-  const replacement = MACROS[word];
+  const replacement = resolveMacroReplacement(word);
   if (!replacement) return null;
 
   const before = wordStart > 0 ? doc.sliceString(wordStart - 1, wordStart) : '';
