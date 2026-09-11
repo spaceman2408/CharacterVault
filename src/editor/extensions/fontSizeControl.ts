@@ -4,7 +4,7 @@
  * @module @editor/extensions/fontSizeControl
  */
 
-import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
+import { EditorView, keymap } from '@codemirror/view';
 import { StateEffect, StateField, Compartment } from '@codemirror/state';
 import { closeToolbarSearch } from './toolbarSearch';
 
@@ -64,41 +64,17 @@ function createFontSizeTheme(size: number) {
 }
 
 /**
- * ViewPlugin that manages font size theme reconfiguration
- * Uses a timeout to defer the compartment reconfiguration outside the update cycle
- */
-const fontSizeThemePlugin = ViewPlugin.fromClass(
-  class {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    constructor(_view: EditorView) {
-      // Initial theme is set via compartment
-    }
-
-    update(update: ViewUpdate) {
-      const oldSize = update.startState.field(editorFontSizeField);
-      const newSize = update.state.field(editorFontSizeField);
-      
-      if (oldSize !== newSize) {
-        // Schedule the compartment reconfiguration after this update cycle completes
-        const view = update.view;
-        const size = newSize;
-        setTimeout(() => {
-          view.dispatch({
-            effects: fontSizeThemeCompartment.reconfigure(createFontSizeTheme(size)),
-          });
-        }, 0);
-      }
-    }
-  }
-);
-
-/**
- * Helper to set font size on an editor view
+ * Helper to set font size on an editor view.
+ * Dispatches the field update and the theme reconfiguration together so no
+ * deferred plugin dispatch is needed.
  */
 export function setFontSize(view: EditorView, size: number): void {
   const clampedSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, size));
   view.dispatch({
-    effects: setEditorFontSize.of(clampedSize),
+    effects: [
+      setEditorFontSize.of(clampedSize),
+      fontSizeThemeCompartment.reconfigure(createFontSizeTheme(clampedSize)),
+    ],
   });
 }
 
@@ -189,6 +165,7 @@ function createFontSizePopup(
   slider.min = `${MIN_FONT_SIZE}`;
   slider.max = `${MAX_FONT_SIZE}`;
   slider.step = '1';
+  slider.setAttribute('aria-label', 'Editor font size');
   slider.style.cssText = `
     flex: 1;
     height: ${isMobile ? '8px' : '4px'};
@@ -231,10 +208,63 @@ function createFontSizePopup(
     onFontSizeChange(size);
   });
 
-  // Close on escape key
+  // Explicit keyboard control so arrows/Home/End/PageUp/PageDown work even
+  // though the slider lives inside the editor panel. Handled here with
+  // preventDefault so the native step does not apply a second time.
+  slider.addEventListener('keydown', (e) => {
+    const current = parseInt(slider.value, 10);
+    if (Number.isNaN(current)) return;
+    let next: number | null = null;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = current - 1;
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = current + 1;
+    else if (e.key === 'PageDown') next = current - 5;
+    else if (e.key === 'PageUp') next = current + 5;
+    else if (e.key === 'Home') next = MIN_FONT_SIZE;
+    else if (e.key === 'End') next = MAX_FONT_SIZE;
+    if (next === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const clamped = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, next));
+    slider.value = `${clamped}`;
+    valueDisplay.textContent = `${clamped}px`;
+    setFontSize(view, clamped);
+    onFontSizeChange(clamped);
+  });
+
+  const resetRow = document.createElement('div');
+  resetRow.style.cssText = `
+    display: flex;
+    justify-content: flex-end;
+  `;
+
+  const resetBtn = document.createElement('button');
+  resetBtn.type = 'button';
+  resetBtn.textContent = `Reset (${DEFAULT_FONT_SIZE}px)`;
+  resetBtn.setAttribute('aria-label', 'Reset editor font size');
+  resetBtn.style.cssText = `
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ai-toolbar-text-secondary);
+    background: transparent;
+    border: 1px solid var(--ai-toolbar-input-border);
+    border-radius: 6px;
+    cursor: pointer;
+  `;
+  resetBtn.addEventListener('click', () => {
+    slider.value = `${DEFAULT_FONT_SIZE}`;
+    valueDisplay.textContent = `${DEFAULT_FONT_SIZE}px`;
+    setFontSize(view, DEFAULT_FONT_SIZE);
+    onFontSizeChange(DEFAULT_FONT_SIZE);
+  });
+  resetRow.appendChild(resetBtn);
+  container.appendChild(resetRow);
+
+  // Close on escape key and return focus to the editor
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
+      view.focus();
     }
   };
   document.addEventListener('keydown', handleKeyDown);
@@ -262,7 +292,8 @@ export function createFontSizeControl(
   const button = document.createElement('button');
   button.className = 'ai-toolbar-btn-font-size';
   button.innerHTML = 'aA';
-  button.title = 'Font Size';
+  button.title = 'Font Size (Ctrl+= / Ctrl+- / Ctrl+0)';
+  button.setAttribute('aria-label', 'Editor font size');
   button.style.cssText = `
     display: flex;
     align-items: center;
@@ -338,15 +369,39 @@ export function createFontSizeControl(
 /**
  * Font size extension factory
  * @param initialSize - Initial font size (defaults to 16)
+ * @param opts - Optional change callback so keyboard shortcuts persist
  * @returns Extension array for CodeMirror
  */
-export function fontSizeExtension(initialSize?: number) {
+export function fontSizeExtension(
+  initialSize?: number,
+  opts: { onChange?: (size: number) => void } = {},
+) {
   const size = initialSize ?? DEFAULT_FONT_SIZE;
-  
+
+  const stepFontSize = (view: EditorView, delta: number): boolean => {
+    const current = view.state.field(editorFontSizeField, false) ?? size;
+    const next = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, current + delta));
+    if (next === current) return true;
+    setFontSize(view, next);
+    opts.onChange?.(next);
+    return true;
+  };
+
+  const resetFontSize = (view: EditorView): boolean => {
+    setFontSize(view, DEFAULT_FONT_SIZE);
+    opts.onChange?.(DEFAULT_FONT_SIZE);
+    return true;
+  };
+
   return [
     editorFontSizeField,
     fontSizeThemeCompartment.of(createFontSizeTheme(size)),
-    fontSizeThemePlugin,
+    keymap.of([
+      { key: 'Mod-=', run: (view) => stepFontSize(view, 1) },
+      { key: 'Mod-+', run: (view) => stepFontSize(view, 1) },
+      { key: 'Mod--', run: (view) => stepFontSize(view, -1) },
+      { key: 'Mod-0', run: resetFontSize },
+    ]),
   ];
 }
 
