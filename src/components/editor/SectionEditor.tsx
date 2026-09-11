@@ -375,10 +375,16 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     : 'prose';
 
   // Use the shared AI editor hook
-  // Key forces re-initialization when section changes to prevent value mixing
+  // Key forces re-initialization when section changes to prevent value mixing.
+  // Split preview only changes layout (editor div stays mounted) so undo/focus survive.
+  const sectionPlaceholder = React.useMemo(() => {
+    const label = CHARACTER_SECTIONS.find(s => s.id === section)?.label ?? 'content';
+    return `Write ${label.toLowerCase()}...`;
+  }, [section]);
   const { editorRef, payloadPreviewModal } = useAIEditor({
-    key: `${section}-${isSplitPreviewOpen ? 'split' : 'single'}`,
+    key: section,
     value: currentValue,
+    placeholder: sectionPlaceholder,
     onImmediateChange: handleImmediateChange,
     onPersistChange: handlePersistChange,
     setSelectedText,
@@ -601,27 +607,22 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
         </div>
       </div>
 
-      {isCreatorNotesSection && isSplitPreviewOpen ? (
-        <div className="flex flex-1 min-h-0 flex-col gap-4 lg:flex-row">
-          <div
-            ref={editorRef}
-            className="min-h-0 border border-border rounded-xl overflow-hidden lg:w-1/2"
-          />
+      <div className={isCreatorNotesSection && isSplitPreviewOpen ? 'flex flex-1 min-h-0 flex-col gap-4 lg:flex-row' : 'flex flex-1 min-h-0 flex-col'}>
+        <div
+          ref={editorRef}
+          className={isCreatorNotesSection && isSplitPreviewOpen ? 'min-h-0 flex-1 border border-border rounded-xl overflow-hidden lg:w-1/2' : 'flex-1 min-h-0 border border-border rounded-xl overflow-hidden'}
+        />
 
-          <div className="min-h-0 overflow-hidden rounded-xl border bg-vault-800 shadow-inner border-border lg:w-1/2">
+        {isCreatorNotesSection && isSplitPreviewOpen ? (
+          <div className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-vault-800 shadow-inner border-border lg:w-1/2">
             <CreatorNotesPreviewPane
               content={livePreviewValue}
               frameClassName="block h-full w-full bg-vault-800"
               emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-fg-subtle"
             />
           </div>
-        </div>
-      ) : (
-        <div
-          ref={editorRef}
-          className="flex-1 min-h-0 border border-border rounded-xl overflow-hidden"
-        />
-      )}
+        ) : null}
+      </div>
 
       {section === 'creator_notes' && (
         <CreatorNotesPreviewModal

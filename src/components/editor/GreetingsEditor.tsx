@@ -208,6 +208,7 @@ function GreetingDetail({
 
   const { editorRef, payloadPreviewModal } = useAIEditor({
     value: draftGreeting,
+    placeholder: 'Write greeting...',
     onImmediateChange: setDraftGreeting,
     onPersistChange: onPersistUpdate,
     saveMode: 'debounced',

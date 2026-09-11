@@ -12,10 +12,11 @@ export {
 } from './syntaxHighlight';
 
 
-export { 
-  toolbarSearch, 
+export {
+  toolbarSearch,
   toolbarSearchTheme,
   openToolbarSearch,
+  openToolbarSearchReplace,
   closeToolbarSearch,
   toggleToolbarSearch,
 } from './toolbarSearch';
@@ -57,6 +58,7 @@ export {
 
 export {
   characterMacroHelper,
+  resolveMacroReplacement,
 } from './characterMacroHelper';
 
 export {
@@ -83,6 +85,9 @@ export {
   tokenize,
   DEFAULT_TOKENIZER_OPTIONS,
 } from './spellcheck';
+
+export { editorBasics } from './editorBasics';
+export type { EditorBasicsOptions } from './editorBasics';
 
 export type {
   SpellcheckExtensionOptions,

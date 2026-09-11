@@ -5,7 +5,7 @@
  */
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { EditorView, drawSelection, keymap, ViewUpdate } from '@codemirror/view';
+import { EditorView, keymap, ViewUpdate } from '@codemirror/view';
 import { Compartment, EditorState, Prec, Transaction } from '@codemirror/state';
 import type { Extension } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, insertTab, indentLess } from '@codemirror/commands';
@@ -32,6 +32,7 @@ import { searchPanelOpen, toolbarSearch, toolbarSearchTheme } from '../editor/ex
 import { themeSync } from '../editor/extensions/themeSync';
 import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
 import { characterMacroHelper } from '../editor/extensions/characterMacroHelper';
+import { editorBasics } from '../editor/extensions/editorBasics';
 import { macroHighlight } from '../editor/extensions/macroHighlight';
 import {
   markdownImageLinks,
@@ -166,6 +167,8 @@ export interface UseAIEditorOptions {
   minHeight?: string;
   /** Optional max height for the editor scroller (useful for nested/mobile cards) */
   maxHeight?: string;
+  /** Placeholder shown when the document is empty */
+  placeholder?: string;
   /** Additional CSS styles for the editor */
   editorStyles?: Record<string, string>;
   /** Whether the editor is currently active/visible */
@@ -253,6 +256,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     contextSectionIds,
     minHeight = '100px',
     maxHeight,
+    placeholder,
     editorStyles = {},
     isActive = true,
     fontSize,
@@ -492,6 +496,11 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   useEffect(() => {
     saveDebounceMsRef.current = saveDebounceMs;
   }, [saveDebounceMs]);
+
+  const onFontSizeChangeRef = useRef(onFontSizeChange);
+  useEffect(() => {
+    onFontSizeChangeRef.current = onFontSizeChange;
+  }, [onFontSizeChange]);
 
   const runPersist = useCallback((nextValue: string) => {
     const persistFn = onPersistChangeRef.current;
@@ -1078,7 +1087,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         keymap.of(historyKeymap),
         history(),
         themeSync(),
-        drawSelection(),
+        ...editorBasics({ placeholderText: placeholder }),
         EditorView.lineWrapping,
         // Custom in-editor spellcheck (see src/editor/spellcheck)
         spellcheckExtension({ settings: spellcheck, mode: spellcheckMode }),
@@ -1214,8 +1223,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         // Search & Replace functionality
         toolbarSearch(),
         toolbarSearchTheme(),
-        // Font size extension
-        fontSizeExtension(fontSize),
+        // Font size extension (shortcuts persist via ref to avoid remounts)
+        fontSizeExtension(fontSize, {
+          onChange: (size) => onFontSizeChangeRef.current?.(size),
+        }),
         // Character card macro typing helper + {{char}}/{{user}} coloring
         characterMacroHelper(),
         macroHighlight(),
@@ -1231,16 +1242,29 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
     viewRef.current = view;
 
-    // Auto-focus the editor
+    // showPanel registers synchronously, so hook it up without waiting.
+    panelUpdateRef.current = getPanelUpdateFunction(view) ?? null;
+
+    // Skip auto-focus on touch devices so switching sections/entries does not
+    // pop the software keyboard; desktop keeps the previous focus behavior.
     const focusTimer = window.setTimeout(() => {
+      if (
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(pointer: coarse)').matches
+      ) {
+        return;
+      }
       view.focus();
     }, 50);
 
-    // Get reference to the panel's updateAIState function
+    // Fallback in case the panel registers after view creation.
     const panelHookTimer = window.setTimeout(() => {
-      const updateFunc = getPanelUpdateFunction(view);
-      if (updateFunc) {
-        panelUpdateRef.current = updateFunc;
+      if (!panelUpdateRef.current) {
+        const updateFunc = getPanelUpdateFunction(view);
+        if (updateFunc) {
+          panelUpdateRef.current = updateFunc;
+        }
       }
     }, 100);
 
@@ -1289,7 +1313,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       panelUpdateRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, isActive, minHeight, maxHeight, JSON.stringify(editorStyles), flushPendingPersist, schedulePersist, toolbarActions, abortInFlightRequest, setSelectedText, handlePreviewPayload]);
+  }, [key, isActive, minHeight, maxHeight, placeholder, JSON.stringify(editorStyles), flushPendingPersist, schedulePersist, toolbarActions, abortInFlightRequest, setSelectedText, handlePreviewPayload]);
 
   // Update editor content when value changes externally
   useEffect(() => {

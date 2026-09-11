@@ -53,6 +53,7 @@ export function LorebookEntryDetail({
   const { editorRef, payloadPreviewModal, flushPendingPersist } = useAIEditor({
     key: String(entry.id),
     value: draftEntry.content,
+    placeholder: 'Write entry content...',
     onImmediateChange: (value) => {
       setDraftEntry((prev) => {
         const next = { ...prev, content: value };
