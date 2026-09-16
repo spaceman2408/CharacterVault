@@ -114,6 +114,21 @@ export {
   pruneSeqById,
 } from './chatHistoryMap';
 export {
+  BUILTIN_TOOLBAR_BUTTONS,
+  CUSTOM_BUTTON_COLOR,
+  TOOLBAR_ICON_PALETTE,
+  createCustomOpId,
+  isBuiltinOperation,
+  moveToolbarOp,
+  prunePromptModelsForToolbar,
+  resolvePromptTemplate,
+  resolveToolbarButtons,
+  toolbarButtonLabel,
+  validateCustomOp,
+  validateToolbarConfig,
+  type ToolbarButtonDef,
+} from './toolbarConfig';
+export {
   openHistoryAfterFlush,
   shouldComputePayloadHash,
   loadSnapshotDiff,

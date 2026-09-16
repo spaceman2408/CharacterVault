@@ -498,6 +498,8 @@ export interface CharacterVaultSettings {
   sampler?: SamplerSettings;
   prompts?: PromptSettings;
   promptModels?: PromptModelMap;
+  /** Toolbar button layout + user-created ops. Missing = default layout. */
+  toolbar?: ToolbarConfig;
   /** Per-agent endpoint + model override. Missing = use global AIConfig */
   agentModel?: PromptModelBinding;
   studio?: StudioSettings;
@@ -627,7 +629,7 @@ export interface SamplerPreset {
   settings: SamplerSettings;
 }
 
-export type AIOperation =
+export type BuiltinOperation =
   | 'expand'
   | 'rewrite'
   | 'instruct'
@@ -636,6 +638,9 @@ export type AIOperation =
   | 'vivid'
   | 'emotion'
   | 'grammar';
+
+/** Toolbar operation id: one of the builtins, or a user-created `custom:<id>` op. */
+export type AIOperation = BuiltinOperation | (string & {});
 
 /** Toolbar operation prompts; each template must include `${text}` (instruct also needs `${instruction}`) */
 export interface PromptSettings {
@@ -658,8 +663,96 @@ export interface PromptModelBinding {
   modelId: string;
 }
 
-/** Missing key = use global AIConfig */
-export type PromptModelMap = Partial<Record<keyof PromptSettings, PromptModelBinding>>;
+/** Missing key = use global AIConfig. Keys are builtin op ids or `custom:<id>` op ids. */
+export type PromptModelMap = Partial<Record<string, PromptModelBinding>>;
+
+/** User-created toolbar button. `id` is stable (`custom:<suffix>`) and never reused. */
+export interface CustomToolbarOp {
+  id: string;
+  label: string;
+  icon: string;
+  /** Template; must contain `${text}`. */
+  prompt: string;
+}
+
+/**
+ * Toolbar layout: a single user-ordered list of op ids (builtins absent from
+ * `order` are hidden). `instruct` (Custom) is always pinned by normalization.
+ */
+export interface ToolbarConfig {
+  order: string[];
+  customOps: CustomToolbarOp[];
+}
+
+/** Default toolbar order matches the historical layout (primary row first). */
+export const DEFAULT_TOOLBAR_ORDER: string[] = [
+  'expand',
+  'rewrite',
+  'instruct',
+  'shorten',
+  'lengthen',
+  'vivid',
+  'emotion',
+  'grammar',
+];
+
+export const DEFAULT_TOOLBAR_CONFIG: ToolbarConfig = {
+  order: [...DEFAULT_TOOLBAR_ORDER],
+  customOps: [],
+};
+
+const CUSTOM_OP_ID_PATTERN = /^custom:[A-Za-z0-9_-]{1,64}$/;
+
+function normalizeCustomToolbarOp(value: unknown): CustomToolbarOp | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const raw = value as Record<string, unknown>;
+  const id = typeof raw.id === 'string' ? raw.id : '';
+  if (!CUSTOM_OP_ID_PATTERN.test(id)) return undefined;
+  const label = typeof raw.label === 'string' ? raw.label.trim() : '';
+  if (!label || label.length > 40) return undefined;
+  let icon = typeof raw.icon === 'string' ? raw.icon.trim() : '';
+  if (!icon) icon = '✨';
+  if ([...icon].length > 8) icon = '✨';
+  const prompt = typeof raw.prompt === 'string' ? raw.prompt : '';
+  if (!prompt.includes('${text}')) return undefined;
+  return { id, label, icon, prompt };
+}
+
+export function normalizeToolbarConfig(value: unknown): ToolbarConfig {
+  if (value === null || value === undefined) {
+    return { order: [...DEFAULT_TOOLBAR_ORDER], customOps: [] };
+  }
+  const raw = (typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const customOps: CustomToolbarOp[] = [];
+  const seenIds = new Set<string>();
+  if (Array.isArray(raw.customOps)) {
+    for (const entry of raw.customOps) {
+      const op = normalizeCustomToolbarOp(entry);
+      if (!op || seenIds.has(op.id)) continue;
+      seenIds.add(op.id);
+      customOps.push(op);
+    }
+  }
+  const knownCustom = new Set(customOps.map((op) => op.id));
+  let order: string[];
+  if (!Array.isArray(raw.order)) {
+    order = [...DEFAULT_TOOLBAR_ORDER];
+  } else {
+    order = [];
+    const seenOrder = new Set<string>();
+    for (const entry of raw.order) {
+      if (typeof entry !== 'string' || seenOrder.has(entry)) continue;
+      if (DEFAULT_TOOLBAR_ORDER.includes(entry) || knownCustom.has(entry)) {
+        seenOrder.add(entry);
+        order.push(entry);
+      }
+    }
+  }
+  if (!order.includes('instruct')) {
+    order.splice(Math.min(2, order.length), 0, 'instruct');
+  }
+  return { order, customOps };
+}
 
 export type StudioGenerationField = 'name' | 'description' | 'first_mes' | 'mes_example';
 
@@ -921,6 +1014,7 @@ export const DEFAULT_SETTINGS = {
     grammar: 'Please fix any grammar, spelling, and punctuation errors in the following text while preserving the original meaning and style:\n\n"""\n${text}\n"""\n\nProvide only the corrected text without any additional commentary.',
   } satisfies PromptSettings,
   promptModels: {} as PromptModelMap,
+  toolbar: { order: [...DEFAULT_TOOLBAR_ORDER], customOps: [] },
   agentModel: undefined as PromptModelBinding | undefined,
 };
 
