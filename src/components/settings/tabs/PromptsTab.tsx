@@ -4,9 +4,20 @@
  */
 
 import React, { useState } from 'react';
-import { AlertCircle, Bot, ChevronDown, ChevronUp, MessageSquare, Sparkles, Target } from 'lucide-react';
-import type { PromptModelBinding, PromptSettings } from '../../../db/characterTypes';
+import { AlertCircle, ArrowDown, ArrowUp, Bot, ChevronDown, ChevronUp, Lock, MessageSquare, Plus, RotateCcw, SlidersHorizontal, Sparkles, Target, Trash2 } from 'lucide-react';
+import type { CustomToolbarOp, PromptModelBinding, PromptSettings, ToolbarConfig } from '../../../db/characterTypes';
+import { normalizeToolbarConfig } from '../../../db/characterTypes';
+import {
+  BUILTIN_TOOLBAR_BUTTONS,
+  TOOLBAR_ICON_PALETTE,
+  createCustomOpId,
+  moveToolbarOp,
+  prunePromptModelsForToolbar,
+  resolveToolbarButtons,
+  validateCustomOp,
+} from '../../../services/toolbarConfig';
 import { SettingsCard } from '../components/SettingsCard';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { PromptModelBindingSelect } from '../components/PromptModelBindingSelect';
 import type { SettingsTabProps } from '../types';
 
@@ -123,6 +134,375 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   );
 };
 
+const ToolbarButtonsSection: React.FC<{
+  draft: SettingsTabProps['draft'];
+  setDraft: SettingsTabProps['setDraft'];
+  helpers: SettingsTabProps['helpers'];
+  globalAi: SettingsTabProps['draft']['ai'];
+}> = ({ draft, setDraft, helpers, globalAi }) => {
+  const toolbar = normalizeToolbarConfig(draft.toolbar);
+  const buttons = resolveToolbarButtons(toolbar);
+  const [expandedCustom, setExpandedCustom] = useState<Record<string, boolean>>({});
+  const [newLabel, setNewLabel] = useState('');
+  const [newIcon, setNewIcon] = useState(TOOLBAR_ICON_PALETTE[0]);
+  const [newPrompt, setNewPrompt] = useState('');
+  const [newError, setNewError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingReset, setPendingReset] = useState(false);
+
+  const setToolbar = (next: ToolbarConfig) => {
+    setDraft((prev) => ({ ...prev, toolbar: next }));
+  };
+
+  const setOpBinding = (key: string, binding: PromptModelBinding | undefined) => {
+    setDraft((prev) => {
+      const next = { ...prev.promptModels };
+      if (!binding) {
+        delete next[key];
+      } else {
+        next[key] = binding;
+      }
+      return { ...prev, promptModels: next };
+    });
+  };
+
+  const move = (id: string, dir: -1 | 1) => {
+    const idx = toolbar.order.indexOf(id);
+    setToolbar({ ...toolbar, order: moveToolbarOp(toolbar.order, id, idx + dir) });
+  };
+
+  const hide = (id: string) => {
+    if (id === 'instruct') return;
+    setToolbar({ ...toolbar, order: toolbar.order.filter((entry) => entry !== id) });
+  };
+
+  const addBuiltin = (id: string) => {
+    setToolbar(normalizeToolbarConfig({ ...toolbar, order: [...toolbar.order, id] }));
+  };
+
+  const deleteCustom = (id: string) => {
+    setToolbar({
+      order: toolbar.order.filter((entry) => entry !== id),
+      customOps: toolbar.customOps.filter((op) => op.id !== id),
+    });
+    setOpBinding(id, undefined);
+  };
+
+  const patchCustom = (id: string, patch: Partial<CustomToolbarOp>) => {
+    setToolbar({
+      ...toolbar,
+      customOps: toolbar.customOps.map((op) => (op.id === id ? { ...op, ...patch } : op)),
+    });
+  };
+
+  const addCustom = () => {
+    const err = validateCustomOp(
+      { label: newLabel, prompt: newPrompt },
+      buttons.map((b) => b.label),
+    );
+    if (err) {
+      setNewError(err);
+      return;
+    }
+    const id = createCustomOpId();
+    setToolbar({
+      order: [...toolbar.order, id],
+      customOps: [
+        ...toolbar.customOps,
+        { id, label: newLabel.trim(), icon: newIcon, prompt: newPrompt },
+      ],
+    });
+    setExpandedCustom((prev) => ({ ...prev, [id]: true }));
+    setNewLabel('');
+    setNewIcon(TOOLBAR_ICON_PALETTE[0]);
+    setNewPrompt('');
+    setNewError(null);
+  };
+
+  const hiddenBuiltins = (Object.keys(BUILTIN_TOOLBAR_BUTTONS) as string[]).filter(
+    (id) => !toolbar.order.includes(id),
+  );
+
+  return (
+    <SettingsCard>
+      <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-2 flex items-center gap-2">
+        <SlidersHorizontal className="w-4 h-4" />
+        Toolbar Buttons
+      </h3>
+      <p className="text-xs text-fg-muted mb-3">
+        Order the buttons left to right. Extras collapse into the More menu on narrow screens.
+        Custom is always kept.
+      </p>
+      {buttons.map((def, index) => {
+        const isLocked = def.id === 'instruct';
+        const custom = def.isCustom
+          ? toolbar.customOps.find((op) => op.id === def.id)
+          : undefined;
+        const expanded = !!expandedCustom[def.id];
+        const toggleEdit = () =>
+          setExpandedCustom((prev) => ({ ...prev, [def.id]: !prev[def.id] }));
+        return (
+          <div
+            key={def.id}
+            className={`border rounded-lg mb-2 last:mb-0 overflow-visible transition-colors ${
+              expanded ? 'border-accent/60' : 'border-border'
+            }`}
+          >
+            <div className="w-full min-h-12 flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-muted rounded-t-lg">
+              <span className="text-base leading-none" aria-hidden="true">{def.icon}</span>
+              {custom ? (
+                <button
+                  type="button"
+                  onClick={toggleEdit}
+                  title={expanded ? 'Finish editing' : 'Edit button'}
+                  className="flex-1 min-w-0 truncate text-left text-sm font-semibold text-fg-muted transition-colors hover:text-fg"
+                >
+                  {def.label}
+                </button>
+              ) : (
+                <span className="text-sm font-semibold text-fg-muted truncate flex-1 min-w-0">
+                  {def.label}
+                </span>
+              )}
+              {def.isCustom && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-accent shrink-0">
+                  Custom
+                </span>
+              )}
+              {isLocked && (
+                <span title="Always kept on the toolbar" className="inline-flex shrink-0">
+                  <Lock className="w-3.5 h-3.5 text-fg-muted" />
+                </span>
+              )}
+              {custom && (
+                <button
+                  type="button"
+                  onClick={toggleEdit}
+                  className="shrink-0 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg"
+                >
+                  {expanded ? 'Done' : 'Edit'}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => move(def.id, -1)}
+                disabled={index === 0}
+                title="Move left"
+                className="p-1.5 rounded-md text-fg-muted hover:bg-hover disabled:opacity-30"
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => move(def.id, 1)}
+                disabled={index === buttons.length - 1}
+                title="Move right"
+                className="p-1.5 rounded-md text-fg-muted hover:bg-hover disabled:opacity-30"
+              >
+                <ArrowDown className="w-4 h-4" />
+              </button>
+              {!isLocked && (
+                <button
+                  type="button"
+                  onClick={() => setPendingDeleteId(def.id)}
+                  title={def.isCustom ? 'Delete button' : 'Remove from toolbar'}
+                  className="p-1.5 rounded-md text-fg-muted hover:bg-hover hover:text-danger"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {custom && expanded && (
+              <div className="p-3 sm:p-4 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <label className="flex flex-col gap-1 min-w-32 flex-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                      Label
+                    </span>
+                    <input
+                      value={custom.label}
+                      onChange={(e) => patchCustom(custom.id, { label: e.target.value })}
+                      maxLength={40}
+                      className="px-3 py-2 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                      Icon
+                    </span>
+                    <select
+                      value={custom.icon}
+                      onChange={(e) => patchCustom(custom.id, { icon: e.target.value })}
+                      className="px-3 py-2 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                    >
+                      {TOOLBAR_ICON_PALETTE.map((icon) => (
+                        <option key={icon} value={icon}>
+                          {icon}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div>
+                  <textarea
+                    value={custom.prompt}
+                    onChange={(e) => patchCustom(custom.id, { prompt: e.target.value })}
+                    className="w-full min-h-28 h-32 px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 resize-y transition-all duration-200"
+                    placeholder="Enter custom prompt..."
+                  />
+                  <div className="mt-2 text-xs space-y-1">
+                    <span className="text-fg-muted">
+                      <span className="font-semibold text-danger">Required:</span> Must contain
+                      {'${text}'}
+                    </span>
+                  </div>
+                  {!custom.prompt.includes('${text}') && (
+                    <p className="mt-2 text-xs text-danger flex items-start gap-1">
+                      <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                      Missing required {'${text}'} placeholder!
+                    </p>
+                  )}
+                </div>
+                {helpers && (
+                  <PromptModelBindingSelect
+                    binding={draft.promptModels[custom.id]}
+                    globalAi={globalAi}
+                    modelsByBaseUrl={helpers.modelsByBaseUrl}
+                    onChange={(b) => setOpBinding(custom.id, b)}
+                    onFetch={helpers.fetchModelsForUrl}
+                    isFetching={(() => {
+                      const endpoint = draft.promptModels[custom.id]?.baseUrl ?? '';
+                      return !!endpoint && helpers.isFetchingModelsForUrl(endpoint);
+                    })()}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <div className="mt-4 border-t border-border pt-3">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+          Add buttons
+        </div>
+        {hiddenBuiltins.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {hiddenBuiltins.map((id) => {
+              const builtin = BUILTIN_TOOLBAR_BUTTONS[id as keyof typeof BUILTIN_TOOLBAR_BUTTONS];
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => addBuiltin(id)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-fg-muted hover:bg-hover hover:text-fg transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {builtin.icon} {builtin.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-fg-muted mb-3">All built-in buttons are on the toolbar.</p>
+        )}
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+          New custom button
+        </div>
+        <div className="flex flex-wrap gap-2 mb-2">
+          <input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            maxLength={40}
+            placeholder="Label"
+            className="px-3 py-2 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 min-w-32 flex-1"
+          />
+          <select
+            value={newIcon}
+            onChange={(e) => setNewIcon(e.target.value)}
+            title="Icon"
+            className="px-3 py-2 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+          >
+            {TOOLBAR_ICON_PALETTE.map((icon) => (
+              <option key={icon} value={icon}>
+                {icon}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={addCustom}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-fg hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" />
+            Add
+          </button>
+        </div>
+        <textarea
+          value={newPrompt}
+          onChange={(e) => setNewPrompt(e.target.value)}
+          rows={2}
+          placeholder="Prompt template: must contain ${text}"
+          className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 resize-y"
+        />
+        {newError && (
+          <p className="mt-2 text-xs text-danger flex items-start gap-1">
+            <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+            {newError}
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => setPendingReset(true)}
+        className="mt-3 inline-flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg transition-colors"
+      >
+        <RotateCcw className="w-3.5 h-3.5" />
+        Reset toolbar to defaults
+      </button>
+      <ConfirmDialog
+        open={pendingReset}
+        title="Reset toolbar to defaults?"
+        message="Your button order and all custom buttons will be replaced with the defaults. This cannot be undone."
+        confirmLabel="Reset"
+        variant="danger"
+        onConfirm={() => {
+          const next = normalizeToolbarConfig(undefined);
+          setToolbar(next);
+          setDraft((prev) => ({
+            ...prev,
+            promptModels: prunePromptModelsForToolbar(prev.promptModels, next),
+          }));
+          setPendingReset(false);
+        }}
+        onCancel={() => setPendingReset(false)}
+      />
+      {(() => {
+        const pending = buttons.find((b) => b.id === pendingDeleteId);
+        if (!pending) return null;
+        return (
+          <ConfirmDialog
+            open
+            title={pending.isCustom ? `Delete "${pending.label}"?` : `Remove "${pending.label}"?`}
+            message={
+              pending.isCustom
+                ? 'The button and its prompt template will be removed. This cannot be undone.'
+                : 'You can re-add it under Add buttons below.'
+            }
+            confirmLabel={pending.isCustom ? 'Delete' : 'Remove'}
+            variant={pending.isCustom ? 'danger' : 'default'}
+            onConfirm={() => {
+              if (pending.isCustom) deleteCustom(pending.id);
+              else hide(pending.id);
+              setPendingDeleteId(null);
+            }}
+            onCancel={() => setPendingDeleteId(null)}
+          />
+        );
+      })()}
+    </SettingsCard>
+  );
+};
+
 export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpers }) => {
   const [expandedPrompts, setExpandedPrompts] = useState<Record<string, boolean>>({});
 
@@ -133,7 +513,7 @@ export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helper
     }));
   };
 
-  const setBinding = (key: keyof PromptSettings, binding: PromptModelBinding | undefined) => {
+  const setBinding = (key: string, binding: PromptModelBinding | undefined) => {
     setDraft((prev) => {
       const next = { ...prev.promptModels };
       if (!binding) {
@@ -151,6 +531,12 @@ export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helper
 
   return (
     <div className="space-y-4">
+      <ToolbarButtonsSection
+        draft={draft}
+        setDraft={setDraft}
+        helpers={helpers}
+        globalAi={draft.ai}
+      />
       <SettingsCard>
         <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
           <Bot className="w-4 h-4" />

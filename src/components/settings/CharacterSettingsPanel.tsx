@@ -105,6 +105,17 @@ export function CharacterSettingsPanel({
       }
 
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        // Let text fields keep caret navigation
+        const target = e.target as HTMLElement | null;
+        const tag = target?.tagName;
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          tag === 'SELECT' ||
+          target?.isContentEditable
+        ) {
+          return;
+        }
         const tabs = SETTINGS_TABS.map((t) => t.id);
         const currentIndex = tabs.indexOf(activeTab);
         let newIndex: number;
