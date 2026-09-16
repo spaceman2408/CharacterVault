@@ -147,7 +147,7 @@ function createToolbarPanel(
   toolbarContainer.className = 'ai-toolbar-controls';
   toolbarContainer.style.cssText = `
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
@@ -247,7 +247,12 @@ function createToolbarPanel(
     const btn = document.createElement('button');
     btn.className = `ai-toolbar-btn ai-toolbar-btn-${def.id}`;
     btn.dataset.opId = def.id;
-    btn.innerHTML = `<span style="margin-right: 4px;">${def.icon}</span>${def.label}`;
+    const escapedLabel = def.label
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    btn.innerHTML = `<span style="margin-right: 4px;">${def.icon}</span><span class="ai-toolbar-btn-label">${escapedLabel}</span>`;
+    if (def.label.length > 12) btn.title = def.label;
     btn.style.cssText = `
       display: flex;
       align-items: center;

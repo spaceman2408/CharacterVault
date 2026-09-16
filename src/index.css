@@ -795,10 +795,13 @@ textarea:focus:not(:focus-visible) {
 .ai-toolbar-panel .ai-toolbar-more-dropdown {
   position: absolute;
   top: 100%;
-  left: 0;
+  /* Right-aligned: the menu grows left over the op row, so it can never
+     run off the editor column when the chat panel squeezes the toolbar. */
+  right: 0;
   z-index: 30;
   margin-top: 4px;
   min-width: 120px;
+  max-width: min(320px, 70vw);
   display: none;
   flex-direction: column;
   gap: 2px;
@@ -807,6 +810,15 @@ textarea:focus:not(:focus-visible) {
   border-radius: 6px;
   background: var(--ai-toolbar-bg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Long custom labels truncate instead of blowing out the row or menu */
+.ai-toolbar-panel .ai-toolbar-btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 12ch;
 }
 
 .ai-toolbar-panel .ai-result-container {
@@ -900,9 +912,7 @@ textarea:focus:not(:focus-visible) {
     display: none !important;
   }
 
-  .ai-toolbar-panel button.ai-toolbar-btn-expand,
-  .ai-toolbar-panel button.ai-toolbar-btn-rewrite,
-  .ai-toolbar-panel button.ai-toolbar-btn-instruct,
+  .ai-toolbar-panel button.ai-toolbar-btn,
   .ai-toolbar-panel button.ai-toolbar-btn-more {
     padding: 5px 8px !important;
     font-size: 12px !important;
