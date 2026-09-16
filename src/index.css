@@ -880,6 +880,16 @@ textarea:focus:not(:focus-visible) {
   background-color: var(--ai-toolbar-bg) !important;
 }
 
+/* Op-button row scrolls instead of clipping on extremely narrow screens.
+   Auto-overflow normally keeps everything reachable via the More menu. */
+.ai-toolbar-panel .ai-toolbar-primary {
+  scrollbar-width: none;
+}
+
+.ai-toolbar-panel .ai-toolbar-primary::-webkit-scrollbar {
+  display: none;
+}
+
 /* ============================================================================
    AI TOOLBAR PANEL - MOBILE RESPONSIVE
    ============================================================================ */

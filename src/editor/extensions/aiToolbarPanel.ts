@@ -8,7 +8,13 @@
 
 import { EditorView, showPanel, type Panel, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { SelectionRange, StateEffect } from '@codemirror/state';
-import type { AIOperation } from '../../db/characterTypes';
+import type { AIOperation, ToolbarConfig } from '../../db/characterTypes';
+import { DEFAULT_TOOLBAR_CONFIG, normalizeToolbarConfig } from '../../db/characterTypes';
+import {
+  resolveToolbarButtons,
+  toolbarButtonLabel,
+  type ToolbarButtonDef,
+} from '../../services/toolbarConfig';
 import { toggleToolbarSearch, searchPanelOpen, closeToolbarSearch } from './toolbarSearch';
 import { createFontSizeControl } from './fontSizeControl';
 import { clipLiveReasoning } from '../../components/ai/utils';
@@ -107,7 +113,8 @@ function createToolbarPanel(
   onFontSizeChange?: FontSizeChangeCallback,
   toolbarActions: ToolbarActionConfig[] = [],
   onPreviewPayload?: AIPreviewPayloadCallback,
-): Panel & { updateState: () => void; updateAIState: AIStreamingCallback; updateSampler: (s: SamplerSettings) => void } {
+  initialToolbarConfig: ToolbarConfig = DEFAULT_TOOLBAR_CONFIG,
+): Panel & { updateState: () => void; updateAIState: AIStreamingCallback; updateSampler: (s: SamplerSettings) => void; updateToolbarConfig: (c: ToolbarConfig) => void } {
   const dom = document.createElement('div');
   dom.className = 'ai-toolbar-panel';
 
@@ -162,21 +169,9 @@ function createToolbarPanel(
   `;
   dom.appendChild(resultContainer);
 
-  // Primary operations - colors reference CSS variables from index.css
-  const primaryOps: { id: AIOperation; label: string; icon: string; color: string }[] = [
-    { id: 'expand', label: 'Enhance', icon: '✨', color: 'var(--ai-toolbar-accent-primary)' },
-    { id: 'rewrite', label: 'Rephrase', icon: '🔄', color: 'var(--ai-toolbar-accent-secondary)' },
-    { id: 'instruct', label: 'Custom', icon: '💬', color: 'var(--ai-toolbar-accent-success)' },
-  ];
-
-  // Polish operations (in dropdown) - colors reference CSS variables from index.css
-  const polishOps: { id: AIOperation; label: string; icon: string; color: string }[] = [
-    { id: 'shorten', label: 'Shorten', icon: '✂️', color: 'var(--ai-toolbar-accent-warning)' },
-    { id: 'lengthen', label: 'Lengthen', icon: '📄', color: 'var(--ai-toolbar-accent-info)' },
-    { id: 'vivid', label: 'Vivid', icon: '🎨', color: 'var(--ai-toolbar-accent-pink)' },
-    { id: 'emotion', label: 'Emotion', icon: '❤️', color: 'var(--ai-toolbar-accent-rose)' },
-    { id: 'grammar', label: 'Fix', icon: '🪄', color: 'var(--ai-toolbar-accent-neutral)' },
-  ];
+  // Toolbar buttons resolve from the user-configured order (builtins + custom ops).
+  // `instruct` (Custom) is always pinned by normalizeToolbarConfig.
+  let toolbarConfig = normalizeToolbarConfig(initialToolbarConfig);
 
   let hasSelection = false;
   let currentSelection: SelectionRange | null = null;
@@ -247,37 +242,34 @@ function createToolbarPanel(
     return true;
   }
 
-  // Create button helper
-  function createButton(
-    op: { id: AIOperation; label: string; icon: string; color: string },
-    isPrimary: boolean
-  ): HTMLButtonElement {
+  // Create button helper (uniform styling; overflow placement is handled by relayout)
+  function createButton(def: ToolbarButtonDef): HTMLButtonElement {
     const btn = document.createElement('button');
-    btn.className = `ai-toolbar-btn ai-toolbar-btn-${op.id}`;
-    btn.innerHTML = `<span style="margin-right: 4px;">${op.icon}</span>${op.label}`;
+    btn.className = `ai-toolbar-btn ai-toolbar-btn-${def.id}`;
+    btn.dataset.opId = def.id;
+    btn.innerHTML = `<span style="margin-right: 4px;">${def.icon}</span>${def.label}`;
     btn.style.cssText = `
       display: flex;
       align-items: center;
-      padding: ${isPrimary ? '6px 12px' : '4px 8px'};
-      font-size: ${isPrimary ? '13px' : '12px'};
+      padding: 6px 12px;
+      font-size: 13px;
       font-weight: 500;
       color: white;
-      background: ${op.color};
+      background: ${def.color};
       border: none;
       border-radius: 6px;
       cursor: pointer;
       opacity: 0.5;
       pointer-events: none;
       transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
     `;
 
     btn.addEventListener('click', () => {
       if (hasSelection && currentSelection) {
-        // Close dropdown for polish operations
-        if (!isPrimary) {
-          dropdown.style.display = 'none';
-        }
-        onAction(op.id, selectedText, currentSelection);
+        dropdown.style.display = 'none';
+        onAction(def.id, selectedText, currentSelection);
         // Focus after the processing UI swaps (hidden button would otherwise blur to body)
         scheduleFocusWork(() => ensureEditorFocus());
       }
@@ -349,49 +341,64 @@ function createToolbarPanel(
   instructContainer.appendChild(instructCancelBtn);
   toolbarContainer.appendChild(instructContainer);
 
-  // Add primary buttons
+  // Visible op-button row (single user-ordered list; overflow moves to the dropdown)
   const primaryContainer = document.createElement('div');
   primaryContainer.className = 'ai-toolbar-primary';
-  primaryContainer.style.cssText = 'display: flex; flex-wrap: wrap; gap: 6px;';
+  primaryContainer.style.cssText = 'display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; gap: 6px; flex: 1 1 auto; min-width: 0;';
 
-  const primaryButtons = new Map<AIOperation, HTMLButtonElement>();
-  for (const op of primaryOps) {
-    // Skip instruct button - we'll create it specially
-    if (op.id === 'instruct') continue;
-    const btn = createButton(op, true);
-    primaryButtons.set(op.id, btn);
-    primaryContainer.appendChild(btn);
+  const opButtons = new Map<string, HTMLButtonElement>();
+  let instructBtn: HTMLButtonElement | null = null;
+  let buttonOrder: string[] = [];
+
+  function buildToolbarButtons() {
+    primaryContainer.replaceChildren();
+    opButtons.clear();
+    instructBtn = null;
+    buttonOrder = [];
+    for (const def of resolveToolbarButtons(toolbarConfig)) {
+      buttonOrder.push(def.id);
+      if (def.id === 'instruct') {
+        const btn = document.createElement('button');
+        btn.className = 'ai-toolbar-btn ai-toolbar-btn-instruct';
+        btn.dataset.opId = def.id;
+        btn.innerHTML = `<span style="margin-right: 4px;">${def.icon}</span>${def.label}`;
+        btn.style.cssText = `
+          display: flex;
+          align-items: center;
+          padding: 6px 12px;
+          font-size: 13px;
+          font-weight: 500;
+          color: white;
+          background: ${def.color};
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          opacity: 0.5;
+          pointer-events: none;
+          transition: opacity 0.2s, transform 0.1s;
+          white-space: nowrap;
+          flex-shrink: 0;
+        `;
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault(); // Prevent editor losing focus
+        });
+        btn.addEventListener('click', () => {
+          isInstructMode = true;
+          updateState();
+          instructInput.focus();
+        });
+        instructBtn = btn;
+        opButtons.set(def.id, btn);
+        primaryContainer.appendChild(btn);
+        continue;
+      }
+      const btn = createButton(def);
+      opButtons.set(def.id, btn);
+      primaryContainer.appendChild(btn);
+    }
   }
 
-  // Create instruct button specially (without the default click handler)
-  const instructBtn = document.createElement('button');
-  instructBtn.className = 'ai-toolbar-btn ai-toolbar-btn-instruct';
-  instructBtn.innerHTML = `<span style="margin-right: 4px;">💬</span>Custom`;
-  instructBtn.style.cssText = `
-    display: flex;
-    align-items: center;
-    padding: 6px 12px;
-    font-size: 13px;
-    font-weight: 500;
-    color: white;
-    background: var(--ai-toolbar-accent-success);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    opacity: 0.5;
-    pointer-events: none;
-    transition: opacity 0.2s, transform 0.1s;
-  `;
-  instructBtn.addEventListener('mousedown', (e) => {
-    e.preventDefault(); // Prevent editor losing focus
-  });
-  instructBtn.addEventListener('click', () => {
-    isInstructMode = true;
-    updateState();
-    instructInput.focus();
-  });
-  primaryButtons.set('instruct', instructBtn);
-  primaryContainer.appendChild(instructBtn);
+  buildToolbarButtons();
 
   toolbarContainer.appendChild(primaryContainer);
 
@@ -466,18 +473,62 @@ function createToolbarPanel(
   const dropdown = document.createElement('div');
   dropdown.className = 'ai-toolbar-more-dropdown';
 
-  const polishButtons = new Map<AIOperation, HTMLButtonElement>();
-  for (const op of polishOps) {
-    const btn = createButton(op, false);
-    polishButtons.set(op.id, btn);
-    dropdown.appendChild(btn);
-  }
-
   const moreContainer = document.createElement('div');
   moreContainer.className = 'ai-toolbar-more';
+  moreContainer.style.display = 'none';
+  moreContainer.style.flexShrink = '0';
   moreContainer.appendChild(moreBtn);
   moreContainer.appendChild(dropdown);
   toolbarContainer.appendChild(moreContainer);
+
+  // Utilities live in their own shrink-proof group so op buttons never crowd them.
+  // The op row takes whatever space is left and overflows into the More menu.
+  const utilitiesContainer = document.createElement('div');
+  utilitiesContainer.className = 'ai-toolbar-utilities';
+  utilitiesContainer.style.cssText = 'display: flex; align-items: center; gap: 6px; flex-shrink: 0;';
+  toolbarContainer.appendChild(utilitiesContainer);
+
+  /**
+   * Auto-overflow: keep leading buttons in the row while they fit; move the
+   * rest (in order) into the More dropdown. The pinned Custom button
+   * (instruct) never overflows. More is only shown while it holds buttons.
+   */
+  function relayoutToolbar() {
+    if (panelDestroyed) return;
+    if (primaryContainer.style.display === 'none') return;
+    const wasOpen = dropdown.style.display === 'flex';
+    for (const id of buttonOrder) {
+      const btn = opButtons.get(id);
+      if (btn) primaryContainer.appendChild(btn);
+    }
+    dropdown.replaceChildren();
+    dropdown.style.display = 'none';
+    if (!toolbarContainer.clientWidth) {
+      moreContainer.style.display = 'none';
+      return;
+    }
+    // Reserve the More slot while measuring so the row width is final
+    moreContainer.style.display = 'block';
+    moreContainer.style.visibility = 'hidden';
+    let guard = opButtons.size + 1;
+    while (guard-- > 0 && primaryContainer.scrollWidth > primaryContainer.clientWidth + 1) {
+      const rowBtns = [...primaryContainer.children] as HTMLElement[];
+      const movable = rowBtns.filter((el) => el.dataset.opId !== 'instruct');
+      if (movable.length === 0) break;
+      const last = movable[movable.length - 1];
+      if (!last) break;
+      dropdown.prepend(last);
+    }
+    moreContainer.style.visibility = '';
+    moreContainer.style.display = dropdown.childElementCount > 0 ? 'block' : 'none';
+    if (wasOpen && dropdown.childElementCount > 0) {
+      dropdown.style.display = 'flex';
+    }
+  }
+
+  const toolbarResizeObserver =
+    typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => relayoutToolbar()) : null;
+  toolbarResizeObserver?.observe(toolbarContainer);
 
   // Search button (magnifying glass)
   const searchBtn = document.createElement('button');
@@ -536,7 +587,7 @@ function createToolbarPanel(
     view.dispatch({ effects: StateEffect.appendConfig.of([searchPanelListener]) });
   }, 0);
 
-  toolbarContainer.appendChild(searchBtn);
+  utilitiesContainer.appendChild(searchBtn);
 
   // Payload preflight button (view request body without sending)
   const payloadBtn = document.createElement('button');
@@ -577,7 +628,6 @@ function createToolbarPanel(
     toolbarContainer.appendChild(payloadBtn);
   }
 
-  const customActionContainers: HTMLElement[] = [];
   for (const action of toolbarActions) {
     const button = document.createElement('button');
     button.className = `ai-toolbar-btn-custom ai-toolbar-btn-custom-${action.id}`;
@@ -605,17 +655,14 @@ function createToolbarPanel(
     button.addEventListener('mousedown', (e) => {
       e.preventDefault();
     });
-    toolbarContainer.appendChild(button);
-    customActionContainers.push(button);
+    utilitiesContainer.appendChild(button);
   }
 
   // Font size control (aA button with slider popup)
-  let fontSizeBtn: HTMLElement | undefined;
   let fontSizeCleanup: (() => void) | undefined;
   if (onFontSizeChange) {
     const { button: fontSizeBtnContainer, cleanup } = createFontSizeControl(view, onFontSizeChange);
-    fontSizeBtn = fontSizeBtnContainer;
-    toolbarContainer.appendChild(fontSizeBtnContainer);
+    utilitiesContainer.appendChild(fontSizeBtnContainer);
     fontSizeCleanup = cleanup;
   }
 
@@ -648,6 +695,7 @@ function createToolbarPanel(
   // Toggle dropdown
   moreBtn.addEventListener('click', () => {
     if (!hasSelection) return;
+    if (dropdown.childElementCount === 0) return;
     const isOpen = dropdown.style.display === 'flex';
     dropdown.style.display = isOpen ? 'none' : 'flex';
   });
@@ -1007,7 +1055,7 @@ function createToolbarPanel(
 
     // Update title / one-line status
     const opLabel = state.currentOperation
-      ? { expand: 'Enhance', rewrite: 'Rephrase', instruct: 'Custom', shorten: 'Shorten', lengthen: 'Lengthen', vivid: 'Vivid', emotion: 'Emotion', grammar: 'Fix' }[state.currentOperation]
+      ? toolbarButtonLabel(state.currentOperation, toolbarConfig.customOps)
       : 'AI Result';
     if (state.error) {
       resultTitle.textContent = opLabel;
@@ -1089,6 +1137,7 @@ function createToolbarPanel(
   // Update function - called when selection changes
   function updateState() {
     const selection = view.state.selection.main;
+    const wasRowHidden = primaryContainer.style.display === 'none';
     hasSelection = selection.from !== selection.to;
 
     if (hasSelection) {
@@ -1142,6 +1191,7 @@ function createToolbarPanel(
       instructContainer.style.display = 'none';
       primaryContainer.style.display = 'none';
       moreContainer.style.display = 'none';
+      utilitiesContainer.style.display = 'none';
       separator.style.display = 'none';
       infoText.style.display = 'none';
     } else if (isInstructMode) {
@@ -1149,30 +1199,27 @@ function createToolbarPanel(
       instructContainer.style.display = 'flex';
       primaryContainer.style.display = 'none';
       moreContainer.style.display = 'none';
+      utilitiesContainer.style.display = 'none';
       separator.style.display = 'none';
       infoText.style.display = 'none';
     } else {
       abortBtn.style.display = 'none';
       instructContainer.style.display = 'none';
       primaryContainer.style.display = 'flex';
-      moreContainer.style.display = 'block';
+      moreContainer.style.display = dropdown.childElementCount > 0 ? 'block' : 'none';
+      utilitiesContainer.style.display = 'flex';
       const showInfo = infoText.classList.contains('warning');
       separator.style.display = showInfo ? 'block' : 'none';
       infoText.style.display = showInfo ? 'block' : 'none';
+      // Widths were unmeasurable while hidden (processing / instruct mode)
+      if (wasRowHidden) relayoutToolbar();
     }
 
     const isCompactCustomLayout = !state.isProcessing && isInstructMode;
     toolbarContainer.classList.toggle('ai-toolbar-instruct-mode', isCompactCustomLayout);
-    searchBtn.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
     if (onPreviewPayload) {
       // Keep available during instruct mode (useful for Custom preflight); hide while processing
       payloadBtn.style.display = state.isProcessing ? 'none' : 'flex';
-    }
-    for (const actionButton of customActionContainers) {
-      actionButton.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
-    }
-    if (fontSizeBtn) {
-      fontSizeBtn.style.display = isCompactCustomLayout || state.isProcessing ? 'none' : 'flex';
     }
 
     // Update all buttons
@@ -1181,9 +1228,9 @@ function createToolbarPanel(
     const opacity = hasSamplerError ? '0.5' : (hasSelection ? '1' : '0.5');
     const pointerEvents = hasSamplerError ? 'none' : (hasSelection ? 'auto' : 'none');
 
-    for (const btn of primaryButtons.values()) {
+    for (const btn of opButtons.values()) {
       // Instruct button is always enabled unless there's a sampler error
-      if (btn === instructBtn) {
+      if (instructBtn && btn === instructBtn) {
         if (hasSamplerError) {
           btn.style.opacity = '0.5';
           btn.style.pointerEvents = 'none';
@@ -1195,11 +1242,6 @@ function createToolbarPanel(
         btn.style.opacity = opacity;
         btn.style.pointerEvents = pointerEvents;
       }
-    }
-
-    for (const btn of polishButtons.values()) {
-      btn.style.opacity = opacity;
-      btn.style.pointerEvents = pointerEvents;
     }
 
     moreBtn.style.opacity = opacity;
@@ -1273,6 +1315,12 @@ function createToolbarPanel(
 
   // Initial state
   updateState();
+  // Defer first overflow pass until the panel is attached and measurable
+  requestAnimationFrame(() => relayoutToolbar());
+  // Webfont swaps can widen buttons after first paint without resizing anything
+  if (typeof document !== 'undefined' && typeof document.fonts !== 'undefined') {
+    void document.fonts.ready.then(() => relayoutToolbar());
+  }
 
   // Register the update function so it can be accessed from outside
   panelRegistry.set(view, updateAIState);
@@ -1288,8 +1336,20 @@ function createToolbarPanel(
       currentSampler = s;
       updateState();
     },
+    updateToolbarConfig: (c: ToolbarConfig) => {
+      toolbarConfig = normalizeToolbarConfig(c);
+      // Leaving a removed Custom input box would strand its draft
+      if (isInstructMode) {
+        isInstructMode = false;
+        instructInput.value = '';
+      }
+      buildToolbarButtons();
+      updateState();
+      relayoutToolbar();
+    },
     destroy: () => {
       panelDestroyed = true;
+      toolbarResizeObserver?.disconnect();
       if (thinkingScrollRaf) cancelAnimationFrame(thinkingScrollRaf);
       thinkingScrollRaf = 0;
       reasoningText.textContent = '';
@@ -1355,6 +1415,7 @@ export function aiToolbarPanel(
   onFontSizeChange?: FontSizeChangeCallback,
   toolbarActions: ToolbarActionConfig[] = [],
   onPreviewPayload?: AIPreviewPayloadCallback,
+  toolbarConfig: ToolbarConfig = DEFAULT_TOOLBAR_CONFIG,
 ) {
   return [
     showPanel.of((view) =>
@@ -1367,7 +1428,8 @@ export function aiToolbarPanel(
         onAbort,
         onFontSizeChange,
         toolbarActions,
-        onPreviewPayload
+        onPreviewPayload,
+        toolbarConfig
       )
     ),
     toolbarPanelPlugin(onAction),
