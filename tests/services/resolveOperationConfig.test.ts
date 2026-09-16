@@ -192,4 +192,38 @@ describe('normalizePromptModelMap', () => {
       grammar: { baseUrl: 'https://nano-gpt.com/api/v1', modelId: 'a' },
     });
   });
+
+  it('preserves custom op bindings alongside builtins', () => {
+    const result = normalizePromptModelMap({
+      expand: { baseUrl: 'https://nano-gpt.com/api/v1', modelId: 'a' },
+      'custom:pirate': { baseUrl: 'https://openrouter.ai/api/v1/', modelId: '  deepseek/x  ' },
+      'custom:ghost': { baseUrl: '', modelId: 'b' },
+    });
+
+    expect(result).toEqual({
+      expand: { baseUrl: 'https://nano-gpt.com/api/v1', modelId: 'a' },
+      'custom:pirate': { baseUrl: 'https://openrouter.ai/api/v1', modelId: 'deepseek/x' },
+    });
+  });
+});
+
+describe('resolveConfigForOperation with custom ops', () => {
+  it('resolves a custom op binding like a builtin', () => {
+    const config = baseConfig();
+    const result = resolveConfigForOperation(config, 'custom:pirate', {
+      'custom:pirate': {
+        baseUrl: 'https://openrouter.ai/api/v1',
+        modelId: 'deepseek/deepseek-v4-pro',
+      },
+    });
+
+    expect(result.baseUrl).toBe('https://openrouter.ai/api/v1');
+    expect(result.modelId).toBe('deepseek/deepseek-v4-pro');
+    expect(result.apiKey).toBe('or-key');
+  });
+
+  it('returns the original config when the custom op has no binding', () => {
+    const config = baseConfig();
+    expect(resolveConfigForOperation(config, 'custom:pirate', {})).toBe(config);
+  });
 });

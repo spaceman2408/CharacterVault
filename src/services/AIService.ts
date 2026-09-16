@@ -13,7 +13,9 @@ import type {
   CharacterBook,
   ReasoningEffort,
   AIOperation,
+  CustomToolbarOp,
 } from '../db/characterTypes';
+import { resolvePromptTemplate } from './toolbarConfig';
 import { ReasoningParser, extractMessageReasoning } from './ReasoningParser';
 import { resolveProvider, NanoGPTProvider } from './providers';
 import type { ModelProviderInfo, FetchModelsOptions } from './providers';
@@ -424,6 +426,7 @@ export class AIService {
   private config: AIConfig;
   private sampler: SamplerSettings;
   private prompts: PromptSettings;
+  private customOps: CustomToolbarOp[];
   private abortController: AbortController | null = null;
   // Survives abort() nulling the controller so stream loops still observe cancel.
   private aborted = false;
@@ -438,11 +441,12 @@ export class AIService {
   /** Per-message role/framing overhead when summing multi-message prompts. */
   private static readonly MESSAGE_OVERHEAD_TOKENS = 6;
 
-  constructor(config: AIConfig, sampler: SamplerSettings, prompts?: PromptSettings) {
+  constructor(config: AIConfig, sampler: SamplerSettings, prompts?: PromptSettings, customOps?: CustomToolbarOp[]) {
     this.config = config;
     this.sampler = sampler;
     // Merge provided prompts with defaults to ensure all properties are present
     this.prompts = prompts ? { ...DEFAULT_PROMPTS, ...prompts } : DEFAULT_PROMPTS;
+    this.customOps = customOps ? [...customOps] : [];
   }
 
   /**
@@ -839,7 +843,8 @@ Provide only the generated text without any additional commentary.`;
     operation: AIOperation,
     text: string,
     context: string[],
-    instruction?: string
+    instruction?: string,
+    customOps: CustomToolbarOp[] = this.customOps,
   ): ChatMessage[] {
     const maxInput = this.sampler.contextLength - this.sampler.maxTokens - AIService.SAFETY_MARGIN;
     const systemPromptTemplate = this.getThinkToken() + getStablePrefixParts(EDITOR_PERSONA);
@@ -851,7 +856,10 @@ Provide only the generated text without any additional commentary.`;
       }
       userPromptTemplate = this.interpolateInstructPrompt(this.prompts.instruct, '', instruction);
     } else {
-      userPromptTemplate = this.interpolatePrompt(this.prompts[operation], '');
+      userPromptTemplate = this.interpolatePrompt(
+        resolvePromptTemplate(operation, this.prompts, customOps),
+        '',
+      );
     }
 
     const overhead = AIService.estimateTokens(systemPromptTemplate + userPromptTemplate);
@@ -871,7 +879,10 @@ Provide only the generated text without any additional commentary.`;
     const userPrompt =
       operation === 'instruct'
         ? this.interpolateInstructPrompt(this.prompts.instruct, truncatedText, instruction!)
-        : this.interpolatePrompt(this.prompts[operation], truncatedText);
+        : this.interpolatePrompt(
+            resolvePromptTemplate(operation, this.prompts, customOps),
+            truncatedText,
+          );
 
     return [
       { role: 'system', content: systemPrompt },
@@ -897,13 +908,14 @@ Provide only the generated text without any additional commentary.`;
     operation: AIOperation,
     text: string,
     context: string[],
-    options?: { instruction?: string; customSampler?: Partial<SamplerSettings> }
+    options?: { instruction?: string; customSampler?: Partial<SamplerSettings>; customOps?: CustomToolbarOp[] }
   ): AIRequestPreview {
     const messages = this.buildOperationMessages(
       operation,
       text,
       context,
-      options?.instruction
+      options?.instruction,
+      options?.customOps ?? this.customOps,
     );
     const stream = !!this.config.enableStreaming;
     const body = this.buildChatCompletionBody(messages, options?.customSampler, stream);
@@ -1231,6 +1243,26 @@ Provide only the generated text without any additional commentary.`;
   }
 
   /**
+   * Run any toolbar text operation (builtin or user-created `custom:<id>` op).
+   * Custom ops interpolate `${text}` like the builtin polish ops; `instruct`
+   * additionally requires an instruction.
+   */
+  async runTextOperation(
+    operation: AIOperation,
+    text: string,
+    context: string[],
+    instruction?: string,
+    customSampler?: Partial<SamplerSettings>,
+    onChunk?: (chunk: { content?: string; reasoning?: string }) => void
+  ): Promise<AIResponse> {
+    return this.chatCompletion(
+      this.buildOperationMessages(operation, text, context, instruction),
+      customSampler,
+      onChunk
+    );
+  }
+
+  /**
    * Expand selected text
    */
   async expandText(
@@ -1239,11 +1271,7 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    return this.chatCompletion(
-      this.buildOperationMessages('expand', text, context),
-      customSampler,
-      onChunk
-    );
+    return this.runTextOperation('expand', text, context, undefined, customSampler, onChunk);
   }
 
   /**
@@ -1255,11 +1283,7 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    return this.chatCompletion(
-      this.buildOperationMessages('rewrite', text, context),
-      customSampler,
-      onChunk
-    );
+    return this.runTextOperation('rewrite', text, context, undefined, customSampler, onChunk);
   }
 
   /**
@@ -1272,11 +1296,7 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    return this.chatCompletion(
-      this.buildOperationMessages('instruct', text, context, instruction),
-      customSampler,
-      onChunk
-    );
+    return this.runTextOperation('instruct', text, context, instruction, customSampler, onChunk);
   }
 
   /**
@@ -1288,11 +1308,7 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    return this.chatCompletion(
-      this.buildOperationMessages('shorten', text, context),
-      customSampler,
-      onChunk
-    );
+    return this.runTextOperation('shorten', text, context, undefined, customSampler, onChunk);
   }
 
   /**
@@ -1304,11 +1320,7 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    return this.chatCompletion(
-      this.buildOperationMessages('lengthen', text, context),
-      customSampler,
-      onChunk
-    );
+    return this.runTextOperation('lengthen', text, context, undefined, customSampler, onChunk);
   }
 
   /**
@@ -1320,11 +1332,7 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    return this.chatCompletion(
-      this.buildOperationMessages('vivid', text, context),
-      customSampler,
-      onChunk
-    );
+    return this.runTextOperation('vivid', text, context, undefined, customSampler, onChunk);
   }
 
   /**
@@ -1336,11 +1344,7 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    return this.chatCompletion(
-      this.buildOperationMessages('emotion', text, context),
-      customSampler,
-      onChunk
-    );
+    return this.runTextOperation('emotion', text, context, undefined, customSampler, onChunk);
   }
 
   /**
@@ -1352,11 +1356,7 @@ Provide only the generated text without any additional commentary.`;
     customSampler?: Partial<SamplerSettings>,
     onChunk?: (chunk: { content?: string; reasoning?: string }) => void
   ): Promise<AIResponse> {
-    return this.chatCompletion(
-      this.buildOperationMessages('grammar', text, context),
-      customSampler,
-      onChunk
-    );
+    return this.runTextOperation('grammar', text, context, undefined, customSampler, onChunk);
   }
 
   /**
@@ -1456,7 +1456,8 @@ Provide only the generated text without any additional commentary.`;
 export function createAIService(
   config: AIConfig,
   sampler: SamplerSettings,
-  prompts?: PromptSettings
+  prompts?: PromptSettings,
+  customOps?: CustomToolbarOp[]
 ): AIService {
-  return new AIService(config, sampler, prompts);
+  return new AIService(config, sampler, prompts, customOps);
 }
