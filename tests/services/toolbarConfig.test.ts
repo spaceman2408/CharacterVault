@@ -7,6 +7,7 @@ import {
   isBuiltinOperation,
   moveToolbarOp,
   prunePromptModelsForToolbar,
+  removeToolbarOps,
   resolvePromptTemplate,
   resolveToolbarButtons,
   toolbarButtonLabel,
@@ -174,6 +175,32 @@ describe('moveToolbarOp', () => {
     const next = moveToolbarOp(order, 'nope', 0);
     expect(next).toEqual(order);
     expect(next).not.toBe(order);
+  });
+});
+
+describe('removeToolbarOps', () => {
+  const config = {
+    order: ['expand', 'instruct', 'custom:a', 'grammar'],
+    customOps: [{ ...PIRATE, id: 'custom:a' }],
+  };
+
+  it('hides builtins and deletes customs', () => {
+    const next = removeToolbarOps(config, ['expand', 'custom:a']);
+    expect(next.order).toEqual(['instruct', 'grammar']);
+    expect(next.customOps).toEqual([]);
+  });
+
+  it('never removes instruct', () => {
+    const next = removeToolbarOps(config, ['instruct', 'expand']);
+    expect(next.order).toContain('instruct');
+    expect(next.order).not.toContain('expand');
+  });
+
+  it('ignores unknown ids', () => {
+    expect(removeToolbarOps(config, ['nope'])).toEqual({
+      order: ['expand', 'instruct', 'custom:a', 'grammar'],
+      customOps: [{ ...PIRATE, id: 'custom:a' }],
+    });
   });
 });
 

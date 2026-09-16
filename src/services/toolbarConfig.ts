@@ -145,6 +145,16 @@ export function moveToolbarOp(order: readonly string[], id: string, toIndex: num
   return next;
 }
 
+/** Remove ops by id (builtins are hidden, customs deleted). `instruct` survives. */
+export function removeToolbarOps(config: ToolbarConfig, ids: readonly string[]): ToolbarConfig {
+  const remove = new Set(ids);
+  const normalized = normalizeToolbarConfig(config);
+  return normalizeToolbarConfig({
+    order: normalized.order.filter((id) => !remove.has(id)),
+    customOps: normalized.customOps.filter((op) => !remove.has(op.id)),
+  });
+}
+
 /** Drop model bindings for deleted custom ops; keep builtins and live customs. */
 export function prunePromptModelsForToolbar(
   promptModels: PromptModelMap | null | undefined,

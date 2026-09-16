@@ -13,6 +13,7 @@ import {
   createCustomOpId,
   moveToolbarOp,
   prunePromptModelsForToolbar,
+  removeToolbarOps,
   resolveToolbarButtons,
   validateCustomOp,
 } from '../../../services/toolbarConfig';
@@ -171,6 +172,9 @@ const ToolbarButtonsSection: React.FC<{
   const [newError, setNewError] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingReset, setPendingReset] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pendingBulk, setPendingBulk] = useState(false);
 
   const setToolbar = (next: ToolbarConfig) => {
     setDraft((prev) => ({ ...prev, toolbar: next }));
@@ -196,6 +200,7 @@ const ToolbarButtonsSection: React.FC<{
   const hide = (id: string) => {
     if (id === 'instruct') return;
     setToolbar({ ...toolbar, order: toolbar.order.filter((entry) => entry !== id) });
+    setSelectedIds((prev) => prev.filter((entry) => entry !== id));
   };
 
   const addBuiltin = (id: string) => {
@@ -208,6 +213,36 @@ const ToolbarButtonsSection: React.FC<{
       customOps: toolbar.customOps.filter((op) => op.id !== id),
     });
     setOpBinding(id, undefined);
+    setSelectedIds((prev) => prev.filter((entry) => entry !== id));
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id],
+    );
+  };
+
+  const exitBulkMode = () => {
+    setBulkMode(false);
+    setSelectedIds([]);
+  };
+
+  const confirmBulkRemove = () => {
+    const removedCustomIds = new Set(
+      toolbar.customOps.filter((op) => selectedIds.includes(op.id)).map((op) => op.id),
+    );
+    setDraft((prev) => {
+      const nextModels = { ...prev.promptModels };
+      for (const id of removedCustomIds) delete nextModels[id];
+      return {
+        ...prev,
+        toolbar: removeToolbarOps(prev.toolbar, selectedIds),
+        promptModels: nextModels,
+      };
+    });
+    setSelectedIds([]);
+    setBulkMode(false);
+    setPendingBulk(false);
   };
 
   const patchCustom = (id: string, patch: Partial<CustomToolbarOp>) => {
@@ -245,13 +280,28 @@ const ToolbarButtonsSection: React.FC<{
   const hiddenBuiltins = (Object.keys(BUILTIN_TOOLBAR_BUTTONS) as string[]).filter(
     (id) => !toolbar.order.includes(id),
   );
+  const selectableCount = buttons.filter((b) => b.id !== 'instruct').length;
+  const selectedButtons = buttons.filter((b) => selectedIds.includes(b.id));
+  const selectedCustoms = selectedButtons.filter((b) => b.isCustom);
+  const selectedBuiltins = selectedButtons.filter((b) => !b.isCustom);
 
   return (
     <SettingsCard>
-      <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-2 flex items-center gap-2">
-        <SlidersHorizontal className="w-4 h-4" />
-        Toolbar Buttons
-      </h3>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider flex items-center gap-2">
+          <SlidersHorizontal className="w-4 h-4" />
+          Toolbar Buttons
+        </h3>
+        {selectableCount > 0 && (
+          <button
+            type="button"
+            onClick={() => (bulkMode ? exitBulkMode() : setBulkMode(true))}
+            className="shrink-0 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg"
+          >
+            {bulkMode ? 'Done' : 'Select'}
+          </button>
+        )}
+      </div>
       <p className="text-xs text-fg-muted mb-3">
         Order the buttons left to right. Extras collapse into the More menu on narrow screens.
         Custom is always kept.
@@ -272,27 +322,44 @@ const ToolbarButtonsSection: React.FC<{
             }`}
           >
             <div className="w-full min-h-12 flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-muted rounded-t-lg">
-              <span className="text-base leading-none" aria-hidden="true">{def.icon}</span>
-              {custom ? (
-                <button
-                  type="button"
-                  onClick={toggleEdit}
-                  title={expanded ? 'Finish editing' : 'Edit button'}
-                  className="flex-1 min-w-0 truncate text-left text-sm font-semibold text-fg-muted transition-colors hover:text-fg"
-                >
-                  {def.label}
-                </button>
+              {bulkMode && !isLocked ? (
+                <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(def.id)}
+                    onChange={() => toggleSelect(def.id)}
+                    className="h-4 w-4 shrink-0 accent-[var(--accent)]"
+                  />
+                  <span className="text-base leading-none" aria-hidden="true">{def.icon}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg-muted">
+                    {def.label}
+                  </span>
+                </label>
               ) : (
-                <span className="text-sm font-semibold text-fg-muted truncate flex-1 min-w-0">
-                  {def.label}
-                </span>
+                <>
+                  <span className="text-base leading-none" aria-hidden="true">{def.icon}</span>
+                  {custom ? (
+                    <button
+                      type="button"
+                      onClick={toggleEdit}
+                      title={expanded ? 'Finish editing' : 'Edit button'}
+                      className="flex-1 min-w-0 truncate text-left text-sm font-semibold text-fg-muted transition-colors hover:text-fg"
+                    >
+                      {def.label}
+                    </button>
+                  ) : (
+                    <span className="text-sm font-semibold text-fg-muted truncate flex-1 min-w-0">
+                      {def.label}
+                    </span>
+                  )}
+                </>
               )}
               {def.isCustom && (
                 <span className="text-[10px] font-bold uppercase tracking-wider text-accent shrink-0">
                   Custom
                 </span>
               )}
-              {custom && (
+              {custom && !bulkMode && (
                 <button
                   type="button"
                   onClick={toggleEdit}
@@ -301,24 +368,28 @@ const ToolbarButtonsSection: React.FC<{
                   {expanded ? 'Done' : 'Edit'}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => move(def.id, -1)}
-                disabled={index === 0}
-                title="Move left"
-                className="p-1.5 rounded-md text-fg-muted hover:bg-hover disabled:opacity-30"
-              >
-                <ArrowUp className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => move(def.id, 1)}
-                disabled={index === buttons.length - 1}
-                title="Move right"
-                className="p-1.5 rounded-md text-fg-muted hover:bg-hover disabled:opacity-30"
-              >
-                <ArrowDown className="w-4 h-4" />
-              </button>
+              {!bulkMode && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => move(def.id, -1)}
+                    disabled={index === 0}
+                    title="Move left"
+                    className="p-1.5 rounded-md text-fg-muted hover:bg-hover disabled:opacity-30"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => move(def.id, 1)}
+                    disabled={index === buttons.length - 1}
+                    title="Move right"
+                    className="p-1.5 rounded-md text-fg-muted hover:bg-hover disabled:opacity-30"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </button>
+                </>
+              )}
               {isLocked ? (
                 <span
                   title="Always kept on the toolbar"
@@ -416,6 +487,37 @@ const ToolbarButtonsSection: React.FC<{
           </div>
         );
       })}
+      {bulkMode && (
+        <div className="mt-1 mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-fg-muted">
+            {selectedIds.length === 0
+              ? 'Tick buttons to remove'
+              : `${selectedIds.length} selected`}
+          </span>
+          <span className="flex-1" />
+          <button
+            type="button"
+            onClick={exitBulkMode}
+            className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={selectedIds.length === 0}
+            onClick={() => setPendingBulk(true)}
+            className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-opacity disabled:opacity-40 ${
+              selectedCustoms.length > 0
+                ? 'border border-danger/40 bg-danger text-white hover:opacity-90'
+                : 'bg-accent text-accent-fg hover:opacity-90'
+            }`}
+          >
+            {selectedCustoms.length > 0
+              ? `Delete (${selectedIds.length})`
+              : `Remove (${selectedIds.length})`}
+          </button>
+        </div>
+      )}
       <div className="mt-4 border-t border-border pt-3">
         <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
           Add buttons
@@ -514,6 +616,38 @@ const ToolbarButtonsSection: React.FC<{
         }}
         onCancel={() => setPendingReset(false)}
       />
+      {(() => {
+        if (!pendingBulk || selectedButtons.length === 0) return null;
+        const hasCustoms = selectedCustoms.length > 0;
+        const names = (list: typeof selectedButtons) => {
+          const quoted = list.map((b) => `"${b.label}"`);
+          return quoted.length <= 3
+            ? quoted.join(', ')
+            : `${quoted.slice(0, 2).join(', ')} and ${quoted.length - 2} others`;
+        };
+        const parts: string[] = [];
+        if (selectedCustoms.length > 0) {
+          parts.push(`${names(selectedCustoms)} will be permanently deleted.`);
+        }
+        if (selectedBuiltins.length > 0) {
+          parts.push(`${names(selectedBuiltins)} will be removed and can be re-added below.`);
+        }
+        return (
+          <ConfirmDialog
+            open
+            title={
+              hasCustoms
+                ? `Delete ${selectedButtons.length} buttons?`
+                : `Remove ${selectedButtons.length} buttons?`
+            }
+            message={parts.join(' ')}
+            confirmLabel={hasCustoms ? 'Delete' : 'Remove'}
+            variant={hasCustoms ? 'danger' : 'default'}
+            onConfirm={confirmBulkRemove}
+            onCancel={() => setPendingBulk(false)}
+          />
+        );
+      })()}
       {(() => {
         const pending = buttons.find((b) => b.id === pendingDeleteId);
         if (!pending) return null;

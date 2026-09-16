@@ -120,6 +120,7 @@ export {
   isBuiltinOperation,
   moveToolbarOp,
   prunePromptModelsForToolbar,
+  removeToolbarOps,
   resolvePromptTemplate,
   resolveToolbarButtons,
   toolbarButtonLabel,
