@@ -21,6 +21,8 @@ import type {
   SectionMeta,
   SpellcheckSettings,
   DefaultChatPanel,
+  ToolbarConfig,
+  AIOperation as ToolbarAIOperation,
 } from '../db/characterTypes';
 
 /**
@@ -29,18 +31,10 @@ import type {
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 
 /**
- * AI operation types - expanded for character creation workflow
+ * AI operation types - toolbar ops (builtins + user-created `custom:<id>` ops)
+ * plus the legacy character-creation `ask` op.
  */
-export type AIOperation =
-  | 'expand'
-  | 'rewrite'
-  | 'instruct'
-  | 'ask'
-  | 'shorten'
-  | 'lengthen'
-  | 'vivid'
-  | 'emotion'
-  | 'grammar';
+export type AIOperation = ToolbarAIOperation | 'ask';
 
 /**
  * Context section for AI context (character spec fields)
@@ -85,6 +79,8 @@ export interface CharacterEditorContextValue {
   promptSettings: PromptSettings;
   /** Per-operation model routing for toolbar AI prompts */
   promptModels: PromptModelMap;
+  /** Toolbar button layout + user-created ops */
+  toolbarConfig: ToolbarConfig;
   /** Per-agent endpoint + model override. Missing uses global AIConfig */
   agentModel: PromptModelBinding | undefined;
   /** AI config with the agent model binding applied */

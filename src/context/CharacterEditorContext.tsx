@@ -12,6 +12,7 @@ import type {
   PromptModelBinding,
   PromptModelMap,
   SpellcheckSettings,
+  ToolbarConfig,
 } from '../db/characterTypes';
 import {
   DEFAULT_SETTINGS,
@@ -96,6 +97,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [samplerSettings, setSamplerSettings] = useState<SamplerSettings>(DEFAULT_SETTINGS.sampler);
   const [promptSettings, setPromptSettings] = useState<PromptSettings>(DEFAULT_SETTINGS.prompts);
   const [promptModels, setPromptModels] = useState<PromptModelMap>({});
+  const [toolbarConfig, setToolbarConfig] = useState<ToolbarConfig>(DEFAULT_SETTINGS.toolbar);
   const [agentModel, setAgentModel] = useState<PromptModelBinding | undefined>(undefined);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isOpeningHistory, setIsOpeningHistory] = useState(false);
@@ -317,11 +319,12 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   // Function to reload settings from database
   const reloadSettings = useCallback(async () => {
     try {
-      const [config, sampler, prompts, models, agentBinding, settings, secOrder, secHidden, spell, contextIds] = await Promise.all([
+      const [config, sampler, prompts, models, toolbar, agentBinding, settings, secOrder, secHidden, spell, contextIds] = await Promise.all([
         characterSettingsService.getAISettings(),
         characterSettingsService.getSamplerSettings(),
         characterSettingsService.getPromptSettings(),
         characterSettingsService.getPromptModels(),
+        characterSettingsService.getToolbarConfig(),
         characterSettingsService.getAgentModel(),
         characterSettingsService.getSettings(),
         characterSettingsService.getSectionOrder(),
@@ -333,6 +336,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setSamplerSettings(sampler);
       setPromptSettings(prompts);
       setPromptModels(models);
+      setToolbarConfig(toolbar);
       setAgentModel(agentBinding);
       setFontSizeState(settings.ui.editorFontSize);
       setSectionOrder(secOrder);
@@ -1109,10 +1113,15 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     let newContent: string;
     
     switch (operation) {
+      case 'ask':
+        // For ask operation, just insert at cursor or append
+        newContent = currentValue + '\n\n' + result;
+        break;
       case 'expand':
       case 'rewrite':
       case 'instruct':
-        // Replace selected text with result
+      default:
+        // Replace selected text with result (also covers polish + custom toolbar ops)
         if (textToReplace) {
           // Find the first occurrence of the selected text and replace it
           const index = currentValue.indexOf(textToReplace);
@@ -1143,12 +1152,6 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
           newContent = currentValue + '\n\n' + result;
         }
         break;
-      case 'ask':
-        // For ask operation, just insert at cursor or append
-        newContent = currentValue + '\n\n' + result;
-        break;
-      default:
-        newContent = currentValue;
     }
     
     // Update the spec field
@@ -1178,6 +1181,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     samplerSettings,
     promptSettings,
     promptModels,
+    toolbarConfig,
     agentModel,
     agentAiConfig,
     isHistoryOpen,

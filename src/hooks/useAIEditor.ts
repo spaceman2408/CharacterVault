@@ -4,7 +4,7 @@
  * @module @hooks/useAIEditor
  */
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { EditorView, keymap, ViewUpdate } from '@codemirror/view';
 import { Compartment, EditorState, Prec, Transaction } from '@codemirror/state';
 import type { Extension } from '@codemirror/state';
@@ -17,7 +17,10 @@ import type {
   PromptSettings,
   PromptModelMap,
   AIOperation,
+  ToolbarConfig,
 } from '../db/characterTypes';
+import { normalizeToolbarConfig } from '../db/characterTypes';
+import { CharacterEditorContext } from '../context/characterEditorContextTypes';
 import { resolveConfigForOperation } from '../services/resolveOperationConfig';
 import { aiToolbarPanel, getPanelUpdateFunction } from '../editor/extensions/aiToolbarPanel';
 import type { ToolbarActionConfig } from '../editor/extensions/aiToolbarPanel';
@@ -156,6 +159,8 @@ export interface UseAIEditorOptions {
   promptSettings: PromptSettings;
   /** Per-operation model routing for toolbar AI prompts */
   promptModels?: PromptModelMap;
+  /** Toolbar button layout + user-created ops. Missing = default layout. */
+  toolbarConfig?: ToolbarConfig;
   /**
    * Resolve context chunks for AI operations (may load custom context from IDB).
    * Prefer the async form so vault-local custom context is included.
@@ -252,6 +257,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     samplerSettings,
     promptSettings,
     promptModels,
+    toolbarConfig,
     getContextContent,
     contextSectionIds,
     minHeight = '100px',
@@ -476,6 +482,19 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     promptModelsRef.current = promptModels;
   }, [promptModels]);
 
+  const contextToolbarConfig = React.useContext(CharacterEditorContext)?.toolbarConfig;
+  const normalizedToolbarConfig = useMemo(
+    // Explicit option wins (tests, standalone use); otherwise follow workspace settings.
+    () => normalizeToolbarConfig(toolbarConfig ?? contextToolbarConfig),
+    // Stringified key: callers may pass a fresh object identity each render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(toolbarConfig ?? contextToolbarConfig ?? null)],
+  );
+  const toolbarConfigRef = useRef(normalizedToolbarConfig);
+  useEffect(() => {
+    toolbarConfigRef.current = normalizedToolbarConfig;
+  }, [normalizedToolbarConfig]);
+
   // Use refs to always have access to the latest callbacks/options
   const onImmediateChangeRef = useRef(onImmediateChange);
   const onPersistChangeRef = useRef(onPersistChange ?? onChange);
@@ -611,7 +630,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       const service = new AIService(
         currentConfig,
         samplerSettingsRef.current,
-        promptSettingsRef.current
+        promptSettingsRef.current,
+        toolbarConfigRef.current.customOps
       );
       let context = await Promise.resolve(getContextContent(contextSectionIdsRef.current));
       try {
@@ -712,7 +732,12 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     try {
       // Debug: Log the model being used (may be per-prompt override)
       console.log('[useAIEditor] Using model:', currentConfig.modelId, 'Base URL:', currentConfig.baseUrl);
-      const aiService = new AIService(currentConfig, currentSampler, currentPrompts);
+      const aiService = new AIService(
+        currentConfig,
+        currentSampler,
+        currentPrompts,
+        toolbarConfigRef.current.customOps
+      );
       // Only attach if we are still the active generation (rapid double-click / unmount)
       if (!isCurrentRequest()) {
         aiService.abort();
@@ -740,35 +765,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
       let response;
       try {
-        switch (operation) {
-          case 'expand':
-            response = await aiService.expandText(text, context, undefined, onChunk);
-            break;
-          case 'rewrite':
-            response = await aiService.rewriteText(text, context, undefined, onChunk);
-            break;
-          case 'instruct':
-            if (!customPrompt) throw new Error('No custom prompt provided');
-            response = await aiService.instructText(text, customPrompt, context, undefined, onChunk);
-            break;
-          case 'shorten':
-            response = await aiService.shortenText(text, context, undefined, onChunk);
-            break;
-          case 'lengthen':
-            response = await aiService.lengthenText(text, context, undefined, onChunk);
-            break;
-          case 'vivid':
-            response = await aiService.makeVivid(text, context, undefined, onChunk);
-            break;
-          case 'emotion':
-            response = await aiService.addEmotion(text, context, undefined, onChunk);
-            break;
-          case 'grammar':
-            response = await aiService.fixGrammar(text, context, undefined, onChunk);
-            break;
-          default:
-            throw new Error('Unknown operation');
-        }
+        response = await aiService.runTextOperation(
+          operation,
+          text,
+          context,
+          customPrompt,
+          undefined,
+          onChunk
+        );
       } finally {
         // Drop custom-context body (and other chunks) as soon as the request is built/sent
         context = [];
@@ -1219,6 +1223,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           onFontSizeChange,
           toolbarActions,
           handlePreviewPayload,
+          toolbarConfigRef.current,
         ),
         // Search & Replace functionality
         toolbarSearch(),
@@ -1244,6 +1249,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
     // showPanel registers synchronously, so hook it up without waiting.
     panelUpdateRef.current = getPanelUpdateFunction(view) ?? null;
+    // Panel was just built from the current config; the sync effect below skips it.
+    appliedToolbarKeyRef.current = JSON.stringify(toolbarConfigRef.current);
 
     // Skip auto-focus on touch devices so switching sections/entries does not
     // pop the software keyboard; desktop keeps the previous focus behavior.
@@ -1367,6 +1374,18 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     }
   }, [samplerSettings]);
 
+  const appliedToolbarKeyRef = useRef<string | null>(null);
+  // Push toolbar layout changes to open panels without remounting the editor
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const key = JSON.stringify(normalizedToolbarConfig);
+    if (appliedToolbarKeyRef.current === key) return;
+    appliedToolbarKeyRef.current = key;
+    const panel = view.dom.querySelector('.ai-toolbar-panel') as unknown as { __panel?: { updateToolbarConfig?: (c: ToolbarConfig) => void } } | null;
+    panel?.__panel?.updateToolbarConfig?.(normalizedToolbarConfig);
+  }, [normalizedToolbarConfig]);
+
   // Sync external font size changes to the editor
   useEffect(() => {
     const view = viewRef.current;
@@ -1407,6 +1426,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     selectedText: payloadPreviewText,
     initialOperation: payloadPreviewOperation,
     initialInstruction: payloadPreviewInstruction,
+    toolbarConfig: normalizedToolbarConfig,
     buildPreview: buildPayloadPreview,
   });
 
