@@ -27,7 +27,7 @@
 - **AI Assistant Orion** - Built-in chat to help brainstorm and write character and lorebook content
 - **AI Agent** - Chat that writes the open character card or lorebook (optional review diff before writes land)
 - **AI Creation Studio** - Generate a full card from a concept or tags, with custom prompts and field toggles
-- **AI Toolbar** - Enhance, rephrase, shorten, lengthen, or fix selected text inline
+- **AI Toolbar** - Enhance, rephrase, shorten, lengthen, fix, or run your own custom buttons inline
 - **Lorebook Editor** - Shared editor for card books and vault books: ST fields, content-first layout, AI-generated keys
 - **Recursion Map** - Fullscreen web of unlock paths; inspect entries, edit keys in place, and bulk-edit flags
 - **Creator Notes** - HTML/CSS support with live preview

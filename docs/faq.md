@@ -101,6 +101,8 @@ The AI toolbar sits at the top of every text editor and offers several operation
 | **Emotion** | Enhance emotional expression |
 | **Fix** | Grammar and clarity improvements |
 
+The buttons are customizable: reorder, hide, and re-add them, or create your own custom buttons with their own prompts and models, under **Settings → Prompts → Toolbar Buttons**.
+
 Suggestions preview **in the editor as ghost text** at your selection. Accept (`Ctrl+Enter` / `⌘+Enter`) commits the edit; Reject (`Escape`) keeps the original.
 
 See [Text Editor → AI Toolbar](/features/editor#ai-toolbar) for details.
@@ -314,7 +316,7 @@ The system reserves a 100-token safety margin automatically.
 :::
 
 ::: details Can I customize the AI prompts?
-Yes, all eight toolbar operation prompts are customizable:
+Yes, all built-in toolbar operation prompts are customizable:
 
 1. Open **Settings** in the workspace header
 2. Go to the **Prompts** tab
@@ -323,8 +325,12 @@ Yes, all eight toolbar operation prompts are customizable:
 Each prompt must include `${text}` as a placeholder (the selected or full editor content). The Custom operation also requires `${instruction}`. See [Text Editor → Customizing AI Operation Prompts](/features/editor#customizing-ai-operation-prompts).
 :::
 
+::: details How do I add my own toolbar button?
+On **Settings → Prompts**, the **Toolbar Buttons** card has a **New custom button** form. Give it a label, icon, and color, then write a prompt template containing `${text}`. The button appears at the end of every editor toolbar and can have its own model mapping, just like the built-ins. See [Text Editor → Custom Buttons](/features/editor#custom-buttons).
+:::
+
 ::: details Can each toolbar button use a different model?
-Yes. On **Settings → Prompts**, expand any operation and set **Model for this prompt**. You can keep **Default (AI Config)** or point that op at another endpoint (Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio, custom) and model. Keys are configured on the **AI Config** tab first.
+Yes. On **Settings → Prompts**, expand any operation and set **Model for this prompt**. You can keep **Default (AI Config)** or point that op at another endpoint (Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio, custom) and model. Keys are configured on the **AI Config** tab first. Custom buttons you create get the same picker inside their button editor.
 
 Orion chat and AI Creation Studio always use the global AI Config model. The **Agent** uses the **Agent** mapping at the top of the Prompts tab (Default follows AI Config). Lorebook ✨ key generation follows the **Custom** prompt mapping when set.
 

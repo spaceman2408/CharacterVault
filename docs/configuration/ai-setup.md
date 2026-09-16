@@ -173,14 +173,15 @@ The **Agent** card at the top of the tab uses the same endpoint and model picker
 
 Character Agent and lorebook Agent share this mapping. Sampler, streaming, and reasoning stay global. See [AI Agent](/features/ai-agent#model-for-agent).
 
-Prompts below that are divided into two groups:
+Prompts below that are divided into three groups:
 
+- **Toolbar Buttons** — Reorder, hide, and re-add toolbar buttons, or create custom buttons with their own label, icon, color, prompt, and model mapping. See [Text Editor → AI Toolbar](/features/editor#ai-toolbar).
 - **Primary Operations** — Enhance, Rephrase, Custom. Each prompt is in a collapsible section. Click to expand and edit in a text area.
 - **Polish Operations** — Shorten, Lengthen, Vivid, Emotion, Fix. Same collapsible layout.
 
 ### Prompt text
 
-Every prompt must contain `${text}` — this is where your selected text gets inserted. The Custom (Instruct) prompt also requires `${instruction}` for your typed instruction. Validation errors appear inline if required placeholders are missing.
+Every prompt must contain `${text}` — this is where your selected text gets inserted. The Custom (Instruct) prompt also requires `${instruction}` for your typed instruction. Custom buttons you create need `${text}` in their template as well. Validation errors appear inline if required placeholders are missing.
 
 ### Per-prompt model routing
 

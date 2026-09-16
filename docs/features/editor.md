@@ -8,17 +8,22 @@ AI toolbar operations require an AI provider to be configured. If you haven't se
 
 ## AI Toolbar
 
-A fixed toolbar sits at the top of every editor. When you select text, the AI buttons become active.
+A fixed toolbar sits at the top of every editor. When you select text, the AI buttons become active. Buttons run left to right in your order; when space runs out, extras collapse into **▼ More** automatically. Labels longer than 12 characters are shortened (hover a button for its full name).
 
-### Primary Operations
+### Built-in Buttons
 
-These are always visible in the toolbar:
+The default set covers the common edits:
 
 | Button | Operation | What It Does |
 | :--- | :--- | :--- |
 | ✨ **Enhance** | Expand | Elaborate on the selected text with more detail |
 | 🔄 **Rephrase** | Rewrite | Rewrite the selection while preserving the meaning |
 | 💬 **Custom** | Instruct | Type your own instruction for the AI to apply |
+| ✂️ **Shorten** | Shorten | Condense the selected text |
+| 📄 **Lengthen** | Lengthen | Extend the selection with additional content |
+| 🎨 **Vivid** | Vivid | Apply vivid, descriptive language |
+| ❤️ **Emotion** | Emotion | Enhance emotional expression |
+| 🪄 **Fix** | Grammar | Fix grammar and improve clarity |
 
 The **Custom** button opens an inline text input instead of running immediately. Type your instruction, then press **Enter** or click **Send**. Press **Escape** or **Cancel** to close it without running.
 
@@ -30,17 +35,29 @@ All AI toolbar inputs support multi-line text. Press **Shift+Enter** to insert l
 Custom works even without a selection — you can give instructions about the whole section. For example, type "add more detail" to enhance the entire field at once.
 :::
 
-### Polish Operations
+### Customizing the Toolbar
 
-Click **▼ More** to reveal a dropdown with additional operations:
+Open **Settings** in the workspace header, then the **Prompts** tab. The **Toolbar Buttons** card at the top controls which buttons appear and in what order. Remember to **Save Settings** when done.
 
-| Button | Operation | What It Does |
-| :--- | :--- | :--- |
-| ✂️ **Shorten** | Shorten | Condense the selected text |
-| 📄 **Lengthen** | Lengthen | Extend the selection with additional content |
-| 🎨 **Vivid** | Vivid | Apply vivid, descriptive language |
-| ❤️ **Emotion** | Emotion | Enhance emotional expression |
-| 🪄 **Fix** | Grammar | Fix grammar and improve clarity |
+- **Reorder** — Use the ↑ ↓ arrows on a button to move it left or right.
+- **Remove** — Use the trash can to take a built-in button off the toolbar. Removed built-ins wait under **Add buttons** and can be put back at any time.
+- **Bulk remove** — Click **Select**, tick several buttons (or click their labels), then **Remove** / **Delete** once. One confirmation covers the whole batch.
+- **Reset** — **Reset toolbar to defaults** restores the original set and order. Asks for confirmation first.
+- **Custom can't be removed** — The 💬 **Custom** button is always kept (it shows a lock instead of a trash can), though you can move it.
+
+Removing a button asks for confirmation: deleting a custom button is permanent, while removing a built-in just hides it.
+
+### Custom Buttons
+
+Under **Add buttons** you can also create your own buttons via **New custom button**:
+
+1. Pick a **label** (up to 40 characters), an **icon**, and a **color**.
+2. Write the **prompt template** — it must contain `${text}`, which is replaced with your selection when the button runs.
+3. Click **Add**. The button lands at the end of the toolbar and its editor opens automatically.
+
+Each custom button can use its own AI endpoint and model: expand its editor (**Edit** or click its label) and set **Model for this prompt**, the same picker the built-in prompts use. Edit the label, icon, color, or template any time the same way; delete it with the trash can (with confirmation).
+
+Custom buttons behave like the polish operations: they need a text selection, and their results preview as ghost text with Accept / Reject exactly like the built-ins.
 
 ### AI Operation Results (Ghost Preview)
 
@@ -210,7 +227,7 @@ Tags are cleaned up as you add them. Empty tags are ignored, extra spaces are re
 
 ## Customizing AI Operation Prompts
 
-All eight toolbar operation prompts are customizable, and each one can optionally use a **different AI endpoint and model** than your global AI Config selection.
+All built-in toolbar operation prompts are customizable, and each one can optionally use a **different AI endpoint and model** than your global AI Config selection. Custom buttons you create carry their own prompt template, edited from the button itself (see [Custom Buttons](#custom-buttons)).
 
 1. Open **Settings** in the workspace header.
 2. Go to the **Prompts** tab.
@@ -223,7 +240,7 @@ Prompts must include certain placeholders to work. The system validates these be
 
 | Placeholder | Used In | Purpose |
 | :--- | :--- | :--- |
-| `${text}` | All operations | The selected or full editor content |
+| `${text}` | All operations, including custom buttons | The selected or full editor content |
 | `${instruction}` | Custom only | The custom instruction text |
 
 ::: info What is a placeholder?
@@ -233,7 +250,7 @@ A **placeholder** is a special token that gets replaced with actual content befo
 **Example:** In the template `Enhance the following text: ${text}`, the placeholder is replaced with your selection when you click **Enhance**.
 :::
 
-**Primary prompts** (Enhance, Rephrase) need `${text}`. **Polish prompts** (Shorten, Lengthen, Vivid, Emotion, Fix) also need `${text}`.
+**Primary prompts** (Enhance, Rephrase) need `${text}`. **Polish prompts** (Shorten, Lengthen, Vivid, Emotion, Fix) also need `${text}`. **Custom button prompts** need `${text}` as well — validated when the button is created and on save.
 
 **Custom** is special — it needs both `${instruction}` and `${text}`. When the editor has content, your template is used. When it's empty, the system swaps in a generation template instead.
 
@@ -286,6 +303,7 @@ Collapsed headers show `→ model-id` when a mapping is active.
 | Rephrase | rewrite |
 | Custom | instruct (also used by lorebook AI key generation) |
 | Shorten / Lengthen / Vivid / Emotion / Fix | matching polish op |
+| Your custom buttons | set in each button's editor, same picker |
 
 **Not overridden by these mappings:** Orion chat and AI Creation Studio always use the global AI Config model. Streaming, reasoning, and sampler settings stay global.
 
