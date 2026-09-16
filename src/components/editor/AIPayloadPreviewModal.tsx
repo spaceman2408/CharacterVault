@@ -6,19 +6,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Braces, Check, Copy, MessageSquareText, X } from 'lucide-react';
-import type { AIOperation } from '../../db/characterTypes';
+import type { AIOperation, ToolbarConfig } from '../../db/characterTypes';
+import { resolveToolbarButtons } from '../../services/toolbarConfig';
 import type { AIRequestPreview } from '../../services/AIService';
-
-const OPERATION_OPTIONS: { id: AIOperation; label: string }[] = [
-  { id: 'expand', label: 'Enhance' },
-  { id: 'rewrite', label: 'Rephrase' },
-  { id: 'instruct', label: 'Custom' },
-  { id: 'shorten', label: 'Shorten' },
-  { id: 'lengthen', label: 'Lengthen' },
-  { id: 'vivid', label: 'Vivid' },
-  { id: 'emotion', label: 'Emotion' },
-  { id: 'grammar', label: 'Fix' },
-];
 
 function formatTokenCount(n: number): string {
   if (n < 1000) return `~${n}`;
@@ -35,6 +25,8 @@ export interface AIPayloadPreviewModalProps {
   initialOperation: AIOperation;
   /** Prefill for Custom instruction */
   initialInstruction?: string;
+  /** Toolbar layout for the operation list. Missing = default layout. */
+  toolbarConfig?: ToolbarConfig;
   /**
    * Build a preflight preview for the given op / instruction.
    * Return null when the request cannot be built (e.g. empty Custom instruction).
@@ -55,12 +47,14 @@ function AIPayloadPreviewModalBody({
   selectedText,
   initialOperation,
   initialInstruction,
+  toolbarConfig,
   buildPreview,
 }: {
   onClose: () => void;
   selectedText: string;
   initialOperation: AIOperation;
   initialInstruction: string;
+  toolbarConfig?: ToolbarConfig;
   buildPreview: (
     operation: AIOperation,
     instruction?: string
@@ -71,6 +65,7 @@ function AIPayloadPreviewModalBody({
   const [copied, setCopied] = useState(false);
   const [preview, setPreview] = useState<AIRequestPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
+  const operationOptions = resolveToolbarButtons(toolbarConfig);
 
   const previewError =
     operation === 'instruct' && !instruction.trim()
@@ -165,7 +160,7 @@ function AIPayloadPreviewModalBody({
             Operation
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {OPERATION_OPTIONS.map((op) => {
+            {operationOptions.map((op) => {
               const active = operation === op.id;
               return (
                 <button
@@ -306,6 +301,7 @@ export function AIPayloadPreviewModal({
   selectedText,
   initialOperation,
   initialInstruction = '',
+  toolbarConfig,
   buildPreview,
 }: AIPayloadPreviewModalProps): React.ReactElement | null {
   useEffect(() => {
@@ -341,6 +337,7 @@ export function AIPayloadPreviewModal({
         selectedText={selectedText}
         initialOperation={initialOperation}
         initialInstruction={initialInstruction}
+        toolbarConfig={toolbarConfig}
         buildPreview={buildPreview}
       />
     </div>,
