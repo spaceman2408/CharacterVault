@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_SETTINGS,
   DEFAULT_STUDIO_SETTINGS,
+  normalizeToolbarConfig,
   type CharacterVaultSettings,
 } from '../../src/db/characterTypes';
 import {
@@ -47,6 +48,7 @@ function makeDraft(): BackupDraftTarget {
     sampler: { ...DEFAULT_SETTINGS.sampler },
     prompts: { ...DEFAULT_SETTINGS.prompts },
     promptModels: {},
+    toolbar: normalizeToolbarConfig(undefined),
     agentModel: undefined,
     showLuckyVortex: true,
     markdownImageOpenLinks: true,
@@ -177,6 +179,67 @@ describe('applyBackupToDraft', () => {
     expect(next.spellcheckIgnoredWords).toEqual(['foo']);
     expect(next.studioFavorites).toEqual([{ category: 'mood', tag: 'brooding' }]);
     expect(next.agentModel).toBeUndefined();
+  });
+});
+
+describe('toolbar backup', () => {
+  const pirate = { id: 'custom:pirate', label: 'Pirate', icon: '🏴', prompt: 'Yarr: ${text}' };
+
+  function makeSavedWithToolbar() {
+    const saved = makeSaved();
+    saved.toolbar = { order: ['instruct', 'custom:pirate', 'expand'], customOps: [pirate] };
+    saved.promptModels = {
+      'custom:pirate': { baseUrl: 'https://example.com/v1', modelId: 'model-a' },
+    };
+    return saved;
+  }
+
+  it('round-trips custom buttons, order, and bindings', () => {
+    const built = buildSettingsBackup(makeSavedWithToolbar(), true);
+    const parsed = parseSettingsBackup(JSON.parse(JSON.stringify(built)));
+    expect(parsed.settings.toolbar.order).toEqual(['instruct', 'custom:pirate', 'expand']);
+    expect(parsed.settings.toolbar.customOps).toEqual([pirate]);
+    expect(parsed.settings.promptModels['custom:pirate']).toEqual({
+      baseUrl: 'https://example.com/v1',
+      modelId: 'model-a',
+    });
+    const next = applyBackupToDraft(makeDraft(), parsed);
+    expect(next.toolbar.order).toContain('custom:pirate');
+    expect(next.toolbar.customOps).toEqual([pirate]);
+  });
+
+  it('falls back to defaults when the backup has no toolbar', () => {
+    const file = parseSettingsBackup({
+      kind: 'charactervault-settings',
+      version: 1,
+      settings: {},
+    });
+    expect(file.settings.toolbar.order).toContain('instruct');
+    expect(file.settings.toolbar.customOps).toEqual([]);
+  });
+
+  it('drops malformed customs and prunes orphaned bindings', () => {
+    const file = parseSettingsBackup({
+      kind: 'charactervault-settings',
+      version: 1,
+      settings: {
+        toolbar: {
+          order: ['instruct', 'custom:bad', 'custom:pirate'],
+          customOps: [
+            { id: 'custom:bad', label: 'Bad', icon: '✨', prompt: 'missing placeholder' },
+            pirate,
+          ],
+        },
+        promptModels: {
+          'custom:bad': { baseUrl: 'https://example.com/v1', modelId: 'm' },
+          'custom:pirate': { baseUrl: 'https://example.com/v1', modelId: 'm' },
+        },
+      },
+    });
+    expect(file.settings.toolbar.customOps).toEqual([pirate]);
+    expect(file.settings.toolbar.order).not.toContain('custom:bad');
+    expect(file.settings.promptModels['custom:bad']).toBeUndefined();
+    expect(file.settings.promptModels['custom:pirate']).toBeDefined();
   });
 });
 

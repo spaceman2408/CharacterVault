@@ -14,6 +14,7 @@ import type {
   CharacterSection,
   DefaultChatPanel,
   StudioSettings,
+  ToolbarConfig,
 } from '../../db/characterTypes';
 import type { ModelProvider } from '../../services/providers';
 import type { StudioFavoriteRef } from '../../services/SettingsBackupService';
@@ -32,6 +33,7 @@ export interface SettingsDraft {
   sampler: SamplerSettings;
   prompts: PromptSettings;
   promptModels: PromptModelMap;
+  toolbar: ToolbarConfig;
   agentModel: PromptModelBinding | undefined;
   showLuckyVortex: boolean;
   markdownImageOpenLinks: boolean;

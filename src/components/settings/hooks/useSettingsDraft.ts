@@ -20,6 +20,7 @@ import {
   DEFAULT_REQUIRE_AGENT_REVIEW,
   DEFAULT_STUDIO_SETTINGS,
   normalizeStudioSettings,
+  normalizeToolbarConfig,
   clampContextLength,
   normalizeDefaultChatPanel,
 } from '../../../db/characterTypes';
@@ -28,6 +29,7 @@ import {
   persistableAIConfig,
 } from '../../../services/CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from '../../../services/resolveOperationConfig';
+import { prunePromptModelsForToolbar, validateToolbarConfig } from '../../../services/toolbarConfig';
 import { validateStudioPrompts } from '../../../pages/ai-creation-studio/generationPrompts';
 import {
   getFavoriteTags,
@@ -46,6 +48,7 @@ export function createDefaultDraft(): SettingsDraft {
     sampler: { ...DEFAULT_SETTINGS.sampler },
     prompts: { ...DEFAULT_SETTINGS.prompts },
     promptModels: {},
+    toolbar: normalizeToolbarConfig(DEFAULT_SETTINGS.toolbar),
     agentModel: undefined,
     showLuckyVortex: true,
     markdownImageOpenLinks: DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
@@ -195,12 +198,13 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     const loadSettings = async () => {
       setIsLoading(true);
       try {
-        const [config, sampler, prompts, promptModels, agentModel, fullSettings, secOrder, secHidden, spell, studio, contextIds] =
+        const [config, sampler, prompts, promptModels, toolbar, agentModel, fullSettings, secOrder, secHidden, spell, studio, contextIds] =
           await Promise.all([
             characterSettingsService.getAISettings(),
             characterSettingsService.getSamplerSettings(),
             characterSettingsService.getPromptSettings(),
             characterSettingsService.getPromptModels(),
+            characterSettingsService.getToolbarConfig(),
             characterSettingsService.getAgentModel(),
             characterSettingsService.getSettings(),
             characterSettingsService.getSectionOrder(),
@@ -220,6 +224,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           sampler: mergeLoadedSampler(sampler),
           prompts,
           promptModels,
+          toolbar,
           agentModel,
           showLuckyVortex: fullSettings.ui?.showLuckyVortex ?? true,
           markdownImageOpenLinks:
@@ -271,6 +276,13 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       return;
     }
 
+    const toolbarError = validateToolbarConfig(draft.toolbar);
+    if (toolbarError) {
+      addToast('error', toolbarError);
+      setIsSaving(false);
+      return;
+    }
+
     const agentModelError = validateAgentModel(draft.agentModel);
     if (agentModelError) {
       addToast('error', agentModelError);
@@ -293,7 +305,11 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       };
 
       const normalizedBaseUrl = normalizeBaseUrl(draft.ai.baseUrl);
-      const promptModels = normalizePromptModelMap(draft.promptModels);
+      const toolbar = normalizeToolbarConfig(draft.toolbar);
+      const promptModels = prunePromptModelsForToolbar(
+        normalizePromptModelMap(draft.promptModels),
+        toolbar,
+      );
       const agentModel = normalizeModelBinding(draft.agentModel) ?? null;
 
       await characterSettingsService.saveAllAISettings(
@@ -316,6 +332,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         draft.prompts,
         promptModels,
         agentModel,
+        toolbar,
       );
 
       const currentSettings = await characterSettingsService.getSettings();

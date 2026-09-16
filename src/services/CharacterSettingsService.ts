@@ -12,6 +12,7 @@ import type {
   PromptModelMap,
   SpellcheckSettings,
   StudioSettings,
+  ToolbarConfig,
 } from '../db/characterTypes';
 import { DEFAULT_SETTINGS } from '../db/characterTypes';
 import {
@@ -21,6 +22,7 @@ import {
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_STUDIO_SETTINGS,
   normalizeStudioSettings,
+  normalizeToolbarConfig,
 } from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
 import type { CharacterSection } from '../db/characterTypes';
@@ -330,6 +332,26 @@ export class CharacterSettingsService {
   }
 
   /**
+   * Get toolbar button layout + user-created ops
+   */
+  async getToolbarConfig(): Promise<ToolbarConfig> {
+    const settings = await this.getSettings();
+    return normalizeToolbarConfig(settings.toolbar);
+  }
+
+  /**
+   * Save toolbar button layout + user-created ops
+   */
+  async saveToolbarConfig(toolbar: ToolbarConfig): Promise<void> {
+    const settings = await this.getSettings();
+    const updatedSettings: CharacterVaultSettings = {
+      ...settings,
+      toolbar: normalizeToolbarConfig(toolbar),
+    };
+    await characterDb.settings.put(updatedSettings);
+  }
+
+  /**
    * Save all AI-related settings at once (avoids race conditions)
    */
   async saveAllAISettings(
@@ -338,6 +360,7 @@ export class CharacterSettingsService {
     prompts: PromptSettings,
     promptModels?: PromptModelMap,
     agentModel?: PromptModelBinding | null,
+    toolbar?: ToolbarConfig,
   ): Promise<void> {
     const settings = await this.getSettings();
     
@@ -360,6 +383,10 @@ export class CharacterSettingsService {
         agentModel !== undefined
           ? normalizeModelBinding(agentModel)
           : normalizeModelBinding(settings.agentModel),
+      toolbar:
+        toolbar !== undefined
+          ? normalizeToolbarConfig(toolbar)
+          : normalizeToolbarConfig(settings.toolbar),
     };
     
     await characterDb.settings.put(updatedSettings);
@@ -390,6 +417,7 @@ export class CharacterSettingsService {
       sampler: DEFAULT_SETTINGS.sampler,
       prompts: DEFAULT_SETTINGS.prompts,
       promptModels: {},
+      toolbar: normalizeToolbarConfig(DEFAULT_SETTINGS.toolbar),
       contextSectionIds: [],
       studio: {
         enabledFields: { ...DEFAULT_STUDIO_SETTINGS.enabledFields },
@@ -481,6 +509,8 @@ export class CharacterSettingsService {
       // Keep prompt→model routing (not sensitive; keys live under ai)
       promptModels: normalizePromptModelMap(settings.promptModels),
       agentModel: normalizeModelBinding(settings.agentModel),
+      // Keep toolbar layout (not sensitive)
+      toolbar: normalizeToolbarConfig(settings.toolbar),
     };
     
     await characterDb.settings.put(updatedSettings);

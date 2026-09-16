@@ -8,6 +8,7 @@ import type {
   PromptSettings,
   SamplerSettings,
   StudioSettings,
+  ToolbarConfig,
 } from '../db/characterTypes';
 import {
   CHARACTER_SECTIONS,
@@ -18,9 +19,11 @@ import {
   clampContextLength,
   normalizeDefaultChatPanel,
   normalizeStudioSettings,
+  normalizeToolbarConfig,
 } from '../db/characterTypes';
 import { persistableAIConfig } from './CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from './resolveOperationConfig';
+import { prunePromptModelsForToolbar } from './toolbarConfig';
 
 export const SETTINGS_BACKUP_KIND = 'charactervault-settings';
 export const SETTINGS_BACKUP_VERSION = 1;
@@ -35,6 +38,7 @@ export interface SettingsBackupData {
   sampler: SamplerSettings;
   prompts: PromptSettings;
   promptModels: PromptModelMap;
+  toolbar: ToolbarConfig;
   agentModel: PromptModelBinding | null;
   studio: StudioSettings;
   studioFavorites: StudioFavoriteRef[];
@@ -212,16 +216,21 @@ function normalizeBackupUi(value: unknown): CharacterVaultSettings['ui'] {
 
 export function normalizeBackupData(value: unknown): SettingsBackupData {
   const raw = isRecord(value) ? value : {};
+  const toolbar = normalizeToolbarConfig(raw.toolbar);
   return {
     ai: normalizeBackupAI(raw.ai),
     sampler: normalizeBackupSampler(raw.sampler),
     prompts: normalizeBackupPrompts(raw.prompts),
-    promptModels: normalizePromptModelMap(
-      isRecord(raw.promptModels) ? (raw.promptModels as PromptModelMap) : undefined
+    promptModels: prunePromptModelsForToolbar(
+      normalizePromptModelMap(
+        isRecord(raw.promptModels) ? (raw.promptModels as PromptModelMap) : undefined,
+      ),
+      toolbar,
     ),
     agentModel: normalizeModelBinding(
       isRecord(raw.agentModel) ? (raw.agentModel as unknown as PromptModelBinding) : undefined
     ) ?? null,
+    toolbar,
     studio: normalizeStudioSettings(isRecord(raw.studio) ? raw.studio : undefined),
     studioFavorites: normalizeFavoriteRefs(raw.studioFavorites),
     ui: normalizeBackupUi(raw.ui),
@@ -245,6 +254,7 @@ export function buildSettingsBackup(
     prompts: saved.prompts,
     promptModels: saved.promptModels,
     agentModel: saved.agentModel,
+    toolbar: saved.toolbar,
     studio: saved.studio,
     studioFavorites: [...favorites],
     ui: saved.ui,
@@ -303,6 +313,7 @@ export interface BackupDraftTarget {
   sampler: SamplerSettings;
   prompts: PromptSettings;
   promptModels: PromptModelMap;
+  toolbar: ToolbarConfig;
   agentModel: PromptModelBinding | undefined;
   showLuckyVortex: boolean;
   markdownImageOpenLinks: boolean;
@@ -337,6 +348,7 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
     sampler: { ...settings.sampler },
     prompts: { ...settings.prompts },
     promptModels: { ...settings.promptModels },
+    toolbar: normalizeToolbarConfig(settings.toolbar),
     agentModel: settings.agentModel ?? undefined,
     showLuckyVortex: settings.ui.showLuckyVortex ?? true,
     markdownImageOpenLinks: settings.ui.markdownImageOpenLinks ?? true,

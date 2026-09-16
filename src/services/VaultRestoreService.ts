@@ -221,6 +221,7 @@ export class VaultRestoreService {
         data.prompts,
         data.promptModels,
         data.agentModel,
+        data.toolbar,
       );
     } else {
       const current = await characterSettingsService.getAISettings();
@@ -234,6 +235,7 @@ export class VaultRestoreService {
         data.prompts,
         data.promptModels,
         data.agentModel,
+        data.toolbar,
       );
     }
 
