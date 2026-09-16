@@ -183,7 +183,7 @@ describe('applyBackupToDraft', () => {
 });
 
 describe('toolbar backup', () => {
-  const pirate = { id: 'custom:pirate', label: 'Pirate', icon: '🏴', prompt: 'Yarr: ${text}' };
+  const pirate = { id: 'custom:pirate', label: 'Pirate', icon: '🏴', color: '#0891b2', prompt: 'Yarr: ${text}' };
 
   function makeSavedWithToolbar() {
     const saved = makeSaved();

@@ -24,13 +24,14 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.6.1 staging 2';
+export const STAGING_VERSION = 'v1.6.1 staging 3';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
   'AI toolbar buttons are now customizable in Settings, Prompts tab, Toolbar Buttons section.',
   'Reorder, hide, or re-add built-in buttons; extras collapse into the More menu.',
   'Create custom buttons with your own label, icon, prompt text, and model.',
+  'Custom buttons can now pick their own color.',
   'Deleting a button or resetting the toolbar now asks for confirmation.',
   'Editor: current line highlights only when nothing is selected.',
   'Editor search (Ctrl+F) opens with the selection prefilled; Ctrl+H jumps to Replace.',

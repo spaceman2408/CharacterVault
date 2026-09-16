@@ -18,11 +18,11 @@ describe('normalizeToolbarConfig', () => {
   it('keeps a valid custom layout', () => {
     const config = normalizeToolbarConfig({
       order: ['rewrite', 'instruct', 'custom:abc', 'expand'],
-      customOps: [{ id: 'custom:abc', label: 'Pirate', icon: '🏴', prompt: 'Argh: ${text}' }],
+      customOps: [{ id: 'custom:abc', label: 'Pirate', icon: '🏴', color: '#0891b2', prompt: 'Argh: ${text}' }],
     });
     expect(config.order).toEqual(['rewrite', 'instruct', 'custom:abc', 'expand']);
     expect(config.customOps).toHaveLength(1);
-    expect(config.customOps[0]).toMatchObject({ id: 'custom:abc', label: 'Pirate' });
+    expect(config.customOps[0]).toMatchObject({ id: 'custom:abc', label: 'Pirate', color: '#0891b2' });
   });
 
   it('pins instruct when missing', () => {
@@ -105,6 +105,22 @@ describe('normalizeToolbarConfig', () => {
       customOps: [{ id: 'custom:ic', label: '  Spaced  ', icon: '', prompt: 'Do ${text}' }],
     });
     expect(config.customOps[0]).toMatchObject({ label: 'Spaced', icon: '✨' });
+  });
+
+  it('keeps palette colors and defaults anything else', () => {
+    const config = normalizeToolbarConfig({
+      order: ['instruct', 'custom:ok', 'custom:weird', 'custom:missing'],
+      customOps: [
+        { id: 'custom:ok', label: 'Ok', icon: '✨', color: '#0891b2', prompt: 'Do ${text}' },
+        { id: 'custom:weird', label: 'Weird', icon: '✨', color: 'red', prompt: 'Do ${text}' },
+        { id: 'custom:missing', label: 'Missing', icon: '✨', prompt: 'Do ${text}' },
+      ],
+    });
+    expect(config.customOps.map((op) => op.color)).toEqual([
+      '#0891b2',
+      '#5b5270',
+      '#5b5270',
+    ]);
   });
 
   it('does not mutate the default config', () => {

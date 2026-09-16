@@ -37,9 +37,6 @@ export const BUILTIN_TOOLBAR_BUTTONS: Record<BuiltinOperation, ToolbarButtonDef>
   grammar: { id: 'grammar', label: 'Fix', icon: '🪄', color: 'var(--ai-toolbar-accent-neutral)', isCustom: false },
 };
 
-/** Default chrome for user-created buttons. */
-export const CUSTOM_BUTTON_COLOR = 'var(--ai-toolbar-accent-neutral)';
-
 /** Icon choices offered when creating a custom button. */
 export const TOOLBAR_ICON_PALETTE: string[] = [
   '✨', '🔄', '💬', '✂️', '📄', '🎨', '❤️', '🪄',
@@ -71,7 +68,7 @@ export function resolveToolbarButtons(config: ToolbarConfig | undefined): Toolba
         id: custom.id,
         label: custom.label,
         icon: custom.icon,
-        color: CUSTOM_BUTTON_COLOR,
+        color: custom.color,
         isCustom: true,
       });
     }

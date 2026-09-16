@@ -115,7 +115,6 @@ export {
 } from './chatHistoryMap';
 export {
   BUILTIN_TOOLBAR_BUTTONS,
-  CUSTOM_BUTTON_COLOR,
   TOOLBAR_ICON_PALETTE,
   createCustomOpId,
   isBuiltinOperation,

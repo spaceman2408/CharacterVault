@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, ArrowDown, ArrowUp, Bot, ChevronDown, ChevronUp, Lock, MessageSquare, Plus, RotateCcw, SlidersHorizontal, Sparkles, Target, Trash2 } from 'lucide-react';
 import type { CustomToolbarOp, PromptModelBinding, PromptSettings, ToolbarConfig } from '../../../db/characterTypes';
-import { normalizeToolbarConfig } from '../../../db/characterTypes';
+import { DEFAULT_CUSTOM_BUTTON_COLOR, TOOLBAR_COLOR_PALETTE, normalizeToolbarConfig } from '../../../db/characterTypes';
 import {
   BUILTIN_TOOLBAR_BUTTONS,
   TOOLBAR_ICON_PALETTE,
@@ -134,6 +134,27 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   );
 };
 
+const ColorSelect: React.FC<{ value: string; onChange: (color: string) => void; label: string }> = ({
+  value,
+  onChange,
+  label,
+}) => (
+  <select
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    aria-label={label}
+    title={label}
+    style={{ color: value }}
+    className="px-3 py-2 border border-border-strong rounded-lg bg-surface text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50"
+  >
+    {TOOLBAR_COLOR_PALETTE.map((entry) => (
+      <option key={entry.value} value={entry.value} style={{ color: entry.value }}>
+        ● {entry.label}
+      </option>
+    ))}
+  </select>
+);
+
 const ToolbarButtonsSection: React.FC<{
   draft: SettingsTabProps['draft'];
   setDraft: SettingsTabProps['setDraft'];
@@ -145,6 +166,7 @@ const ToolbarButtonsSection: React.FC<{
   const [expandedCustom, setExpandedCustom] = useState<Record<string, boolean>>({});
   const [newLabel, setNewLabel] = useState('');
   const [newIcon, setNewIcon] = useState(TOOLBAR_ICON_PALETTE[0]);
+  const [newColor, setNewColor] = useState(DEFAULT_CUSTOM_BUTTON_COLOR);
   const [newPrompt, setNewPrompt] = useState('');
   const [newError, setNewError] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -209,11 +231,12 @@ const ToolbarButtonsSection: React.FC<{
       order: [...toolbar.order, id],
       customOps: [
         ...toolbar.customOps,
-        { id, label: newLabel.trim(), icon: newIcon, prompt: newPrompt },
+        { id, label: newLabel.trim(), icon: newIcon, color: newColor, prompt: newPrompt },
       ],
     });
     setExpandedCustom((prev) => ({ ...prev, [id]: true }));
     setNewLabel('');
+    setNewColor(DEFAULT_CUSTOM_BUTTON_COLOR);
     setNewIcon(TOOLBAR_ICON_PALETTE[0]);
     setNewPrompt('');
     setNewError(null);
@@ -269,11 +292,6 @@ const ToolbarButtonsSection: React.FC<{
                   Custom
                 </span>
               )}
-              {isLocked && (
-                <span title="Always kept on the toolbar" className="inline-flex shrink-0">
-                  <Lock className="w-3.5 h-3.5 text-fg-muted" />
-                </span>
-              )}
               {custom && (
                 <button
                   type="button"
@@ -301,7 +319,14 @@ const ToolbarButtonsSection: React.FC<{
               >
                 <ArrowDown className="w-4 h-4" />
               </button>
-              {!isLocked && (
+              {isLocked ? (
+                <span
+                  title="Always kept on the toolbar"
+                  className="inline-flex shrink-0 p-1.5"
+                >
+                  <Lock className="w-4 h-4 text-fg-muted" />
+                </span>
+              ) : (
                 <button
                   type="button"
                   onClick={() => setPendingDeleteId(def.id)}
@@ -342,6 +367,16 @@ const ToolbarButtonsSection: React.FC<{
                       ))}
                     </select>
                   </label>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+                    Color
+                  </span>
+                  <ColorSelect
+                    value={custom.color}
+                    onChange={(color) => patchCustom(custom.id, { color })}
+                    label="Button color"
+                  />
                 </div>
                 <div>
                   <textarea
@@ -408,18 +443,20 @@ const ToolbarButtonsSection: React.FC<{
         <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
           New custom button
         </div>
-        <div className="flex flex-wrap gap-2 mb-2">
+        <div className="flex flex-wrap items-end gap-2 mb-2">
           <input
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
             maxLength={40}
             placeholder="Label"
+            aria-label="Button label"
             className="px-3 py-2 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 min-w-32 flex-1"
           />
           <select
             value={newIcon}
             onChange={(e) => setNewIcon(e.target.value)}
             title="Icon"
+            aria-label="Button icon"
             className="px-3 py-2 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
           >
             {TOOLBAR_ICON_PALETTE.map((icon) => (
@@ -428,6 +465,7 @@ const ToolbarButtonsSection: React.FC<{
               </option>
             ))}
           </select>
+          <ColorSelect value={newColor} onChange={setNewColor} label="Button color" />
           <button
             type="button"
             onClick={addCustom}

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, type CustomToolbarOp } from '../../src/db/characterTypes';
+import { DEFAULT_SETTINGS, TOOLBAR_COLOR_PALETTE, type CustomToolbarOp } from '../../src/db/characterTypes';
 import {
   BUILTIN_TOOLBAR_BUTTONS,
-  CUSTOM_BUTTON_COLOR,
+  TOOLBAR_ICON_PALETTE,
   createCustomOpId,
   isBuiltinOperation,
   moveToolbarOp,
@@ -18,8 +18,19 @@ const PIRATE: CustomToolbarOp = {
   id: 'custom:pirate',
   label: 'Pirate',
   icon: '🏴',
+  color: '#0891b2',
   prompt: 'Rewrite like a pirate: ${text}',
 };
+
+describe('toolbar palettes', () => {
+  it('offers non-empty icon and color choices', () => {
+    expect(TOOLBAR_ICON_PALETTE.length).toBeGreaterThan(0);
+    expect(TOOLBAR_COLOR_PALETTE.length).toBeGreaterThan(0);
+    expect(new Set(TOOLBAR_COLOR_PALETTE.map((c) => c.value)).size).toBe(
+      TOOLBAR_COLOR_PALETTE.length,
+    );
+  });
+});
 
 describe('isBuiltinOperation', () => {
   it('recognizes builtins and rejects customs', () => {
@@ -40,14 +51,14 @@ describe('resolveToolbarButtons', () => {
     expect(defs[2]).toMatchObject({ label: 'Custom', isCustom: false });
   });
 
-  it('resolves custom ops with default chrome', () => {
+  it('resolves custom ops with their own chrome', () => {
     const defs = resolveToolbarButtons({ order: ['instruct', PIRATE.id], customOps: [PIRATE] });
     expect(defs).toHaveLength(2);
     expect(defs[1]).toEqual({
       id: PIRATE.id,
       label: 'Pirate',
       icon: '🏴',
-      color: CUSTOM_BUTTON_COLOR,
+      color: '#0891b2',
       isCustom: true,
     });
   });
@@ -130,8 +141,8 @@ describe('validateToolbarConfig', () => {
     const err = validateToolbarConfig({
       order: ['instruct', 'custom:a', 'custom:b'],
       customOps: [
-        { id: 'custom:a', label: 'Pirate', icon: '🏴', prompt: 'Do ${text}' },
-        { id: 'custom:b', label: 'pirate', icon: '🔥', prompt: 'Do ${text}' },
+        { id: 'custom:a', label: 'Pirate', icon: '🏴', color: '#0891b2', prompt: 'Do ${text}' },
+        { id: 'custom:b', label: 'pirate', icon: '🔥', color: 'var(--ai-toolbar-accent-rose)', prompt: 'Do ${text}' },
       ],
     });
     expect(err).toContain('Duplicate button label');
@@ -140,7 +151,7 @@ describe('validateToolbarConfig', () => {
   it('rejects labels colliding with builtins', () => {
     const err = validateToolbarConfig({
       order: ['instruct', 'custom:a'],
-      customOps: [{ id: 'custom:a', label: 'Enhance', icon: '🏴', prompt: 'Do ${text}' }],
+      customOps: [{ id: 'custom:a', label: 'Enhance', icon: '🏴', color: '#0891b2', prompt: 'Do ${text}' }],
     });
     expect(err).toContain('collides with a built-in button label');
   });

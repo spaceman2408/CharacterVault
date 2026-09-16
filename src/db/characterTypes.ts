@@ -671,9 +671,26 @@ export interface CustomToolbarOp {
   id: string;
   label: string;
   icon: string;
+  /** Button chrome; must be a `TOOLBAR_COLOR_PALETTE` value. */
+  color: string;
   /** Template; must contain `${text}`. */
   prompt: string;
 }
+
+/** Swatches offered for custom toolbar buttons. Literal hexes: native dropdown
+ * popups do not resolve CSS vars, so theme vars cannot be used here. */
+export const TOOLBAR_COLOR_PALETTE: { value: string; label: string }[] = [
+  { value: '#7c3aed', label: 'Violet' },
+  { value: '#4f46e5', label: 'Indigo' },
+  { value: '#059669', label: 'Green' },
+  { value: '#d97706', label: 'Amber' },
+  { value: '#0891b2', label: 'Cyan' },
+  { value: '#db2777', label: 'Pink' },
+  { value: '#e11d48', label: 'Rose' },
+  { value: '#5b5270', label: 'Gray' },
+];
+
+export const DEFAULT_CUSTOM_BUTTON_COLOR = '#5b5270';
 
 /**
  * Toolbar layout: a single user-ordered list of op ids (builtins absent from
@@ -713,9 +730,13 @@ function normalizeCustomToolbarOp(value: unknown): CustomToolbarOp | undefined {
   let icon = typeof raw.icon === 'string' ? raw.icon.trim() : '';
   if (!icon) icon = '✨';
   if ([...icon].length > 8) icon = '✨';
+  const rawColor = typeof raw.color === 'string' ? raw.color : '';
+  const color = TOOLBAR_COLOR_PALETTE.some((entry) => entry.value === rawColor)
+    ? rawColor
+    : DEFAULT_CUSTOM_BUTTON_COLOR;
   const prompt = typeof raw.prompt === 'string' ? raw.prompt : '';
   if (!prompt.includes('${text}')) return undefined;
-  return { id, label, icon, prompt };
+  return { id, label, icon, color, prompt };
 }
 
 export function normalizeToolbarConfig(value: unknown): ToolbarConfig {

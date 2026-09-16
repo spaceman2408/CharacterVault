@@ -7,6 +7,7 @@ const PIRATE: CustomToolbarOp = {
   id: 'custom:pirate',
   label: 'Pirate',
   icon: '🏴',
+  color: '#0891b2',
   prompt: 'Rewrite the following like a pirate:\n\n"""\n${text}\n"""',
 };
 
