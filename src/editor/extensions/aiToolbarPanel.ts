@@ -594,6 +594,12 @@ function createToolbarPanel(
 
   utilitiesContainer.appendChild(searchBtn);
 
+  // Non-payload utilities are hidden during Custom-instruct mode while the
+  // payload preflight button stays reachable next to the instruction input.
+  const nonPayloadUtilities: Array<{ el: HTMLElement; showDisplay: string }> = [
+    { el: searchBtn, showDisplay: 'flex' },
+  ];
+
   // Payload preflight button (view request body without sending)
   const payloadBtn = document.createElement('button');
   payloadBtn.className = 'ai-toolbar-btn-payload';
@@ -630,7 +636,7 @@ function createToolbarPanel(
     });
   });
   if (onPreviewPayload) {
-    toolbarContainer.appendChild(payloadBtn);
+    utilitiesContainer.appendChild(payloadBtn);
   }
 
   for (const action of toolbarActions) {
@@ -661,6 +667,7 @@ function createToolbarPanel(
       e.preventDefault();
     });
     utilitiesContainer.appendChild(button);
+    nonPayloadUtilities.push({ el: button, showDisplay: 'flex' });
   }
 
   // Font size control (aA button with slider popup)
@@ -668,6 +675,7 @@ function createToolbarPanel(
   if (onFontSizeChange) {
     const { button: fontSizeBtnContainer, cleanup } = createFontSizeControl(view, onFontSizeChange);
     utilitiesContainer.appendChild(fontSizeBtnContainer);
+    nonPayloadUtilities.push({ el: fontSizeBtnContainer, showDisplay: '' });
     fontSizeCleanup = cleanup;
   }
 
@@ -1204,7 +1212,14 @@ function createToolbarPanel(
       instructContainer.style.display = 'flex';
       primaryContainer.style.display = 'none';
       moreContainer.style.display = 'none';
-      utilitiesContainer.style.display = 'none';
+      // Keep the payload preflight button reachable next to the Custom input;
+      // every other utility stays hidden in this compact layout.
+      if (onPreviewPayload) {
+        utilitiesContainer.style.display = 'flex';
+        for (const { el } of nonPayloadUtilities) el.style.display = 'none';
+      } else {
+        utilitiesContainer.style.display = 'none';
+      }
       separator.style.display = 'none';
       infoText.style.display = 'none';
     } else {
@@ -1213,6 +1228,7 @@ function createToolbarPanel(
       primaryContainer.style.display = 'flex';
       moreContainer.style.display = dropdown.childElementCount > 0 ? 'block' : 'none';
       utilitiesContainer.style.display = 'flex';
+      for (const { el, showDisplay } of nonPayloadUtilities) el.style.display = showDisplay;
       const showInfo = infoText.classList.contains('warning');
       separator.style.display = showInfo ? 'block' : 'none';
       infoText.style.display = showInfo ? 'block' : 'none';

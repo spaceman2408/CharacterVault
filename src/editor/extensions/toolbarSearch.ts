@@ -50,10 +50,14 @@ function getSelectedText(view: EditorView): string | null {
   return view.state.doc.sliceString(selection.from, selection.to);
 }
 
-let pendingSearchFocus: 'search' | 'replace' = 'search';
+/** Per-view initial focus target, consumed when the search panel is created.
+ * WeakMap (not a module global) so two editors opening search in the same
+ * tick cannot steal each other's focus. */
+const pendingSearchFocusByView = new WeakMap<EditorView, 'search' | 'replace'>();
 
 function focusPanelInput(view: EditorView, target: 'search' | 'replace'): void {
   window.setTimeout(() => {
+    if (!view.dom.isConnected) return;
     const selector =
       target === 'replace'
         ? '.cm-toolbar-search-panel .replace-input'
@@ -66,7 +70,7 @@ function focusPanelInput(view: EditorView, target: 'search' | 'replace'): void {
 }
 
 function openToolbarSearchWithFocus(view: EditorView, target: 'search' | 'replace'): boolean {
-  pendingSearchFocus = target;
+  pendingSearchFocusByView.set(view, target);
   const selectedText = getSelectedText(view);
   const currentQuery = getSearchQuery(view.state);
 
@@ -518,13 +522,15 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   };
 
   syncControlsFromState();
-  const initialFocus = pendingSearchFocus;
-  pendingSearchFocus = 'search';
-  setTimeout(() => {
+  const initialFocus = pendingSearchFocusByView.get(view) ?? 'search';
+  pendingSearchFocusByView.delete(view);
+  const focusTimer = window.setTimeout(() => {
+    if (!dom.isConnected) return;
     const target = initialFocus === 'replace' ? replaceInput : searchInput;
     target.focus();
     target.select();
   }, 0);
+  (dom as unknown as { __focusTimer?: number }).__focusTimer = focusTimer;
 
   const updateQuery = () => {
     const newQuery = new SearchQuery({
@@ -644,6 +650,8 @@ function createSearchPanel(view: EditorView) {
     },
     destroy() {
       if (countRaf) cancelAnimationFrame(countRaf);
+      const focusTimer = (controls.dom as unknown as { __focusTimer?: number }).__focusTimer;
+      if (focusTimer !== undefined) window.clearTimeout(focusTimer);
       controls.dom.remove();
     },
   };

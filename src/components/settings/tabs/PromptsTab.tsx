@@ -193,26 +193,55 @@ const ToolbarButtonsSection: React.FC<{
   };
 
   const move = (id: string, dir: -1 | 1) => {
-    const idx = toolbar.order.indexOf(id);
-    setToolbar({ ...toolbar, order: moveToolbarOp(toolbar.order, id, idx + dir) });
+    setDraft((prev) => {
+      const current = normalizeToolbarConfig(prev.toolbar);
+      const idx = current.order.indexOf(id);
+      if (idx === -1) return prev;
+      return {
+        ...prev,
+        toolbar: { ...current, order: moveToolbarOp(current.order, id, idx + dir) },
+      };
+    });
   };
 
   const hide = (id: string) => {
     if (id === 'instruct') return;
-    setToolbar({ ...toolbar, order: toolbar.order.filter((entry) => entry !== id) });
+    setDraft((prev) => {
+      const current = normalizeToolbarConfig(prev.toolbar);
+      if (!current.order.includes(id)) return prev;
+      return {
+        ...prev,
+        toolbar: { ...current, order: current.order.filter((entry) => entry !== id) },
+      };
+    });
     setSelectedIds((prev) => prev.filter((entry) => entry !== id));
   };
 
   const addBuiltin = (id: string) => {
-    setToolbar(normalizeToolbarConfig({ ...toolbar, order: [...toolbar.order, id] }));
+    setDraft((prev) => {
+      const current = normalizeToolbarConfig(prev.toolbar);
+      if (current.order.includes(id)) return prev;
+      return {
+        ...prev,
+        toolbar: normalizeToolbarConfig({ ...current, order: [...current.order, id] }),
+      };
+    });
   };
 
   const deleteCustom = (id: string) => {
-    setToolbar({
-      order: toolbar.order.filter((entry) => entry !== id),
-      customOps: toolbar.customOps.filter((op) => op.id !== id),
+    setDraft((prev) => {
+      const current = normalizeToolbarConfig(prev.toolbar);
+      const nextModels = { ...prev.promptModels };
+      delete nextModels[id];
+      return {
+        ...prev,
+        toolbar: {
+          order: current.order.filter((entry) => entry !== id),
+          customOps: current.customOps.filter((op) => op.id !== id),
+        },
+        promptModels: nextModels,
+      };
     });
-    setOpBinding(id, undefined);
     setSelectedIds((prev) => prev.filter((entry) => entry !== id));
   };
 
@@ -228,15 +257,16 @@ const ToolbarButtonsSection: React.FC<{
   };
 
   const confirmBulkRemove = () => {
-    const removedCustomIds = new Set(
-      toolbar.customOps.filter((op) => selectedIds.includes(op.id)).map((op) => op.id),
-    );
     setDraft((prev) => {
+      const current = normalizeToolbarConfig(prev.toolbar);
+      const removedCustomIds = new Set(
+        current.customOps.filter((op) => selectedIds.includes(op.id)).map((op) => op.id),
+      );
       const nextModels = { ...prev.promptModels };
       for (const id of removedCustomIds) delete nextModels[id];
       return {
         ...prev,
-        toolbar: removeToolbarOps(prev.toolbar, selectedIds),
+        toolbar: removeToolbarOps(current, selectedIds),
         promptModels: nextModels,
       };
     });
@@ -246,9 +276,16 @@ const ToolbarButtonsSection: React.FC<{
   };
 
   const patchCustom = (id: string, patch: Partial<CustomToolbarOp>) => {
-    setToolbar({
-      ...toolbar,
-      customOps: toolbar.customOps.map((op) => (op.id === id ? { ...op, ...patch } : op)),
+    setDraft((prev) => {
+      const current = normalizeToolbarConfig(prev.toolbar);
+      if (!current.customOps.some((op) => op.id === id)) return prev;
+      return {
+        ...prev,
+        toolbar: {
+          ...current,
+          customOps: current.customOps.map((op) => (op.id === id ? { ...op, ...patch } : op)),
+        },
+      };
     });
   };
 
@@ -262,12 +299,19 @@ const ToolbarButtonsSection: React.FC<{
       return;
     }
     const id = createCustomOpId();
-    setToolbar({
-      order: [...toolbar.order, id],
-      customOps: [
-        ...toolbar.customOps,
-        { id, label: newLabel.trim(), icon: newIcon, color: newColor, prompt: newPrompt },
-      ],
+    const label = newLabel.trim();
+    const icon = newIcon;
+    const color = newColor;
+    const prompt = newPrompt;
+    setDraft((prev) => {
+      const current = normalizeToolbarConfig(prev.toolbar);
+      return {
+        ...prev,
+        toolbar: {
+          order: [...current.order, id],
+          customOps: [...current.customOps, { id, label, icon, color, prompt }],
+        },
+      };
     });
     setExpandedCustom((prev) => ({ ...prev, [id]: true }));
     setNewLabel('');

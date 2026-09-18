@@ -305,7 +305,9 @@ export function downloadSettingsBackup(file: SettingsBackupFile, filename: strin
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(url);
+  // Revoke on a delay: immediate revocation can abort the download in Firefox
+  // before the browser has fetched the blob URL.
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export interface BackupDraftTarget {

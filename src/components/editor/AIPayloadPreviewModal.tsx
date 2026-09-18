@@ -16,6 +16,23 @@ function formatTokenCount(n: number): string {
   return `~${Math.round(n / 1000)}k`;
 }
 
+/** Short content hash so the remount key distinguishes same-length selections. */
+function hashPreviewText(s: string): string {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < s.length; i += 1) {
+    const ch = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+
+/** Debounce for preview rebuilds so instruction typing does not spam IDB reads. */
+const PREVIEW_REBUILD_DEBOUNCE_MS = 150;
+
 export interface AIPayloadPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -65,7 +82,14 @@ function AIPayloadPreviewModalBody({
   const [copied, setCopied] = useState(false);
   const [preview, setPreview] = useState<AIRequestPreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
+  const copyTimerRef = React.useRef<number | null>(null);
   const operationOptions = resolveToolbarButtons(toolbarConfig);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   const previewError =
     operation === 'instruct' && !instruction.trim()
@@ -82,23 +106,26 @@ function AIPayloadPreviewModalBody({
     }
 
     setPreviewBusy(true);
-    void (async () => {
-      try {
-        const result = await buildPreview(
-          operation,
-          operation === 'instruct' ? instruction.trim() : undefined
-        );
-        if (!cancelled) setPreview(result);
-      } catch (err) {
-        console.error('[AIPayloadPreviewModal] Failed to build preview:', err);
-        if (!cancelled) setPreview(null);
-      } finally {
-        if (!cancelled) setPreviewBusy(false);
-      }
-    })();
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await buildPreview(
+            operation,
+            operation === 'instruct' ? instruction.trim() : undefined
+          );
+          if (!cancelled) setPreview(result);
+        } catch (err) {
+          console.error('[AIPayloadPreviewModal] Failed to build preview:', err);
+          if (!cancelled) setPreview(null);
+        } finally {
+          if (!cancelled) setPreviewBusy(false);
+        }
+      })();
+    }, PREVIEW_REBUILD_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [previewError, buildPreview, operation, instruction]);
 
@@ -115,7 +142,11 @@ function AIPayloadPreviewModalBody({
     try {
       await navigator.clipboard.writeText(jsonText);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => {
+        copyTimerRef.current = null;
+        setCopied(false);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy payload:', err);
     }
@@ -326,7 +357,7 @@ export function AIPayloadPreviewModal({
   if (!isOpen) return null;
 
   // Remount body when open session identity changes so form state resets cleanly
-  const sessionKey = `${initialOperation}::${initialInstruction}::${selectedText.length}`;
+  const sessionKey = `${initialOperation}::${initialInstruction}::${selectedText.length}:${hashPreviewText(selectedText)}`;
 
   return createPortal(
     <div className="fixed inset-0 z-120 flex items-center justify-center bg-overlay p-3 backdrop-blur-sm sm:p-4">
