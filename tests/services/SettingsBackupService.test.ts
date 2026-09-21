@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_MACRO_HIGHLIGHT_SETTINGS,
+  DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS,
   DEFAULT_SETTINGS,
   DEFAULT_STUDIO_SETTINGS,
   normalizeToolbarConfig,
@@ -54,6 +56,8 @@ function makeDraft(): BackupDraftTarget {
     markdownImageOpenLinks: true,
     defaultChatPanel: 'orion',
     requireAgentReview: false,
+    roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
+    macroHighlight: { ...DEFAULT_MACRO_HIGHLIGHT_SETTINGS },
     spellcheckEnabled: true,
     spellcheckLanguage: 'en',
     spellcheckIgnoredWords: [],

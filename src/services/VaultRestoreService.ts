@@ -8,6 +8,7 @@ import {
   parseSettingsBackup,
   type SettingsBackupFile,
 } from './SettingsBackupService';
+import { normalizeMacroHighlight, normalizeRoleplayHighlight } from '../db/characterTypes';
 import { notifyFavoritesChanged, setFavoriteTags } from '../pages/ai-creation-studio/tags/tagData';
 
 export interface RestorePreview {
@@ -249,6 +250,8 @@ export class VaultRestoreService {
         markdownImageOpenLinks: data.ui.markdownImageOpenLinks ?? true,
         defaultChatPanel: data.ui.defaultChatPanel ?? 'orion',
         requireAgentReview: data.ui.requireAgentReview ?? false,
+        roleplayHighlight: normalizeRoleplayHighlight(data.ui.roleplayHighlight),
+        macroHighlight: normalizeMacroHighlight(data.ui.macroHighlight),
       },
       sectionOrder: data.sectionOrder,
       hiddenSections: data.hiddenSections,

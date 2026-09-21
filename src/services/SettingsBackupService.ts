@@ -3,9 +3,11 @@ import type {
   CharacterSection,
   CharacterVaultSettings,
   DefaultChatPanel,
+  MacroHighlightSettings,
   PromptModelBinding,
   PromptModelMap,
   PromptSettings,
+  RoleplayHighlightSettings,
   SamplerSettings,
   StudioSettings,
   ToolbarConfig,
@@ -18,6 +20,8 @@ import {
   DEFAULT_SPELLCHECK_SETTINGS,
   clampContextLength,
   normalizeDefaultChatPanel,
+  normalizeMacroHighlight,
+  normalizeRoleplayHighlight,
   normalizeStudioSettings,
   normalizeToolbarConfig,
 } from '../db/characterTypes';
@@ -205,6 +209,12 @@ function normalizeBackupUi(value: unknown): CharacterVaultSettings['ui'] {
     markdownImageOpenLinks: asBoolean(raw.markdownImageOpenLinks, true),
     defaultChatPanel: normalizeDefaultChatPanel(raw.defaultChatPanel),
     requireAgentReview: asBoolean(raw.requireAgentReview, false),
+    roleplayHighlight: normalizeRoleplayHighlight(
+      isRecord(raw.roleplayHighlight) ? raw.roleplayHighlight : undefined,
+    ),
+    macroHighlight: normalizeMacroHighlight(
+      isRecord(raw.macroHighlight) ? raw.macroHighlight : undefined,
+    ),
     spellcheck: {
       enabled: asBoolean(spellRaw.enabled, DEFAULT_SPELLCHECK_SETTINGS.enabled),
       language: asString(spellRaw.language, DEFAULT_SPELLCHECK_SETTINGS.language) || 'en',
@@ -321,6 +331,8 @@ export interface BackupDraftTarget {
   markdownImageOpenLinks: boolean;
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
+  roleplayHighlight: RoleplayHighlightSettings;
+  macroHighlight: MacroHighlightSettings;
   spellcheckEnabled: boolean;
   spellcheckLanguage: string;
   spellcheckIgnoredWords: string[];
@@ -356,6 +368,8 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
     markdownImageOpenLinks: settings.ui.markdownImageOpenLinks ?? true,
     defaultChatPanel: normalizeDefaultChatPanel(settings.ui.defaultChatPanel),
     requireAgentReview: settings.ui.requireAgentReview ?? false,
+    roleplayHighlight: normalizeRoleplayHighlight(settings.ui.roleplayHighlight),
+    macroHighlight: normalizeMacroHighlight(settings.ui.macroHighlight),
     spellcheckEnabled: spellcheck.enabled,
     spellcheckLanguage: spellcheck.language,
     spellcheckIgnoredWords: [...spellcheck.ignoredWords],

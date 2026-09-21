@@ -10,6 +10,8 @@ import type {
   PromptSettings,
   PromptModelBinding,
   PromptModelMap,
+  MacroHighlightSettings,
+  RoleplayHighlightSettings,
   SpellcheckSettings,
   StudioSettings,
   ToolbarConfig,
@@ -21,6 +23,8 @@ import {
   DEFAULT_SECTION_ORDER,
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_STUDIO_SETTINGS,
+  normalizeMacroHighlight,
+  normalizeRoleplayHighlight,
   normalizeStudioSettings,
   normalizeToolbarConfig,
 } from '../db/characterTypes';
@@ -93,9 +97,47 @@ export class CharacterSettingsService {
     });
   }
 
+  /** Roleplay prose colors, merged with defaults so all fields exist. */
+  async getRoleplayHighlight(): Promise<RoleplayHighlightSettings> {
+    const settings = await this.getSettings();
+    return normalizeRoleplayHighlight(settings.ui.roleplayHighlight);
+  }
+
+  /** Persist roleplay prose colors (merging with existing values). */
+  async saveRoleplayHighlight(updates: Partial<RoleplayHighlightSettings>): Promise<void> {
+    const settings = await this.getSettings();
+    const current = normalizeRoleplayHighlight(settings.ui.roleplayHighlight);
+    await characterDb.settings.put({
+      ...settings,
+      ui: {
+        ...settings.ui,
+        roleplayHighlight: normalizeRoleplayHighlight({ ...current, ...updates }),
+      },
+    });
+  }
+
+  /** Name-macro colors, merged with defaults so all fields exist. */
+  async getMacroHighlight(): Promise<MacroHighlightSettings> {
+    const settings = await this.getSettings();
+    return normalizeMacroHighlight(settings.ui.macroHighlight);
+  }
+
+  /** Persist name-macro colors (merging with existing values). */
+  async saveMacroHighlight(updates: Partial<MacroHighlightSettings>): Promise<void> {
+    const settings = await this.getSettings();
+    const current = normalizeMacroHighlight(settings.ui.macroHighlight);
+    await characterDb.settings.put({
+      ...settings,
+      ui: {
+        ...settings.ui,
+        macroHighlight: normalizeMacroHighlight({ ...current, ...updates }),
+      },
+    });
+  }
+
   /**
-   * Get spellcheck settings, merging with defaults so all fields exist.
-   */
+    * Get spellcheck settings, merging with defaults so all fields exist.
+    */
   async getSpellcheckSettings(): Promise<SpellcheckSettings> {
     const settings = await this.getSettings();
     return {
