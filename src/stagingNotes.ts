@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.6.1 staging 3';
+export const STAGING_VERSION = 'v1.6.1 staging 4';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -39,4 +39,8 @@ export const STAGING_TEST_NOTES: string[] = [
   'Typing Char or USER plus punctuation now expands to {{char}} / {{user}}.',
   'Creator Notes split preview keeps undo history and focus.',
   'Empty editors show a placeholder hint; touch devices no longer pop the keyboard on section switch.',
+  'Editors now color "dialogue", narration, and *actions*; on by default in every prose editor.',
+  'Change the prose colors in Settings, Character Workspace tab, Roleplay colors section (live preview included).',
+  'Narration follows the editor text color unless you pick one; dialogue defaults to amber, actions to gray.',
+  '{{char}} / {{user}} follow the theme by default and can be recolored in Name macro colors.',
 ];
