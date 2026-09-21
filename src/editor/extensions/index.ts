@@ -63,8 +63,18 @@ export {
 
 export {
   macroHighlight,
+  applyMacroHighlightColors,
   findNameMacroRanges,
 } from './macroHighlight';
+
+export {
+  roleplayHighlight,
+  setRoleplayHighlightEnabled,
+  applyRoleplayHighlightColors,
+  findRoleplayRanges,
+} from './roleplayHighlight';
+
+export type { RoleplayKind, RoleplayRange } from './roleplayHighlight';
 
 export type {
   NameMacroKind,
