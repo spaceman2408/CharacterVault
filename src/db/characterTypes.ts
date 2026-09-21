@@ -476,6 +476,20 @@ export interface SpellcheckSettings {
   customWords: string[];
 }
 
+/** Prose color coding for `"dialogue"`, plain narration, and `*actions*` in editors. */
+export interface RoleplayHighlightSettings {
+  enabled: boolean;
+  /** Hex color for `"quoted dialogue"` */
+  dialogue: string;
+  /**
+   * Hex color for plain narration (text outside quotes / asterisks).
+   * Empty string follows the editor text color.
+   */
+  narration: string;
+  /** Hex color for `*asterisked actions*` */
+  action: string;
+}
+
 export interface CharacterVaultSettings {
   id: 'app-settings';
   ui: {
@@ -493,6 +507,10 @@ export interface CharacterVaultSettings {
     /** When true, Agent tool-loop edits need review before they are applied. */
     requireAgentReview?: boolean;
     spellcheck?: SpellcheckSettings;
+    /** Missing = highlighting on with built-in default colors. */
+    roleplayHighlight?: RoleplayHighlightSettings;
+    /** Missing = macros follow the theme default. */
+    macroHighlight?: MacroHighlightSettings;
   };
   ai?: AIConfig;
   sampler?: SamplerSettings;
@@ -531,6 +549,65 @@ export const DEFAULT_CHARACTER_VAULT_SETTINGS: Omit<CharacterVaultSettings, 'id'
 
 /** Default for Studio → open control on Markdown image links */
 export const DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS = true;
+
+/**
+ * Single color set for both themes; each default reads on light and dark.
+ * Narration defaults to empty (follow the editor text color) because no
+ * single hex reads as body text on both themes.
+ */
+export const DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS: RoleplayHighlightSettings = {
+  enabled: true,
+  dialogue: '#b45309',
+  narration: '',
+  action: '#707070',
+};
+
+/** Retired gray narration default; stored values equal to it mean "never customized". */
+const RETIRED_NARRATION_DEFAULT = '#6b7280';
+
+function normalizeHexColor(value: unknown, fallback: string, allowEmpty = false): string {
+  if (typeof value !== 'string') return fallback;
+  const hex = value.trim().toLowerCase();
+  if (hex === '' && allowEmpty) return '';
+  if (/^#[0-9a-f]{6}$/.test(hex)) return hex;
+  const short = /^#([0-9a-f]{3})$/.exec(hex);
+  if (short) return `#${short[1][0]}${short[1][0]}${short[1][1]}${short[1][1]}${short[1][2]}${short[1][2]}`;
+  return fallback;
+}
+
+/**
+ * `{{char}}` / `{{user}}` name-macro colors.
+ * Empty string follows the theme default.
+ */
+export interface MacroHighlightSettings {
+  char: string;
+  user: string;
+}
+
+export const DEFAULT_MACRO_HIGHLIGHT_SETTINGS: MacroHighlightSettings = {
+  char: '',
+  user: '',
+};
+
+export function normalizeMacroHighlight(value: unknown): MacroHighlightSettings {
+  const raw = (typeof value === 'object' && value !== null ? value : {}) as Partial<MacroHighlightSettings>;
+  return {
+    char: normalizeHexColor(raw.char, '', true),
+    user: normalizeHexColor(raw.user, '', true),
+  };
+}
+
+export function normalizeRoleplayHighlight(value: unknown): RoleplayHighlightSettings {
+  const raw = (typeof value === 'object' && value !== null ? value : {}) as Partial<RoleplayHighlightSettings>;
+  let narration = normalizeHexColor(raw.narration, '', true);
+  if (narration === RETIRED_NARRATION_DEFAULT) narration = '';
+  return {
+    enabled: raw.enabled !== false,
+    dialogue: normalizeHexColor(raw.dialogue, DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS.dialogue),
+    narration,
+    action: normalizeHexColor(raw.action, DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS.action),
+  };
+}
 
 export type DefaultChatPanel = 'orion' | 'agent';
 
