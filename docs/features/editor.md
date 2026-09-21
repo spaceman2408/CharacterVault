@@ -135,6 +135,10 @@ This is available in every text editor that uses the shared CodeMirror toolbar, 
   plus "Ignore word" and "Add to dictionary".
 - **Name macros** — `{{char}}` and `{{user}}` are syntax-colored so they stand
   out while you write (case-insensitive; optional spaces inside the braces).
+  Recolor them under **Character Workspace → Name macro colors** in Settings.
+- **Roleplay colors** — `"dialogue"`, narration, and `*actions*` get distinct
+  colors in every prose editor. Customize under **Character Workspace →
+  Roleplay colors** in Settings.
 - **Markdown image links** — Image syntax is highlighted; optional click-to-open
   is controlled under **Settings → Character Workspace → Editor links**.
 
@@ -157,6 +161,26 @@ highlighted in every shared text editor.
 `{{char}}` and `{{user}}` (and spaced forms like `{{ char }}`) get distinct
 colors in the editor. Matching is case-insensitive so `{{Char}}` and
 `{{USER}}` highlight the same way.
+
+They follow the theme by default. To override one, open **Settings →
+Character Workspace → Name macro colors**, pick a color with the picker or
+type a hex value. Clear the field (back to `auto`) to return to automatic.
+
+### Roleplay colors
+
+Prose editors color-code roleplay text so dialogue, narration, and actions
+are easy to tell apart. Coloring is on by default in every prose editor.
+
+- **Dialogue** — Text in `"double quotes"` (straight or curly). Defaults to amber.
+- **Narration** — Plain prose outside quotes and asterisks. Follows the editor
+  text color unless you pick one.
+- **Actions** — Text in single `*asterisks*`. Defaults to gray. `**bold**`
+  markers are never treated as actions, and unclosed quotes stay narration.
+
+Change the colors under **Settings → Character Workspace → Roleplay colors**:
+each row has a color picker and a hex field, plus a live preview and a reset
+to defaults. `{{char}}` and `{{user}}` always keep their macro colors, even
+inside quotes.
 
 ### Spellcheck
 
