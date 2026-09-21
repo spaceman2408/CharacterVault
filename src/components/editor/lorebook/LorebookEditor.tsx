@@ -78,6 +78,7 @@ function LorebookEditorInner({
   characterName,
   spellcheck,
   markdownImageOpenLinks,
+  roleplayHighlight,
   customContext,
   attachment,
   focusEntry,
@@ -830,6 +831,7 @@ function LorebookEditorInner({
                 onFontSizeChange={onFontSizeChange}
                 spellcheck={spellcheck}
                 markdownImageOpenLinks={markdownImageOpenLinks}
+                roleplayHighlight={roleplayHighlight}
                 isOptionsOpen={isOptionsOpen}
                 onOptionsOpenChange={setIsOptionsOpen}
               />

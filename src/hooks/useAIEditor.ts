@@ -38,14 +38,20 @@ import { characterMacroHelper } from '../editor/extensions/characterMacroHelper'
 import { editorBasics } from '../editor/extensions/editorBasics';
 import { macroHighlight } from '../editor/extensions/macroHighlight';
 import {
+  applyRoleplayHighlightColors,
+  roleplayHighlight as roleplayHighlightExtension,
+  setRoleplayHighlightEnabled,
+} from '../editor/extensions/roleplayHighlight';
+import {
   markdownImageLinks,
   setMarkdownImageOpenLinks,
 } from '../editor/extensions/markdownImageLinks';
 import { spellcheckExtension, setSpellcheckSettings } from '../editor/extensions/spellcheck';
-import type { SpellcheckSettings } from '../db/characterTypes';
+import type { RoleplayHighlightSettings, SpellcheckSettings } from '../db/characterTypes';
 import {
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
+  DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS,
 } from '../db/characterTypes';
 import { LIVE_REASONING_MAX_CHARS } from '../components/ai/utils';
 import { ChunkString } from '../utils/chunkString';
@@ -205,6 +211,11 @@ export interface UseAIEditorOptions {
    * warning. Highlighting is always on. Defaults to true.
    */
   markdownImageOpenLinks?: boolean;
+  /**
+   * Prose color coding for `"dialogue"`, narration, and `*actions*`.
+   * Missing = defaults (highlighting on).
+   */
+  roleplayHighlight?: RoleplayHighlightSettings;
 }
 
 export interface UseAIEditorReturn {
@@ -272,6 +283,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     spellcheck = DEFAULT_SPELLCHECK_SETTINGS,
     spellcheckMode = 'prose',
     markdownImageOpenLinks = DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
+    roleplayHighlight = DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS,
   } = options;
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -1235,6 +1247,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         // Character card macro typing helper + {{char}}/{{user}} coloring
         characterMacroHelper(),
         macroHighlight(),
+        // "dialogue" / narration / *action* prose colors
+        roleplayHighlightExtension({ enabled: roleplayHighlight.enabled }),
         markdownImageLinks({ openLinksEnabled: markdownImageOpenLinks }),
         ...(additionalExtensions ?? []),
       ],
@@ -1409,6 +1423,18 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     if (!view) return;
     setMarkdownImageOpenLinks(view, markdownImageOpenLinks);
   }, [markdownImageOpenLinks]);
+
+  // Sync roleplay prose colors: decorations toggle per view, colors ride CSS vars
+  // so every editor (character + standalone lorebook) repaints without a dispatch.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    setRoleplayHighlightEnabled(view, roleplayHighlight.enabled);
+  }, [roleplayHighlight.enabled]);
+
+  useEffect(() => {
+    applyRoleplayHighlightColors(roleplayHighlight);
+  }, [roleplayHighlight]);
 
   // Declared last so its cleanup runs first on unmount: flip isMountedRef before
   // the editor effect cleanup (which may call setState only while still mounted).

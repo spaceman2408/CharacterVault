@@ -43,6 +43,7 @@ export function LorebookEntryDetail({
   onFontSizeChange,
   spellcheck,
   markdownImageOpenLinks,
+  roleplayHighlight,
   isOptionsOpen,
   onOptionsOpenChange,
 }: LorebookEntryDetailProps): React.ReactElement {
@@ -83,6 +84,7 @@ export function LorebookEntryDetail({
     onFontSizeChange,
     spellcheck,
     markdownImageOpenLinks,
+    roleplayHighlight,
   });
 
   const [keysInput, setKeysInput] = React.useState(entry.keys.join(', '));

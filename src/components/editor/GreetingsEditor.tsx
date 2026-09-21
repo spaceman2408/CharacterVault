@@ -34,6 +34,7 @@ interface GreetingsEditorProps {
   onFontSizeChange?: (size: number) => void;
   spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
   markdownImageOpenLinks?: boolean;
+  roleplayHighlight?: import('../../db/characterTypes').RoleplayHighlightSettings;
 }
 
 interface GreetingListItemProps {
@@ -64,6 +65,7 @@ interface GreetingDetailProps {
   onFontSizeChange?: (size: number) => void;
   spellcheck?: import('../../db/characterTypes').SpellcheckSettings;
   markdownImageOpenLinks?: boolean;
+  roleplayHighlight?: import('../../db/characterTypes').RoleplayHighlightSettings;
 }
 
 /**
@@ -199,6 +201,7 @@ function GreetingDetail({
   onFontSizeChange,
   spellcheck,
   markdownImageOpenLinks,
+  roleplayHighlight,
 }: GreetingDetailProps): React.ReactElement {
   const [draftGreeting, setDraftGreeting] = useState(greeting);
 
@@ -227,6 +230,7 @@ function GreetingDetail({
     onFontSizeChange,
     spellcheck,
     markdownImageOpenLinks,
+    roleplayHighlight,
   });
 
   return (
@@ -259,6 +263,7 @@ export function GreetingsEditor({
   onFontSizeChange,
   spellcheck,
   markdownImageOpenLinks,
+  roleplayHighlight,
 }: GreetingsEditorProps): React.ReactElement {
   const [greetingsList, setGreetingsList] = useState<string[]>(greetings);
   const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(0);
@@ -494,6 +499,7 @@ export function GreetingsEditor({
               onFontSizeChange={onFontSizeChange}
               spellcheck={spellcheck}
               markdownImageOpenLinks={markdownImageOpenLinks}
+              roleplayHighlight={roleplayHighlight}
             />
           </div>
         ) : (

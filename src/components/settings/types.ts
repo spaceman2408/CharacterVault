@@ -13,6 +13,8 @@ import type {
   PromptModelMap,
   CharacterSection,
   DefaultChatPanel,
+  MacroHighlightSettings,
+  RoleplayHighlightSettings,
   StudioSettings,
   ToolbarConfig,
 } from '../../db/characterTypes';
@@ -39,6 +41,8 @@ export interface SettingsDraft {
   markdownImageOpenLinks: boolean;
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
+  roleplayHighlight: RoleplayHighlightSettings;
+  macroHighlight: MacroHighlightSettings;
   spellcheckEnabled: boolean;
   spellcheckLanguage: string;
   spellcheckIgnoredWords: string[];

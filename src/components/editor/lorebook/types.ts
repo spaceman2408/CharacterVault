@@ -6,6 +6,7 @@ import type {
   LorebookEntry,
   PromptModelMap,
   PromptSettings,
+  RoleplayHighlightSettings,
   SamplerSettings,
   SpellcheckSettings,
 } from '../../../db/characterTypes';
@@ -35,6 +36,7 @@ export interface LorebookEditorProps {
   characterName?: string;
   spellcheck?: SpellcheckSettings;
   markdownImageOpenLinks?: boolean;
+  roleplayHighlight?: RoleplayHighlightSettings;
   /** Standalone vault books only — not used for character-embedded lorebooks */
   customContext?: LorebookCustomContextControls;
   /** Character workspace only — compact attach control in the entry header */
@@ -79,6 +81,7 @@ export interface LorebookEntryDetailProps {
   onFontSizeChange?: (size: number) => void;
   spellcheck?: SpellcheckSettings;
   markdownImageOpenLinks?: boolean;
+  roleplayHighlight?: RoleplayHighlightSettings;
   isOptionsOpen: boolean;
   onOptionsOpenChange: (open: boolean) => void;
 }

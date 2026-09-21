@@ -258,6 +258,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     setFontSize,
     spellcheck,
     markdownImageOpenLinks,
+    roleplayHighlight,
   } = useCharacterEditorContext();
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
@@ -403,6 +404,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     spellcheck,
     spellcheckMode: sectionSpellcheckMode,
     markdownImageOpenLinks,
+    roleplayHighlight,
   });
 
   // Early return for no character
@@ -504,6 +506,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
           onFontSizeChange={setFontSize}
           spellcheck={spellcheck}
           markdownImageOpenLinks={markdownImageOpenLinks}
+          roleplayHighlight={roleplayHighlight}
         />
       </div>
     );
@@ -545,6 +548,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
             characterName={currentCharacter?.name}
             spellcheck={spellcheck}
             markdownImageOpenLinks={markdownImageOpenLinks}
+            roleplayHighlight={roleplayHighlight}
             focusEntry={focusEntry}
             attachment={
               currentCharacter?.id

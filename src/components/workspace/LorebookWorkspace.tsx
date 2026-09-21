@@ -36,7 +36,10 @@ import {
   DEFAULT_SETTINGS,
   EMPTY_CUSTOM_CONTEXT_META,
   normalizeDefaultChatPanel,
+  normalizeMacroHighlight,
+  normalizeRoleplayHighlight,
 } from '../../db/characterTypes';
+import { applyMacroHighlightColors } from '../../editor/extensions/macroHighlight';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { estimateTokens } from '../../services/AIService';
 import { applyModelBinding } from '../../services/resolveOperationConfig';
@@ -163,6 +166,18 @@ export function LorebookWorkspace(): React.ReactElement {
   );
   const spellcheck = settings?.ui?.spellcheck;
   const markdownImageOpenLinks = settings?.ui?.markdownImageOpenLinks;
+  const roleplayHighlight = useMemo(
+    () => normalizeRoleplayHighlight(settings?.ui?.roleplayHighlight),
+    [settings?.ui?.roleplayHighlight],
+  );
+  const macroHighlight = useMemo(
+    () => normalizeMacroHighlight(settings?.ui?.macroHighlight),
+    [settings?.ui?.macroHighlight],
+  );
+
+  useEffect(() => {
+    applyMacroHighlightColors(macroHighlight);
+  }, [macroHighlight]);
   const requireAgentReview = settings?.ui?.requireAgentReview ?? false;
 
   const entryCount = currentLorebook?.book?.entries?.length ?? 0;
@@ -603,6 +618,7 @@ export function LorebookWorkspace(): React.ReactElement {
             characterName={currentLorebook.name}
             spellcheck={spellcheck}
             markdownImageOpenLinks={markdownImageOpenLinks}
+            roleplayHighlight={roleplayHighlight}
             focusEntry={lorebookFocusEntry}
             customContext={{
               ownerId: currentLorebook.id,

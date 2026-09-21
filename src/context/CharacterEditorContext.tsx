@@ -11,6 +11,8 @@ import type {
   PromptSettings,
   PromptModelBinding,
   PromptModelMap,
+  MacroHighlightSettings,
+  RoleplayHighlightSettings,
   SpellcheckSettings,
   ToolbarConfig,
 } from '../db/characterTypes';
@@ -23,8 +25,11 @@ import {
   DEFAULT_REQUIRE_AGENT_REVIEW,
   EMPTY_CUSTOM_CONTEXT_META,
   normalizeDefaultChatPanel,
+  normalizeMacroHighlight,
+  normalizeRoleplayHighlight,
 } from '../db/characterTypes';
 import { applyModelBinding, normalizePromptModelMap } from '../services/resolveOperationConfig';
+import { applyMacroHighlightColors } from '../editor/extensions/macroHighlight';
 import type { SectionMeta } from '../db/characterTypes';
 import { bindSpellcheckCallbacks } from '../editor/extensions/spellcheck';
 import { useCharacterContext } from './useCharacterContext';
@@ -83,6 +88,12 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   );
   const [requireAgentReview, setRequireAgentReview] = useState(
     () => settings?.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
+  );
+  const [roleplayHighlight, setRoleplayHighlight] = useState<RoleplayHighlightSettings>(() =>
+    normalizeRoleplayHighlight(settings?.ui.roleplayHighlight),
+  );
+  const [macroHighlight, setMacroHighlight] = useState<MacroHighlightSettings>(() =>
+    normalizeMacroHighlight(settings?.ui.macroHighlight),
   );
   
   // AI-related state
@@ -347,6 +358,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       );
       setDefaultChatPanel(normalizeDefaultChatPanel(settings.ui.defaultChatPanel));
       setRequireAgentReview(settings.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW);
+      setRoleplayHighlight(normalizeRoleplayHighlight(settings.ui.roleplayHighlight));
+      setMacroHighlight(normalizeMacroHighlight(settings.ui.macroHighlight));
       setContextSectionIdsState(contextIds);
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -365,6 +378,11 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   useEffect(() => {
     document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
   }, [fontSize]);
+
+  // Push name-macro colors to every editor via CSS vars (idempotent across mounts)
+  useEffect(() => {
+    applyMacroHighlightColors(macroHighlight);
+  }, [macroHighlight]);
 
   useEffect(() => {
     if (!currentCharacter || !currentCharacterId) {
@@ -1195,6 +1213,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     markdownImageOpenLinks,
     defaultChatPanel,
     requireAgentReview,
+    roleplayHighlight,
+    macroHighlight,
     setActiveSection,
     updateCharacter,
     updateSpecField,

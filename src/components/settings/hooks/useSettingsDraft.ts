@@ -18,7 +18,11 @@ import {
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_CHAT_PANEL,
   DEFAULT_REQUIRE_AGENT_REVIEW,
+  DEFAULT_MACRO_HIGHLIGHT_SETTINGS,
+  DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS,
   DEFAULT_STUDIO_SETTINGS,
+  normalizeMacroHighlight,
+  normalizeRoleplayHighlight,
   normalizeStudioSettings,
   normalizeToolbarConfig,
   clampContextLength,
@@ -54,6 +58,8 @@ export function createDefaultDraft(): SettingsDraft {
     markdownImageOpenLinks: DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
     defaultChatPanel: DEFAULT_CHAT_PANEL,
     requireAgentReview: DEFAULT_REQUIRE_AGENT_REVIEW,
+    roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
+    macroHighlight: { ...DEFAULT_MACRO_HIGHLIGHT_SETTINGS },
     spellcheckEnabled: DEFAULT_SPELLCHECK_SETTINGS.enabled,
     spellcheckLanguage: DEFAULT_SPELLCHECK_SETTINGS.language,
     spellcheckIgnoredWords: [],
@@ -198,7 +204,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     const loadSettings = async () => {
       setIsLoading(true);
       try {
-        const [config, sampler, prompts, promptModels, toolbar, agentModel, fullSettings, secOrder, secHidden, spell, studio, contextIds] =
+        const [config, sampler, prompts, promptModels, toolbar, agentModel, fullSettings, secOrder, secHidden, spell, studio, contextIds, roleplayHighlight, macroHighlight] =
           await Promise.all([
             characterSettingsService.getAISettings(),
             characterSettingsService.getSamplerSettings(),
@@ -212,6 +218,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
             characterSettingsService.getSpellcheckSettings(),
             characterSettingsService.getStudioSettings(),
             characterSettingsService.getContextSectionIds(),
+            characterSettingsService.getRoleplayHighlight(),
+            characterSettingsService.getMacroHighlight(),
           ]);
 
         if (cancelled || !mountedRef.current) return;
@@ -232,6 +240,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           defaultChatPanel: normalizeDefaultChatPanel(fullSettings.ui?.defaultChatPanel),
           requireAgentReview:
             fullSettings.ui?.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
+          roleplayHighlight: normalizeRoleplayHighlight(roleplayHighlight),
+          macroHighlight: normalizeMacroHighlight(macroHighlight),
           spellcheckEnabled: spell.enabled,
           spellcheckLanguage: spell.language,
           spellcheckIgnoredWords: [...(spell.ignoredWords ?? [])],
@@ -338,6 +348,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       const currentSettings = await characterSettingsService.getSettings();
       const contextChanged =
         JSON.stringify(draft.contextSectionIds) !== JSON.stringify(loadedContextRef.current);
+      await characterSettingsService.saveRoleplayHighlight(draft.roleplayHighlight);
+      await characterSettingsService.saveMacroHighlight(draft.macroHighlight);
       await characterSettingsService.saveSettings({
         ...currentSettings,
         ui: {
@@ -346,6 +358,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           markdownImageOpenLinks: draft.markdownImageOpenLinks,
           defaultChatPanel: draft.defaultChatPanel,
           requireAgentReview: draft.requireAgentReview,
+          roleplayHighlight: normalizeRoleplayHighlight(draft.roleplayHighlight),
+          macroHighlight: normalizeMacroHighlight(draft.macroHighlight),
         },
         sectionOrder: draft.sectionOrder,
         hiddenSections: draft.hiddenSections,

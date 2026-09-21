@@ -11,6 +11,7 @@ import {
   type ViewUpdate,
 } from '@codemirror/view';
 import type { Extension, Range } from '@codemirror/state';
+import type { MacroHighlightSettings } from '../../db/characterTypes';
 
 export type NameMacroKind = 'char' | 'user';
 
@@ -113,4 +114,23 @@ const macroHighlightPlugin = ViewPlugin.fromClass(
  */
 export function macroHighlight(): Extension {
   return [macroHighlightTheme, macroHighlightPlugin];
+}
+
+/**
+ * Apply user macro colors. Blank entries remove the override so the theme
+ * default (`--macro-char` / `--macro-user` in index.css) shows again.
+ */
+export function applyMacroHighlightColors(colors: Pick<MacroHighlightSettings, 'char' | 'user'>): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  if (colors.char) {
+    root.style.setProperty('--macro-char', colors.char);
+  } else {
+    root.style.removeProperty('--macro-char');
+  }
+  if (colors.user) {
+    root.style.setProperty('--macro-user', colors.user);
+  } else {
+    root.style.removeProperty('--macro-user');
+  }
 }
