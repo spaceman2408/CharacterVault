@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.6.0
-Full vault backup and restore, a Settings backup tab, and editor quality-of-life: save status, live counts, duplicate greetings and lorebook entries, and `Ctrl+S` / `⌘+S` to flush pending saves.
+::: tip CharacterVault 1.7.0
+Customizable AI toolbar with your own buttons, roleplay highlight colors for dialogue, narration, and actions, plus editor quality-of-life: prefilled search, font-size shortcuts, and `Char` / `USER` macro expansion.
 
-[Try it](https://vault.charactervault.app) · [Backup](/features/import-export#vault-backup) · [Editor](/features/editor)
+[Try it](https://vault.charactervault.app) · [Toolbar](/features/editor#ai-toolbar) · [Roleplay colors](/features/editor#roleplay-colors)
 :::
 
 # CharacterVault

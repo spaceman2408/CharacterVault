@@ -24,23 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.6.1 staging 4';
+export const STAGING_VERSION = 'v1.7.1 staging 1';
 
 /** One short line per thing you want testers to try. */
-export const STAGING_TEST_NOTES: string[] = [
-  'AI toolbar buttons are now customizable in Settings, Prompts tab, Toolbar Buttons section.',
-  'Reorder, hide, or re-add built-in buttons; extras collapse into the More menu.',
-  'Create custom buttons with your own label, icon, prompt text, and model.',
-  'Custom buttons can now pick their own color.',
-  'Deleting a button or resetting the toolbar now asks for confirmation.',
-  'Editor: current line highlights only when nothing is selected.',
-  'Editor search (Ctrl+F) opens with the selection prefilled; Ctrl+H jumps to Replace.',
-  'Editor font size (aA): slider works with arrow keys, plus Reset and Ctrl+= / Ctrl+- / Ctrl+0.',
-  'Typing Char or USER plus punctuation now expands to {{char}} / {{user}}.',
-  'Creator Notes split preview keeps undo history and focus.',
-  'Empty editors show a placeholder hint; touch devices no longer pop the keyboard on section switch.',
-  'Editors now color "dialogue", narration, and *actions*; on by default in every prose editor.',
-  'Change the prose colors in Settings, Character Workspace tab, Roleplay colors section (live preview included).',
-  'Narration follows the editor text color unless you pick one; dialogue defaults to amber, actions to gray.',
-  '{{char}} / {{user}} follow the theme by default and can be recolored in Name macro colors.',
-];
+export const STAGING_TEST_NOTES: string[] = [];
