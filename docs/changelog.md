@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.7.0 (2026-09-22)
+
+Customizable AI toolbar, roleplay highlight colors, and editor quality-of-life. Full notes: [v1.7.0 release notes](/releases/v1.7.0).
+
+### Highlights
+
+- **Customizable toolbar** — reorder, hide, and re-add built-in buttons in **Settings → Prompts → Toolbar Buttons**; extras collapse into **More**; bulk remove with one confirm; delete/reset ask first
+- **Custom buttons** — create your own with label, icon, color, `${text}` prompt template, and per-button model
+- **Roleplay colors** — `"dialogue"`, narration, and `*actions*` highlighted on by default; recolor under **Character Workspace → Roleplay colors**; `{{char}}` / `{{user}}` recolorable under **Name macro colors**
+- Editor: line highlight only with no selection, search prefilled + `Ctrl+H` replace, font-size slider/shortcuts, `Char`/`USER` macro expansion, split-preview undo retention, placeholders, no touch keyboard pop
+
+Details: [Text Editor](/features/editor) · [What's New](/whats-new)
+
+---
+
 ## 1.6.0 (2026-09-10)
 
 Full vault backup and restore, Settings backup, and editor quality-of-life. Full notes: [v1.6.0 release notes](/releases/v1.6.0).

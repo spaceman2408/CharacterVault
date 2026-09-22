@@ -6,6 +6,17 @@ Quick overview of recent updates to CharacterVault.
 
 ## September 2026
 
+### 1.7.0
+
+Customizable AI toolbar, roleplay highlight colors, and editor quality-of-life.
+
+- Reorder, hide, or re-add built-in toolbar buttons in **Settings → Prompts → Toolbar Buttons**; extras collapse into **More**
+- Create **custom buttons** with your own label, icon, color, prompt template, and model
+- `"Dialogue"`, narration, and `*actions*` get distinct colors (on by default); recolor under **Character Workspace → Roleplay colors** and **Name macro colors**
+- Line highlight only with no selection, prefilled search + `Ctrl+H`, font-size shortcuts, `Char`/`USER` macro expansion, split-preview undo retention
+
+[Release 1.7.0 →](/releases/v1.7.0) · [Editor →](/features/editor)
+
 ### 1.6.0
 
 Full vault backup and restore, plus editor quality-of-life.
