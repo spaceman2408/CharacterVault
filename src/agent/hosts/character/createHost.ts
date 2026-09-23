@@ -246,6 +246,7 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
           };
         }
         const applied = addGreeting(spec, action);
+        if (!applied.result.ok) return applied.result;
         spec = applied.spec;
         specDirty = true;
         greetingMutationsThisRun += 1;

@@ -165,6 +165,9 @@ export function addGreeting(
   spec: CharacterSpec,
   action: ParsedAction,
 ): { spec: CharacterSpec; result: ActionResult; changed: boolean } {
+  if (!action.body.trim()) {
+    return { spec, changed: false, result: fail('add_greeting', 'error: content is empty') };
+  }
   const greetings = [...(spec.alternate_greetings ?? [])];
   greetings.push(action.body);
   const next: CharacterSpec = { ...spec, alternate_greetings: greetings };
@@ -187,6 +190,13 @@ export function updateGreeting(
       spec,
       changed: false,
       result: fail('update_greeting', noGreetingMessage(action.headers.index, greetings.length)),
+    };
+  }
+  if (!action.body.trim()) {
+    return {
+      spec,
+      changed: false,
+      result: fail('update_greeting', 'error: content is empty (use delete_greeting to remove)'),
     };
   }
   greetings[index] = action.body;

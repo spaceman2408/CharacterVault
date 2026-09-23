@@ -218,6 +218,19 @@ describe('greetings', () => {
     expect(zero.ok).toBe(false);
     expect(zero.message).toContain('indexes start at 1');
   });
+
+  it('rejects empty greeting adds and updates', () => {
+    const card = spec({ alternate_greetings: ['first'] });
+    const added = addGreeting(card, action('add_greeting', {}, '   '));
+    expect(added.result.ok).toBe(false);
+    expect(added.changed).toBe(false);
+    expect(added.spec.alternate_greetings).toEqual(['first']);
+
+    const updated = updateGreeting(card, action('update_greeting', { index: '1' }, '  \n '));
+    expect(updated.result.ok).toBe(false);
+    expect(updated.changed).toBe(false);
+    expect(updated.spec.alternate_greetings).toEqual(['first']);
+  });
 });
 
 describe('createCharacterHost', () => {
