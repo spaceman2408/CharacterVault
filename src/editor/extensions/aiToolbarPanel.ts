@@ -1023,10 +1023,14 @@ function createToolbarPanel(
   // Capture phase: still fire when focus is body or panel controls
   document.addEventListener('keydown', onPanelKeyDown, true);
 
-  // Autoscroll only when the user has expanded thinking
-  let prevReasoningLength = 0;
-  let userScrolledReasoning = false;
+  // Autoscroll only when the user has expanded thinking. Stickiness is
+  // position-based so scrolling back to the bottom resumes following, and
+  // pins are coalesced (never cancelled-and-rescheduled) so fast token
+  // bursts can't starve the scroll.
+  const THINKING_STICK_THRESHOLD = 24;
+  let thinkingStuck = true;
   let thinkingScrollRaf = 0;
+  let resultStuck = true;
 
   function thinkingBodyText(): string {
     if (state.isStreaming) return clipLiveReasoning(state.streamingReasoning);
@@ -1041,19 +1045,46 @@ function createToolbarPanel(
     reasoningText.textContent = thinkingBodyText();
   }
 
-  reasoningContent.addEventListener('scroll', () => {
-    const isAtBottom =
-      reasoningContent.scrollTop + reasoningContent.clientHeight >= reasoningContent.scrollHeight - 5;
-    userScrolledReasoning = !isAtBottom;
-  });
+  function pinThinkingToBottom() {
+    if (panelDestroyed || !reasoningFold.open || !thinkingStuck) return;
+    reasoningContent.scrollTop = reasoningContent.scrollHeight;
+  }
 
-  reasoningFold.addEventListener('toggle', () => {
+  function scheduleThinkingPin() {
+    if (panelDestroyed || !reasoningFold.open || !thinkingStuck) return;
+    if (thinkingScrollRaf) return;
+    thinkingScrollRaf = requestAnimationFrame(() => {
+      thinkingScrollRaf = 0;
+      if (panelDestroyed) return;
+      pinThinkingToBottom();
+      if (resultStuck) resultContainer.scrollTop = resultContainer.scrollHeight;
+    });
+  }
+
+  const onReasoningScroll = () => {
+    thinkingStuck =
+      reasoningContent.scrollTop + reasoningContent.clientHeight >=
+      reasoningContent.scrollHeight - THINKING_STICK_THRESHOLD;
+  };
+
+  const onResultScroll = () => {
+    resultStuck =
+      resultContainer.scrollTop + resultContainer.clientHeight >=
+      resultContainer.scrollHeight - THINKING_STICK_THRESHOLD;
+  };
+
+  const onReasoningToggle = () => {
     syncThinkingDom();
     if (reasoningFold.open) {
-      userScrolledReasoning = false;
+      thinkingStuck = true;
       reasoningContent.scrollTop = reasoningContent.scrollHeight;
+      scheduleThinkingPin();
     }
-  });
+  };
+
+  reasoningContent.addEventListener('scroll', onReasoningScroll);
+  resultContainer.addEventListener('scroll', onResultScroll);
+  reasoningFold.addEventListener('toggle', onReasoningToggle);
 
   // Update result chrome based on state (body text is an in-editor ghost)
   function updateResultDisplay() {
@@ -1108,17 +1139,9 @@ function createToolbarPanel(
     if (hasReasoning) {
       syncThinkingDom();
 
-      if (state.isStreaming && state.streamingReasoning && reasoningFold.open) {
-        const currentLength = reasoningText.textContent?.length ?? 0;
-        if (currentLength > prevReasoningLength && !userScrolledReasoning) {
-          if (thinkingScrollRaf) cancelAnimationFrame(thinkingScrollRaf);
-          thinkingScrollRaf = requestAnimationFrame(() => {
-            thinkingScrollRaf = 0;
-            if (panelDestroyed) return;
-            reasoningContent.scrollTop = reasoningContent.scrollHeight;
-          });
-        }
-        prevReasoningLength = currentLength;
+      if (reasoningFold.open && (state.isStreaming ? state.streamingReasoning : state.aiReasoning)) {
+        pinThinkingToBottom();
+        scheduleThinkingPin();
       }
     } else {
       reasoningText.textContent = '';
@@ -1142,8 +1165,7 @@ function createToolbarPanel(
     actionButtons.style.display = showActions ? 'flex' : 'none';
 
     if (!state.isStreaming) {
-      prevReasoningLength = 0;
-      userScrolledReasoning = false;
+      thinkingStuck = true;
     }
   }
 
@@ -1380,10 +1402,16 @@ function createToolbarPanel(
       pendingFocusRafs.clear();
       document.removeEventListener('click', closeDropdownOnOutsideClick);
       document.removeEventListener('keydown', onPanelKeyDown, true);
+      reasoningContent.removeEventListener('scroll', onReasoningScroll);
+      resultContainer.removeEventListener('scroll', onResultScroll);
+      reasoningFold.removeEventListener('toggle', onReasoningToggle);
       window.clearTimeout(searchPanelTimer);
       // Drop registry entry early so updateAIState closures are not retained
       // solely by the WeakMap until the EditorView is GC'd.
       panelRegistry.delete(view);
+      // Break the dom -> panel -> view retain cycle so a lingering dom
+      // reference cannot keep the EditorView (and its listeners) alive.
+      (dom as unknown as { __panel?: unknown }).__panel = undefined;
       if (fontSizeCleanup) {
         fontSizeCleanup();
       }
