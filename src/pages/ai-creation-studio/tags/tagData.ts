@@ -61,73 +61,170 @@ function isTenseTag(tag: string): tag is TenseTag {
   return TENSE_TAGS.includes(tag as TenseTag);
 }
 
+export type GenderCode = 'female' | 'male' | 'neutral';
+
+/**
+ * Tags that never take part in gender opposition, either because they carry
+ * both anatomies (futanari / futasub) or because they describe a
+ * gender-variant or mixed scenario rather than a fixed binary gender.
+ * Selecting them neither excludes gendered tags nor gets excluded by them.
+ */
+const GENDER_NEUTRAL_TAGS: ReadonlySet<string> = new Set([
+  'futanari',
+  'futasub',
+  'futapov',
+  'transgender',
+  'trans',
+  'non-binary',
+  'nonbinary',
+  'androgynous',
+  'gender_bender',
+  'genderbender',
+  'ftm_trans',
+  'ftm',
+  'mtf_trans',
+  'mtf',
+  'intersex',
+  'hermaphrodite',
+  'bigender',
+  'genderfluid',
+  'agender',
+]);
+
+/**
+ * Whole tags that are gendered but carry no recognizable gender token,
+ * so the token patterns below would miss them.
+ */
+const FEMALE_WHOLE_TAGS: ReadonlySet<string> = new Set([
+  'milf',
+  'gilf',
+  'goddess',
+  'succubus',
+  'mermaid',
+  'amazon',
+  'princess',
+  'queen',
+  'witch',
+  'nun',
+  'actress',
+  'hag',
+  'giantess',
+  'cheerleader',
+  'femdom',
+  'soft_femdom',
+  'gentle_femdom',
+  'cuckquean',
+  'tomboy',
+  'bitch',
+  'bitchy',
+  'bimbo',
+  'yuri',
+]);
+
+const MALE_WHOLE_TAGS: ReadonlySet<string> = new Set([
+  'incubus',
+  'dilf',
+  'himbo',
+  'prince',
+  'maledom',
+  'femboydom',
+  'trap',
+  'twink',
+  'sissy',
+  'bara',
+  'mpreg',
+]);
+
+/**
+ * Exact snake_case tokens that gender a tag. Matched per token (split on
+ * `_`/`-`) so `human` never matches `man` and `woman` never matches `man`.
+ * Compounds containing a `girl`/`boy` substring anywhere (cat_girl,
+ * foxgirl, monster_boy, girlfriend) are caught by the substring checks
+ * in genderCodeOfTag instead.
+ */
+const FEMALE_TOKENS: ReadonlySet<string> = new Set([
+  'female',
+  'woman',
+  'wife',
+  'sister',
+  'sisters',
+  'daughter',
+  'mother',
+  'mommy',
+  'mom',
+  'aunt',
+  'niece',
+  'widow',
+  'lady',
+  'maid',
+  'mistress',
+  'madam',
+  'bride',
+  'motherly',
+  'dominatrix',
+  'domme',
+]);
+
+const MALE_TOKENS: ReadonlySet<string> = new Set([
+  'male',
+  'man',
+  'husband',
+  'son',
+  'brother',
+  'brothers',
+  'father',
+  'daddy',
+  'uncle',
+  'nephew',
+  'groom',
+  'widower',
+]);
+
+/**
+ * Classify a tag's gender coding for exclusion purposes. Works on built-in
+ * and custom tags alike: explicit whole-tag lists first, then token
+ * patterns. Tags signalling both sides at once (father-daughter,
+ * mother_and_son) and unrecognized tags are neutral, so mixed scenarios
+ * stay selectable and unknown tags fail open instead of over-blocking.
+ */
+export function genderCodeOfTag(tag: string): GenderCode {
+  const normalized = tag.trim().toLowerCase();
+  if (GENDER_NEUTRAL_TAGS.has(normalized)) return 'neutral';
+  if (FEMALE_WHOLE_TAGS.has(normalized)) return 'female';
+  if (MALE_WHOLE_TAGS.has(normalized)) return 'male';
+  const tokens = normalized.split(/[_-]+/);
+  const female = tokens.some((token) => token.includes('girl') || FEMALE_TOKENS.has(token));
+  const male = tokens.some((token) => token.includes('boy') || MALE_TOKENS.has(token));
+  if (female && male) return 'neutral';
+  if (female) return 'female';
+  if (male) return 'male';
+  return 'neutral';
+}
+
 /**
  * Tag exclusion rules - if a tag is selected, these tags should be excluded from random selection
  *
- * Appendage logic:
- *   - Female-coded tags exclude penis/balls appearance tags (large_penis, small_penis, huge_balls)
- *   - Male-coded tags exclude breast appearance tags (huge_breasts, small_breasts)
- *   - futanari / futasub are intentionally exempt — they have both
- *   - femboy / trap / twink / catboy are male but keep breast exclusion removed (crossdressing context)
+ * Gender opposition (female-coded vs male-coded, e.g. slime_girl vs
+ * catboy) is derived dynamically from genderCodeOfTag in
+ * addExclusionsForTag, so every built-in and custom tag is covered.
+ * The static rules below only handle non-gender conflicts.
  */
 
 const FEMALE_APPENDAGE_EXCLUSIONS = ['large_penis', 'small_penis', 'huge_balls'] as const;
 const MALE_APPENDAGE_EXCLUSIONS = ['huge_breasts', 'small_breasts'] as const;
 
-const FEMALE_IDENTITY_TAGS = [
-  'female',
-  'woman',
-  'girl',
-  'strong_woman',
-  'grown_woman',
-] as const;
-
-const FEMALE_ROLE_TAGS = [
-  'mother',
-  'daughter',
-  'sister',
-  'big_sister',
-  'mommy_dom',
-  'dommy_mommy',
-  'milf',
-  'gilf',
-  'wife',
-  'loving_wife',
-  'girlfriend',
-  'aunt',
-  'stepmother',
-  'stepsister',
-  'muscle_mommy',
-  'sugar_mommy',
-  'widow',
-] as const;
-
-const MALE_IDENTITY_TAGS = [
-  'male',
-  'boy',
-  'man',
-  'monster_boy',
-  'incubus',
-  'old_man',
-] as const;
-
-const MALE_CROSSDRESSING_TAGS = ['femboy', 'catboy', 'twink', 'trap', 'sissy'] as const;
-
-const MALE_ROLE_TAGS = [
-  'father',
-  'son',
-  'brother',
-  'big_brother',
-  'daddy',
-  'dilf',
-  'husband',
-  'boyfriend',
-] as const;
-
-const FEMALE_CODED_TAGS = [...FEMALE_IDENTITY_TAGS, ...FEMALE_ROLE_TAGS] as const;
-const MALE_CODED_TAGS = [...MALE_IDENTITY_TAGS, ...MALE_CROSSDRESSING_TAGS, ...MALE_ROLE_TAGS] as const;
-
-const MALE_BREAST_ALLOWED_TAGS = MALE_CROSSDRESSING_TAGS;
+/**
+ * Male-coded tags exempt from the breast exclusion (crossdressing
+ * context). Every other male-coded tag excludes breast appearance tags.
+ */
+const MALE_BREAST_ALLOWED_TAGS: ReadonlySet<string> = new Set([
+  'femboy',
+  'catboy',
+  'twink',
+  'trap',
+  'sissy',
+  'femboydom',
+]);
 
 type TagExclusionRule = {
   when: readonly string[];
@@ -135,32 +232,12 @@ type TagExclusionRule = {
 };
 
 const exclusionRules: readonly TagExclusionRule[] = [
-  {
-    when: FEMALE_CODED_TAGS,
-    exclude: [...MALE_CODED_TAGS, ...FEMALE_APPENDAGE_EXCLUSIONS],
-  },
-  {
-    when: [...FEMALE_APPENDAGE_EXCLUSIONS],
-    exclude: FEMALE_CODED_TAGS,
-  },
-  {
-    when: [...MALE_IDENTITY_TAGS, ...MALE_ROLE_TAGS],
-    exclude: [...FEMALE_CODED_TAGS, ...MALE_APPENDAGE_EXCLUSIONS],
-  },
-  {
-    when: MALE_BREAST_ALLOWED_TAGS,
-    exclude: FEMALE_CODED_TAGS,
-  },
-  {
-    when: MALE_APPENDAGE_EXCLUSIONS,
-    exclude: [...MALE_IDENTITY_TAGS, ...MALE_ROLE_TAGS],
-  },
   { when: ['large_penis'], exclude: ['small_penis'] },
   { when: ['small_penis'], exclude: ['large_penis'] },
   { when: ['huge_breasts'], exclude: ['small_breasts'] },
   { when: ['small_breasts'], exclude: ['huge_breasts'] },
-  { when: ['lesbian', 'wlw'], exclude: ['gay', 'mlm'] },
-  { when: ['gay', 'mlm'], exclude: ['lesbian', 'wlw'] },
+  { when: ['lesbian', 'wlw', 'yuri'], exclude: ['gay', 'mlm', 'bara'] },
+  { when: ['gay', 'mlm', 'bara'], exclude: ['lesbian', 'wlw', 'yuri'] },
 ];
 
 function buildTagExclusions(rules: readonly TagExclusionRule[]): Record<string, string[]> {
@@ -269,49 +346,144 @@ function shuffle<T>(arr: readonly T[]): T[] {
 }
 
 /**
- * Get all tags that should be excluded based on currently selected tags
+ * All built-in tags split by gender coding, computed lazily so the
+ * classifier (not a hand-maintained list) is the single source of truth.
+ */
+let femaleGenderedTags: ReadonlySet<string> | null = null;
+let maleGenderedTags: ReadonlySet<string> | null = null;
+
+function genderedTagPools(): { female: ReadonlySet<string>; male: ReadonlySet<string> } {
+  if (!femaleGenderedTags || !maleGenderedTags) {
+    const female = new Set<string>();
+    const male = new Set<string>();
+    for (const tags of Object.values(TAG_CATEGORY_MAP)) {
+      for (const tag of tags) {
+        const code = genderCodeOfTag(tag);
+        if (code === 'female') female.add(tag);
+        else if (code === 'male') male.add(tag);
+      }
+    }
+    femaleGenderedTags = female;
+    maleGenderedTags = male;
+  }
+  return { female: femaleGenderedTags, male: maleGenderedTags };
+}
+
+/**
+ * Get all tags that should be excluded based on currently selected tags.
+ * Combines the static rules above with dynamic gender opposition, so a
+ * selected female-coded tag excludes every male-coded tag (and
+ * penis/balls appearance tags) and vice versa.
  */
 function getExcludedTags(currentSelections: Record<string, string[]>): Set<string> {
   const excluded = new Set<string>();
-  
+
   // Collect all currently selected tags across all categories
   const allSelected = Object.values(currentSelections).flat();
-  
+
   // For each selected tag, add its exclusions to the set
   for (const tag of allSelected) {
-    const exclusions = TAG_EXCLUSIONS[tag];
-    if (exclusions) {
-      exclusions.forEach(excludedTag => excluded.add(excludedTag));
-    }
+    addExclusionsForTag(excluded, tag);
   }
-  
+
   return excluded;
 }
 
 function addExclusionsForTag(excludedTags: Set<string>, tag: string): void {
   const exclusions = TAG_EXCLUSIONS[tag];
-  if (!exclusions) return;
+  if (exclusions) {
+    for (const excludedTag of exclusions) {
+      excludedTags.add(excludedTag);
+    }
+  }
 
-  for (const excludedTag of exclusions) {
-    excludedTags.add(excludedTag);
+  const pools = genderedTagPools();
+  const code = genderCodeOfTag(tag);
+  if (code === 'female') {
+    for (const opposite of pools.male) {
+      if (opposite !== tag) excludedTags.add(opposite);
+    }
+    for (const excludedTag of FEMALE_APPENDAGE_EXCLUSIONS) {
+      excludedTags.add(excludedTag);
+    }
+  } else if (code === 'male') {
+    for (const opposite of pools.female) {
+      if (opposite !== tag) excludedTags.add(opposite);
+    }
+    if (!MALE_BREAST_ALLOWED_TAGS.has(tag)) {
+      for (const excludedTag of MALE_APPENDAGE_EXCLUSIONS) {
+        excludedTags.add(excludedTag);
+      }
+    }
+  }
+
+  // Reverse appendage rules: picking the anatomy implies the gender side.
+  if ((FEMALE_APPENDAGE_EXCLUSIONS as readonly string[]).includes(tag)) {
+    for (const femaleTag of pools.female) {
+      if (femaleTag !== tag) excludedTags.add(femaleTag);
+    }
+  }
+  if ((MALE_APPENDAGE_EXCLUSIONS as readonly string[]).includes(tag)) {
+    for (const maleTag of pools.male) {
+      if (maleTag !== tag && !MALE_BREAST_ALLOWED_TAGS.has(maleTag)) {
+        excludedTags.add(maleTag);
+      }
+    }
   }
 }
 
 /**
- * Get all tags that should be excluded based on currently selected tags (exported for UI)
+ * Get all tags that should be excluded based on currently selected tags
+ * (exported for UI). Pass every rendered tag as `candidates` so custom
+ * tags — which the built-in pools cannot know — get the same gender
+ * opposition treatment in the browser.
  */
-export function getExcludedTagsForUI(currentSelections: Record<string, string[]>): Set<string> {
-  return getExcludedTags(currentSelections);
+export function getExcludedTagsForUI(
+  currentSelections: Record<string, string[]>,
+  candidates: readonly string[] = [],
+): Set<string> {
+  const excluded = getExcludedTags(currentSelections);
+  if (candidates.length > 0) {
+    const selectedCodes = new Set(
+      Object.values(currentSelections).flat().map(genderCodeOfTag),
+    );
+    for (const candidate of candidates) {
+      const code = genderCodeOfTag(candidate);
+      if (code === 'neutral') continue;
+      if (selectedCodes.has(code === 'female' ? 'male' : 'female')) {
+        excluded.add(candidate);
+      }
+    }
+  }
+  return excluded;
 }
 
 /**
- * Draw a random number of tags from a pool, respecting min/max constraints and exclusions.
+ * Gender codes present in a selections record, ignoring neutral tags.
+ * Used to keep custom tags — which the built-in exclusion map cannot
+ * know — coherent during random draws.
+ */
+function selectedGenderCodes(selections: Record<string, string[]>): Set<GenderCode> {
+  const codes = new Set<GenderCode>();
+  for (const tag of Object.values(selections).flat()) {
+    const code = genderCodeOfTag(tag);
+    if (code !== 'neutral') codes.add(code);
+  }
+  return codes;
+}
+
+/**
+ * Draw a random number of tags from a pool, respecting min/max constraints
+ * and exclusions. `selectedCodes` tracks genders picked so far (including
+ * custom tags) and is updated as this draw picks, so a custom opposite-
+ * gender candidate can never slip in alongside an earlier pick.
  */
 function drawTags(
-  pool: readonly string[], 
-  min: number, 
-  max: number, 
-  excludedTags: Set<string>
+  pool: readonly string[],
+  min: number,
+  max: number,
+  excludedTags: Set<string>,
+  selectedCodes: Set<GenderCode> = new Set(),
 ): string[] {
   const count = Math.floor(Math.random() * (max - min + 1)) + min;
   if (count <= 0) return [];
@@ -321,8 +493,11 @@ function drawTags(
   for (const tag of shuffle(pool)) {
     if (selected.length >= count) break;
     if (excludedTags.has(tag)) continue;
+    const code = genderCodeOfTag(tag);
+    if (code !== 'neutral' && selectedCodes.has(code === 'female' ? 'male' : 'female')) continue;
 
     selected.push(tag);
+    if (code !== 'neutral') selectedCodes.add(code);
     addExclusionsForTag(excludedTags, tag);
   }
 
@@ -338,14 +513,19 @@ function drawTags(
  *
  * `lockedKeys` prevent overwriting existing selections in those categories.
  *
+ * Pass merged pools via `options.pools` (e.g. built-ins plus user custom
+ * tags) so custom tags can be drawn; otherwise the built-in pools are used.
+ * Locked selections — custom or not — still exert exclusions on the draw.
+ *
  * Tags are selected with exclusion rules to prevent conflicting tags (e.g., male/female, mother/father).
  */
 export function randomizeTags(
   currentSelections: Record<string, string[]>,
   lockedKeys: readonly string[] = [],
-  options: { includeNsfw?: boolean } = {}
+  options: { includeNsfw?: boolean; pools?: Record<string, readonly string[]> } = {},
 ): Record<string, string[]> {
   const includeNsfw = options.includeNsfw ?? true;
+  const pools = options.pools ?? TAG_CATEGORY_MAP;
   const next: Record<string, string[]> = { ...currentSelections };
 
   const coreCategoryKeys: TagCategoryKey[] = ['identity', 'role', 'personality'];
@@ -361,17 +541,18 @@ export function randomizeTags(
 
   // Build exclusion set incrementally as we select tags
   let excludedTags = getExcludedTags(next);
+  const codes = selectedGenderCodes(next);
 
   for (const key of coreCategoryKeys) {
     if (lockedKeys.includes(key)) continue;
-    next[key] = drawTags(TAG_CATEGORY_MAP[key], 1, 2, excludedTags);
+    next[key] = drawTags(pools[key] ?? [], 1, 2, excludedTags, codes);
     // Update exclusions after each selection
     excludedTags = getExcludedTags(next);
   }
 
   for (const key of supportingKeys) {
     if (lockedKeys.includes(key)) continue;
-    next[key] = drawTags(TAG_CATEGORY_MAP[key], 0, 2, excludedTags);
+    next[key] = drawTags(pools[key] ?? [], 0, 2, excludedTags, codes);
     // Update exclusions after each selection
     excludedTags = getExcludedTags(next);
   }
@@ -379,7 +560,7 @@ export function randomizeTags(
   for (const key of flavorKeys) {
     if (lockedKeys.includes(key)) continue;
     if (key === 'kink_fetish' && !includeNsfw) continue;
-    next[key] = drawTags(TAG_CATEGORY_MAP[key], 0, 1, excludedTags);
+    next[key] = drawTags(pools[key] ?? [], 0, 1, excludedTags, codes);
     // Update exclusions after each selection
     excludedTags = getExcludedTags(next);
   }
