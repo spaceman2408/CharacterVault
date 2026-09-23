@@ -79,7 +79,19 @@ export function diffSpecChanges(
   const beforeGreetings = original.alternate_greetings ?? [];
   const afterGreetings = proposed.alternate_greetings ?? [];
   if (JSON.stringify(beforeGreetings) !== JSON.stringify(afterGreetings)) {
-    if (beforeGreetings.length === afterGreetings.length) {
+    if (afterGreetings.length > beforeGreetings.length) {
+      const overlap = beforeGreetings.length;
+      afterGreetings.slice(0, overlap).forEach((after, index) => {
+        const before = beforeGreetings[index] ?? '';
+        if (before !== after) {
+          changes.push({ id: `greeting:${index}`, kind: 'greeting', index, before, after });
+        }
+      });
+      afterGreetings.slice(overlap).forEach((after, offset) => {
+        const index = overlap + offset;
+        changes.push({ id: `greeting:${index}`, kind: 'greeting', index, before: '', after });
+      });
+    } else if (beforeGreetings.length === afterGreetings.length) {
       afterGreetings.forEach((after, index) => {
         const before = beforeGreetings[index] ?? '';
         if (before !== after) {
@@ -199,6 +211,20 @@ export function countApproved(decisions: ReviewDecisions): number {
   return Object.values(decisions).filter((decision) => decision.approved).length;
 }
 
+export const GREETINGS_EDIT_SEPARATOR = '\n---\n';
+
+export function formatGreetingsForEdit(greetings: string[]): string {
+  return greetings.join(GREETINGS_EDIT_SEPARATOR);
+}
+
+export function parseGreetingsFromEdit(raw: string): string[] {
+  if (raw.includes(GREETINGS_EDIT_SEPARATOR)) {
+    return raw.split(GREETINGS_EDIT_SEPARATOR).filter((part) => part.trim() !== '');
+  }
+  if (raw.trim() === '') return [];
+  return [raw];
+}
+
 /**
  * Applies approved review decisions onto a base spec. The base is usually the
  * live card at apply time (not the run-start original) so concurrent editor
@@ -219,14 +245,21 @@ export function applySpecDecisions(
       changed = true;
     } else if (change.kind === 'greeting') {
       const greetings = [...(next.alternate_greetings ?? [])];
-      if (change.index >= greetings.length) continue;
-      greetings[change.index] = decision.edited ?? change.after;
-      next.alternate_greetings = greetings;
-      changed = true;
+      const text = decision.edited ?? change.after;
+      if (text.trim() === '') continue;
+      if (change.before === '') {
+        greetings.splice(Math.max(0, Math.min(change.index, greetings.length)), 0, text);
+        next.alternate_greetings = greetings;
+        changed = true;
+      } else {
+        if (change.index < 0 || change.index >= greetings.length) continue;
+        greetings[change.index] = text;
+        next.alternate_greetings = greetings;
+        changed = true;
+      }
     } else if (change.kind === 'greetings') {
       const lines =
-        decision.edited != null ? decision.edited.split('\n') : [...change.after];
-      if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+        decision.edited != null ? parseGreetingsFromEdit(decision.edited) : [...change.after];
       next.alternate_greetings = lines;
       changed = true;
     }

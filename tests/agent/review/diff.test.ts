@@ -9,6 +9,8 @@ import {
   diffCharacterReview,
   diffLorebookReview,
   diffSpecChanges,
+  formatGreetingsForEdit,
+  parseGreetingsFromEdit,
 } from '../../../src/agent/review/diff';
 import type {
   CharacterBook,
@@ -80,13 +82,34 @@ describe('diffSpecChanges', () => {
     ]);
   });
 
-  it('falls back to a whole-list change when greeting counts differ', () => {
+  it('emits a per-greeting add with an empty original for appended greetings', () => {
     const changes = diffSpecChanges(
       spec({ alternate_greetings: ['Hi.'] }),
       spec({ alternate_greetings: ['Hi.', 'Welcome.'] }),
     );
     expect(changes).toEqual([
-      { id: 'greetings', kind: 'greetings', before: ['Hi.'], after: ['Hi.', 'Welcome.'] },
+      { id: 'greeting:1', kind: 'greeting', index: 1, before: '', after: 'Welcome.' },
+    ]);
+  });
+
+  it('emits edits plus adds when earlier greetings changed alongside an append', () => {
+    const changes = diffSpecChanges(
+      spec({ alternate_greetings: ['Hi.'] }),
+      spec({ alternate_greetings: ['Hi edited.', 'Welcome.'] }),
+    );
+    expect(changes).toEqual([
+      { id: 'greeting:0', kind: 'greeting', index: 0, before: 'Hi.', after: 'Hi edited.' },
+      { id: 'greeting:1', kind: 'greeting', index: 1, before: '', after: 'Welcome.' },
+    ]);
+  });
+
+  it('falls back to a whole-list change when greetings are removed', () => {
+    const changes = diffSpecChanges(
+      spec({ alternate_greetings: ['Hi.', 'Bye.'] }),
+      spec({ alternate_greetings: ['Hi.'] }),
+    );
+    expect(changes).toEqual([
+      { id: 'greetings', kind: 'greetings', before: ['Hi.', 'Bye.'], after: ['Hi.'] },
     ]);
   });
 });
@@ -243,15 +266,60 @@ describe('live-base merging', () => {
     expect(merged).toBeUndefined();
   });
 
-  it('strips a phantom trailing empty greeting from list edits', () => {
+  it('appends new greetings instead of dropping them', () => {
     const original = spec({ alternate_greetings: ['A.'] });
     const proposed = spec({ alternate_greetings: ['A.', 'B.'] });
     const changes = diffSpecChanges(original, proposed);
     expect(changes).toHaveLength(1);
-    expect(changes[0].kind).toBe('greetings');
+    expect(changes[0]).toMatchObject({ kind: 'greeting', index: 1, before: '', after: 'B.' });
     const decisions = defaultDecisions(changes);
-    decisions.greetings = { approved: true, edited: 'A.\nB.\n' };
     const merged = applySpecDecisions(original, changes, decisions);
     expect(merged?.alternate_greetings).toEqual(['A.', 'B.']);
+  });
+
+  it('inserts appended greetings without clobbering concurrent live adds', () => {
+    const original = spec({ alternate_greetings: ['A.'] });
+    const proposed = spec({ alternate_greetings: ['A.', 'B.'] });
+    const changes = diffSpecChanges(original, proposed);
+    const decisions = defaultDecisions(changes);
+    const merged = applySpecDecisions(spec({ alternate_greetings: ['A.', 'Live.'] }), changes, decisions);
+    expect(merged?.alternate_greetings).toEqual(['A.', 'B.', 'Live.']);
+  });
+
+  it('keeps multiline greetings intact through list-edit round trips', () => {
+    const original = spec({ alternate_greetings: ['A.', 'B.'] });
+    const proposed = spec({ alternate_greetings: ['A.'] });
+    const changes = diffSpecChanges(original, proposed);
+    expect(changes).toHaveLength(1);
+    expect(changes[0].kind).toBe('greetings');
+    const decisions = defaultDecisions(changes);
+    decisions.greetings = { approved: true, edited: 'Line one\nLine two\n---\nB part one\nB part two\n---\n' };
+    const merged = applySpecDecisions(original, changes, decisions);
+    expect(merged?.alternate_greetings).toEqual(['Line one\nLine two', 'B part one\nB part two']);
+  });
+
+  it('skips whitespace-only greeting edits instead of saving empty greetings', () => {
+    const original = spec({ alternate_greetings: ['A.'] });
+    const proposed = spec({ alternate_greetings: ['A.', 'B.'] });
+    const changes = diffSpecChanges(original, proposed);
+    const decisions = defaultDecisions(changes);
+    decisions['greeting:1'] = { approved: true, edited: '   ' };
+    expect(applySpecDecisions(original, changes, decisions)).toBeUndefined();
+  });
+});
+
+describe('parseGreetingsFromEdit', () => {
+  it('round-trips multiline greetings through the edit separator', () => {
+    const greetings = ['Line one\n\nLine two', 'B part one\nB part two'];
+    expect(parseGreetingsFromEdit(formatGreetingsForEdit(greetings))).toEqual(greetings);
+  });
+
+  it('keeps a separator-free edit as one greeting so blank lines survive', () => {
+    expect(parseGreetingsFromEdit('Para one\n\nPara two')).toEqual(['Para one\n\nPara two']);
+  });
+
+  it('drops whitespace-only blocks instead of creating empty greetings', () => {
+    expect(parseGreetingsFromEdit('A.\n---\n   \n---\nB.')).toEqual(['A.', 'B.']);
+    expect(parseGreetingsFromEdit('   ')).toEqual([]);
   });
 });
