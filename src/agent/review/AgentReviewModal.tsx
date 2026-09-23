@@ -128,7 +128,7 @@ function DiffPane({
         />
         {label}
       </p>
-      <div className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border bg-bg p-2.5 text-xs leading-relaxed text-fg">
+      <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word rounded-lg border border-border bg-bg p-2.5 text-xs leading-relaxed text-fg">
         {isEmpty && emptyLabel ? (
           <span className="italic text-fg-subtle">{emptyLabel}</span>
         ) : (
@@ -164,7 +164,7 @@ function DiffView({ diff, before, after }: { diff: WordDiffResult; before: strin
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
             Original
           </p>
-          <div className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border bg-bg p-2.5 text-xs leading-relaxed text-fg">
+          <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word rounded-lg border border-border bg-bg p-2.5 text-xs leading-relaxed text-fg">
             {before || <span className="italic text-fg-subtle">(empty)</span>}
           </div>
         </div>
@@ -172,7 +172,7 @@ function DiffView({ diff, before, after }: { diff: WordDiffResult; before: strin
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
             Agent
           </p>
-          <div className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-accent/30 bg-bg p-2.5 text-xs leading-relaxed text-fg">
+          <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word rounded-lg border border-accent/30 bg-bg p-2.5 text-xs leading-relaxed text-fg">
             {after || <span className="italic text-fg-subtle">(empty)</span>}
           </div>
         </div>
@@ -266,7 +266,7 @@ function GreetingBlock({
           </span>
         )}
       </p>
-      <div className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-fg">
+      <div className="max-h-40 overflow-y-auto whitespace-pre-wrap wrap-break-word text-xs leading-relaxed text-fg">
         {text || <span className="italic text-fg-subtle">(empty)</span>}
       </div>
     </div>
@@ -600,7 +600,7 @@ export function AgentReviewModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-overlay p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-100 flex items-center justify-center bg-overlay p-3 backdrop-blur-sm sm:p-6"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onMinimize();
       }}
