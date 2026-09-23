@@ -196,10 +196,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
   const searchLower = search.trim().toLowerCase();
 
-  // Get excluded tags based on current selections
+  // Get excluded tags based on current selections. Every rendered tag is
+  // passed as a candidate so custom tags get gender-opposition gray-outs too.
   const excludedTags = useMemo(
-    () => getExcludedTagsForUI(selections),
-    [selections]
+    () => getExcludedTagsForUI(selections, categories.flatMap((category) => category.tags)),
+    [selections, categories]
   );
 
   const favoriteTags = useMemo(

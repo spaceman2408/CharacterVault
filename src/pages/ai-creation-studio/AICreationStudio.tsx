@@ -128,8 +128,13 @@ export const AICreationStudio: React.FC = () => {
   const handleFeelingLucky = useCallback(() => {
     if (!hasRequiredGenerationTags(tagSelections)) return;
     // Hidden categories are locked: Lucky keeps their current selections
-    // instead of drawing new tags for them.
-    const randomized = randomizeTags(tagSelections, hiddenCategories, { includeNsfw: !hideNsfw });
+    // instead of drawing new tags for them. Pools are the merged
+    // built-in + custom tags so custom tags can be drawn too.
+    const pools = Object.fromEntries(allCategories.map((category) => [category.key, category.tags]));
+    const randomized = randomizeTags(tagSelections, hiddenCategories, {
+      includeNsfw: !hideNsfw,
+      pools,
+    });
     setTagSelections(randomized);
 
     if (showLuckyVortexSetting) {
@@ -150,7 +155,7 @@ export const AICreationStudio: React.FC = () => {
         void start(text, tags);
       }
     }
-  }, [tagSelections, showLuckyVortexSetting, start, saveSuccess, hideNsfw, hiddenCategories]);
+  }, [tagSelections, showLuckyVortexSetting, start, saveSuccess, hideNsfw, hiddenCategories, allCategories]);
 
   const handleVortexAnimationStart = useCallback(() => {
     setFadeInputModal(true);
