@@ -17,7 +17,7 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { countApproved, defaultDecisions } from './diff';
+import { countApproved, defaultDecisions, formatGreetingsForEdit } from './diff';
 import { diffWords, type WordDiffResult } from './wordDiff';
 import type { AgentReviewChange, ReviewDecision, ReviewDecisions } from './types';
 
@@ -34,6 +34,12 @@ function changeTitle(change: AgentReviewChange): { label: string; detail: string
     case 'field':
       return { label: change.label, detail: 'Character field' };
     case 'greeting':
+      if (change.before === '') {
+        return { label: `Greeting #${change.index + 1}`, detail: 'New alternate greeting' };
+      }
+      if (change.after === '') {
+        return { label: `Greeting #${change.index + 1}`, detail: 'Deleted alternate greeting' };
+      }
       return { label: `Greeting #${change.index + 1}`, detail: 'Alternate greeting' };
     case 'greetings':
       return { label: 'Greetings list', detail: 'Added, removed, or reordered greetings' };
@@ -86,7 +92,7 @@ function changeTextPair(change: AgentReviewChange): { before: string; after: str
     case 'greeting':
       return { before: change.before, after: change.after };
     case 'greetings':
-      return { before: change.before.join('\n'), after: change.after.join('\n') };
+      return null;
     case 'entry-added':
       return { before: '', after: change.content };
     case 'entry-updated':
@@ -213,6 +219,123 @@ function DiffStat({ diff }: { diff: WordDiffResult }): React.ReactElement | null
   );
 }
 
+function GreetingsStat({ before, after }: { before: string[]; after: string[] }): React.ReactElement | null {
+  const added = Math.max(0, after.length - before.length);
+  const removed = Math.max(0, before.length - after.length);
+  if (added === 0 && removed === 0) return null;
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold">
+      {added > 0 && (
+        <span className="rounded bg-success-soft px-1.5 py-0.5 text-success-soft-fg">
+          +{added} greeting{added === 1 ? '' : 's'}
+        </span>
+      )}
+      {removed > 0 && (
+        <span className="rounded bg-danger-soft px-1.5 py-0.5 text-danger-soft-fg">
+          −{removed} greeting{removed === 1 ? '' : 's'}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function GreetingBlock({
+  index,
+  text,
+  badge,
+  badgeClassName,
+  accent,
+}: {
+  index: number;
+  text: string;
+  badge?: string;
+  badgeClassName?: string;
+  accent?: boolean;
+}): React.ReactElement {
+  return (
+    <div
+      className={`rounded-lg border p-2.5 ${
+        accent ? 'border-accent/30 bg-bg' : 'border-border bg-bg'
+      }`}
+    >
+      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-fg-subtle">
+        Greeting #{index + 1}
+        {badge && (
+          <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badgeClassName ?? ''}`}>
+            {badge}
+          </span>
+        )}
+      </p>
+      <div className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-relaxed text-fg">
+        {text || <span className="italic text-fg-subtle">(empty)</span>}
+      </div>
+    </div>
+  );
+}
+
+function GreetingsListView({ before, after }: { before: string[]; after: string[] }): React.ReactElement {
+  const isAppend =
+    after.length > before.length && before.every((greeting, index) => greeting === after[index]);
+  const isTruncate =
+    before.length > after.length && after.every((greeting, index) => greeting === before[index]);
+  const MAX_RENDERED_GREETINGS = 100;
+  const renderTruncatedNotice = (total: number): React.ReactElement | null => {
+    if (total <= MAX_RENDERED_GREETINGS) return null;
+    return (
+      <p className="rounded-lg border border-border bg-bg p-2.5 text-xs italic text-fg-subtle">
+        …and {total - MAX_RENDERED_GREETINGS} more (approve to keep them; edit to prune).
+      </p>
+    );
+  };
+  return (
+    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+      <div className="min-w-0 space-y-2">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+          <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-fg-subtle" />
+          Original · {before.length} greeting{before.length === 1 ? '' : 's'}
+        </p>
+        {before.length === 0 && (
+          <p className="rounded-lg border border-border bg-bg p-2.5 text-xs italic text-fg-subtle">
+            (no greetings)
+          </p>
+        )}
+        {before.slice(0, MAX_RENDERED_GREETINGS).map((greeting, index) => (
+          <GreetingBlock
+            key={index}
+            index={index}
+            text={greeting}
+            badge={isTruncate && index >= after.length ? 'Removed' : undefined}
+            badgeClassName="bg-danger-soft text-danger-soft-fg"
+          />
+        ))}
+        {renderTruncatedNotice(before.length)}
+      </div>
+      <div className="min-w-0 space-y-2">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+          <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-accent" />
+          Agent · {after.length} greeting{after.length === 1 ? '' : 's'}
+        </p>
+        {after.length === 0 && (
+          <p className="rounded-lg border border-border bg-bg p-2.5 text-xs italic text-fg-subtle">
+            (no greetings)
+          </p>
+        )}
+        {after.slice(0, MAX_RENDERED_GREETINGS).map((greeting, index) => (
+          <GreetingBlock
+            key={index}
+            index={index}
+            text={greeting}
+            accent
+            badge={isAppend && index >= before.length ? 'New' : undefined}
+            badgeClassName="bg-success-soft text-success-soft-fg"
+          />
+        ))}
+        {renderTruncatedNotice(after.length)}
+      </div>
+    </div>
+  );
+}
+
 interface ChangeRowProps {
   change: AgentReviewChange;
   decision: ReviewDecision;
@@ -250,7 +373,7 @@ function ChangeRow({
     (change.kind === 'field' || change.kind === 'greeting'
       ? change.after
       : change.kind === 'greetings'
-        ? change.after.join('\n')
+        ? formatGreetingsForEdit(change.after)
         : change.kind === 'entry-added' || change.kind === 'entry-updated'
           ? entryProposedContent(change)
           : '');
@@ -281,6 +404,9 @@ function ChangeRow({
           </span>
         </button>
         {pair && wordDiff && <DiffStat diff={wordDiff} />}
+        {change.kind === 'greetings' && (
+          <GreetingsStat before={change.before} after={change.after} />
+        )}
         {editable && decision.approved && expanded && (
           <button
             type="button"
@@ -343,13 +469,18 @@ function ChangeRow({
                 aria-label={`Edited ${label}`}
               />
               {change.kind === 'greetings' && (
-                <p className="text-[11px] text-fg-subtle">One greeting per line.</p>
+                <p className="text-[11px] text-fg-subtle">
+                  Separate greetings with a line containing only ---.
+                </p>
               )}
             </div>
           ) : (
             <>
               {pair && wordDiff && (
                 <DiffView diff={wordDiff} before={pair.before} after={pair.after} />
+              )}
+              {change.kind === 'greetings' && (
+                <GreetingsListView before={change.before} after={change.after} />
               )}
               {change.kind === 'book-settings' && (
                 <ul className="space-y-1 rounded-lg border border-accent/25 bg-accent-soft/40 p-2.5">
