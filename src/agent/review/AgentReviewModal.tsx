@@ -515,6 +515,16 @@ export function AgentReviewModal({
   );
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
+  // Resync when a new review payload arrives while the modal is mounted;
+  // otherwise decisions/expanded would silently refer to stale change ids.
+  const changeIdsKey = changes.map((change) => change.id).join('\n');
+  useEffect(() => {
+    setDecisions(defaultDecisions(changes));
+    setExpanded(new Set(changes.slice(0, 1).map((change) => change.id)));
+    setConfirmDiscard(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [changeIdsKey]);
+
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onMinimize();
