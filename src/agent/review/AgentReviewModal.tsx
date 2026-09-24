@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Book,
@@ -18,7 +18,8 @@ import {
   X,
 } from 'lucide-react';
 import { countApproved, defaultDecisions, formatGreetingsForEdit } from './diff';
-import { diffWords, type WordDiffResult } from './wordDiff';
+import { diffParagraphs, type ParagraphDiff, type ParagraphRow, type RichPart } from './paragraphDiff';
+import type { WordDiffSegment } from './wordDiff';
 import type { AgentReviewChange, ReviewDecision, ReviewDecisions } from './types';
 
 interface AgentReviewModalProps {
@@ -104,115 +105,183 @@ function changeTextPair(change: AgentReviewChange): { before: string; after: str
   }
 }
 
-function DiffPane({
-  label,
-  accent,
+function WordSegments({
   segments,
   showDeletions,
-  emptyLabel,
-  isEmpty,
 }: {
-  label: string;
-  accent: boolean;
-  segments: Array<{ text: string; type: 'same' | 'del' | 'add' }>;
+  segments: WordDiffSegment[];
   showDeletions: boolean;
-  emptyLabel?: string;
-  isEmpty: boolean;
 }): React.ReactElement {
   return (
-    <div className="min-w-0">
-      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-        <span
-          aria-hidden="true"
-          className={`inline-block h-2 w-2 rounded-full ${accent ? 'bg-accent' : 'bg-fg-subtle'}`}
-        />
-        {label}
-      </p>
-      <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word rounded-lg border border-border bg-bg p-2.5 text-xs leading-relaxed text-fg">
-        {isEmpty && emptyLabel ? (
-          <span className="italic text-fg-subtle">{emptyLabel}</span>
-        ) : (
-          segments.map((segment, index) => {
-            if (segment.type === 'same') return <span key={index}>{segment.text}</span>;
-            if (segment.type === 'del' && showDeletions) {
-              return (
-                <span key={index} className="rounded bg-danger-soft px-px text-danger-soft-fg">
-                  {segment.text}
-                </span>
-              );
-            }
-            if (segment.type === 'add' && !showDeletions) {
-              return (
-                <span key={index} className="rounded bg-success-soft px-px text-success-soft-fg">
-                  {segment.text}
-                </span>
-              );
-            }
-            return null;
-          })
-        )}
+    <>
+      {segments.map((segment, index) => {
+        if (segment.type === 'same') return <span key={index}>{segment.text}</span>;
+        if (segment.type === 'del' && showDeletions) {
+          return (
+            <span key={index} className="rounded bg-danger-soft px-px text-danger-soft-fg">
+              {segment.text}
+            </span>
+          );
+        }
+        if (segment.type === 'add' && !showDeletions) {
+          return (
+            <span key={index} className="rounded bg-success-soft px-px text-success-soft-fg">
+              {segment.text}
+            </span>
+          );
+        }
+        return null;
+      })}
+    </>
+  );
+}
+
+function DiffCell({ children }: { children: React.ReactNode }): React.ReactElement {
+  return (
+    <div className="min-w-0 rounded-lg border border-border bg-bg p-2.5">
+      <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word text-xs leading-relaxed text-fg">
+        {children}
       </div>
     </div>
   );
 }
 
-function DiffView({ diff, before, after }: { diff: WordDiffResult; before: string; after: string }): React.ReactElement {
-  if (diff.truncated) {
-    return (
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <div className="min-w-0">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-            Original
-          </p>
-          <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word rounded-lg border border-border bg-bg p-2.5 text-xs leading-relaxed text-fg">
-            {before || <span className="italic text-fg-subtle">(empty)</span>}
-          </div>
-        </div>
-        <div className="min-w-0">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-            Agent
-          </p>
-          <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word rounded-lg border border-accent/30 bg-bg p-2.5 text-xs leading-relaxed text-fg">
-            {after || <span className="italic text-fg-subtle">(empty)</span>}
-          </div>
-        </div>
-      </div>
-    );
+function RichParts({
+  parts,
+  showDeletions,
+}: {
+  parts: RichPart[];
+  showDeletions: boolean;
+}): React.ReactElement {
+  const changedClassName = showDeletions
+    ? 'rounded bg-danger-soft px-px text-danger-soft-fg'
+    : 'rounded bg-success-soft px-px text-success-soft-fg';
+  return (
+    <>
+      {parts.map((part, index) => (
+        <Fragment key={index}>
+          {index > 0 && '\n'}
+          {part.kind === 'same' ? (
+            <span>{part.text}</span>
+          ) : part.kind === 'changed' ? (
+            <span className={changedClassName}>{part.text}</span>
+          ) : (
+            <WordSegments segments={part.diff.segments} showDeletions={showDeletions} />
+          )}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+function rowSideNode(row: ParagraphRow, showDeletions: boolean): React.ReactNode {
+  switch (row.kind) {
+    case 'same':
+      return <span>{row.paras.join('\n\n')}</span>;
+    case 'add':
+      if (showDeletions) return null;
+      return (
+        <span className="rounded bg-success-soft px-px text-success-soft-fg">
+          {row.paras.join('\n\n')}
+        </span>
+      );
+    case 'del':
+      if (!showDeletions) return null;
+      return (
+        <span className="rounded bg-danger-soft px-px text-danger-soft-fg">
+          {row.paras.join('\n\n')}
+        </span>
+      );
+    case 'replace':
+      return <RichParts parts={showDeletions ? row.left : row.right} showDeletions={showDeletions} />;
+  }
+}
+
+function SideContent({
+  rows,
+  showDeletions,
+  emptyLabel,
+}: {
+  rows: ParagraphRow[];
+  showDeletions: boolean;
+  emptyLabel: string;
+}): React.ReactElement {
+  const blocks: React.ReactNode[] = [];
+  rows.forEach((row) => {
+    const node = rowSideNode(row, showDeletions);
+    if (node) blocks.push(node);
+  });
+  if (blocks.length === 0) {
+    return <span className="italic text-fg-subtle">{emptyLabel}</span>;
   }
   return (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-      <DiffPane
-        label="Original"
-        accent={false}
-        segments={diff.segments}
-        showDeletions
-        isEmpty={before === ''}
-        emptyLabel={after === '' ? undefined : '(empty)'}
-      />
-      <DiffPane
-        label="Agent"
-        accent
-        segments={diff.segments}
-        showDeletions={false}
-        isEmpty={after === ''}
-        emptyLabel={before === '' ? '(new)' : '(removed)'}
-      />
+    <>
+      {blocks.map((block, index) => (
+        <Fragment key={index}>
+          {index > 0 && '\n\n'}
+          {block}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+function ParagraphDiffView({
+  diff,
+  before,
+}: {
+  diff: ParagraphDiff;
+  before: string;
+}): React.ReactElement {
+  if (diff.rows.length === 0) {
+    return <p className="text-xs italic text-fg-subtle">(empty)</p>;
+  }
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+          <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-fg-subtle" />
+          Original
+        </p>
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+          <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-accent" />
+          Agent
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+        <DiffCell>
+          <SideContent rows={diff.rows} showDeletions emptyLabel="(empty)" />
+        </DiffCell>
+        <DiffCell>
+          <SideContent
+            rows={diff.rows}
+            showDeletions={false}
+            emptyLabel={before === '' ? '(new)' : '(removed)'}
+          />
+        </DiffCell>
+      </div>
     </div>
   );
 }
 
-function DiffStat({ diff }: { diff: WordDiffResult }): React.ReactElement | null {
-  if (diff.truncated || (diff.addedWords === 0 && diff.removedWords === 0)) return null;
+function DiffStat({
+  addedWords,
+  removedWords,
+}: {
+  addedWords: number;
+  removedWords: number;
+}): React.ReactElement | null {
+  if (addedWords === 0 && removedWords === 0) return null;
   return (
     <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold">
-      {diff.addedWords > 0 && (
+      {addedWords > 0 && (
         <span className="rounded bg-success-soft px-1.5 py-0.5 text-success-soft-fg">
-          +{diff.addedWords}
+          +{addedWords}
         </span>
       )}
-      {diff.removedWords > 0 && (
+      {removedWords > 0 && (
         <span className="rounded bg-danger-soft px-1.5 py-0.5 text-danger-soft-fg">
-          −{diff.removedWords}
+          −{removedWords}
         </span>
       )}
     </span>
@@ -358,10 +427,7 @@ function ChangeRow({
   const [isEditing, setIsEditing] = useState(false);
   const { label, detail } = changeTitle(change);
   const pair = useMemo(() => changeTextPair(change), [change]);
-  const wordDiff = useMemo(
-    () => (pair ? diffWords(pair.before, pair.after) : null),
-    [pair],
-  );
+  const paraDiff = useMemo(() => (pair ? diffParagraphs(pair.before, pair.after) : null), [pair]);
   const editable =
     change.kind === 'field' ||
     change.kind === 'greeting' ||
@@ -403,7 +469,9 @@ function ChangeRow({
             <span className="block truncate text-[11px] text-fg-subtle">{detail}</span>
           </span>
         </button>
-        {pair && wordDiff && <DiffStat diff={wordDiff} />}
+        {paraDiff && (
+          <DiffStat addedWords={paraDiff.addedWords} removedWords={paraDiff.removedWords} />
+        )}
         {change.kind === 'greetings' && (
           <GreetingsStat before={change.before} after={change.after} />
         )}
@@ -476,9 +544,7 @@ function ChangeRow({
             </div>
           ) : (
             <>
-              {pair && wordDiff && (
-                <DiffView diff={wordDiff} before={pair.before} after={pair.after} />
-              )}
+              {paraDiff && pair && <ParagraphDiffView diff={paraDiff} before={pair.before} />}
               {change.kind === 'greetings' && (
                 <GreetingsListView before={change.before} after={change.after} />
               )}
