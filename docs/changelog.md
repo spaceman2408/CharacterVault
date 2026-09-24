@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.7.5 (2026-09-24)
+
+Clearer agent-review greeting diffs and custom tags in Creation Studio gender rules. Full notes: [v1.7.5 release notes](/releases/v1.7.5).
+
+### Highlights
+
+- **Agent review** — new/removed greetings are labeled (empty Original side for a new one), and Greetings-list rewrites show per-greeting blocks with counts and **New** / **Removed** badges; text diffs align by paragraph and line
+- **Studio custom tags** — **Feeling Lucky** draws merged built-in + custom pools, and custom tags gray out by gender opposition like built-ins
+- Agent rejects empty greeting adds/updates with an error
+
+Details: [AI Agent](/features/ai-agent) · [AI Creation Studio](/features/ai-creation-studio) · [What's New](/whats-new)
+
+---
+
 ## 1.7.0 (2026-09-22)
 
 Customizable AI toolbar, roleplay highlight colors, and editor quality-of-life. Full notes: [v1.7.0 release notes](/releases/v1.7.0).

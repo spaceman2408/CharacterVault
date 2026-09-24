@@ -1,7 +1,7 @@
 {
   "name": "character-vault",
   "private": true,
-  "version": "1.7.0",
+  "version": "1.7.5",
   "license": "GPL-3.0-only",
   "homepage": "https://vault.charactervault.app",
   "type": "module",

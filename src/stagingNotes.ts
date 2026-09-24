@@ -24,10 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.7.1 staging 2';
+export const STAGING_VERSION = 'v1.7.6 staging 1';
 
 /** One short line per thing you want testers to try. */
-export const STAGING_TEST_NOTES: string[] = [
-  'Agent review: ask the agent for a new alternate greeting — it now shows as a New alternate greeting with an empty Original.',
-  'Greetings list changes now show per-greeting blocks with counts and New/Removed badges.',
-];
+export const STAGING_TEST_NOTES: string[] = [];

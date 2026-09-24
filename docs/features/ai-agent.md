@@ -164,7 +164,8 @@ The chat header shows a **Review** chip while this is on. Character Agent and lo
 
 When a run that changed something finishes, **Review agent edits** opens instead of writing:
 
-- Each field, greeting, and lorebook change is a row with a word-level **Original / Agent** diff and `+added` / `−removed` counts. Very large texts fall back to side-by-side full text.
+- Each field, greeting, and lorebook change is a row with a **Original / Agent** diff and `+added` / `−removed` word counts. Long texts align paragraph by paragraph and line by line, highlighting only the reworded fragments; very large or heavily changed texts fall back to side-by-side full text.
+- Greeting changes are labeled: an added greeting shows as **New alternate greeting** with an empty **Original**, a deleted one as **Deleted alternate greeting**, and a **Greetings list** rewrite shows per-greeting blocks with `+N` / `−N` greeting counts and **New** / **Removed** badges. When editing a Greetings list change, separate greetings with a line containing only `---`.
 - Approve or deny per change. **Approve all** / **Deny all** set every row. Denied rows stay in the list but are not applied.
 - Expand an approved change to **edit** the proposed text (and lorebook keys) before it lands.
 - **Apply N edits** takes **one snapshot**, then writes only the approved rows. **Discard** throws the whole proposal away (with a confirm).

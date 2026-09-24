@@ -6,6 +6,16 @@ Quick overview of recent updates to CharacterVault.
 
 ## September 2026
 
+### 1.7.5
+
+Clearer agent-review greeting diffs and custom tags in Creation Studio gender rules.
+
+- Agent review labels **New alternate greeting** / **Deleted alternate greeting** rows and shows Greetings-list rewrites as per-greeting blocks with counts and **New** / **Removed** badges; text diffs align by paragraph and line
+- **Feeling Lucky** draws your custom tags, and custom tags gray out by gender opposition like built-ins in **Creation Studio → Tags Mode**
+- Thinking and chat autoscroll follow streams reliably and release when you scroll up
+
+[Release 1.7.5 →](/releases/v1.7.5) · [AI Agent →](/features/ai-agent) · [AI Creation Studio →](/features/ai-creation-studio)
+
 ### 1.7.0
 
 Customizable AI toolbar, roleplay highlight colors, and editor quality-of-life.

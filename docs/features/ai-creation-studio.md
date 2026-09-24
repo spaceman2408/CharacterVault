@@ -51,7 +51,7 @@ Select tags across categories. **Generation** (perspective and tense) is always 
 - Tags convert to a readable concept (`female_knight` → "Female, Knight")
 - Conflicting tags are excluded (for example, selecting "female" disables "male")
 - **Star** a tag to pin it in **Favorites**. Recently used tags appear under **Recents**.
-- **Add your own tag** at the bottom of a category (not Generation). Custom tags save in settings. A slug that already exists in another category is rejected.
+- **Add your own tag** at the bottom of a category (not Generation). Custom tags save in settings. A slug that already exists in another category is rejected. Custom tags are drawn by Feeling Lucky and follow the same gender gray-out rules as built-ins.
 
 ::: tip Switching Modes
 Switching from Tags to Write copies the selected tags into the concept field so you can edit them as prose.
@@ -79,7 +79,8 @@ Descriptions are written like character-card reference material. If you choose *
 - Supporting categories (Genre, Appearance, Tone): 0–2 tags each
 - Flavor categories (Dynamic, Kink & Fetish): 0–1 each; Kink is skipped when NSFW is hidden
 - Hidden categories are not picked
-- Respects tag exclusion rules
+- Draws from built-in and your custom tags together
+- Respects tag exclusion rules, including gender opposition for both built-in and custom tags
 - Shows a visual "tag vortex" before generation (can be disabled)
 
 **Disabling the vortex:**

@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.7.0
-Customizable AI toolbar with your own buttons, roleplay highlight colors for dialogue, narration, and actions, plus editor quality-of-life: prefilled search, font-size shortcuts, and `Char` / `USER` macro expansion.
+::: tip CharacterVault 1.7.5
+Clearer agent-review greeting diffs and custom tags in Creation Studio gender rules, plus steadier thinking and chat autoscroll.
 
-[Try it](https://vault.charactervault.app) · [Toolbar](/features/editor#ai-toolbar) · [Roleplay colors](/features/editor#roleplay-colors)
+[Try it](https://vault.charactervault.app) · [Review edits](/features/ai-agent#review-edits) · [Feeling Lucky](/features/ai-creation-studio#feeling-lucky)
 :::
 
 # CharacterVault
