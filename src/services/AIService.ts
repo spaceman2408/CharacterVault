@@ -135,6 +135,18 @@ export function fitContextChunks(context: string[], availableTokens: number): st
 }
 
 /**
+ * Parse a `Retry-After` response header value into milliseconds.
+ * Only numeric delta-seconds are supported; HTTP dates and anything
+ * unparseable yield `undefined`.
+ */
+export function parseRetryAfterMs(raw: string | null | undefined): number | undefined {
+  if (raw == null || raw.trim() === '') return undefined;
+  const seconds = Number(raw.trim());
+  if (!Number.isFinite(seconds) || seconds < 0) return undefined;
+  return Math.floor(seconds * 1000);
+}
+
+/**
  * Token breakdown for vault cards. Both numbers count only text that can
  * reach a chat prompt.
  *
@@ -279,12 +291,15 @@ export type AIErrorType =
 export class AIError extends Error {
   type: AIErrorType;
   statusCode?: number;
+  /** Milliseconds to wait before retrying, from the Retry-After header. */
+  retryAfterMs?: number;
 
-  constructor(message: string, type: AIErrorType, statusCode?: number) {
+  constructor(message: string, type: AIErrorType, statusCode?: number, retryAfterMs?: number) {
     super(message);
     this.name = 'AIError';
     this.type = type;
     this.statusCode = statusCode;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -1080,7 +1095,12 @@ Provide only the generated text without any additional commentary.`;
         throw new AIError('Invalid API key', 'auth', 401);
       }
       if (response.status === 429) {
-        throw new AIError('Rate limit exceeded', 'rate_limit', 429);
+        throw new AIError(
+          'Rate limit exceeded',
+          'rate_limit',
+          429,
+          parseRetryAfterMs(response.headers.get('retry-after')),
+        );
       }
       let errorMessage = response.statusText || `HTTP ${response.status}`;
       try {
@@ -1096,7 +1116,10 @@ Provide only the generated text without any additional commentary.`;
       throw new AIError(
         this.withBaseUrlHint(`API error: ${errorMessage}`),
         'server',
-        response.status
+        response.status,
+        response.status >= 500
+          ? parseRetryAfterMs(response.headers.get('retry-after'))
+          : undefined,
       );
     }
 

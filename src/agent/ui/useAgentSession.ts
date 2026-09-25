@@ -34,6 +34,7 @@ import { getProviderSelectionId } from '../../services/providers';
 import { normalizeBaseUrl } from '../../utils/aiBaseUrl';
 import type { ChatMessage as ServiceChatMessage } from '../../services/AIService';
 import { AGENT_MAX_OUTPUT_TOKENS, runLoop } from '../core/runLoop';
+import { withTransientRetry } from '../core/retry';
 import { stripFences } from '../core/stripFences';
 import type { AgentHost, AgentMessage, AgentToolMode } from '../core/types';
 import { parseToolTarget } from './toolTarget';
@@ -718,7 +719,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                   appendStreamChunk(chunk);
                 }
               : undefined,
-            complete: async (messages, onChunk) => {
+            complete: withTransientRetry(async (messages, onChunk) => {
               if (!isCurrent() || abortedRef.current) {
                 throw new AIError('Request was cancelled', 'unknown');
               }
@@ -766,7 +767,9 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
               });
               callTimingRef.current = null;
               return completion;
-            },
+            }, {
+              shouldAbort: () => abortedRef.current || !isCurrent(),
+            }),
             onEvent: (event) => {
               if (!isCurrent() || abortedRef.current) return;
               if (event.type === 'tool_start') {
