@@ -261,6 +261,38 @@ Castle
     expect(followUp.some((message) => message.role === 'tool' && message.tool_call_id === 'call_keep')).toBe(true);
   });
 
+  it('does not execute a native call cut off inside a string', async () => {
+    const { host, calls } = fakeHost();
+    const events: AgentEvent[] = [];
+    const complete = vi.fn(
+      scriptedComplete([
+        {
+          content: '',
+          toolCalls: [
+            {
+              id: 'call_cut',
+              name: 'add_entry',
+              arguments: '{"name":"Keep","keys":"keep","content":"Cast',
+            },
+          ],
+        },
+        'Stopped.',
+      ]),
+    );
+    const result = await runLoop({
+      host,
+      complete,
+      userMessage: 'go',
+      onEvent: collect(events).push,
+    });
+    expect(result.reason).toBe('complete');
+    expect(calls).toHaveLength(0);
+    const incomplete = events.find(
+      (event) => event.type === 'tool_result' && event.result.toolName === 'incomplete_action',
+    );
+    expect(incomplete?.type === 'tool_result' && incomplete.result.message).toContain('tool call JSON was cut off');
+  });
+
   it('does not parse XML from the body in native mode', async () => {
     const { host, calls } = fakeHost();
     const result = await runLoop({

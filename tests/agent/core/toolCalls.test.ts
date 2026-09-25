@@ -41,17 +41,45 @@ describe('parsedActionFromToolCall', () => {
     });
   });
 
-  it('repairs truncated arguments', () => {
+  it('treats a truncated string as incomplete instead of salvaging it', () => {
     const action = parsedActionFromToolCall({
       id: 'call_1',
       name: 'add_entry',
       arguments: '{"name":"Harbor","keys":"harbor","content":"A busy harbor.',
+    });
+    expect(action).toBeNull();
+  });
+
+  it('still maps arguments missing only a closing brace', () => {
+    const action = parsedActionFromToolCall({
+      id: 'call_1',
+      name: 'add_entry',
+      arguments: '{"name":"Harbor","keys":"harbor","content":"A busy harbor."',
     });
     expect(action?.headers.name).toBe('Harbor');
     expect(action?.body).toBe('A busy harbor.');
   });
 });
 
+describe('parsedActionFromToolCall tool names', () => {
+  it('rejects an invalid native tool name as incomplete', () => {
+    const action = parsedActionFromToolCall({
+      id: 'call_1',
+      name: 'a(',
+      arguments: '{"content":"hi"}',
+    });
+    expect(action).toBeNull();
+  });
+
+  it('still maps a valid but unknown tool name', () => {
+    const action = parsedActionFromToolCall({
+      id: 'call_1',
+      name: 'frobnicate',
+      arguments: '{"content":"hi"}',
+    });
+    expect(action?.name).toBe('frobnicate');
+  });
+});
 describe('mapNativeToolCalls', () => {
   it('stops at the first unrepairable call and keeps earlier actions', () => {
     const mapped = mapNativeToolCalls([

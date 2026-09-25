@@ -52,10 +52,14 @@ function failedToolLabel(toolName: string): string {
   return `Couldn't ${toolName.replace(/_/g, ' ')}`;
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function failedToolDetail(message: string, toolName: string): string {
   let detail = message.trim();
   detail = detail.replace(/^(error|limit|exists):\s*/i, '');
-  detail = detail.replace(new RegExp(`^${toolName}:\\s*`, 'i'), '');
+  detail = detail.replace(new RegExp(`^${escapeRegExp(toolName)}:\\s*`, 'i'), '');
   return detail.trim();
 }
 

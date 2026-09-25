@@ -37,7 +37,7 @@ function indexOfIgnoreCase(haystack: string, needle: string, from: number): numb
   return -1;
 }
 
-function isValidToolName(name: string): boolean {
+export function isValidToolName(name: string): boolean {
   if (!name || !isNameStart(name[0])) return false;
   for (let i = 1; i < name.length; i += 1) {
     if (!isNamePart(name[i])) return false;

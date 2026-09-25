@@ -1,4 +1,5 @@
 import type { NativeToolCall, ParsedAction } from './types';
+import { isValidToolName } from './parseActions';
 
 function headerValue(value: unknown): string | null {
   if (value == null) return null;
@@ -11,12 +12,12 @@ function headerValue(value: unknown): string | null {
   return null;
 }
 
-export function repairJson(raw: string): string | null {
+export function repairJsonDetailed(raw: string): { text: string; truncatedString: boolean } | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   try {
     JSON.parse(trimmed);
-    return trimmed;
+    return { text: trimmed, truncatedString: false };
   } catch {
     // repair truncated objects / strings
   }
@@ -46,24 +47,29 @@ export function repairJson(raw: string): string | null {
     else if (char === '}' || char === ']') stack.pop();
   }
 
+  const truncatedString = inString || escape;
   let repaired = trimmed;
   if (inString) repaired += '"';
   while (stack.length > 0) repaired += stack.pop();
 
   try {
     JSON.parse(repaired);
-    return repaired;
+    return { text: repaired, truncatedString };
   } catch {
     return null;
   }
 }
 
+export function repairJson(raw: string): string | null {
+  return repairJsonDetailed(raw)?.text ?? null;
+}
+
 export function parsedActionFromArguments(name: string, rawArgs: string): ParsedAction | null {
-  const repaired = repairJson(rawArgs);
-  if (!repaired) return null;
+  const repaired = repairJsonDetailed(rawArgs);
+  if (!repaired || repaired.truncatedString) return null;
   let parsed: unknown;
   try {
-    parsed = JSON.parse(repaired);
+    parsed = JSON.parse(repaired.text);
   } catch {
     return null;
   }
@@ -86,7 +92,7 @@ export function parsedActionFromArguments(name: string, rawArgs: string): Parsed
 
 export function parsedActionFromToolCall(call: NativeToolCall): ParsedAction | null {
   const name = call.name.trim();
-  if (!name) return null;
+  if (!name || !isValidToolName(name)) return null;
   const raw = call.arguments ?? '';
   if (!raw.trim()) return { name, headers: {}, body: '' };
   return parsedActionFromArguments(name, raw);

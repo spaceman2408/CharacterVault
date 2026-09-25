@@ -120,4 +120,13 @@ describe('formatToolEvent', () => {
       ),
     ).toBe('Incomplete action: a tool_call was not closed with </tool_call>');
   });
+
+  it('does not throw on a regex-hostile tool name and keeps unknown-action labels', () => {
+    expect(() =>
+      formatToolEvent(event('a(', 'error: boom', false)),
+    ).not.toThrow();
+    expect(
+      formatToolEvent(event('unknown_action', 'unknown_action: frobnicate', false)),
+    ).toContain('Unknown action');
+  });
 });
