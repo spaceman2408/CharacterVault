@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildLorebookAgentSystemPrompt } from '../../../../src/agent/hosts/lorebook/prompt';
+import { buildLorebookAgentSystemPrompt, LOREBOOK_TOOL_LIST } from '../../../../src/agent/hosts/lorebook/prompt';
+import { LOREBOOK_TOOL_SPECS } from '../../../../src/agent/hosts/lorebook/schemas';
+import { LOREBOOK_TOOL_NAMES } from '../../../../src/agent/hosts/lorebook/tools';
 
 const TOOL_NAMES = [
   'list_entries',
@@ -49,5 +51,23 @@ describe('buildLorebookAgentSystemPrompt', () => {
     expect(prompt).not.toContain('>>>');
     expect(prompt).toContain('Never write the word tool_name');
     expect(prompt).not.toContain('never JSON');
+  });
+});
+
+describe('lorebook tool list/spec sync', () => {
+  it('covers every tool name, spec, and list entry with no duplicates', () => {
+    const listed = [...LOREBOOK_TOOL_LIST.matchAll(/^- (\w+)/gm)].map((match) => match[1]);
+    for (const name of LOREBOOK_TOOL_NAMES) {
+      expect(listed).toContain(name);
+    }
+    const specNames = LOREBOOK_TOOL_SPECS.map((spec) => spec.name);
+    for (const name of specNames) {
+      expect(listed).toContain(name);
+    }
+    for (const name of listed) {
+      expect(specNames).toContain(name);
+    }
+    expect(new Set(listed).size).toBe(listed.length);
+    expect(new Set(specNames).size).toBe(specNames.length);
   });
 });
