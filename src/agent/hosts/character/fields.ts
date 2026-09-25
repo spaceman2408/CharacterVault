@@ -1,5 +1,8 @@
 import type { CharacterSpec } from '../../../db/characterTypes';
 import { CHARACTER_SECTIONS } from '../../../db/characterTypes';
+import { parseCommaList } from '../commaList';
+
+export { parseCommaList };
 
 export const CHARACTER_AGENT_FIELD_IDS = [
   'name',
@@ -62,14 +65,6 @@ export function cloneSpec(spec: CharacterSpec): CharacterSpec {
     alternate_greetings: [...(spec.alternate_greetings ?? [])],
     tags: spec.tags ? [...spec.tags] : spec.tags,
   };
-}
-
-export function parseCommaList(raw: string | undefined): string[] {
-  if (!raw) return [];
-  return raw
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
 }
 
 export function getFieldValue(spec: CharacterSpec, id: CharacterAgentFieldId): string {

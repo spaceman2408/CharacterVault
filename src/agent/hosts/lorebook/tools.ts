@@ -1,5 +1,6 @@
 import type { CharacterBook, LorebookEntry } from '../../../db/characterTypes';
 import type { ActionResult, ParsedAction } from '../../core/types';
+import { parseCommaList } from '../commaList';
 import { parseReplaceAll, replaceText, replacementText, searchText } from '../replaceText';
 import {
   applyBookReplacements,
@@ -39,13 +40,7 @@ export const MAX_NEW_ENTRIES_PER_RUN = 50;
 export const MAX_UPDATES_PER_RUN = 50;
 export const MAX_DELETES_PER_RUN = 50;
 
-export function parseCommaList(raw: string | undefined): string[] {
-  if (!raw) return [];
-  return raw
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
-}
+export { parseCommaList };
 
 export function parseConstantFlag(raw: string | undefined): boolean {
   if (!raw) return false;

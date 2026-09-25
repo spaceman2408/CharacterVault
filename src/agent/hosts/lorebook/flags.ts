@@ -1,5 +1,6 @@
 import type { CharacterBook, LorebookEntry, LorebookPosition } from '../../../db/characterTypes';
 import { estimateTokens } from '../../../services/AIService';
+import { parseCommaList } from '../commaList';
 
 export const ENTRY_FLAG_KEYS = [
   'enabled',
@@ -42,13 +43,6 @@ export function hasHeader(headers: Record<string, string>, key: string): boolean
 
 export function hasAnyFlagHeader(headers: Record<string, string>): boolean {
   return ENTRY_FLAG_KEYS.some((key) => hasHeader(headers, key));
-}
-
-function commaList(raw: string): string[] {
-  return raw
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
 }
 
 function parseBool(raw: string, field: string): { ok: true; value: boolean } | { ok: false; message: string } {
@@ -112,7 +106,7 @@ export function parseEntryFlags(
   }
 
   if (hasHeader(headers, 'secondary_keys')) {
-    patch.secondary_keys = commaList(headers.secondary_keys ?? '');
+    patch.secondary_keys = parseCommaList(headers.secondary_keys ?? '');
   }
 
   if (hasHeader(headers, 'selective')) {

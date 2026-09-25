@@ -1,5 +1,6 @@
 import type { CharacterBook } from '../../db/characterTypes';
 import type { ActionResult, ParsedAction } from '../core/types';
+import { parseCommaList } from './commaList';
 import { parseReplaceAll, replaceText, replacementText, searchInText, searchText } from './replaceText';
 
 export const MAX_SEARCH_PLACES = 40;
@@ -173,18 +174,11 @@ export function applyBookReplacements(
     return {
       ...entry,
       content: contentHit ? contentHit.text : entry.content,
-      keys: keysHit ? splitCommaList(keysHit.text) : entry.keys,
+      keys: keysHit ? parseCommaList(keysHit.text) : entry.keys,
       name: nameHitEntry ? nameHitEntry.text : entry.name,
-      secondary_keys: filterHit ? splitCommaList(filterHit.text) : entry.secondary_keys,
+      secondary_keys: filterHit ? parseCommaList(filterHit.text) : entry.secondary_keys,
     };
   });
 
   return { ...book, name, description, entries };
-}
-
-function splitCommaList(raw: string): string[] {
-  return raw
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
 }
