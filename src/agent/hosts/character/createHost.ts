@@ -172,12 +172,14 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
         }
         const applied = updateField(spec, action);
         if (!applied.result.ok) return applied.result;
-        spec = applied.spec;
-        specDirty = true;
-        fieldUpdatesThisRun += 1;
-        const rawId = (action.headers.id ?? '').trim();
-        if (isCharacterAgentFieldId(rawId)) {
-          cacheFieldRead(rawId, formatFieldRead(spec, rawId));
+        if (applied.changed) {
+          spec = applied.spec;
+          specDirty = true;
+          fieldUpdatesThisRun += 1;
+          const rawId = (action.headers.id ?? '').trim();
+          if (isCharacterAgentFieldId(rawId)) {
+            cacheFieldRead(rawId, formatFieldRead(spec, rawId));
+          }
         }
         return applied.result;
       }
@@ -265,12 +267,14 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
         }
         const applied = updateGreeting(spec, action);
         if (!applied.result.ok) return applied.result;
-        spec = applied.spec;
-        specDirty = true;
-        greetingMutationsThisRun += 1;
-        const greetings = spec.alternate_greetings ?? [];
-        const index = parseGreetingIndex(action.headers.index, greetings.length);
-        if (index != null) cacheGreetingRead(index, formatGreetingRead(greetings, index));
+        if (applied.changed) {
+          spec = applied.spec;
+          specDirty = true;
+          greetingMutationsThisRun += 1;
+          const greetings = spec.alternate_greetings ?? [];
+          const index = parseGreetingIndex(action.headers.index, greetings.length);
+          if (index != null) cacheGreetingRead(index, formatGreetingRead(greetings, index));
+        }
         return applied.result;
       }
       if (action.name === 'replace_in_greeting') {

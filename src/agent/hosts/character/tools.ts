@@ -100,10 +100,11 @@ export function updateField(
     };
   }
   const next = setFieldValue(spec, rawId, action.body);
+  const changed = getFieldValue(next, rawId) !== getFieldValue(spec, rawId);
   const value = getFieldValue(next, rawId);
   return {
-    spec: next,
-    changed: true,
+    spec: changed ? next : spec,
+    changed,
     result: ok(
       'update_field',
       `ok ${rawId} (${fieldLabel(rawId)}) — ${tokenCountLabel(value)}`,
@@ -197,6 +198,14 @@ export function updateGreeting(
       spec,
       changed: false,
       result: fail('update_greeting', 'error: content is empty (use delete_greeting to remove)'),
+    };
+  }
+  const changed = greetings[index] !== action.body;
+  if (!changed) {
+    return {
+      spec,
+      changed: false,
+      result: ok('update_greeting', `ok greeting ${greetingNumber(index)}/${greetings.length}`),
     };
   }
   greetings[index] = action.body;

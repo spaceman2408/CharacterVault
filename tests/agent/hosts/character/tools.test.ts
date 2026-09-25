@@ -116,6 +116,22 @@ describe('updateField', () => {
     expect(result.ok).toBe(true);
     expect(next.tags).toEqual(['fantasy', 'map', 'quiet']);
   });
+
+  it('reports unchanged when the content is identical', () => {
+    const field = updateField(
+      spec({ description: 'Same.' }),
+      action('update_field', { id: 'description' }, 'Same.'),
+    );
+    expect(field.result.ok).toBe(true);
+    expect(field.changed).toBe(false);
+
+    const greeting = updateGreeting(
+      spec({ alternate_greetings: ['hi'] }),
+      action('update_greeting', { index: '1' }, 'hi'),
+    );
+    expect(greeting.result.ok).toBe(true);
+    expect(greeting.changed).toBe(false);
+  });
 });
 
 describe('replaceInField', () => {
@@ -404,6 +420,22 @@ describe('createCharacterHost', () => {
       takeSnapshot,
     });
     await host.execute(action('list_fields'));
+    await host.flush?.();
+    expect(state.persist).not.toHaveBeenCalled();
+    expect(takeSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('does not persist or snapshot for a no-op update', async () => {
+    const state = hostState(spec({ description: 'Same.' }));
+    const takeSnapshot = vi.fn(async () => undefined);
+    const host = createCharacterHost({
+      ...state.io,
+      takeSnapshot,
+    });
+    const result = await host.execute(
+      action('update_field', { id: 'description' }, 'Same.'),
+    );
+    expect(result.ok).toBe(true);
     await host.flush?.();
     expect(state.persist).not.toHaveBeenCalled();
     expect(takeSnapshot).not.toHaveBeenCalled();
