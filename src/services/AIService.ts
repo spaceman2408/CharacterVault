@@ -474,6 +474,11 @@ export class AIService {
 
   /** Max tokens allowed for request input (context window minus max output and margin). */
   private getMaxInputTokens(sampler: SamplerSettings = this.sampler): number {
+    return AIService.inputTokenBudget(sampler);
+  }
+
+  /** Input token budget shared by the toolbar/chat paths and the agent loop. */
+  static inputTokenBudget(sampler: Pick<SamplerSettings, 'contextLength' | 'maxTokens'>): number {
     return Math.max(0, sampler.contextLength - sampler.maxTokens - AIService.SAFETY_MARGIN);
   }
 

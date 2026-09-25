@@ -91,6 +91,10 @@ export interface RunLoopOptions {
   isAborted?: () => boolean;
   maxTurns?: number;
   maxActionsPerTurn?: number;
+  /** Input token budget for the live prompt. Unset disables pruning. */
+  maxInputTokens?: number;
+  /** Token estimator for budget pruning (e.g. estimatePromptTokens). */
+  measurePrompt?: (messages: readonly AgentMessage[]) => number;
 }
 
 export interface RunLoopResult {

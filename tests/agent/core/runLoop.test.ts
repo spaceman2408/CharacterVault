@@ -293,6 +293,43 @@ Castle
     expect(incomplete?.type === 'tool_result' && incomplete.result.message).toContain('tool call JSON was cut off');
   });
 
+  it('prunes the live prompt to maxInputTokens while keeping the newest exchange', async () => {
+    const big = 'x'.repeat(2000);
+    const { host } = fakeHost(async () => ({
+      ok: true,
+      toolName: 'add_entry',
+      message: `ok ${big}`,
+    }));
+    const measure = (messages: readonly AgentMessage[]) =>
+      messages.reduce((total, message) => total + (message.content?.length ?? 0), 0);
+    const seenSizes: number[] = [];
+    const seenJson: string[] = [];
+    const inner = scriptedComplete([
+      '<<<add_entry\nname: Keep\nkeys: keep\n---\nCastle\n>>>',
+      '<<<add_entry\nname: Harbor\nkeys: harbor\n---\nDocks\n>>>',
+      'All set.',
+    ]);
+    const complete = vi.fn(async (messages: AgentMessage[]) => {
+      seenSizes.push(measure(messages));
+      seenJson.push(JSON.stringify(messages));
+      return inner(messages);
+    });
+    const result = await runLoop({
+      host,
+      complete,
+      userMessage: 'go',
+      maxInputTokens: 3000,
+      measurePrompt: measure,
+    });
+    expect(result.reason).toBe('complete');
+    expect(seenSizes).toHaveLength(3);
+    for (const size of seenSizes) {
+      expect(size).toBeLessThanOrEqual(3000);
+    }
+    expect(seenJson[2]).toContain('Harbor');
+    expect(seenJson[2]).not.toContain('Castle');
+  });
+
   it('does not parse XML from the body in native mode', async () => {
     const { host, calls } = fakeHost();
     const result = await runLoop({

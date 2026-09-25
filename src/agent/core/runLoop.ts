@@ -1,4 +1,5 @@
 import { parseActions } from './parseActions';
+import { pruneMessagesToBudget, TOOL_RESULTS_PREFIX } from './pruneMessages';
 import { stripFences } from './stripFences';
 import { mapNativeToolCalls } from './toolCalls';
 import type {
@@ -32,7 +33,7 @@ export function isLengthFinish(reason: string | null | undefined): boolean {
 
 export function formatToolResults(results: ActionResult[]): string {
   const lines = results.map((result) => `[${result.toolName}] ${result.message}`);
-  return `Tool results:\n${lines.join('\n')}`;
+  return `${TOOL_RESULTS_PREFIX}${lines.join('\n')}`;
 }
 
 function unfinishedNameFromRaw(raw: string): string | null {
@@ -108,9 +109,16 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
     maxTurns = DEFAULT_MAX_TURNS,
     maxActionsPerTurn = DEFAULT_MAX_ACTIONS_PER_TURN,
     toolMode: initialToolMode,
+    maxInputTokens,
+    measurePrompt,
   } = options;
 
   const emit = onEvent ?? (() => undefined);
+
+  const budgeted = (prompt: AgentMessage[]): AgentMessage[] => {
+    if (maxInputTokens == null || !measurePrompt) return prompt;
+    return pruneMessagesToBudget(prompt, maxInputTokens, measurePrompt);
+  };
 
   let toolMode: AgentToolMode =
     initialToolMode ?? (host.tools && host.tools.length > 0 ? 'native' : 'xml');
@@ -140,8 +148,9 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
     let finishReason: string | null | undefined;
     let toolCalls: NativeToolCall[] = [];
     try {
-      notifyPrompt();
-      const result = await complete(messages, onChunk);
+      const requestMessages = budgeted(messages);
+      notifyPrompt(requestMessages);
+      const result = await complete(requestMessages, onChunk);
       content = result.content ?? '';
       reasoning = result.reasoning;
       finishReason = result.finishReason;
@@ -202,9 +211,10 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
             { role: 'assistant', content },
             { role: 'user', content: CONTINUE_NUDGE },
           ];
-          notifyPrompt(continuationMessages);
+          const continuationRequest = budgeted(continuationMessages);
+          notifyPrompt(continuationRequest);
           const continuation = await complete(
-            continuationMessages,
+            continuationRequest,
             onChunk,
           );
           content += continuation.content ?? '';

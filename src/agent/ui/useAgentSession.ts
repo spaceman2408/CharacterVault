@@ -709,6 +709,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
             history: historyForLoop,
             toolMode,
             isAborted: () => abortedRef.current || !isCurrent(),
+            maxInputTokens: AIService.inputTokenBudget(samplerSettingsRef.current),
+            measurePrompt: estimatePromptTokens,
             onPrompt: (prompt) => {
               if (!isCurrent() || abortedRef.current) return;
               setLivePromptTokens(estimatePromptTokens(prompt));
