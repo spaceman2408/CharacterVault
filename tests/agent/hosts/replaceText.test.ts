@@ -118,6 +118,20 @@ describe('replaceText', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.message).toContain('first line matched once');
   });
+
+  it('replaces a case-only snippet', () => {
+    const result = replaceText('The Harbor lights.', 'harbor', 'port', false);
+    expect(result).toEqual({ ok: true, text: 'The port lights.', count: 1 });
+  });
+
+  it('rejects an ambiguous case-insensitive match unless replace_all', () => {
+    const blocked = replaceText('Harbor harbor', 'HARBOR', 'port', false);
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.message).toContain('matches 2 times');
+
+    const all = replaceText('Harbor harbor', 'HARBOR', 'port', true);
+    expect(all).toEqual({ ok: true, text: 'port port', count: 2 });
+  });
 });
 
 describe('replacementText', () => {

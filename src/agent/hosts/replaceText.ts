@@ -160,6 +160,29 @@ function findNormalizedRanges(haystack: string, needle: string): Range[] {
   return ranges;
 }
 
+function findCaseInsensitiveRanges(haystack: string, needle: string): Range[] | null {
+  const needleNorm = normalizeForMatch(needle).normalized;
+  if (!needleNorm) return [];
+  const needleLower = needleNorm.toLowerCase();
+  const hay = normalizeForMatch(haystack);
+  const hayLower = hay.normalized.toLowerCase();
+  if (hayLower.length !== hay.normalized.length || needleLower.length !== needleNorm.length) {
+    return null;
+  }
+  const ranges: Range[] = [];
+  let from = 0;
+  while (from <= hayLower.length - needleLower.length) {
+    const at = hayLower.indexOf(needleLower, from);
+    if (at === -1) break;
+    ranges.push({
+      start: hay.origIndex[at],
+      end: hay.origIndex[at + needleLower.length],
+    });
+    from = at + needleLower.length;
+  }
+  return ranges;
+}
+
 function nonemptyLines(text: string): string[] {
   return text
     .replace(/\r\n/g, '\n')
@@ -237,6 +260,18 @@ function resolveRanges(
     if (trimmedFolded.length > 1) {
       return {
         error: `error: old matches ${trimmedFolded.length} times; pass replace_all true or a longer unique snippet`,
+      };
+    }
+  }
+
+  const caseInsensitive = findCaseInsensitiveRanges(source, oldText);
+  if (caseInsensitive) {
+    if (caseInsensitive.length === 1 || (caseInsensitive.length > 1 && replaceAll)) {
+      return caseInsensitive;
+    }
+    if (caseInsensitive.length > 1) {
+      return {
+        error: `error: old matches ${caseInsensitive.length} times; pass replace_all true or a longer unique snippet`,
       };
     }
   }
