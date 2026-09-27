@@ -53,6 +53,10 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-danger-soft-fg: var(--danger-soft-fg);
+  --color-diff-del-line: var(--diff-del-line);
+  --color-diff-del-word: var(--diff-del-word);
+  --color-diff-add-line: var(--diff-add-line);
+  --color-diff-add-word: var(--diff-add-word);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-info-soft-fg: var(--info-soft-fg);
@@ -104,6 +108,10 @@
   --danger: #dc2626;
   --danger-soft: #fee2e2;
   --danger-soft-fg: #7f1d1d;
+  --diff-del-line: rgba(239, 68, 68, 0.1);
+  --diff-del-word: rgba(239, 68, 68, 0.32);
+  --diff-add-line: rgba(34, 197, 94, 0.12);
+  --diff-add-word: rgba(34, 197, 94, 0.38);
   --info: #7c3aed;
   --info-soft: #ede9fe;
   --info-soft-fg: #5b21b6;
@@ -244,6 +252,10 @@
   --danger: #f48771;
   --danger-soft: rgba(244, 135, 113, 0.16);
   --danger-soft-fg: #f7b0a0;
+  --diff-del-line: rgba(244, 135, 113, 0.12);
+  --diff-del-word: rgba(244, 135, 113, 0.38);
+  --diff-add-line: rgba(137, 209, 133, 0.1);
+  --diff-add-word: rgba(137, 209, 133, 0.34);
   --info: #3794ff;
   --info-soft: rgba(55, 148, 255, 0.16);
   --info-soft-fg: #9cdcfe;

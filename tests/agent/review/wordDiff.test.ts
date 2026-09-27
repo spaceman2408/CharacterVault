@@ -69,4 +69,35 @@ describe('diffWords', () => {
     expect(result.truncated).toBe(true);
     expect(result.segments).toEqual([]);
   });
+
+  it('highlights only the punctuation that changed', () => {
+    const result = diffWords('Stop, please.', 'Stop. please.');
+    expect(renderLeft('Stop, please.', 'Stop. please.')).toBe('Stop[-,] please.');
+    expect(result.addedWords).toBe(0);
+    expect(result.removedWords).toBe(0);
+  });
+
+  it('folds short unchanged islands into one phrase highlight', () => {
+    expect(renderRight('She walks to the old mill.', 'He runs to a new mill.')).toBe(
+      '{+He runs to a new} mill.',
+    );
+  });
+
+  it('keeps true word counts after folding islands', () => {
+    const result = diffWords('She walks to the old mill.', 'He runs to a new mill.');
+    expect(result.removedWords).toBe(4);
+    expect(result.addedWords).toBe(4);
+  });
+
+  it('reports similarity over kept words', () => {
+    expect(diffWords('one two three four', 'one two three five').similarity).toBeCloseTo(0.75);
+    expect(diffWords('alpha beta', 'gamma delta').similarity).toBe(0);
+    expect(diffWords('same', 'same').similarity).toBe(1);
+  });
+
+  it('gives up on huge rewrites instead of exhausting memory', () => {
+    const before = Array.from({ length: 1900 }, (_, i) => `old${i}`).join(' ');
+    const after = Array.from({ length: 1900 }, (_, i) => `new${i}`).join(' ');
+    expect(diffWords(before, after).truncated).toBe(true);
+  });
 });

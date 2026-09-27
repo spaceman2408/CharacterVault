@@ -112,34 +112,31 @@ function WordSegments({
   segments: WordDiffSegment[];
   showDeletions: boolean;
 }): React.ReactElement {
+  const hidden = showDeletions ? 'add' : 'del';
+  const wordClassName = showDeletions ? 'rounded-sm bg-diff-del-word' : 'rounded-sm bg-diff-add-word';
   return (
     <>
       {segments.map((segment, index) => {
+        if (segment.type === hidden) return null;
         if (segment.type === 'same') return <span key={index}>{segment.text}</span>;
-        if (segment.type === 'del' && showDeletions) {
-          return (
-            <span key={index} className="rounded bg-danger-soft px-px text-danger-soft-fg">
-              {segment.text}
-            </span>
-          );
-        }
-        if (segment.type === 'add' && !showDeletions) {
-          return (
-            <span key={index} className="rounded bg-success-soft px-px text-success-soft-fg">
-              {segment.text}
-            </span>
-          );
-        }
-        return null;
+        return (
+          <span key={index} className={wordClassName}>
+            {segment.text}
+          </span>
+        );
       })}
     </>
   );
 }
 
+function lineTintClassName(showDeletions: boolean): string {
+  return `-mx-1 rounded px-1 ${showDeletions ? 'bg-diff-del-line' : 'bg-diff-add-line'}`;
+}
+
 function DiffCell({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
-    <div className="min-w-0 rounded-lg border border-border bg-bg p-2.5">
-      <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word text-xs leading-relaxed text-fg">
+    <div className="min-w-0 rounded-lg border border-border bg-bg px-1.5 py-2.5">
+      <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word px-1 text-xs leading-relaxed text-fg">
         {children}
       </div>
     </div>
@@ -153,45 +150,36 @@ function RichParts({
   parts: RichPart[];
   showDeletions: boolean;
 }): React.ReactElement {
-  const changedClassName = showDeletions
-    ? 'rounded bg-danger-soft px-px text-danger-soft-fg'
-    : 'rounded bg-success-soft px-px text-success-soft-fg';
+  const tint = lineTintClassName(showDeletions);
   return (
-    <>
-      {parts.map((part, index) => (
-        <Fragment key={index}>
-          {index > 0 && '\n'}
-          {part.kind === 'same' ? (
-            <span>{part.text}</span>
-          ) : part.kind === 'changed' ? (
-            <span className={changedClassName}>{part.text}</span>
-          ) : (
+    <div>
+      {parts.map((part, index) =>
+        part.kind === 'same' ? (
+          <div key={index}>{part.text}</div>
+        ) : part.kind === 'changed' ? (
+          <div key={index} className={tint}>
+            {part.text}
+          </div>
+        ) : (
+          <div key={index} className={tint}>
             <WordSegments segments={part.diff.segments} showDeletions={showDeletions} />
-          )}
-        </Fragment>
-      ))}
-    </>
+          </div>
+        ),
+      )}
+    </div>
   );
 }
 
 function rowSideNode(row: ParagraphRow, showDeletions: boolean): React.ReactNode {
   switch (row.kind) {
     case 'same':
-      return <span>{row.paras.join('\n\n')}</span>;
+      return <div>{row.paras.join('\n\n')}</div>;
     case 'add':
       if (showDeletions) return null;
-      return (
-        <span className="rounded bg-success-soft px-px text-success-soft-fg">
-          {row.paras.join('\n\n')}
-        </span>
-      );
+      return <div className={lineTintClassName(false)}>{row.paras.join('\n\n')}</div>;
     case 'del':
       if (!showDeletions) return null;
-      return (
-        <span className="rounded bg-danger-soft px-px text-danger-soft-fg">
-          {row.paras.join('\n\n')}
-        </span>
-      );
+      return <div className={lineTintClassName(true)}>{row.paras.join('\n\n')}</div>;
     case 'replace':
       return <RichParts parts={showDeletions ? row.left : row.right} showDeletions={showDeletions} />;
   }
@@ -215,14 +203,11 @@ function SideContent({
     return <span className="italic text-fg-subtle">{emptyLabel}</span>;
   }
   return (
-    <>
+    <div className="space-y-5">
       {blocks.map((block, index) => (
-        <Fragment key={index}>
-          {index > 0 && '\n\n'}
-          {block}
-        </Fragment>
+        <Fragment key={index}>{block}</Fragment>
       ))}
-    </>
+    </div>
   );
 }
 

@@ -1,4 +1,4 @@
-import { diffWords, type WordDiffResult } from './wordDiff';
+import { countWords, diffWords, type WordDiffResult } from './wordDiff';
 
 export type RichPart =
   | { kind: 'same'; text: string }
@@ -17,9 +17,12 @@ export interface ParagraphDiff {
   removedWords: number;
 }
 
-// Word highlights stay readable only while a changed paragraph pair has a
-// handful of change fragments; beyond that they degrade into confetti.
-const MAX_WORD_FRAGMENTS = 10;
+// Below this share of kept words a pair reads as a rewrite, not an edit, and
+// word highlights would mostly cover the whole line anyway.
+const MIN_PAIR_SIMILARITY = 0.4;
+
+// Line pairing diffs every removed line against every added line in a block.
+const MAX_PAIR_CANDIDATES = 400;
 
 // LCS table guard: paragraph counts are small in practice, but a pathological
 // input with thousands of paragraphs must not blow memory.
@@ -38,11 +41,6 @@ function splitLines(text: string): string[] {
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line !== '');
-}
-
-function countWords(text: string): number {
-  const trimmed = text.trim();
-  return trimmed === '' ? 0 : trimmed.split(/\s+/).length;
 }
 
 type SequenceOp = { type: 'same' | 'del' | 'add'; paras: string[] };
@@ -98,10 +96,59 @@ function pairWordDiff(before: string, after: string): WordDiffResult | null {
   if (!before || !after) return null;
   const diff = diffWords(before, after);
   if (diff.truncated) return null;
-  if (diff.addedWords === 0 && diff.removedWords === 0) return null;
-  const fragments = diff.segments.filter((segment) => segment.type !== 'same').length;
-  if (fragments > MAX_WORD_FRAGMENTS) return null;
+  if (diff.similarity < MIN_PAIR_SIMILARITY) return null;
   return diff;
+}
+
+type LineOp =
+  | { type: 'pair'; diff: WordDiffResult }
+  | { type: 'del'; line: string }
+  | { type: 'add'; line: string };
+
+/**
+ * Order-preserving pairing of removed and added lines that maximizes total
+ * similarity, so several reworded lines (or a split/merged paragraph) each
+ * keep word highlights instead of the whole block turning solid.
+ */
+function pairLines(before: string[], after: string[]): LineOp[] {
+  const n = before.length;
+  const m = after.length;
+  const pairs: (WordDiffResult | null)[][] = Array.from({ length: n }, () =>
+    new Array<WordDiffResult | null>(m).fill(null),
+  );
+  if (n * m <= MAX_PAIR_CANDIDATES) {
+    for (let i = 0; i < n; i += 1) {
+      for (let j = 0; j < m; j += 1) pairs[i][j] = pairWordDiff(before[i], after[j]);
+    }
+  }
+  const best: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i -= 1) {
+    for (let j = m - 1; j >= 0; j -= 1) {
+      const pair = pairs[i][j];
+      const paired = pair ? pair.similarity + best[i + 1][j + 1] : -1;
+      best[i][j] = Math.max(best[i + 1][j], best[i][j + 1], paired);
+    }
+  }
+  const ops: LineOp[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    const pair = pairs[i][j];
+    if (pair && best[i][j] === pair.similarity + best[i + 1][j + 1]) {
+      ops.push({ type: 'pair', diff: pair });
+      i += 1;
+      j += 1;
+    } else if (best[i + 1][j] >= best[i][j + 1]) {
+      ops.push({ type: 'del', line: before[i] });
+      i += 1;
+    } else {
+      ops.push({ type: 'add', line: after[j] });
+      j += 1;
+    }
+  }
+  for (; i < n; i += 1) ops.push({ type: 'del', line: before[i] });
+  for (; j < m; j += 1) ops.push({ type: 'add', line: after[j] });
+  return ops;
 }
 
 /**
@@ -135,47 +182,43 @@ function alignReplaceLines(
     }
   };
 
+  const removeLine = (line: string): void => {
+    push(left, { kind: 'changed', text: line });
+    removedWords += countWords(line);
+  };
+  const addLine = (line: string): void => {
+    push(right, { kind: 'changed', text: line });
+    addedWords += countWords(line);
+  };
+
   for (let index = 0; index < ops.length; index += 1) {
     const op = ops[index];
+    const next = ops[index + 1];
     if (op.type === 'same') {
       for (const line of op.paras) {
         push(left, { kind: 'same', text: line });
         push(right, { kind: 'same', text: line });
       }
+    } else if (next && next.type !== 'same' && next.type !== op.type) {
+      const removed = op.type === 'del' ? op.paras : next.paras;
+      const added = op.type === 'del' ? next.paras : op.paras;
+      for (const lineOp of pairLines(removed, added)) {
+        if (lineOp.type === 'pair') {
+          addedWords += lineOp.diff.addedWords;
+          removedWords += lineOp.diff.removedWords;
+          left.push({ kind: 'words', diff: lineOp.diff });
+          right.push({ kind: 'words', diff: lineOp.diff });
+        } else if (lineOp.type === 'del') {
+          removeLine(lineOp.line);
+        } else {
+          addLine(lineOp.line);
+        }
+      }
+      index += 1;
     } else if (op.type === 'del') {
-      const next = ops[index + 1];
-      if (next?.type === 'add' && op.paras.length === 1 && next.paras.length === 1) {
-        const wordDiff = pairWordDiff(op.paras[0], next.paras[0]);
-        if (wordDiff) {
-          addedWords += wordDiff.addedWords;
-          removedWords += wordDiff.removedWords;
-          left.push({ kind: 'words', diff: wordDiff });
-          right.push({ kind: 'words', diff: wordDiff });
-          index += 1;
-          continue;
-        }
-      }
-      if (next?.type === 'add') {
-        for (const line of op.paras) {
-          push(left, { kind: 'changed', text: line });
-          removedWords += countWords(line);
-        }
-        for (const line of next.paras) {
-          push(right, { kind: 'changed', text: line });
-          addedWords += countWords(line);
-        }
-        index += 1;
-      } else {
-        for (const line of op.paras) {
-          push(left, { kind: 'changed', text: line });
-          removedWords += countWords(line);
-        }
-      }
+      op.paras.forEach(removeLine);
     } else {
-      for (const line of op.paras) {
-        push(right, { kind: 'changed', text: line });
-        addedWords += countWords(line);
-      }
+      op.paras.forEach(addLine);
     }
   }
 
@@ -183,10 +226,9 @@ function alignReplaceLines(
 }
 
 /**
- * Align two texts paragraph by paragraph. Removed runs immediately followed
- * by added runs pair into `replace` rows so the review can show what each
- * old paragraph became; a 1-vs-1 pair with a small, similar change carries
- * its word diff for inline highlights.
+ * Align two texts paragraph by paragraph. Adjacent removed and added runs
+ * pair into `replace` rows so the review can show what each old paragraph
+ * became; similar line pairs inside them carry word diffs for highlights.
  */
 export function diffParagraphs(before: string, after: string): ParagraphDiff {
   const rows: ParagraphRow[] = [];
@@ -198,21 +240,23 @@ export function diffParagraphs(before: string, after: string): ParagraphDiff {
     const op = ops[index];
     if (op.type === 'same') {
       rows.push({ kind: 'same', paras: op.paras });
-    } else if (op.type === 'del') {
+    } else if (op.type === 'del' || op.type === 'add') {
       const next = ops[index + 1];
-      if (next?.type === 'add') {
-        const aligned = alignReplaceLines(op.paras, next.paras);
+      if (next && next.type !== 'same' && next.type !== op.type) {
+        const removed = op.type === 'del' ? op.paras : next.paras;
+        const added = op.type === 'del' ? next.paras : op.paras;
+        const aligned = alignReplaceLines(removed, added);
         addedWords += aligned.addedWords;
         removedWords += aligned.removedWords;
         rows.push({ kind: 'replace', left: aligned.left, right: aligned.right });
         index += 1;
-      } else {
+      } else if (op.type === 'del') {
         for (const para of op.paras) removedWords += countWords(para);
         rows.push({ kind: 'del', paras: op.paras });
+      } else {
+        for (const para of op.paras) addedWords += countWords(para);
+        rows.push({ kind: 'add', paras: op.paras });
       }
-    } else {
-      for (const para of op.paras) addedWords += countWords(para);
-      rows.push({ kind: 'add', paras: op.paras });
     }
   }
 

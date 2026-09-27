@@ -113,4 +113,44 @@ describe('diffParagraphs', () => {
     expect(diff.addedWords).toBe(2);
     expect(diff.removedWords).toBe(0);
   });
+
+  it('keeps word highlights on a long paragraph with many small edits', () => {
+    const words = Array.from({ length: 80 }, (_, i) => `word${i}`);
+    const edited = words.map((word, i) => (i % 5 === 0 ? `${word}x` : word));
+    const diff = diffParagraphs(words.join(' '), edited.join(' '));
+    expect(diff.rows.map((row) => row.kind)).toEqual(['replace']);
+    const replace = diff.rows[0];
+    if (replace.kind === 'replace') {
+      expect(replace.left.map((part) => part.kind)).toEqual(['words']);
+      expect(replace.right.map((part) => part.kind)).toEqual(['words']);
+    }
+    expect(diff.addedWords).toBe(16);
+    expect(diff.removedWords).toBe(16);
+  });
+
+  it('pairs several reworded lines in one block by similarity', () => {
+    const before = 'Name: Athena\nShe is a brave knight of the realm.\nShe loves quiet evenings by the fire.';
+    const after = 'Name: Athena\nShe is a bold knight of the realm.\nShe loves long evenings by the fire.';
+    const diff = diffParagraphs(before, after);
+    const replace = diff.rows[0];
+    expect(replace.kind).toBe('replace');
+    if (replace.kind === 'replace') {
+      expect(replace.left.map((part) => part.kind)).toEqual(['same', 'words', 'words']);
+      expect(replace.right.map((part) => part.kind)).toEqual(['same', 'words', 'words']);
+    }
+    expect(diff.addedWords).toBe(2);
+    expect(diff.removedWords).toBe(2);
+  });
+
+  it('pairs a split paragraph with the half it came from', () => {
+    const before = 'Athena guards the northern gate every night. She never sleeps.';
+    const after = 'Athena guards the northern gate every night.\n\nShe never sleeps.';
+    const diff = diffParagraphs(before, after);
+    expect(diff.rows.map((row) => row.kind)).toEqual(['replace']);
+    const replace = diff.rows[0];
+    if (replace.kind === 'replace') {
+      expect(replace.left.map((part) => part.kind)).toEqual(['words']);
+      expect(replace.right.map((part) => part.kind)).toEqual(['words', 'changed']);
+    }
+  });
 });
