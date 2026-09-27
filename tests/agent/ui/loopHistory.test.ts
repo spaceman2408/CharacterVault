@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { toLoopHistory } from '../../../src/agent/ui/loopHistory';
-import { CHARACTER_LOOKUP_TOOLS, REVIEW_NOTE_TOOL } from '../../../src/agent/ui/notices';
+import {
+  CHARACTER_LOOKUP_TOOLS,
+  REVIEW_NOTE_TOOL,
+  TURN_LIMIT_NOTICE,
+} from '../../../src/agent/ui/notices';
 import type { AgentToolEvent } from '../../../src/agent/ui/types';
 import type { ChatMessage } from '../../../src/components/ai/types';
 
@@ -78,6 +82,28 @@ describe('toLoopHistory', () => {
       + '[App note: edits this run: Added “Harbor” (#4)]\n\n'
       + '[App note: review: Rejected: “Harbor” (#4).]',
     );
+  });
+
+  it('notes a run that stopped at the turn limit, even with only lookups', () => {
+    const history = [
+      message('u1', 'user', 'Search everywhere'),
+      message('a1', 'assistant'),
+      message('u2', 'user', 'Continue where you left off.'),
+    ];
+    expect(
+      toLoopHistory(history, { a1: [readField] }, CHARACTER_LOOKUP_TOOLS, { a1: TURN_LIMIT_NOTICE }),
+    ).toEqual([
+      { role: 'user', content: 'Search everywhere' },
+      { role: 'assistant', content: `[App note: ${TURN_LIMIT_NOTICE}]` },
+      { role: 'user', content: 'Continue where you left off.' },
+    ]);
+  });
+
+  it('does not resend other error notices', () => {
+    const history = [message('u1', 'user', 'Go'), message('a1', 'assistant')];
+    expect(
+      toLoopHistory(history, {}, CHARACTER_LOOKUP_TOOLS, { a1: 'Provider returned 500' }),
+    ).toEqual([{ role: 'user', content: 'Go' }]);
   });
 
   it('strips tool fences from stored speech', () => {

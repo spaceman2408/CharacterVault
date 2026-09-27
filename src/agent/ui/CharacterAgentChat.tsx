@@ -24,6 +24,7 @@ import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
 import {
   CHARACTER_LOOKUP_TOOLS,
+  CONTINUE_MESSAGE,
   messageNotices,
   shouldRenderAgentMessage,
   visibleToolEvents,
@@ -150,6 +151,10 @@ export function CharacterAgentChat({
     [review, session],
   );
 
+  const handleContinue = useCallback(() => {
+    void handleAskGuarded(CONTINUE_MESSAGE);
+  }, [handleAskGuarded]);
+
   const handleRegenerateGuarded = useCallback(() => {
     if (review) {
       setReviewOpen(true);
@@ -228,11 +233,17 @@ export function CharacterAgentChat({
           onRegenerate={handleRegenerateGuarded}
           onDelete={session.handleDeleteMessage}
           onOpenTarget={onOpenTarget}
+          onContinue={
+            index === session.chatHistory.length - 1 && !session.isProcessing
+              ? handleContinue
+              : undefined
+          }
         />
       );
     },
     [
       aiConfig.showReasoning,
+      handleContinue,
       handleRegenerateGuarded,
       onOpenTarget,
       session.chatHistory.length,

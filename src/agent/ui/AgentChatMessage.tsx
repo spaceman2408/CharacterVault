@@ -9,6 +9,7 @@ import { formatTime } from '../../components/ai/utils';
 import { FoldedText } from '../../components/ai/components/FoldedText';
 import { StatsInfoButton } from '../../components/ai/components/StatsInfoButton';
 import { HoverInfoTip } from './HoverInfoTip';
+import { TURN_LIMIT_NOTICE } from './notices';
 import { ToolEventList } from './ToolEventList';
 import type { AgentToolEvent, AgentToolTarget } from './types';
 
@@ -25,6 +26,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   onRegenerate,
   onDelete,
   onOpenTarget,
+  onContinue,
 }: {
   message: ChatMessage;
   messageIndex: number;
@@ -38,6 +40,8 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   onRegenerate: () => void;
   onDelete: (messageId: string) => void;
   onOpenTarget?: (target: AgentToolTarget) => void;
+  /** Shown on the turn-limit notice; pass only for the latest message. */
+  onContinue?: () => void;
 }): React.ReactElement {
   const handleDelete = useCallback(() => {
     onDelete(message.id);
@@ -93,14 +97,30 @@ export const AgentChatMessage = memo(function AgentChatMessage({
 
       {notices.length > 0 ? (
         <ul className="space-y-1">
-          {notices.map((notice, noticeIndex) => (
-            <li
-              key={`${noticeIndex}-${notice}`}
-              className="rounded-md bg-danger-soft px-2 py-1 text-xs leading-5 text-danger-soft-fg"
-            >
-              {notice}
-            </li>
-          ))}
+          {notices.map((notice, noticeIndex) => {
+            const turnLimit = notice === TURN_LIMIT_NOTICE;
+            return (
+              <li
+                key={`${noticeIndex}-${notice}`}
+                className={`flex items-center gap-2 rounded-md px-2 py-1 text-xs leading-5 ${
+                  turnLimit
+                    ? 'bg-warning-soft text-warning-soft-fg'
+                    : 'bg-danger-soft text-danger-soft-fg'
+                }`}
+              >
+                <span className="min-w-0 flex-1">{notice}</span>
+                {turnLimit && onContinue ? (
+                  <button
+                    type="button"
+                    onClick={onContinue}
+                    className="shrink-0 rounded-md border border-warning/40 px-2 font-medium hover:opacity-90"
+                  >
+                    Continue
+                  </button>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       ) : null}
 

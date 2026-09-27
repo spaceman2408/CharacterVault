@@ -43,7 +43,12 @@ import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
 import { LIVE_SPEECH_MAX_CHARS, liveAgentSpeech } from './speechDraft';
 import { toLoopHistory } from './loopHistory';
-import { compactToolResultMessage, isLookupOnlyTurn, REVIEW_NOTE_TOOL } from './notices';
+import {
+  compactToolResultMessage,
+  isLookupOnlyTurn,
+  REVIEW_NOTE_TOOL,
+  TURN_LIMIT_NOTICE,
+} from './notices';
 import { estimatePromptTokens } from './promptUsage';
 import type { AgentToolEvent } from './types';
 
@@ -356,6 +361,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     if (!messageId) return;
     const events = toolEventsRef.current[messageId] ?? [];
     if (!isLookupOnlyTurn(events, lookupToolNamesRef.current)) return;
+    if (errorByMessageIdRef.current[messageId]) return;
 
     const nextHistory = chatHistoryRef.current.filter((message) => message.id !== messageId);
     chatHistoryRef.current = nextHistory;
@@ -686,6 +692,14 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
           return;
         }
 
+        // Built before notices are cleared below; turn-limit stops ride along as app notes.
+        const historyForLoop = toLoopHistory(
+          priorHistory,
+          toolEventsRef.current,
+          lookupToolNamesRef.current,
+          errorByMessageIdRef.current,
+        );
+
         const requestId = ++requestIdRef.current;
         abortedRef.current = false;
         isProcessingRef.current = true;
@@ -699,12 +713,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         pendingStatsRef.current = undefined;
         callTimingRef.current = null;
         onRunningChangeRef.current?.(true);
-
-        const historyForLoop = toLoopHistory(
-          priorHistory,
-          toolEventsRef.current,
-          lookupToolNamesRef.current,
-        );
 
         const isCurrent = () => isMountedRef.current && requestId === requestIdRef.current;
         let runService: AIService | null = null;
@@ -861,6 +869,10 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
               }
             },
           });
+
+          if (result.reason === 'max_turns' && isCurrent()) {
+            attachError(TURN_LIMIT_NOTICE);
+          }
 
           if (result.reason === 'abort' && isCurrent()) {
             dropLookupOnlyMessage(lastAssistantIdRef.current);

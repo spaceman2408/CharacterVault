@@ -1,4 +1,8 @@
+import { DEFAULT_MAX_TURNS } from '../core/runLoop';
 import type { AgentToolEvent } from './types';
+
+export const TURN_LIMIT_NOTICE = `Stopped at the ${DEFAULT_MAX_TURNS}-turn limit for one run.`;
+export const CONTINUE_MESSAGE = 'Continue where you left off.';
 
 export const LOREBOOK_LOOKUP_TOOLS = new Set([
   'list_entries',

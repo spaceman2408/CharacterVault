@@ -21,6 +21,7 @@ import { formatAgentBusyLabel } from './busyLabel';
 import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
 import {
+  CONTINUE_MESSAGE,
   messageNotices,
   shouldRenderAgentMessage,
   visibleToolEvents,
@@ -152,6 +153,10 @@ export function LorebookAgentChat({
     [review, session],
   );
 
+  const handleContinue = useCallback(() => {
+    void handleAskGuarded(CONTINUE_MESSAGE);
+  }, [handleAskGuarded]);
+
   const handleRegenerateGuarded = useCallback(() => {
     if (review) {
       setReviewOpen(true);
@@ -228,11 +233,17 @@ export function LorebookAgentChat({
           onRegenerate={handleRegenerateGuarded}
           onDelete={session.handleDeleteMessage}
           onOpenTarget={onOpenTarget}
+          onContinue={
+            index === session.chatHistory.length - 1 && !session.isProcessing
+              ? handleContinue
+              : undefined
+          }
         />
       );
     },
     [
       aiConfig.showReasoning,
+      handleContinue,
       handleRegenerateGuarded,
       onOpenTarget,
       session.chatHistory.length,
