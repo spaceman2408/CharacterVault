@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diffLines, toSplitRows, type LineRow } from '../../../src/agent/review/lineDiff';
+import { diffLines, foldUnchanged, toSplitRows, type LineRow } from '../../../src/agent/review/lineDiff';
 
 function kinds(rows: LineRow[]): string[] {
   return rows.map((row) => row.kind);
@@ -155,5 +155,40 @@ describe('toSplitRows', () => {
   it('carries paragraph breaks from either side', () => {
     const split = toSplitRows(diffLines('A.\nB.', 'A.\n\nB.').rows);
     expect(split.map((row) => row.breakBefore)).toEqual([false, true]);
+  });
+});
+
+describe('foldUnchanged', () => {
+  const isSame = (item: string): boolean => item === '=';
+  const shape = (items: string[]): string[] =>
+    foldUnchanged(items, isSame).map((part) =>
+      part.kind === 'item' ? part.item : `fold${part.items.length}`,
+    );
+
+  it('folds a long interior run and keeps two lines of context each side', () => {
+    expect(shape(['x', '=', '=', '=', '=', '=', '=', '=', 'x'])).toEqual([
+      'x', '=', '=', 'fold3', '=', '=', 'x',
+    ]);
+  });
+
+  it('keeps only trailing context before the first change and leading after the last', () => {
+    expect(shape(['=', '=', '=', '=', '=', 'x', '=', '=', '=', '=', '='])).toEqual([
+      'fold3', '=', '=', 'x', '=', '=', 'fold3',
+    ]);
+  });
+
+  it('leaves short runs alone', () => {
+    expect(shape(['x', '=', '=', '=', '=', '=', '=', 'x'])).toEqual([
+      'x', '=', '=', '=', '=', '=', '=', 'x',
+    ]);
+  });
+
+  it('never folds text with no changes', () => {
+    expect(shape(['=', '=', '=', '=', '=', '=', '='])).toEqual(['=', '=', '=', '=', '=', '=', '=']);
+  });
+
+  it('keys folds by their first hidden index', () => {
+    const folded = foldUnchanged(['x', '=', '=', '=', '=', '=', '=', '=', 'x'], isSame);
+    expect(folded.find((part) => part.kind === 'fold')).toMatchObject({ key: 3 });
   });
 });

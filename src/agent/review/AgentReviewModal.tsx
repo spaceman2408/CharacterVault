@@ -14,11 +14,20 @@ import {
   Settings2,
   ShieldCheck,
   Trash2,
+  UnfoldVertical,
   User,
   X,
 } from 'lucide-react';
 import { countApproved, defaultDecisions, formatGreetingsForEdit } from './diff';
-import { diffLines, toSplitRows, type LineDiff, type LineRow, type SideCell } from './lineDiff';
+import {
+  diffLines,
+  foldUnchanged,
+  toSplitRows,
+  type LineDiff,
+  type LineRow,
+  type SideCell,
+  type SplitRow,
+} from './lineDiff';
 import type { WordDiffSegment } from './wordDiff';
 import type { AgentReviewChange, ReviewDecision, ReviewDecisions } from './types';
 
@@ -184,32 +193,99 @@ function DiffLegend({ label, side }: { label: string; side: DiffSide | 'same' })
   );
 }
 
+type VisibleItem<T> =
+  | { kind: 'item'; item: T; index: number }
+  | { kind: 'fold'; key: number; count: number };
+
+function useFoldedItems<T>(
+  items: T[],
+  isUnchanged: (item: T) => boolean,
+): { visible: VisibleItem<T>[]; expand: (key: number) => void } {
+  const folded = useMemo(() => foldUnchanged(items, isUnchanged), [items, isUnchanged]);
+  const [openFolds, setOpenFolds] = useState<ReadonlySet<number>>(() => new Set());
+  const visible = useMemo(() => {
+    const out: VisibleItem<T>[] = [];
+    let index = 0;
+    for (const part of folded) {
+      if (part.kind === 'item') {
+        out.push({ kind: 'item', item: part.item, index });
+        index += 1;
+      } else if (openFolds.has(part.key)) {
+        for (const item of part.items) {
+          out.push({ kind: 'item', item, index });
+          index += 1;
+        }
+      } else {
+        out.push({ kind: 'fold', key: part.key, count: part.items.length });
+        index += part.items.length;
+      }
+    }
+    return out;
+  }, [folded, openFolds]);
+  const expand = (key: number) => setOpenFolds((prev) => new Set(prev).add(key));
+  return { visible, expand };
+}
+
+function FoldBar({
+  count,
+  onExpand,
+  className = '',
+}: {
+  count: number;
+  onExpand: () => void;
+  className?: string;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={onExpand}
+      className={`my-0.5 flex w-full items-center justify-center gap-1.5 border-y border-border bg-surface py-1 text-[11px] font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg ${className}`}
+    >
+      <UnfoldVertical className="h-3.5 w-3.5" />
+      Show {count} unchanged line{count === 1 ? '' : 's'}
+    </button>
+  );
+}
+
+const isUnchangedSplitRow = (row: SplitRow): boolean => row.left?.tone === 'same';
+const isUnchangedLineRow = (row: LineRow): boolean => row.kind === 'same';
+
 function SplitDiffView({ rows }: { rows: LineRow[] }): React.ReactElement {
   const splitRows = useMemo(() => toSplitRows(rows), [rows]);
+  const { visible, expand } = useFoldedItems(splitRows, isUnchangedSplitRow);
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-bg">
-      <div className="grid grid-cols-2 border-b border-border bg-surface">
-        <div className="border-r border-border px-2.5 py-1.5">
-          <DiffLegend label="Original" side="del" />
+      <div className="max-h-80 overflow-y-auto text-xs leading-relaxed text-fg">
+        <div className="sticky top-0 z-10 grid grid-cols-2 border-b border-border bg-surface">
+          <div className="border-r border-border px-2.5 py-1.5">
+            <DiffLegend label="Original" side="del" />
+          </div>
+          <div className="px-2.5 py-1.5">
+            <DiffLegend label="Agent" side="add" />
+          </div>
         </div>
-        <div className="px-2.5 py-1.5">
-          <DiffLegend label="Agent" side="add" />
-        </div>
-      </div>
-      <div className="max-h-80 overflow-y-auto overscroll-contain text-xs leading-relaxed text-fg">
-        <div className="grid grid-cols-2 py-1">
-          {splitRows.map((row, index) => (
-            <Fragment key={index}>
-              {row.breakBefore && index > 0 && (
-                <>
-                  <div aria-hidden="true" className="h-3 border-r border-border" />
-                  <div aria-hidden="true" className="h-3" />
-                </>
-              )}
-              <SideCellView cell={row.left} side="del" divider />
-              <SideCellView cell={row.right} side="add" />
-            </Fragment>
-          ))}
+        <div className="grid grid-cols-2">
+          {visible.map((entry) =>
+            entry.kind === 'fold' ? (
+              <FoldBar
+                key={`fold-${entry.key}`}
+                count={entry.count}
+                onExpand={() => expand(entry.key)}
+                className="col-span-2"
+              />
+            ) : (
+              <Fragment key={entry.index}>
+                {entry.item.breakBefore && entry.index > 0 && (
+                  <>
+                    <div aria-hidden="true" className="h-3 border-r border-border" />
+                    <div aria-hidden="true" className="h-3" />
+                  </>
+                )}
+                <SideCellView cell={entry.item.left} side="del" divider />
+                <SideCellView cell={entry.item.right} side="add" />
+              </Fragment>
+            ),
+          )}
         </div>
       </div>
     </div>
@@ -236,37 +312,46 @@ function InlineLine({
 }
 
 function InlineDiffView({ rows }: { rows: LineRow[] }): React.ReactElement {
+  const { visible, expand } = useFoldedItems(rows, isUnchangedLineRow);
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-bg">
       <div className="flex items-center gap-3 border-b border-border bg-surface px-2.5 py-1.5">
         <DiffLegend label="Original" side="del" />
         <DiffLegend label="Agent" side="add" />
       </div>
-      <div className="max-h-96 overflow-y-auto overscroll-contain py-1 text-xs leading-relaxed text-fg">
-        {rows.map((row, index) => (
-          <Fragment key={index}>
-            {row.breakBefore && index > 0 && <div aria-hidden="true" className="h-3" />}
-            {row.kind === 'same' && <InlineLine side="same">{row.text}</InlineLine>}
-            {row.kind === 'del' && <InlineLine side="del">{row.text}</InlineLine>}
-            {row.kind === 'add' && <InlineLine side="add">{row.text}</InlineLine>}
-            {row.kind === 'pair' && (
-              <>
-                <InlineLine side="del">
-                  <WordSegments
-                    segments={row.diff.segments.filter((segment) => segment.type !== 'add')}
-                    side="del"
-                  />
-                </InlineLine>
-                <InlineLine side="add">
-                  <WordSegments
-                    segments={row.diff.segments.filter((segment) => segment.type !== 'del')}
-                    side="add"
-                  />
-                </InlineLine>
-              </>
-            )}
-          </Fragment>
-        ))}
+      <div className="max-h-96 overflow-y-auto py-1 text-xs leading-relaxed text-fg">
+        {visible.map((entry) => {
+          if (entry.kind === 'fold') {
+            return (
+              <FoldBar key={`fold-${entry.key}`} count={entry.count} onExpand={() => expand(entry.key)} />
+            );
+          }
+          const row = entry.item;
+          return (
+            <Fragment key={entry.index}>
+              {row.breakBefore && entry.index > 0 && <div aria-hidden="true" className="h-3" />}
+              {row.kind === 'same' && <InlineLine side="same">{row.text}</InlineLine>}
+              {row.kind === 'del' && <InlineLine side="del">{row.text}</InlineLine>}
+              {row.kind === 'add' && <InlineLine side="add">{row.text}</InlineLine>}
+              {row.kind === 'pair' && (
+                <>
+                  <InlineLine side="del">
+                    <WordSegments
+                      segments={row.diff.segments.filter((segment) => segment.type !== 'add')}
+                      side="del"
+                    />
+                  </InlineLine>
+                  <InlineLine side="add">
+                    <WordSegments
+                      segments={row.diff.segments.filter((segment) => segment.type !== 'del')}
+                      side="add"
+                    />
+                  </InlineLine>
+                </>
+              )}
+            </Fragment>
+          );
+        })}
       </div>
     </div>
   );

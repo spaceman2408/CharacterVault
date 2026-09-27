@@ -250,3 +250,44 @@ export function toSplitRows(rows: LineRow[]): SplitRow[] {
   }
   return split;
 }
+
+export type FoldedItem<T> = { kind: 'item'; item: T } | { kind: 'fold'; key: number; items: T[] };
+
+const FOLD_CONTEXT = 2;
+const MIN_FOLDED = 3;
+
+/**
+ * Hide long unchanged stretches behind folds, keeping a little context next
+ * to each change. Text with no changes at all is left unfolded.
+ */
+export function foldUnchanged<T>(items: T[], isUnchanged: (item: T) => boolean): FoldedItem<T>[] {
+  const folded: FoldedItem<T>[] = [];
+  const pushItems = (from: number, to: number): void => {
+    for (let index = from; index < to; index += 1) folded.push({ kind: 'item', item: items[index] });
+  };
+  if (items.every(isUnchanged)) {
+    pushItems(0, items.length);
+    return folded;
+  }
+  let index = 0;
+  while (index < items.length) {
+    if (!isUnchanged(items[index])) {
+      pushItems(index, index + 1);
+      index += 1;
+      continue;
+    }
+    let end = index;
+    while (end < items.length && isUnchanged(items[end])) end += 1;
+    const hiddenFrom = index === 0 ? 0 : index + FOLD_CONTEXT;
+    const hiddenTo = end === items.length ? end : end - FOLD_CONTEXT;
+    if (hiddenTo - hiddenFrom >= MIN_FOLDED) {
+      pushItems(index, hiddenFrom);
+      folded.push({ kind: 'fold', key: hiddenFrom, items: items.slice(hiddenFrom, hiddenTo) });
+      pushItems(hiddenTo, end);
+    } else {
+      pushItems(index, end);
+    }
+    index = end;
+  }
+  return folded;
+}
