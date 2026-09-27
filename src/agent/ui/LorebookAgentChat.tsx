@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Loader2, ShieldCheck } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
 import type { ChatMessage } from '../../components/ai/types';
 import type {
@@ -15,6 +15,7 @@ import { AgentReviewModal } from '../review/AgentReviewModal';
 import { applyBookDecisions, applyLorebookReview, diffLorebookReview } from '../review/diff';
 import type { LorebookReviewPayload, ReviewDecisions } from '../review/types';
 import { AgentChatMessage } from './AgentChatMessage';
+import { AgentReviewStatus } from './AgentReviewStatus';
 import { AgentToolModeChip } from './AgentToolModeChip';
 import { formatAgentBusyLabel } from './busyLabel';
 import { LiveSpeech } from './LiveSpeech';
@@ -261,26 +262,11 @@ export function LorebookAgentChat({
       headerActions={
         <>
           <AgentToolModeChip mode={session.toolMode} />
-          {requireReview && (
-            <span
-              className="inline-flex items-center gap-1 rounded-lg bg-accent-soft px-2 py-1 text-xs text-accent"
-              title="Agent edits need your review before they are applied (Studio settings)"
-            >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Review
-            </span>
-          )}
-          {review && !reviewOpen && (
-            <button
-              type="button"
-              onClick={() => setReviewOpen(true)}
-              className="inline-flex items-center gap-1 rounded-lg bg-warning-soft px-2 py-1 text-xs font-medium text-warning-soft-fg"
-              title={`${reviewChanges.length} agent edits waiting for review`}
-            >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Review ({reviewChanges.length})
-            </button>
-          )}
+          <AgentReviewStatus
+            requireReview={requireReview}
+            pendingCount={review && !reviewOpen ? reviewChanges.length : null}
+            onOpen={() => setReviewOpen(true)}
+          />
           {headerActions}
         </>
       }

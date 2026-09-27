@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, type ReactNode } from 'react';
 import {
   MessageSquare,
+  MessageSquarePlus,
   X,
   Sparkles,
   Loader2,
@@ -161,22 +162,22 @@ export function AIChatView({
 
   return (
     <div className="h-full flex flex-col bg-bg border-l border-border animate-fade-in-slow">
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-muted/50 shrink-0">
+      <div className="@container flex items-center justify-between gap-2 px-3 py-2.5 border-b border-border bg-muted/50 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <MessageSquare className="w-4 h-4 text-fg-muted shrink-0" />
           <h2 className="font-semibold text-fg truncate text-sm">{title}</h2>
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
           {headerActions}
-          {(chatHistory.length > 0 || hasOlderMessages) && (
+          {!composerDisabled && (chatHistory.length > 0 || hasOlderMessages) && (
             <button
               type="button"
               onClick={() => setIsConfirmingNewChat(true)}
-              disabled={composerDisabled}
-              className="text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors disabled:opacity-40 disabled:pointer-events-none"
-              title={composerDisabled ? effectiveHint : 'Start a new chat'}
+              className="p-1.5 text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors"
+              title="Start a new chat"
+              aria-label="New chat"
             >
-              New chat
+              <MessageSquarePlus className="w-4 h-4" />
             </button>
           )}
           {onClose && (
