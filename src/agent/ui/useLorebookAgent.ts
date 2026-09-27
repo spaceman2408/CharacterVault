@@ -7,6 +7,7 @@ import type {
   SamplerSettings,
 } from '../../db/characterTypes';
 import { createLorebookHost } from '../hosts/lorebook/createHost';
+import { applyLorebookReview, defaultDecisions, diffLorebookReview } from '../review/diff';
 import type { LorebookReviewPayload } from '../review/types';
 import { LOREBOOK_LOOKUP_TOOLS } from './notices';
 import {
@@ -17,12 +18,15 @@ import {
 
 export { lastUserMessageIndex };
 
+/** Receives the latest saved book and returns the book to write, or null to skip. */
+export type SetAgentBook = (build: (latest: CharacterBook) => CharacterBook | null) => Promise<void>;
+
 export interface UseLorebookAgentOptions {
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
   getBook: () => CharacterBook;
-  setBook: (book: CharacterBook) => Promise<void>;
+  setBook: SetAgentBook;
   getCustomContext: () => Promise<string | null>;
   flushDraft: () => void | Promise<void>;
   takeSnapshot: () => Promise<void>;
@@ -58,18 +62,21 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     [onPendingReview],
   );
 
-  const createHost = useCallback(
-    () =>
-      createLorebookHost({
-        getBook,
-        setBook,
-        getCustomContext,
-        takeSnapshot,
-        shouldReview: checkShouldReview,
-        onPendingReview: forwardPendingReview,
-      }),
-    [getBook, getCustomContext, setBook, takeSnapshot, checkShouldReview, forwardPendingReview],
-  );
+  const createHost = useCallback(() => {
+    const originalBook = structuredClone(getBook());
+    return createLorebookHost({
+      getBook,
+      setBook: (proposedBook) =>
+        setBook((latest) => {
+          const payload: LorebookReviewPayload = { originalBook, proposedBook };
+          return applyLorebookReview(payload, defaultDecisions(diffLorebookReview(payload)), latest);
+        }),
+      getCustomContext,
+      takeSnapshot,
+      shouldReview: checkShouldReview,
+      onPendingReview: forwardPendingReview,
+    });
+  }, [getBook, getCustomContext, setBook, takeSnapshot, checkShouldReview, forwardPendingReview]);
 
   return useAgentSession({
     aiConfig,

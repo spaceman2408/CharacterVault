@@ -333,19 +333,28 @@ export function applyBookDecisions(
   return changed ? next : undefined;
 }
 
+/**
+ * Pass the latest saved card as `base` when writing, so editor edits made
+ * while the agent ran survive. The default base only answers "is anything
+ * approved?".
+ */
 export function applyCharacterReview(
   payload: CharacterReviewPayload,
   decisions: ReviewDecisions,
+  base: { spec: CharacterSpec; book: CharacterBook } = {
+    spec: payload.originalSpec,
+    book: payload.originalBook,
+  },
 ): AppliedCharacterReview {
   const result: AppliedCharacterReview = {};
   if (payload.proposedSpec) {
     const changes = diffSpecChanges(payload.originalSpec, payload.proposedSpec);
-    const spec = applySpecDecisions(payload.originalSpec, changes, decisions);
+    const spec = applySpecDecisions(base.spec, changes, decisions);
     if (spec) result.spec = spec;
   }
   if (payload.proposedBook) {
     const changes = diffBookChanges(payload.originalBook, payload.proposedBook);
-    const book = applyBookDecisions(payload.originalBook, payload.proposedBook, changes, decisions);
+    const book = applyBookDecisions(base.book, payload.proposedBook, changes, decisions);
     if (book) result.book = book;
   }
   return result;
@@ -354,7 +363,8 @@ export function applyCharacterReview(
 export function applyLorebookReview(
   payload: LorebookReviewPayload,
   decisions: ReviewDecisions,
+  base: CharacterBook = payload.originalBook,
 ): CharacterBook | null {
   const changes = diffBookChanges(payload.originalBook, payload.proposedBook);
-  return applyBookDecisions(payload.originalBook, payload.proposedBook, changes, decisions) ?? null;
+  return applyBookDecisions(base, payload.proposedBook, changes, decisions) ?? null;
 }

@@ -12,7 +12,7 @@ import type {
 import { stripFences } from '../core/stripFences';
 import { computeAgentContextUsage, usageStatus } from '../hosts/lorebook/contextUsage';
 import { AgentReviewModal } from '../review/AgentReviewModal';
-import { applyBookDecisions, applyLorebookReview, diffLorebookReview } from '../review/diff';
+import { applyLorebookReview, diffLorebookReview } from '../review/diff';
 import type { LorebookReviewPayload, ReviewDecisions } from '../review/types';
 import { AgentChatMessage } from './AgentChatMessage';
 import { AgentReviewStatus } from './AgentReviewStatus';
@@ -27,14 +27,14 @@ import {
   writeRecapLine,
 } from './notices';
 import type { AgentToolTarget } from './types';
-import { useLorebookAgent } from './useLorebookAgent';
+import { useLorebookAgent, type SetAgentBook } from './useLorebookAgent';
 
 export interface LorebookAgentChatProps {
   aiConfig: AIConfig;
   samplerSettings: SamplerSettings;
   promptSettings: PromptSettings;
   getBook: () => CharacterBook;
-  setBook: (book: CharacterBook) => Promise<void>;
+  setBook: SetAgentBook;
   getCustomContext: () => Promise<string | null>;
   flushDraft: () => void | Promise<void>;
   takeSnapshot: () => Promise<void>;
@@ -102,19 +102,17 @@ export function LorebookAgentChat({
         setReviewOpen(false);
         return;
       }
-      const changes = diffLorebookReview(review);
       setIsApplyingReview(true);
       try {
         await takeSnapshot();
-        const merged = applyBookDecisions(getBook(), review.proposedBook, changes, decisions);
-        if (merged) await setBook(merged);
+        await setBook((latest) => applyLorebookReview(review, decisions, latest));
       } finally {
         setIsApplyingReview(false);
         setReview(null);
         setReviewOpen(false);
       }
     },
-    [getBook, review, setBook, takeSnapshot],
+    [review, setBook, takeSnapshot],
   );
 
   const handleDiscardReview = useCallback(() => {

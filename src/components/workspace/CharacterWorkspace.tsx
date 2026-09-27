@@ -892,14 +892,22 @@ function CharacterWorkspaceInner({
       ?? createEmptyCharacterBook(currentCharacter?.name ?? '');
   }, [currentCharacter]);
 
-  const persistAgentCard = useCallback(async (update: {
-    spec?: CharacterSpec;
-    book?: CharacterBook;
-  }) => {
-    const latest = await flushPendingSaves();
+  const persistAgentCard = useCallback(async (
+    build: (latest: { spec: CharacterSpec; book: CharacterBook }) => {
+      spec?: CharacterSpec;
+      book?: CharacterBook;
+    },
+  ) => {
+    // The entry draft queues a card save, so flush it before reading the latest card.
     flushLorebookDraft();
+    const latest = await flushPendingSaves();
     const character = latest ?? currentCharacter;
     if (!character) return;
+    const update = build({
+      spec: character.data.spec,
+      book: character.data.characterBook ?? createEmptyCharacterBook(character.name),
+    });
+    if (!update.spec && !update.book) return;
     const spec = update.spec ?? character.data.spec;
     const book = update.book ?? character.data.characterBook;
     await updateCharacter({

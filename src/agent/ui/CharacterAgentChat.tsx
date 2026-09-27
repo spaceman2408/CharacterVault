@@ -11,15 +11,9 @@ import type {
   SamplerSettings,
 } from '../../db/characterTypes';
 import { stripFences } from '../core/stripFences';
-import type { CharacterHostPersist } from '../hosts/character/createHost';
 import { computeCharacterAgentContextUsage, usageStatus } from '../hosts/character/contextUsage';
 import { AgentReviewModal } from '../review/AgentReviewModal';
-import {
-  applyBookDecisions,
-  applyCharacterReview,
-  applySpecDecisions,
-  diffCharacterReview,
-} from '../review/diff';
+import { applyCharacterReview, diffCharacterReview } from '../review/diff';
 import type { CharacterReviewPayload } from '../review/types';
 import type { ReviewDecisions } from '../review/types';
 import { AgentChatMessage } from './AgentChatMessage';
@@ -36,7 +30,7 @@ import {
   writeRecapLine,
 } from './notices';
 import type { AgentToolTarget } from './types';
-import { useCharacterAgent } from './useCharacterAgent';
+import { useCharacterAgent, type PersistAgentCard } from './useCharacterAgent';
 
 export interface CharacterAgentChatProps {
   aiConfig: AIConfig;
@@ -44,7 +38,7 @@ export interface CharacterAgentChatProps {
   promptSettings: PromptSettings;
   getSpec: () => CharacterSpec;
   getBook: () => CharacterBook;
-  persist: (update: CharacterHostPersist) => Promise<void>;
+  persist: PersistAgentCard;
   getCustomContext: () => Promise<string | null>;
   flushDraft: () => void | Promise<void>;
   takeSnapshot: () => Promise<void>;
@@ -105,27 +99,17 @@ export function CharacterAgentChat({
         setReviewOpen(false);
         return;
       }
-      const changes = diffCharacterReview(review);
       setIsApplyingReview(true);
       try {
         await takeSnapshot();
-        await persist({
-          spec:
-            staged.spec && review.proposedSpec
-              ? applySpecDecisions(getSpec(), changes, decisions)
-              : undefined,
-          book:
-            staged.book && review.proposedBook
-              ? applyBookDecisions(getBook(), review.proposedBook, changes, decisions)
-              : undefined,
-        });
+        await persist((latest) => applyCharacterReview(review, decisions, latest));
       } finally {
         setIsApplyingReview(false);
         setReview(null);
         setReviewOpen(false);
       }
     },
-    [getBook, getSpec, persist, review, takeSnapshot],
+    [persist, review, takeSnapshot],
   );
 
   const handleDiscardReview = useCallback(() => {

@@ -385,9 +385,13 @@ export function LorebookWorkspace(): React.ReactElement {
     return currentLorebookRef.current?.book ?? createEmptyCharacterBook();
   }, []);
 
-  const setAgentBook = useCallback(async (book: CharacterBook) => {
+  const setAgentBook = useCallback(async (
+    build: (latest: CharacterBook) => CharacterBook | null,
+  ) => {
+    flushLorebookDraft();
     await pendingSaveRef.current;
-    await handleBookChange(book);
+    const next = build(currentLorebookRef.current?.book ?? createEmptyCharacterBook());
+    if (next) await handleBookChange(next);
   }, [handleBookChange]);
 
   const getAgentCustomContext = useCallback(async (): Promise<string | null> => {

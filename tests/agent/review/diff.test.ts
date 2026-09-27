@@ -257,6 +257,64 @@ describe('live-base merging', () => {
     expect(merged).toBeUndefined();
   });
 
+  it('writes a character run onto the latest card so edits made during the run survive', () => {
+    const payload = {
+      originalSpec: spec(),
+      proposedSpec: spec({ description: 'Pirate.' }),
+      originalBook: book([entry({ id: 1, content: 'Old.' })]),
+      proposedBook: book([
+        entry({ id: 1, content: 'Agent rewrite.' }),
+        entry({ id: 2, content: 'Agent add.' }),
+      ]),
+    };
+    const latest = {
+      spec: spec({ personality: 'Edited during the run.' }),
+      book: book([entry({ id: 1, content: 'Old.' }), entry({ id: 2, content: 'User add.' })]),
+    };
+    const applied = applyCharacterReview(
+      payload,
+      defaultDecisions(diffCharacterReview(payload)),
+      latest,
+    );
+    expect(applied.spec?.description).toBe('Pirate.');
+    expect(applied.spec?.personality).toBe('Edited during the run.');
+    expect(applied.book?.entries.map((row) => [row.id, row.content])).toEqual([
+      [1, 'Agent rewrite.'],
+      [2, 'User add.'],
+      [0, 'Agent add.'],
+    ]);
+  });
+
+  it('keeps the agent version of a field both sides changed', () => {
+    const payload = {
+      originalSpec: spec(),
+      proposedSpec: spec({ description: 'Agent.' }),
+      originalBook: book(),
+      proposedBook: undefined,
+    };
+    const latest = { spec: spec({ description: 'User.' }), book: book() };
+    const applied = applyCharacterReview(
+      payload,
+      defaultDecisions(diffCharacterReview(payload)),
+      latest,
+    );
+    expect(applied.spec?.description).toBe('Agent.');
+  });
+
+  it('writes a lorebook run onto the latest book', () => {
+    const payload = {
+      originalBook: book([entry({ id: 1, content: 'A.' }), entry({ id: 2, content: 'B.' })]),
+      proposedBook: book([entry({ id: 1, content: 'A.' }), entry({ id: 2, content: 'Agent B.' })]),
+    };
+    const latest = book([entry({ id: 1, content: 'User A.' }), entry({ id: 2, content: 'B.' })]);
+    const applied = applyLorebookReview(
+      payload,
+      defaultDecisions(diffLorebookReview(payload)),
+      latest,
+    );
+    expect(applied?.entries.map((row) => row.content)).toEqual(['User A.', 'Agent B.']);
+  });
+
   it('skips per-greeting edits when the live list shrank', () => {
     const original = spec({ alternate_greetings: ['A.', 'B.'] });
     const proposed = spec({ alternate_greetings: ['A.', 'B edited.'] });
