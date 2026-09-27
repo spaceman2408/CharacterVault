@@ -13,7 +13,7 @@ import type {
 import { stripFences } from '../core/stripFences';
 import { computeCharacterAgentContextUsage, usageStatus } from '../hosts/character/contextUsage';
 import { AgentReviewModal } from '../review/AgentReviewModal';
-import { applyCharacterReview, diffCharacterReview } from '../review/diff';
+import { applyCharacterReview, diffCharacterReview, formatReviewOutcome } from '../review/diff';
 import type { CharacterReviewPayload } from '../review/types';
 import type { ReviewDecisions } from '../review/types';
 import { AgentChatMessage } from './AgentChatMessage';
@@ -90,33 +90,6 @@ export function CharacterAgentChat({
     setReviewOpen(true);
   }, []);
 
-  const handleApplyReview = useCallback(
-    async (decisions: ReviewDecisions) => {
-      if (!review) return;
-      const staged = applyCharacterReview(review, decisions);
-      if (!staged.spec && !staged.book) {
-        setReview(null);
-        setReviewOpen(false);
-        return;
-      }
-      setIsApplyingReview(true);
-      try {
-        await takeSnapshot();
-        await persist((latest) => applyCharacterReview(review, decisions, latest));
-      } finally {
-        setIsApplyingReview(false);
-        setReview(null);
-        setReviewOpen(false);
-      }
-    },
-    [persist, review, takeSnapshot],
-  );
-
-  const handleDiscardReview = useCallback(() => {
-    setReview(null);
-    setReviewOpen(false);
-  }, []);
-
   const session = useCharacterAgent({
     aiConfig,
     samplerSettings,
@@ -133,6 +106,38 @@ export function CharacterAgentChat({
     chatOwnerType,
     chatOwnerId,
   });
+  const { noteReviewOutcome } = session;
+
+  const handleApplyReview = useCallback(
+    async (decisions: ReviewDecisions) => {
+      if (!review) return;
+      const outcome = formatReviewOutcome(diffCharacterReview(review), decisions);
+      const staged = applyCharacterReview(review, decisions);
+      if (!staged.spec && !staged.book) {
+        noteReviewOutcome(outcome);
+        setReview(null);
+        setReviewOpen(false);
+        return;
+      }
+      setIsApplyingReview(true);
+      try {
+        await takeSnapshot();
+        await persist((latest) => applyCharacterReview(review, decisions, latest));
+        noteReviewOutcome(outcome);
+      } finally {
+        setIsApplyingReview(false);
+        setReview(null);
+        setReviewOpen(false);
+      }
+    },
+    [noteReviewOutcome, persist, review, takeSnapshot],
+  );
+
+  const handleDiscardReview = useCallback(() => {
+    noteReviewOutcome(formatReviewOutcome([], null));
+    setReview(null);
+    setReviewOpen(false);
+  }, [noteReviewOutcome]);
 
   const handleAskGuarded = useCallback(
     (question: string) => {

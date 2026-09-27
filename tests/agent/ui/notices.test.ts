@@ -4,6 +4,7 @@ import {
   compactToolResultMessage,
   isLookupOnlyTurn,
   messageNotices,
+  REVIEW_NOTE_TOOL,
   shouldRenderAgentMessage,
   visibleToolEvents,
   writeRecapLine,
@@ -45,6 +46,15 @@ describe('visibleToolEvents', () => {
       message: 'error: no entry #9',
     };
     expect(visibleToolEvents([okList, failedRead])).toEqual([failedRead]);
+  });
+
+  it('hides the review note', () => {
+    const note: AgentToolEvent = {
+      toolName: REVIEW_NOTE_TOOL,
+      ok: true,
+      message: 'The user applied every change from this run.',
+    };
+    expect(visibleToolEvents([okAdd, note])).toEqual([okAdd]);
   });
 
   it('keeps writes to different ids', () => {

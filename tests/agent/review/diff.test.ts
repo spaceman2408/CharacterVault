@@ -10,6 +10,7 @@ import {
   diffLorebookReview,
   diffSpecChanges,
   formatGreetingsForEdit,
+  formatReviewOutcome,
   parseGreetingsFromEdit,
 } from '../../../src/agent/review/diff';
 import type {
@@ -198,6 +199,37 @@ describe('applyCharacterReview', () => {
     decisions['entry-deleted:1'] = { approved: false };
     const applied = applyCharacterReview(payload, decisions);
     expect(applied.book).toBeUndefined();
+  });
+});
+
+describe('formatReviewOutcome', () => {
+  const payload = {
+    originalSpec: spec(),
+    proposedSpec: spec({ description: 'Pirate.', alternate_greetings: ['Ahoy.'] }),
+    originalBook: book(),
+    proposedBook: book([entry({ id: 4, comment: 'Harbor' })]),
+  };
+  const changes = diffCharacterReview(payload);
+
+  it('says when everything was applied as proposed', () => {
+    expect(formatReviewOutcome(changes, defaultDecisions(changes))).toBe(
+      'The user applied every change from this run.',
+    );
+  });
+
+  it('lists applied, edited, and rejected changes', () => {
+    const decisions = defaultDecisions(changes);
+    decisions['greeting:0'] = { approved: true, edited: 'Ahoy there.' };
+    decisions['entry-added:4'] = { approved: false };
+    expect(formatReviewOutcome(changes, decisions)).toBe(
+      "Applied: Description. Applied with the user's own edits: greeting 1. Rejected: “Harbor” (#4).",
+    );
+  });
+
+  it('says when the proposal was discarded', () => {
+    expect(formatReviewOutcome(changes, null)).toBe(
+      'The user discarded every change from this run.',
+    );
   });
 });
 

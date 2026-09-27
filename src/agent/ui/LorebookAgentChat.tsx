@@ -12,7 +12,7 @@ import type {
 import { stripFences } from '../core/stripFences';
 import { computeAgentContextUsage, usageStatus } from '../hosts/lorebook/contextUsage';
 import { AgentReviewModal } from '../review/AgentReviewModal';
-import { applyLorebookReview, diffLorebookReview } from '../review/diff';
+import { applyLorebookReview, diffLorebookReview, formatReviewOutcome } from '../review/diff';
 import type { LorebookReviewPayload, ReviewDecisions } from '../review/types';
 import { AgentChatMessage } from './AgentChatMessage';
 import { AgentReviewStatus } from './AgentReviewStatus';
@@ -93,33 +93,6 @@ export function LorebookAgentChat({
     setReviewOpen(true);
   }, []);
 
-  const handleApplyReview = useCallback(
-    async (decisions: ReviewDecisions) => {
-      if (!review) return;
-      const staged = applyLorebookReview(review, decisions);
-      if (!staged) {
-        setReview(null);
-        setReviewOpen(false);
-        return;
-      }
-      setIsApplyingReview(true);
-      try {
-        await takeSnapshot();
-        await setBook((latest) => applyLorebookReview(review, decisions, latest));
-      } finally {
-        setIsApplyingReview(false);
-        setReview(null);
-        setReviewOpen(false);
-      }
-    },
-    [review, setBook, takeSnapshot],
-  );
-
-  const handleDiscardReview = useCallback(() => {
-    setReview(null);
-    setReviewOpen(false);
-  }, []);
-
   const session = useLorebookAgent({
     aiConfig,
     samplerSettings,
@@ -135,6 +108,38 @@ export function LorebookAgentChat({
     chatOwnerType,
     chatOwnerId,
   });
+  const { noteReviewOutcome } = session;
+
+  const handleApplyReview = useCallback(
+    async (decisions: ReviewDecisions) => {
+      if (!review) return;
+      const outcome = formatReviewOutcome(diffLorebookReview(review), decisions);
+      const staged = applyLorebookReview(review, decisions);
+      if (!staged) {
+        noteReviewOutcome(outcome);
+        setReview(null);
+        setReviewOpen(false);
+        return;
+      }
+      setIsApplyingReview(true);
+      try {
+        await takeSnapshot();
+        await setBook((latest) => applyLorebookReview(review, decisions, latest));
+        noteReviewOutcome(outcome);
+      } finally {
+        setIsApplyingReview(false);
+        setReview(null);
+        setReviewOpen(false);
+      }
+    },
+    [noteReviewOutcome, review, setBook, takeSnapshot],
+  );
+
+  const handleDiscardReview = useCallback(() => {
+    noteReviewOutcome(formatReviewOutcome([], null));
+    setReview(null);
+    setReviewOpen(false);
+  }, [noteReviewOutcome]);
 
   const handleAskGuarded = useCallback(
     (question: string) => {

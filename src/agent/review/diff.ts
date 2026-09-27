@@ -207,6 +207,49 @@ export function defaultDecisions(changes: AgentReviewChange[]): ReviewDecisions 
   return decisions;
 }
 
+function reviewChangeLabel(change: AgentReviewChange): string {
+  switch (change.kind) {
+    case 'field':
+      return change.label;
+    case 'greeting':
+      return `greeting ${change.index + 1}`;
+    case 'greetings':
+      return 'the greetings list';
+    case 'entry-added':
+    case 'entry-updated':
+    case 'entry-deleted':
+      return `“${change.title}” (#${change.entryId})`;
+    case 'book-settings':
+      return 'book settings';
+  }
+}
+
+/** One line for the model on what the user kept. Null decisions mean the proposal was discarded. */
+export function formatReviewOutcome(
+  changes: AgentReviewChange[],
+  decisions: ReviewDecisions | null,
+): string {
+  if (!decisions) return 'The user discarded every change from this run.';
+  const applied: string[] = [];
+  const edited: string[] = [];
+  const rejected: string[] = [];
+  for (const change of changes) {
+    const decision = decisions[change.id];
+    const label = reviewChangeLabel(change);
+    if (!decision?.approved) rejected.push(label);
+    else if (decision.edited != null || decision.editedKeys != null) edited.push(label);
+    else applied.push(label);
+  }
+  if (edited.length === 0 && rejected.length === 0) {
+    return 'The user applied every change from this run.';
+  }
+  const parts: string[] = [];
+  if (applied.length > 0) parts.push(`Applied: ${applied.join(', ')}.`);
+  if (edited.length > 0) parts.push(`Applied with the user's own edits: ${edited.join(', ')}.`);
+  if (rejected.length > 0) parts.push(`Rejected: ${rejected.join(', ')}.`);
+  return parts.join(' ');
+}
+
 export function countApproved(decisions: ReviewDecisions): number {
   return Object.values(decisions).filter((decision) => decision.approved).length;
 }

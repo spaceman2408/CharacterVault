@@ -42,7 +42,8 @@ import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
 import { LIVE_SPEECH_MAX_CHARS, liveAgentSpeech } from './speechDraft';
-import { compactToolResultMessage, isLookupOnlyTurn } from './notices';
+import { toLoopHistory } from './loopHistory';
+import { compactToolResultMessage, isLookupOnlyTurn, REVIEW_NOTE_TOOL } from './notices';
 import { estimatePromptTokens } from './promptUsage';
 import type { AgentToolEvent } from './types';
 
@@ -134,6 +135,8 @@ export interface UseAgentSessionReturn {
   handleDeleteMessage: (messageId: string) => void;
   handleAbort: () => void;
   clearError: () => void;
+  /** Records the review result on the last run so the next run knows what landed. */
+  noteReviewOutcome: (note: string) => void;
   isAIConfigured: boolean;
   isHydrating: boolean;
   hasOlderMessages: boolean;
@@ -376,6 +379,23 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+
+  const noteReviewOutcome = useCallback((note: string) => {
+    const history = chatHistoryRef.current;
+    let target: ChatMessage | undefined;
+    for (let i = history.length - 1; i >= 0 && !target; i -= 1) {
+      if (history[i].role === 'assistant') target = history[i];
+    }
+    if (!target) return;
+    const event: AgentToolEvent = { toolName: REVIEW_NOTE_TOOL, ok: true, message: note };
+    const nextEvents = {
+      ...toolEventsRef.current,
+      [target.id]: [...(toolEventsRef.current[target.id] ?? []), event],
+    };
+    toolEventsRef.current = nextEvents;
+    setToolEventsByMessageId(nextEvents);
+    persistMessage(target);
+  }, [persistMessage]);
 
   const handleAbort = useCallback(() => {
     abortedRef.current = true;
@@ -680,10 +700,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         callTimingRef.current = null;
         onRunningChangeRef.current?.(true);
 
-        const historyForLoop: AgentMessage[] = priorHistory.map((message) => ({
-          role: message.role,
-          content: message.content,
-        }));
+        const historyForLoop = toLoopHistory(
+          priorHistory,
+          toolEventsRef.current,
+          lookupToolNamesRef.current,
+        );
 
         const isCurrent = () => isMountedRef.current && requestId === requestIdRef.current;
         let runService: AIService | null = null;
@@ -981,6 +1002,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     handleDeleteMessage,
     handleAbort,
     clearError,
+    noteReviewOutcome,
     isAIConfigured,
     isHydrating,
     hasOlderMessages,

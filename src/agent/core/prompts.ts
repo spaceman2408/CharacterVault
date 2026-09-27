@@ -18,6 +18,9 @@ Do not wrap a whole lorebook in one JSON blob. Always close every <tool_call> be
 export const NATIVE_TOOL_INTRO =
   'Call tools with the provided functions. Do not write tool XML or JSON in the message body.';
 
+export const HISTORY_NOTES_GUIDE =
+  'Earlier replies may end with [App note: …] lines. The app adds them to list what that run changed and what the user kept after review. Never write them yourself.';
+
 export function formatAgentToolGuide(
   mode: AgentToolMode,
   toolList: string,
@@ -28,11 +31,15 @@ export function formatAgentToolGuide(
 
 ${toolList}
 
-You may emit up to 12 actions per reply, then wait for tool results. Finish each call with complete JSON arguments before starting the next.`;
+You may emit up to 12 actions per reply, then wait for tool results. Finish each call with complete JSON arguments before starting the next.
+
+${HISTORY_NOTES_GUIDE}`;
   }
   return `${xmlSyntax}
 
 ${toolList}
 
-You may emit up to 12 actions per reply, then wait for tool results. Close every </tool_call> before starting the next.`;
+You may emit up to 12 actions per reply, then wait for tool results. Close every </tool_call> before starting the next.
+
+${HISTORY_NOTES_GUIDE}`;
 }

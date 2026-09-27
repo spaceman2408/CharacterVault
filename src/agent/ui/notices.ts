@@ -16,6 +16,9 @@ export const LOREBOOK_WRITE_TOOLS = new Set([
   'update_book_settings',
 ]);
 
+/** Stored on a run's last message after review; sent to the model, never shown. */
+export const REVIEW_NOTE_TOOL = 'review_outcome';
+
 export const CHARACTER_LOOKUP_TOOLS = new Set([
   'list_fields',
   'read_field',
@@ -47,6 +50,7 @@ export function visibleToolEvents(
 
   for (const event of events) {
     if (event.ok && lookupTools.has(event.toolName)) continue;
+    if (event.toolName === REVIEW_NOTE_TOOL) continue;
 
     const id = writeEntryId(event, writeTools);
     if (id && addIndexById.has(id)) {
