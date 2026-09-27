@@ -3,6 +3,11 @@ export type AgentToolTarget =
   | { type: 'greeting'; index: number }
   | { type: 'entry'; id: number };
 
+export interface AgentBusyAction {
+  toolName: string;
+  headers: Record<string, string>;
+}
+
 export interface AgentToolEvent {
   toolName: string;
   ok: boolean;

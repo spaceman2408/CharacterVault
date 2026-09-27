@@ -97,6 +97,8 @@ Docks
     });
     expect(result.reason).toBe('complete');
     expect(calls.map((action) => action.headers.name)).toEqual(['Keep', 'Harbor']);
+    const starts = events.filter((event) => event.type === 'tool_start');
+    expect(starts.map((event) => event.headers.name)).toEqual(['Keep', 'Harbor']);
     expect(persist).toHaveBeenCalledTimes(1);
     expect(complete).toHaveBeenCalledTimes(2);
     expect(host.extraContextChunks).toHaveBeenCalledTimes(1);

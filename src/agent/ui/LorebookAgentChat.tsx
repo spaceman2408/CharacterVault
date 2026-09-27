@@ -311,7 +311,9 @@ export function LorebookAgentChat({
           <div className="flex items-center gap-2">
             <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
             <span className="text-xs">
-              {session.busyLabel ? `Running ${formatAgentBusyLabel(session.busyLabel)}` : 'Working…'}
+              {session.busyAction
+                ? formatAgentBusyLabel(session.busyAction, getBook().entries)
+                : 'Working…'}
             </span>
           </div>
           {aiConfig.showReasoning !== false ? (

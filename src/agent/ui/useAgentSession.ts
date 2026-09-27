@@ -50,7 +50,7 @@ import {
   TURN_LIMIT_NOTICE,
 } from './notices';
 import { estimatePromptTokens } from './promptUsage';
-import type { AgentToolEvent } from './types';
+import type { AgentBusyAction, AgentToolEvent } from './types';
 
 export interface UseAgentSessionOptions {
   aiConfig: AIConfig;
@@ -128,7 +128,7 @@ export interface UseAgentSessionReturn {
   errorByMessageId: Record<string, string>;
   isProcessing: boolean;
   error: string | null;
-  busyLabel: string | null;
+  busyAction: AgentBusyAction | null;
   isStreaming: boolean;
   streamingContent: string;
   streamingReasoning: string;
@@ -171,7 +171,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const [errorByMessageId, setErrorByMessageId] = useState<Record<string, string>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [busyLabel, setBusyLabel] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<AgentBusyAction | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingReasoning, setStreamingReasoning] = useState('');
   const [streamingContent, setStreamingContent] = useState('');
@@ -411,7 +411,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     if (isMountedRef.current) {
       setIsProcessing(false);
       setIsStreaming(false);
-      setBusyLabel(null);
+      setBusyAction(null);
     }
     onRunningChangeRef.current?.(false);
   }, [cancelStreamFlush]);
@@ -453,7 +453,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         setErrorByMessageId({});
         setHasOlderMessages(false);
         setError(null);
-        setBusyLabel(null);
+        setBusyAction(null);
         setIsProcessing(false);
         setIsStreaming(false);
         setLivePromptTokens(null);
@@ -492,7 +492,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     if (isMountedRef.current) {
       setIsProcessing(false);
       setIsStreaming(false);
-      setBusyLabel(null);
+      setBusyAction(null);
       setStreamingReasoning('');
       setStreamingContent('');
     }
@@ -704,7 +704,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         abortedRef.current = false;
         isProcessingRef.current = true;
         setIsProcessing(true);
-        setBusyLabel(null);
+        setBusyAction(null);
         setError(null);
         errorByMessageIdRef.current = {};
         setErrorByMessageId({});
@@ -804,13 +804,13 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
             onEvent: (event) => {
               if (!isCurrent() || abortedRef.current) return;
               if (event.type === 'tool_start') {
-                setBusyLabel(event.toolName);
+                setBusyAction({ toolName: event.toolName, headers: event.headers });
                 return;
               }
               if (event.type === 'assistant_text') {
                 dropLookupOnlyMessage(lastAssistantIdRef.current);
                 clearStreamDraft();
-                setBusyLabel(null);
+                setBusyAction(null);
                 if (isMountedRef.current) setIsStreaming(false);
                 const id = generateMessageId();
                 lastAssistantIdRef.current = id;
@@ -909,7 +909,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
             if (isMountedRef.current) {
               setIsProcessing(false);
               setIsStreaming(false);
-              setBusyLabel(null);
+              setBusyAction(null);
             }
             onRunningChangeRef.current?.(false);
           } else {
@@ -1002,7 +1002,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     errorByMessageId,
     isProcessing,
     error,
-    busyLabel,
+    busyAction,
     isStreaming,
     streamingContent,
     streamingReasoning,

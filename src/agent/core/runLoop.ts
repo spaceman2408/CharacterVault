@@ -249,7 +249,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
         return finish('abort');
       }
       const action = toRun[index];
-      emit({ type: 'tool_start', toolName: action.name });
+      emit({ type: 'tool_start', toolName: action.name, headers: action.headers });
       const result = host.toolNames.includes(action.name)
         ? await host.execute(action)
         : {
