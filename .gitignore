@@ -49,3 +49,7 @@ discord-release.md
 # Local scratch / screenshots
 tmp/
 clientUtils/
+
+# Local Agent test harness and preview config
+.claude/launch.json
+.claude/agent-harness/
