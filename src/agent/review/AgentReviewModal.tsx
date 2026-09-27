@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { countApproved, defaultDecisions, formatGreetingsForEdit } from './diff';
-import { diffParagraphs, type ParagraphDiff, type ParagraphRow, type RichPart } from './paragraphDiff';
+import { diffLines, toSplitRows, type LineDiff, type LineRow, type SideCell } from './lineDiff';
 import type { WordDiffSegment } from './wordDiff';
 import type { AgentReviewChange, ReviewDecision, ReviewDecisions } from './types';
 
@@ -105,148 +105,179 @@ function changeTextPair(change: AgentReviewChange): { before: string; after: str
   }
 }
 
+const NARROW_QUERY = '(max-width: 767px)';
+
+function useIsNarrow(): boolean {
+  const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW_QUERY).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(NARROW_QUERY);
+    const handleChange = () => setNarrow(mql.matches);
+    mql.addEventListener('change', handleChange);
+    return () => mql.removeEventListener('change', handleChange);
+  }, []);
+  return narrow;
+}
+
+type DiffSide = 'del' | 'add';
+
+const LINE_TINT: Record<DiffSide, string> = {
+  del: 'bg-diff-del-line',
+  add: 'bg-diff-add-line',
+};
+
+const WORD_TINT: Record<DiffSide, string> = {
+  del: 'rounded-sm bg-diff-del-word',
+  add: 'rounded-sm bg-diff-add-word',
+};
+
+const EMPTY_CELL =
+  'bg-[repeating-linear-gradient(135deg,transparent_0_5px,var(--border)_5px_6px)]';
+
 function WordSegments({
   segments,
-  showDeletions,
+  side,
 }: {
   segments: WordDiffSegment[];
-  showDeletions: boolean;
+  side: DiffSide;
 }): React.ReactElement {
-  const hidden = showDeletions ? 'add' : 'del';
-  const wordClassName = showDeletions ? 'rounded-sm bg-diff-del-word' : 'rounded-sm bg-diff-add-word';
   return (
     <>
-      {segments.map((segment, index) => {
-        if (segment.type === hidden) return null;
-        if (segment.type === 'same') return <span key={index}>{segment.text}</span>;
-        return (
-          <span key={index} className={wordClassName}>
+      {segments.map((segment, index) =>
+        segment.type === 'same' ? (
+          <span key={index}>{segment.text}</span>
+        ) : (
+          <span key={index} className={WORD_TINT[side]}>
             {segment.text}
           </span>
-        );
-      })}
+        ),
+      )}
     </>
   );
 }
 
-function lineTintClassName(showDeletions: boolean): string {
-  return `-mx-1 rounded px-1 ${showDeletions ? 'bg-diff-del-line' : 'bg-diff-add-line'}`;
+function SideCellView({
+  cell,
+  side,
+  divider,
+}: {
+  cell: SideCell | null;
+  side: DiffSide;
+  divider?: boolean;
+}): React.ReactElement {
+  const base = `min-w-0 whitespace-pre-wrap wrap-break-word px-2.5 py-0.5 ${divider ? 'border-r border-border' : ''}`;
+  if (!cell) return <div aria-hidden="true" className={`${base} ${EMPTY_CELL}`} />;
+  if (cell.tone === 'same') return <div className={base}>{cell.text}</div>;
+  return (
+    <div className={`${base} ${LINE_TINT[side]}`}>
+      {cell.tone === 'changed' ? cell.text : <WordSegments segments={cell.segments} side={side} />}
+    </div>
+  );
 }
 
-function DiffCell({ children }: { children: React.ReactNode }): React.ReactElement {
+function DiffLegend({ label, side }: { label: string; side: DiffSide | 'same' }): React.ReactElement {
+  const dotClassName = side === 'del' ? 'bg-danger' : side === 'add' ? 'bg-success' : 'bg-fg-subtle';
   return (
-    <div className="min-w-0 rounded-lg border border-border bg-bg px-1.5 py-2.5">
-      <div className="max-h-64 overflow-y-auto whitespace-pre-wrap wrap-break-word px-1 text-xs leading-relaxed text-fg">
-        {children}
+    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
+      <span aria-hidden="true" className={`inline-block h-2 w-2 rounded-full ${dotClassName}`} />
+      {label}
+    </p>
+  );
+}
+
+function SplitDiffView({ rows }: { rows: LineRow[] }): React.ReactElement {
+  const splitRows = useMemo(() => toSplitRows(rows), [rows]);
+  return (
+    <div className="overflow-hidden rounded-lg border border-border bg-bg">
+      <div className="grid grid-cols-2 border-b border-border bg-surface">
+        <div className="border-r border-border px-2.5 py-1.5">
+          <DiffLegend label="Original" side="del" />
+        </div>
+        <div className="px-2.5 py-1.5">
+          <DiffLegend label="Agent" side="add" />
+        </div>
+      </div>
+      <div className="max-h-80 overflow-y-auto overscroll-contain text-xs leading-relaxed text-fg">
+        <div className="grid grid-cols-2 py-1">
+          {splitRows.map((row, index) => (
+            <Fragment key={index}>
+              {row.breakBefore && index > 0 && (
+                <>
+                  <div aria-hidden="true" className="h-3 border-r border-border" />
+                  <div aria-hidden="true" className="h-3" />
+                </>
+              )}
+              <SideCellView cell={row.left} side="del" divider />
+              <SideCellView cell={row.right} side="add" />
+            </Fragment>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-function RichParts({
-  parts,
-  showDeletions,
+function InlineLine({
+  side,
+  children,
 }: {
-  parts: RichPart[];
-  showDeletions: boolean;
+  side: DiffSide | 'same';
+  children: React.ReactNode;
 }): React.ReactElement {
-  const tint = lineTintClassName(showDeletions);
+  const sign = side === 'del' ? '−' : side === 'add' ? '+' : '';
   return (
-    <div>
-      {parts.map((part, index) =>
-        part.kind === 'same' ? (
-          <div key={index}>{part.text}</div>
-        ) : part.kind === 'changed' ? (
-          <div key={index} className={tint}>
-            {part.text}
-          </div>
-        ) : (
-          <div key={index} className={tint}>
-            <WordSegments segments={part.diff.segments} showDeletions={showDeletions} />
-          </div>
-        ),
-      )}
+    <div className={`flex gap-1.5 px-2 py-0.5 ${side === 'same' ? '' : LINE_TINT[side]}`}>
+      <span aria-hidden="true" className="w-2.5 shrink-0 select-none text-center text-fg-subtle">
+        {sign}
+      </span>
+      {side !== 'same' && <span className="sr-only">{side === 'del' ? 'Removed: ' : 'Added: '}</span>}
+      <div className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word">{children}</div>
     </div>
   );
 }
 
-function rowSideNode(row: ParagraphRow, showDeletions: boolean): React.ReactNode {
-  switch (row.kind) {
-    case 'same':
-      return <div>{row.paras.join('\n\n')}</div>;
-    case 'add':
-      if (showDeletions) return null;
-      return <div className={lineTintClassName(false)}>{row.paras.join('\n\n')}</div>;
-    case 'del':
-      if (!showDeletions) return null;
-      return <div className={lineTintClassName(true)}>{row.paras.join('\n\n')}</div>;
-    case 'replace':
-      return <RichParts parts={showDeletions ? row.left : row.right} showDeletions={showDeletions} />;
-  }
-}
-
-function SideContent({
-  rows,
-  showDeletions,
-  emptyLabel,
-}: {
-  rows: ParagraphRow[];
-  showDeletions: boolean;
-  emptyLabel: string;
-}): React.ReactElement {
-  const blocks: React.ReactNode[] = [];
-  rows.forEach((row) => {
-    const node = rowSideNode(row, showDeletions);
-    if (node) blocks.push(node);
-  });
-  if (blocks.length === 0) {
-    return <span className="italic text-fg-subtle">{emptyLabel}</span>;
-  }
+function InlineDiffView({ rows }: { rows: LineRow[] }): React.ReactElement {
   return (
-    <div className="space-y-5">
-      {blocks.map((block, index) => (
-        <Fragment key={index}>{block}</Fragment>
-      ))}
+    <div className="overflow-hidden rounded-lg border border-border bg-bg">
+      <div className="flex items-center gap-3 border-b border-border bg-surface px-2.5 py-1.5">
+        <DiffLegend label="Original" side="del" />
+        <DiffLegend label="Agent" side="add" />
+      </div>
+      <div className="max-h-96 overflow-y-auto overscroll-contain py-1 text-xs leading-relaxed text-fg">
+        {rows.map((row, index) => (
+          <Fragment key={index}>
+            {row.breakBefore && index > 0 && <div aria-hidden="true" className="h-3" />}
+            {row.kind === 'same' && <InlineLine side="same">{row.text}</InlineLine>}
+            {row.kind === 'del' && <InlineLine side="del">{row.text}</InlineLine>}
+            {row.kind === 'add' && <InlineLine side="add">{row.text}</InlineLine>}
+            {row.kind === 'pair' && (
+              <>
+                <InlineLine side="del">
+                  <WordSegments
+                    segments={row.diff.segments.filter((segment) => segment.type !== 'add')}
+                    side="del"
+                  />
+                </InlineLine>
+                <InlineLine side="add">
+                  <WordSegments
+                    segments={row.diff.segments.filter((segment) => segment.type !== 'del')}
+                    side="add"
+                  />
+                </InlineLine>
+              </>
+            )}
+          </Fragment>
+        ))}
+      </div>
     </div>
   );
 }
 
-function ParagraphDiffView({
-  diff,
-  before,
-}: {
-  diff: ParagraphDiff;
-  before: string;
-}): React.ReactElement {
+function LineDiffView({ diff }: { diff: LineDiff }): React.ReactElement {
+  const narrow = useIsNarrow();
   if (diff.rows.length === 0) {
     return <p className="text-xs italic text-fg-subtle">(empty)</p>;
   }
-  return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-          <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-fg-subtle" />
-          Original
-        </p>
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-subtle">
-          <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-accent" />
-          Agent
-        </p>
-      </div>
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-        <DiffCell>
-          <SideContent rows={diff.rows} showDeletions emptyLabel="(empty)" />
-        </DiffCell>
-        <DiffCell>
-          <SideContent
-            rows={diff.rows}
-            showDeletions={false}
-            emptyLabel={before === '' ? '(new)' : '(removed)'}
-          />
-        </DiffCell>
-      </div>
-    </div>
-  );
+  return narrow ? <InlineDiffView rows={diff.rows} /> : <SplitDiffView rows={diff.rows} />;
 }
 
 function DiffStat({
@@ -412,7 +443,7 @@ function ChangeRow({
   const [isEditing, setIsEditing] = useState(false);
   const { label, detail } = changeTitle(change);
   const pair = useMemo(() => changeTextPair(change), [change]);
-  const paraDiff = useMemo(() => (pair ? diffParagraphs(pair.before, pair.after) : null), [pair]);
+  const lineDiff = useMemo(() => (pair ? diffLines(pair.before, pair.after) : null), [pair]);
   const editable =
     change.kind === 'field' ||
     change.kind === 'greeting' ||
@@ -454,8 +485,8 @@ function ChangeRow({
             <span className="block truncate text-[11px] text-fg-subtle">{detail}</span>
           </span>
         </button>
-        {paraDiff && (
-          <DiffStat addedWords={paraDiff.addedWords} removedWords={paraDiff.removedWords} />
+        {lineDiff && (
+          <DiffStat addedWords={lineDiff.addedWords} removedWords={lineDiff.removedWords} />
         )}
         {change.kind === 'greetings' && (
           <GreetingsStat before={change.before} after={change.after} />
@@ -529,7 +560,7 @@ function ChangeRow({
             </div>
           ) : (
             <>
-              {paraDiff && pair && <ParagraphDiffView diff={paraDiff} before={pair.before} />}
+              {lineDiff && <LineDiffView diff={lineDiff} />}
               {change.kind === 'greetings' && (
                 <GreetingsListView before={change.before} after={change.after} />
               )}
