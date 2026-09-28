@@ -357,6 +357,17 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     selectionLockRef.current = null;
   }, []);
 
+  /** Call after the lock is cleared so the update listener re-syncs the toolbar selection. */
+  const restoreLockedSelection = useCallback((lock: SelectionLock | null) => {
+    const view = viewRef.current;
+    if (!view || !lock) return;
+    const { from, to } = clampSelectionLock(lock, view.state.doc.length);
+    view.dispatch({
+      selection: { anchor: from, head: to },
+      annotations: [Transaction.addToHistory.of(false)],
+    });
+  }, []);
+
   /** Cancel debounce timer so a pre-session keystroke cannot flush mid-AI. */
   const holdPersistForAiSession = useCallback(() => {
     if (persistTimeoutRef.current !== null) {
@@ -866,6 +877,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
       if (wasCancelled) {
         console.log('[useAIEditor] AI request cancelled by user');
+        const lock = selectionLockRef.current;
         streamingContentRef.current.clear();
         streamingReasoningRef.current.clear();
         lastInstructPromptRef.current = null;
@@ -879,6 +891,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         errorRef.current = null;
         dispatchClearGhost();
         setEditorReadOnlyForAi(false);
+        restoreLockedSelection(lock);
         panelUpdateRef.current?.({
           isProcessing: false,
           isStreaming: false,
@@ -933,6 +946,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     dispatchGhostPreview,
     dispatchGhostContent,
     dispatchClearGhost,
+    restoreLockedSelection,
     flushPersistAfterAiSession,
   ]);
 
@@ -1017,6 +1031,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     // Use ref so instruct recovery works even if reject was captured at editor init
     const isInstruct = currentOperationRef.current === 'instruct';
     const savedPrompt = isInstruct ? lastInstructPromptRef.current : null;
+    const lock = selectionLockRef.current;
 
     // Clear streaming refs
     streamingContentRef.current.clear();
@@ -1039,6 +1054,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
     dispatchClearGhost();
     setEditorReadOnlyForAi(false);
+    restoreLockedSelection(lock);
 
     // Clear panel state (but pass back the instruct prompt for recovery)
     panelUpdateRef.current?.({
@@ -1055,7 +1071,14 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
     // Session over — flush any pre-session pending persist
     flushPersistAfterAiSession();
-  }, [setSelectedText, clearSelectionLock, dispatchClearGhost, setEditorReadOnlyForAi, flushPersistAfterAiSession]);
+  }, [
+    setSelectedText,
+    clearSelectionLock,
+    dispatchClearGhost,
+    setEditorReadOnlyForAi,
+    restoreLockedSelection,
+    flushPersistAfterAiSession,
+  ]);
 
   // Handle abort - cancel the current AI request
   const abort = useCallback(() => {
