@@ -42,6 +42,7 @@ import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
 import { LIVE_SPEECH_MAX_CHARS, liveAgentSpeech } from './speechDraft';
+import { noteRunFinished } from './finishNotice';
 import { toLoopHistory } from './loopHistory';
 import {
   compactToolResultMessage,
@@ -912,6 +913,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
               setBusyAction(null);
             }
             onRunningChangeRef.current?.(false);
+            if (!abortedRef.current) noteRunFinished();
           } else {
             runService?.abort();
             if (aiServiceRef.current === runService) {
