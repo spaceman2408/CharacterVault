@@ -27,6 +27,7 @@ import {
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
+import { lorebookSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
 import { useEditLastMessage } from './useEditLastMessage';
 import { useLorebookAgent, type SetAgentBook } from './useLorebookAgent';
@@ -54,12 +55,6 @@ export interface LorebookAgentChatProps {
   contextEmptyHint?: string;
   composerHint?: string;
 }
-
-const BOOK_SUGGESTIONS: readonly string[] = [
-  'Audit this book',
-  'List my constant entries',
-  'Summarize my longest entry',
-];
 
 export function LorebookAgentChat({
   aiConfig,
@@ -341,7 +336,7 @@ export function LorebookAgentChat({
       hasOlderMessages={session.hasOlderMessages}
       onLoadOlder={session.handleLoadOlder}
       onClose={onClose}
-      emptySuggestions={BOOK_SUGGESTIONS}
+      emptySuggestions={lorebookSuggestions(getBook(), customContextIncluded)}
       renderMessage={renderMessage}
       processingIndicator={
         <div className="py-1 text-fg-muted">

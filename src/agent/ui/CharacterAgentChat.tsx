@@ -30,6 +30,7 @@ import {
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
+import { characterSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
 import { useCharacterAgent, type PersistAgentCard } from './useCharacterAgent';
 import { useEditLastMessage } from './useEditLastMessage';
@@ -54,12 +55,6 @@ export interface CharacterAgentChatProps {
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
 }
-
-const AGENT_SUGGESTIONS: readonly string[] = [
-  'Audit this card',
-  'Summarize my lorebook',
-  'Write me one more alternate greeting',
-];
 
 export function CharacterAgentChat({
   aiConfig,
@@ -341,7 +336,7 @@ export function CharacterAgentChat({
       hasOlderMessages={session.hasOlderMessages}
       onLoadOlder={session.handleLoadOlder}
       onClose={onClose}
-      emptySuggestions={AGENT_SUGGESTIONS}
+      emptySuggestions={characterSuggestions(getSpec(), getBook(), customContextIncluded)}
       renderMessage={renderMessage}
       processingIndicator={
         <div className="py-1 text-fg-muted">
