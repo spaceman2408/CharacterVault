@@ -24,7 +24,12 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.8.1 staging 1';
+export const STAGING_VERSION = 'v1.8.1 staging 2';
 
 /** One short line per thing you want testers to try. */
-export const STAGING_TEST_NOTES: string[] = [];
+export const STAGING_TEST_NOTES: string[] = [
+  'Snapshots: the diff now uses cards like the agent review, with Restore on each card. A snapshot marked as changed should never show an empty diff.',
+  'Snapshots: lorebook entry settings (enabled, position, order, keys) and entry order changes now show in the diff.',
+  'Chat header: the Orion / Agent icons at the left switch modes. The highlighted one is active.',
+  'Orion: hover your last message and click the pencil to edit and resend it. × cancels and keeps the chat as it was.',
+];
