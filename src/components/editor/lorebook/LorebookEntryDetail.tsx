@@ -26,6 +26,7 @@ import {
 import type { LorebookEntryDetailProps } from './types';
 import { registerLorebookDraftFlush } from './draftFlush';
 import { ToggleChip } from './ToggleChip';
+import { NumberField } from './NumberField';
 
 export function LorebookEntryDetail({
   entry,
@@ -304,12 +305,6 @@ export function LorebookEntryDetail({
     setDraftEntry(updatedEntry);
     onPersistUpdate(updatedEntry);
   };
-  const handlePriorityChange = (value: string) => {
-    const num = parseInt(value, 10);
-    const updatedEntry = { ...draftEntry, priority: Number.isNaN(num) ? 0 : num };
-    setDraftEntry(updatedEntry);
-    onPersistUpdate(updatedEntry);
-  };
   const handlePositionChange = (value: LorebookPosition) => {
     const restExt = { ...(draftEntry.extensions || {}) };
     delete restExt._st_position;
@@ -466,10 +461,10 @@ export function LorebookEntryDetail({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <FieldLabel help={FIELD_HELP.insertionOrder}>Insertion Order</FieldLabel>
-              <input
-                type="number"
+              <NumberField
                 value={draftEntry.priority ?? 0}
-                onChange={(e) => handlePriorityChange(e.target.value)}
+                fallback={0}
+                onCommit={(priority) => persistPatch({ priority })}
                 className={FIELD_CLASS}
               />
             </div>
@@ -493,14 +488,11 @@ export function LorebookEntryDetail({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <FieldLabel help={FIELD_HELP.depth}>Depth</FieldLabel>
-                <input
-                  type="number"
-                  min={0}
+                <NumberField
                   value={draftEntry.depth ?? 4}
-                  onChange={(e) => {
-                    const num = parseInt(e.target.value, 10);
-                    persistPatch({ depth: Number.isNaN(num) ? 0 : num });
-                  }}
+                  fallback={0}
+                  min={0}
+                  onCommit={(depth) => persistPatch({ depth })}
                   className={FIELD_CLASS}
                 />
               </div>
@@ -548,22 +540,18 @@ export function LorebookEntryDetail({
           <div>
             <FieldLabel help={FIELD_HELP.probability}>Probability %</FieldLabel>
             <div className="flex items-center gap-3">
-              <input
-                type="number"
+              <NumberField
+                value={draftEntry.probability ?? 100}
+                fallback={100}
                 min={0}
                 max={100}
-                value={draftEntry.probability ?? 100}
-                onChange={(e) => {
-                  const num = parseInt(e.target.value, 10);
-                  const probability = Number.isNaN(num)
-                    ? 100
-                    : Math.min(100, Math.max(0, num));
+                onCommit={(probability) =>
                   persistPatch({
                     probability,
                     useProbability:
                       probability < 100 ? true : (draftEntry.useProbability ?? false),
-                  });
-                }}
+                  })
+                }
                 className={FIELD_CLASS}
               />
               <ToggleChip
