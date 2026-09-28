@@ -54,16 +54,17 @@ That lorebook Agent does not edit character spec fields. For description, greeti
 | :--- | :--- |
 | **Card fields** | Name, description, personality, scenario, first message, examples, system prompt, post-history instructions, appearance, creator notes, creator, character version, tags, avatar URL |
 | **Alternate greetings** | Add, rewrite, snippet-edit, or delete. **Greeting 1** is the first alternate, same as the [Greetings](/features/greetings-editor) tab. First Message is its own field. |
-| **Embedded lorebook** | Add, rename, rekey, rewrite, snippet-edit, or delete entries (name, keys, content, constant) |
+| **Embedded lorebook** | Add, rename, rekey, rewrite, snippet-edit, or delete entries (name, keys, content, constant, enabled, position and depth, insertion order, secondary keys, probability, recursion flags) |
+| **Lorebook settings** | Scan depth, token budget, recursive scanning, book name, and description |
 
 ### Lorebook Agent
 
-Same lorebook entry tools as above, for the vault book you have open.
+Same lorebook entry and settings tools as above, for the vault book you have open.
 
 ### What it does not write
 
 - Portrait **image** (upload that yourself)
-- SillyTavern extras such as recursion flags, probability, depth, scan settings, or the Extensions JSON blob
+- The Extensions JSON blob
 - The whole vault at once (it only sees the open card or book)
 
 New lorebook entries it adds are **not** pinned into Orion or the AI toolbar. Open the entry **eye** if you want them in that context. They still export on the card or book.
@@ -87,17 +88,25 @@ Details: [AI Context → Custom Context](/features/ai-context#custom-context).
 
 Until that write (or until you apply a review), the editor keeps the previous text. A pulsing **Agent writing** label in the workspace header is the cue.
 
+You can keep editing while it runs. The write only covers what the Agent changed, so your edits to other fields, greetings, and entries stay. If you both changed the same one, the Agent's version wins and yours is in the snapshot taken just before the write.
+
 Snippet edits match a unique stretch of existing text instead of rewriting the whole field or entry. Matching tolerates quote styles and multi-section spans. If the snippet is not unique, ask it to re-read and copy a longer stretch.
 
 Providers that accept OpenAI-style `tools` use native function calling. If a provider returns 400 on `tools`, CharacterVault remembers that model, retries the turn with XML tool calls in the message, and later runs for that model skip native tools. You do not turn this on separately. The chat header shows a **Native** or **XML** chip for the current model (hover for the same explanation).
 
 Catalogs in the prompt are built at the **start** of the run. After names or keys change, the Agent can list again in that same run. The **next** Send rebuilds catalogs from the saved card.
 
+The Agent remembers earlier requests in the same chat. Each past run carries a short note on what it changed, whether you applied or discarded its review, and whether it hit the turn limit, so “undo that” or “do the same for greeting 2” work. Full text is never resent; the Agent reads the current card again when it needs to. **New chat** starts over.
+
 ### What you see in chat
 
 - **Tool lines:** color-coded list / read / write results, including lorebook entry ids. Click a successful write to open that field, greeting, or lorebook entry.
 - **Write recap:** speech from a turn that also called tools stays on the message. If there was no speech, **Applied N writes** sits above the tool list.
-- **Busy labels:** while a tool is running, the header spinner uses English phrases (`Updating field`) instead of snake_case names.
+- **Status line:** while a tool runs, the spinner names what it is working on, such as *Updating Description*, *Reading entry “Harbor”*, or *Searching “harbor”*. An entry added earlier in the same run shows by id (*entry #4*).
+- **Turn limit:** a run that stops at the [loop-turn cap](#limits-per-run) says so on its last message, with a **Continue** button that sends “Continue where you left off.”
+- **Starter suggestions:** an empty chat offers a few first requests based on what the card or book is missing, such as *Write a description*, *Write 2 alternate greetings*, or *Build a lorebook from my custom context*. It never suggests Appearance, Personality, Scenario, System prompt, or Post-history. A finished card gets the usual *Audit this card* style chips.
+- **Header:** a shield icon means [review](#review-edits) is on, and a yellow **Review N** button means a proposal is waiting. **New chat** is the speech bubble with a plus. The **Native** / **XML** chip hides when the panel is narrow.
+- **Finished in the background:** if a run ends while you are on another tab, the page title starts with **Agent finished** until you come back.
 - **Thinking:** streams in an expanded **Thinking** fold while it is live; after the reply it collapses
 - **Live token count:** catalogs, custom context, and the current prompt (including tool results)
 - **TTFT / t/s:** on the assistant message info tooltip when the reply finishes, same as Orion
@@ -109,9 +118,11 @@ The thread is stored in the browser with the vault. Long threads keep a small wi
 
 - **Stop** (square while it is working) cancels the current run. Writes that already finished in that run still flush.
 - **Send** with an empty box retries the last request (same as the composer hint).
-- **New chat** asks first, then clears the saved thread for this panel only. The card stays as last written. Closing the panel or leaving the card keeps the conversation.
+- **New chat** asks first, then clears the saved thread for this panel only. The card stays as last written. Closing the panel or leaving the card keeps the conversation. It is hidden while a review is pending.
 - While a review is pending, the composer is disabled. Apply or discard the proposal first.
-- Delete a message to trim from that point; you cannot delete while a run is in progress.
+- **Edit** (the pencil on your last message) puts its text back in the box. Nothing is removed until you send; then that message and the replies after it are replaced. The **×** cancels and keeps the chat as it was.
+- Delete a message to trim from that point; you cannot edit or delete while a run is in progress.
+- **@-mentions:** type `@` to pick a field, alternate greeting, or lorebook entry. It inserts plain text such as `@Description`, `@Greeting 2`, or `@“Harbor” (#4)`, and the Agent reads it as that item. **↑** / **↓** move, **Enter** or **Tab** picks, **Esc** closes the list.
 
 If you Stop while it is still thinking, Send is available again so you can retry or type a new ask.
 
@@ -150,6 +161,8 @@ If a job is huge, send a second ask for the rest.
 | Tool calls in one model reply | 12 |
 | Loop turns | 32 |
 
+A run that reaches the loop-turn cap stops with a note and a **Continue** button. Continue starts a new run that picks up where it left off.
+
 Duplicate lorebook **names** in one run revise the new entry instead of adding a second copy. Names that already existed in the book are rejected; ask it to update that id.
 
 ## Review edits {#review-edits}
@@ -160,18 +173,18 @@ By default the Agent applies writes when the run finishes. To inspect them first
 2. Enable **Review agent edits before applying**.
 3. Save Settings.
 
-The chat header shows a **Review** chip while this is on. Character Agent and lorebook Agent share the same preference.
+A shield icon in the chat header shows while this is on. Character Agent and lorebook Agent share the same preference.
 
 When a run that changed something finishes, **Review agent edits** opens instead of writing:
 
-- Each field, greeting, and lorebook change is a row with a **Original / Agent** diff and `+added` / `−removed` word counts. Long texts align paragraph by paragraph and line by line, highlighting only the reworded fragments; very large or heavily changed texts fall back to side-by-side full text.
+- Each field, greeting, and lorebook change is a row with an **Original / Agent** diff and `+added` / `−removed` word counts. On wider screens the two sides sit next to each other, aligned line by line; on phones the diff is one inline column. Reworded lines highlight only the words that changed. Runs of unchanged lines fold behind **Show N unchanged lines**. Lines that changed too much, and very long texts, show as whole removed and added lines.
 - Greeting changes are labeled: an added greeting shows as **New alternate greeting** with an empty **Original**, a deleted one as **Deleted alternate greeting**, and a **Greetings list** rewrite shows per-greeting blocks with `+N` / `−N` greeting counts and **New** / **Removed** badges. When editing a Greetings list change, separate greetings with a line containing only `---`.
 - Approve or deny per change. **Approve all** / **Deny all** set every row. Denied rows stay in the list but are not applied.
 - Expand an approved change to **edit** the proposed text (and lorebook keys) before it lands.
 - **Apply N edits** takes **one snapshot**, then writes only the approved rows. **Discard** throws the whole proposal away (with a confirm).
-- Close the modal or click outside to **decide later**. A yellow **Review (N)** chip in the chat header reopens it. Send is blocked until you apply or discard.
+- Close the modal or click outside to **decide later**. The yellow **Review N** button in the chat header reopens it. Send is blocked until you apply or discard.
 
-Edits you make in the editor to fields the Agent did **not** touch are kept when you apply. New lorebook entries get a free id if you added one yourself while the review was open.
+**Apply** writes on top of the card as it is now. Edits you made in the editor meanwhile stay, unless the Agent changed the same field; then the approved Agent version wins and yours is in the snapshot Apply takes first. New lorebook entries get a free id if you added one yourself while the review was open.
 
 Turn the toggle off to restore 1.4.x auto-apply.
 
@@ -256,7 +269,7 @@ Raise **Settings → Sampler → Context Length**. Huge books plus custom contex
 
 The Agent writes **once**, when the run finishes (or you **Stop**, for tools that already completed) — unless review is on, in which case nothing lands until you **Apply**. The **Agent writing** header label is the cue. If the run ends with no tool lines, nothing was applied. That is a model/tool failure, not a delayed save.
 
-If Send is locked and you see a yellow **Review (N)** chip, a proposal is waiting. Open it and apply or discard.
+If Send is locked and you see a yellow **Review N** button, a proposal is waiting. Open it and apply or discard.
 
 ### Lorebook writes did not reach the vault book
 
@@ -264,7 +277,7 @@ The character must have a [linked library book](/features/lorebook-vault#attach-
 
 ### Wrong greeting number
 
-**Greeting 1** is the first *alternate*, same as the editor. First Message is a separate field. Ask for “greeting 1” or “first message” explicitly.
+**Greeting 1** is the first *alternate*, same as the editor. First Message is a separate field. Ask for “greeting 1” or “first message” explicitly, or pick it with `@`.
 
 ## Next Steps
 
