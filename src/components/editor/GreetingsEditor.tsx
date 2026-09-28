@@ -270,6 +270,13 @@ export function GreetingsEditor({
   const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
   const [pendingDuplicateIndex, setPendingDuplicateIndex] = useState<number | null>(null);
+  const [detailKey, setDetailKey] = useState(0);
+
+  // Showing a different greeting remounts the editor so undo history can't carry text across greetings.
+  const showOtherGreeting = useCallback((index: number) => {
+    setSelectedGreetingIndex(index);
+    setDetailKey((key) => key + 1);
+  }, []);
 
   // Sync list from persisted state
   useEffect(() => {
@@ -300,10 +307,10 @@ export function GreetingsEditor({
     const newList = [...greetingsList, ''];
     const newIndex = newList.length - 1;
     setGreetingsList(newList);
-    setSelectedGreetingIndex(newIndex);
+    showOtherGreeting(newIndex);
     setIsMobileViewOpen(true);
     onChange(newList);
-  }, [greetingsList, onChange]);
+  }, [greetingsList, onChange, showOtherGreeting]);
 
   // Handle duplicate greeting
   const handleDuplicateGreeting = useCallback((index: number) => {
@@ -318,10 +325,10 @@ export function GreetingsEditor({
     const newList = [...greetingsList];
     newList.splice(index + 1, 0, greetingsList[index]);
     setGreetingsList(newList);
-    setSelectedGreetingIndex(index + 1);
+    showOtherGreeting(index + 1);
     setIsMobileViewOpen(true);
     onChange(newList);
-  }, [greetingsList, onChange, pendingDuplicateIndex]);
+  }, [greetingsList, onChange, pendingDuplicateIndex, showOtherGreeting]);
 
   // Handle move greeting up/down
   const handleMoveGreeting = useCallback((index: number, direction: -1 | 1) => {
@@ -330,9 +337,13 @@ export function GreetingsEditor({
     const newList = [...greetingsList];
     [newList[index], newList[target]] = [newList[target], newList[index]];
     setGreetingsList(newList);
-    setSelectedGreetingIndex(target);
+    if (index === selectedGreetingIndex) {
+      setSelectedGreetingIndex(target);
+    } else {
+      showOtherGreeting(target);
+    }
     onChange(newList);
-  }, [greetingsList, onChange]);
+  }, [greetingsList, onChange, selectedGreetingIndex, showOtherGreeting]);
 
   // Handle delete greeting
   const handleDeleteGreeting = useCallback((index: number) => {
@@ -354,13 +365,18 @@ export function GreetingsEditor({
     } else if (selectedGreetingIndex > index) {
       setSelectedGreetingIndex(selectedGreetingIndex - 1);
     }
+    if (selectedGreetingIndex === index) {
+      setDetailKey((key) => key + 1);
+    }
   }, [greetingsList, selectedGreetingIndex, onChange, pendingDeleteIndex]);
 
   // Handle select greeting with mobile view
   const handleSelectGreeting = useCallback((index: number) => {
-    setSelectedGreetingIndex(index);
+    if (index !== selectedGreetingIndex) {
+      showOtherGreeting(index);
+    }
     setIsMobileViewOpen(true);
-  }, []);
+  }, [selectedGreetingIndex, showOtherGreeting]);
 
   // Handle back to list on mobile
   const handleBackToList = useCallback(() => {
@@ -486,6 +502,7 @@ export function GreetingsEditor({
               </div>
             </div>
             <GreetingDetail
+              key={detailKey}
               greeting={selectedGreeting}
               onPersistUpdate={(value) => handleGreetingPersistUpdate(safeSelectedIndex, value)}
               aiConfig={aiConfig}
