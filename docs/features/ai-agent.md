@@ -61,6 +61,14 @@ That lorebook Agent does not edit character spec fields. For description, greeti
 
 Same lorebook entry and settings tools as above, for the vault book you have open.
 
+### What it can check
+
+Ask it to check the card or book and it runs read-only reports. Nothing is written.
+
+- **Audit:** sizes, empty fields, duplicate keys, and `{{char}}` / `{{user}}` use. On a card it also checks example dialogue: a `<START>` line, and a `{{char}}:` line in each block.
+- **Recursion map:** which entries can unlock which.
+- **Key test:** give it a line a user might write, such as *we head down to the harbor at night*. It lists the entries that would activate and the key that matched, plus key hits that stay off (disabled, secondary keys, delay until recursion). It follows recursion when recursive scanning is on. It is an estimate: earlier chat messages, inclusion groups, and timed effects are not replayed.
+
 ### What it does not write
 
 - Portrait **image** (upload that yourself)

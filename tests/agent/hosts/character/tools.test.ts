@@ -620,4 +620,25 @@ describe('auditCard', () => {
     expect(result.message).not.toContain(`lorebook ~${content.length}`);
     expect(result.message).not.toContain(content);
   });
+
+  it('checks example dialogue blocks for <START> and a {{char}}: line', () => {
+    const book = createEmptyCharacterBook('Aria');
+    const good = auditCard(
+      spec({ mes_example: '<START>\n{{user}}: Hi.\n{{char}}: Hello.\n<start>\nAria: Welcome back.' }),
+      book,
+    );
+    expect(good.message).toContain('Examples: 2 blocks');
+    expect(good.message).not.toContain('no {{char}}: line');
+
+    const gaps = auditCard(
+      spec({ mes_example: '<START>\n{{char}}: Hello.\n<START>\n{{user}}: Hi.\nShe waves.' }),
+      book,
+    );
+    expect(gaps.message).toContain('Examples: 2 blocks; no {{char}}: line in block 2');
+
+    const noStart = auditCard(spec({ mes_example: '{{char}}: Hello.' }), book);
+    expect(noStart.message).toContain('Examples: 1 block; no <START> line');
+
+    expect(auditCard(spec({ mes_example: '' }), book).message).not.toContain('Examples:');
+  });
 });

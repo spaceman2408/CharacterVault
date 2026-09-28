@@ -24,6 +24,7 @@ const SHARED_EXPECTATIONS = [
   'move_greeting',
   'update_book_settings',
   'read_recursion',
+  'test_keys',
   'excludeRecursion',
   'insertion_order',
   'personality and physical_description may stay empty',

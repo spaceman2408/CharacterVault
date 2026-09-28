@@ -25,6 +25,7 @@ import {
   replaceAcrossBook,
   replaceInEntry,
   searchBook,
+  testKeys,
   updateBookSettings,
   updateEntry,
 } from './tools';
@@ -168,6 +169,9 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
       }
       if (action.name === 'read_recursion') {
         return readRecursion(book, action);
+      }
+      if (action.name === 'test_keys') {
+        return testKeys(book, action);
       }
       if (action.name === 'replace_across') {
         if (replaceAcrossThisRun >= MAX_REPLACE_ACROSS_PER_RUN) {

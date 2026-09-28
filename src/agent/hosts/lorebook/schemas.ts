@@ -210,6 +210,18 @@ export const LOREBOOK_TOOL_SPECS: readonly AgentToolSpec[] = [
     },
   },
   {
+    name: 'test_keys',
+    description:
+      'Read-only. Given sample chat text, list which entries would activate and the key that matched: constants, secondary-key logic, and recursive passes when recursive_scanning is on. Also lists key hits that stay inactive (disabled, secondary keys, delay). No bodies.',
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Sample chat text, such as a message or two a user might write' },
+      },
+      required: ['text'],
+    },
+  },
+  {
     name: 'update_book_settings',
     description:
       'Update lorebook scan_depth, token_budget, recursive_scanning, name, or description. Omit a field to leave it unchanged.',

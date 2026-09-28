@@ -10,6 +10,7 @@ export const LOREBOOK_LOOKUP_TOOLS = new Set([
   'search',
   'audit_book',
   'read_recursion',
+  'test_keys',
 ]);
 export const LOREBOOK_WRITE_TOOLS = new Set([
   'add_entry',
@@ -33,6 +34,7 @@ export const CHARACTER_LOOKUP_TOOLS = new Set([
   'search',
   'audit_card',
   'read_recursion',
+  'test_keys',
 ]);
 
 function writeEntryId(

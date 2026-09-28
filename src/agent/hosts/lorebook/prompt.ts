@@ -8,7 +8,7 @@ The current entry catalog and book settings are already in context (id, name, ke
 To find text, search. To rename a term everywhere, replace_across with replace_all true. Search is case-insensitive; replace_across uses unique-match rules like replace_in_entry (copy the exact snippet).
 To revise an existing entry, read_entry that id (one entry's content and activation fields). For a small edit, replace_in_entry with a unique snippet from that latest read. Quotes and dashes can differ. After a replace, read_entry again before another replace in that entry. To drop a section, old can be its first line through its last unique line; empty new deletes that span. Do not delete a heading alone. If a large delete fails, update_entry with the remaining full body. For a full rewrite, update_entry. Do not read entries you will not edit.
 Common activation on add_entry / update_entry: enabled, position (before_char, after_char, before_example, after_example, at_depth), depth (with at_depth), insertion_order, secondary_keys, selective, probability, excludeRecursion (non-recursable), preventRecursion, delayUntilRecursion. Omit a field to leave it unchanged.
-To inspect who can unlock whom, read_recursion (optional id for one entry). The map uses primary keys in content, matching the editor. Use update_book_settings recursive_scanning true if the map should fire in SillyTavern.
+To inspect who can unlock whom, read_recursion (optional id for one entry). The map uses primary keys in content, matching the editor. Use update_book_settings recursive_scanning true if the map should fire in SillyTavern. To check which entries a chat line would activate, and that keys do not fire on common words, test_keys with a sample line.
 To remove an entry, delete_entry by id. You do not need to read it first unless you are unsure. Prefer update_entry to fix a malformed entry. Use update_book_settings for scan_depth, token_budget, and recursive_scanning. After a large write, audit_book if you need a size/key/recursion check.
 While calling tools, emit tool calls only — no user-facing prose. When the book covers the request, stop: no tool calls, a short summary is enough.`;
 
@@ -22,6 +22,7 @@ export const LOREBOOK_TOOL_LIST = `- list_entries — no arguments. Returns id, 
 - replace_across — old, new or content, optional replace_all. Unique match per place unless replace_all.
 - audit_book — no arguments. Counts, tokens, duplicate keys, recursion. No bodies.
 - read_recursion — optional id. Whole-book recursion map, or one entry's incoming/outgoing edges. No bodies.
+- test_keys — text (a sample chat message or two). Entries that would activate and the key that matched, plus key hits that stay inactive. No bodies.
 - update_book_settings — optional name, description, scan_depth, token_budget, recursive_scanning.`;
 
 export function buildLorebookAgentSystemPrompt(

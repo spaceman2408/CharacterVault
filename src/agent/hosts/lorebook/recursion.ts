@@ -10,8 +10,8 @@ const MAX_SOURCE_LINES = 80;
 const MAX_NEIGHBORS = 40;
 const MAX_ISOLATED = 24;
 
-function entryLabel(entry: LorebookEntry): string {
-  return `#${entry.id} ${entry.name?.trim() || entry.keys?.[0] || '(unnamed)'}`;
+export function entryLabel(entry: LorebookEntry): string {
+  return `#${entry.id} ${entry.name?.trim() || entry.comment?.trim() || entry.keys?.[0] || '(unnamed)'}`;
 }
 
 function labelFor(

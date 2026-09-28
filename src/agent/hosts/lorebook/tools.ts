@@ -11,6 +11,7 @@ import {
 } from '../search';
 import { formatBookAudit } from './audit';
 import { formatEntryCatalog } from './catalog';
+import { formatKeyTest } from './keyTest';
 import { formatRecursionMap } from './recursion';
 import {
   applyEntryFlagPatch,
@@ -32,6 +33,7 @@ export const LOREBOOK_TOOL_NAMES = [
   'replace_across',
   'audit_book',
   'read_recursion',
+  'test_keys',
   'update_book_settings',
 ] as const;
 export type LorebookToolName = (typeof LOREBOOK_TOOL_NAMES)[number];
@@ -518,6 +520,14 @@ export function readRecursion(book: CharacterBook, action: ParsedAction): Action
     return { ok: true, toolName: 'read_recursion', message: formatRecursionMap(book, id) };
   }
   return { ok: true, toolName: 'read_recursion', message: formatRecursionMap(book) };
+}
+
+export function testKeys(book: CharacterBook, action: ParsedAction): ActionResult {
+  const text = (action.headers.text ?? '').trim() || action.body.trim();
+  if (!text) {
+    return { ok: false, toolName: 'test_keys', message: 'error: text is empty' };
+  }
+  return { ok: true, toolName: 'test_keys', message: formatKeyTest(book, text) };
 }
 
 export function updateBookSettings(

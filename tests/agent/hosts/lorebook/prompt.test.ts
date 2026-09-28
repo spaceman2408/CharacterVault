@@ -14,6 +14,7 @@ const TOOL_NAMES = [
   'replace_across',
   'audit_book',
   'read_recursion',
+  'test_keys',
   'excludeRecursion',
   'update_book_settings',
   'insertion_order',

@@ -75,6 +75,29 @@ function collectMacroPlaces(spec: CharacterSpec, macro: '{{char}}' | '{{user}}')
   return places;
 }
 
+/** Block count and format gaps in mes_example: `<START>` separators and a `{{char}}:` line per block. */
+function formatExampleDialogue(spec: CharacterSpec): string | null {
+  const examples = (spec.mes_example ?? '').trim();
+  if (!examples) return null;
+  const blocks = examples
+    .split(/<START>/i)
+    .map((block) => block.trim())
+    .filter(Boolean);
+  const name = (spec.name ?? '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const charLine = new RegExp(`^\\s*(?:\\{\\{char\\}\\}|<bot>|<char>${name ? `|${name}` : ''})\\s*:`, 'im');
+  const withoutCharLine: number[] = [];
+  blocks.forEach((block, index) => {
+    if (!charLine.test(block)) withoutCharLine.push(index + 1);
+  });
+
+  const bits = [`${blocks.length} block${blocks.length === 1 ? '' : 's'}`];
+  if (!/<START>/i.test(examples)) bits.push('no <START> line');
+  if (withoutCharLine.length > 0) {
+    bits.push(`no {{char}}: line in block ${withoutCharLine.join(', ')}`);
+  }
+  return `Examples: ${bits.join('; ')}`;
+}
+
 export function formatCardAudit(spec: CharacterSpec, book: CharacterBook): string {
   const requiredFilled = CHARACTER_AUDIT_REQUIRED_FIELD_IDS.filter(
     (id) => getFieldValue(spec, id).trim().length > 0,
@@ -139,6 +162,9 @@ export function formatCardAudit(spec: CharacterSpec, book: CharacterBook): strin
   } else {
     lines.push('Macros: none');
   }
+
+  const examples = formatExampleDialogue(spec);
+  if (examples) lines.push(examples);
 
   lines.push(formatBookAudit(book));
   return lines.join('\n');
