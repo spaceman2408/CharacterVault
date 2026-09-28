@@ -85,7 +85,12 @@ export {
   type SettingsBackupFile,
   type StudioFavoriteRef,
 } from './SettingsBackupService';
-export { CharacterSnapshotService, characterSnapshotService, type SnapshotRestoreAction } from './CharacterSnapshotService';
+export {
+  CharacterSnapshotService,
+  characterSnapshotService,
+  type CharacterHashes,
+  type SnapshotRestoreAction,
+} from './CharacterSnapshotService';
 export {
   CustomContextService,
   customContextService,

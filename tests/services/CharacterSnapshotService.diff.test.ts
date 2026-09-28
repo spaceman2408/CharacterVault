@@ -161,3 +161,87 @@ describe('CharacterSnapshotService.diffSnapshotAgainstCharacter', () => {
     expect(imageEntry?.snapshotValue).toBe('data:image/png;base64,OLD');
   });
 });
+
+describe('CharacterSnapshotService change detection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function snapshotOf(character: Character, overrides: Partial<Character['data']['spec']> = {}) {
+    const service = new CharacterSnapshotService();
+    const imageHash = await service.computeImageHash(character.imageData, character.thumbnailData);
+    return makeSnapshot({
+      payload: {
+        name: character.name,
+        imageData: '',
+        thumbnailData: '',
+        data: { ...character.data, spec: { ...character.data.spec, ...overrides } },
+      },
+      imageHash,
+    });
+  }
+
+  it('does not flag a field that went from missing to empty', async () => {
+    const service = new CharacterSnapshotService();
+    const character = makeCharacter();
+    const snapshot = await snapshotOf(character, { creator: undefined, tags: undefined });
+
+    const entries = await service.diffSnapshotAgainstCharacter(snapshot, character);
+
+    expect(entries.filter(entry => entry.changed)).toEqual([]);
+  });
+
+  it('does not flag CRLF versus LF line endings', async () => {
+    const service = new CharacterSnapshotService();
+    const character = makeCharacter({ data: { spec: makeSpec({ description: 'one\ntwo' }), extensions: {} } });
+    const snapshot = await snapshotOf(character, { description: 'one\r\ntwo' });
+
+    const entries = await service.diffSnapshotAgainstCharacter(snapshot, character);
+
+    expect(entries.find(entry => entry.section === 'description')?.changed).toBe(false);
+  });
+
+  it('hasChanges agrees with the section diff', async () => {
+    const service = new CharacterSnapshotService();
+    const character = makeCharacter();
+    const imageHash = await service.computeImageHash(character.imageData, character.thumbnailData);
+
+    expect(service.hasChanges(await snapshotOf(character, { creator: undefined }), character, imageHash)).toBe(false);
+    expect(service.hasChanges(await snapshotOf(character, { description: 'old' }), character, imageHash)).toBe(true);
+    expect(service.hasChanges(await snapshotOf(character), character, 'other-image')).toBe(true);
+  });
+
+  it('computeCharacterHashes matches the hash stored with a snapshot', async () => {
+    const service = new CharacterSnapshotService();
+    const character = makeCharacter();
+    const imageHash = await service.computeImageHash(character.imageData, character.thumbnailData);
+    const storedHash = await service.buildPayloadHash(service.buildPayload(character), imageHash);
+
+    expect(await service.computeCharacterHashes(character)).toEqual({ imageHash, payloadHash: storedHash });
+  });
+
+  it('snapshotHasChanges skips the load when the payload hash matches', async () => {
+    const service = new CharacterSnapshotService();
+    const character = makeCharacter();
+    const hashes = await service.computeCharacterHashes(character);
+    const cosmetic = await snapshotOf(character, { creator: undefined });
+    const edited = await snapshotOf(character, { description: 'old' });
+    const { characterDb } = await import('../../src/db');
+    vi.mocked(characterDb.getSnapshotById).mockImplementation(async (id: string) =>
+      id === 'cosmetic' ? cosmetic : id === 'edited' ? edited : undefined,
+    );
+    const meta = (id: string, payloadHash: string) => ({
+      id,
+      characterId: character.id,
+      source: 'manual' as const,
+      createdAt: '2020-01-02T00:00:00.000Z',
+      payloadHash,
+      imageHash: null,
+    });
+
+    expect(await service.snapshotHasChanges(meta('same', hashes.payloadHash), character, hashes)).toBe(false);
+    expect(await service.snapshotHasChanges(meta('cosmetic', 'stale'), character, hashes)).toBe(false);
+    expect(await service.snapshotHasChanges(meta('edited', 'stale'), character, hashes)).toBe(true);
+    expect(characterDb.getSnapshotById).not.toHaveBeenCalledWith('same');
+  });
+});

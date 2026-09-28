@@ -49,7 +49,7 @@ Do not add `if (host === 'lorebook')` in `core/`.
 
 ## Wiring
 
-`LorebookWorkspace` and `CharacterWorkspace` import from `../../agent`. `AIChatPanel` / `useAIChat` must not import this package. Shared chrome is `AIChatView` in `components/ai`.
+`LorebookWorkspace` and `CharacterWorkspace` import from `../../agent`. `AIChatPanel` / `useAIChat` must not import this package. Shared chrome is `AIChatView` in `components/ai`. The review's line and word diff views live in `components/diff`, shared with the character snapshot history.
 
 Edit on the last user message (`ui/useEditLastMessage.ts`) loads its text with the `setComposerText` that `AIChatView` hands to `renderMessage`. Nothing is trimmed until the edited text is sent through the composer (Continue never commits an edit). Like Send and Regenerate, it opens a pending review instead, so the review outcome still lands on its own run.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diffLines, foldUnchanged, toSplitRows, type LineRow } from '../../../src/agent/review/lineDiff';
+import { diffLines, foldUnchanged, toSplitRows, type LineRow } from '../../../src/components/diff/lineDiff';
 
 function kinds(rows: LineRow[]): string[] {
   return rows.map((row) => row.kind);
@@ -11,6 +11,13 @@ describe('diffLines', () => {
     expect(diff.rows).toEqual([]);
     expect(diff.addedWords).toBe(0);
     expect(diff.removedWords).toBe(0);
+  });
+
+  it('flags spacing-only changes that rows cannot show', () => {
+    expect(diffLines('One.\nTwo.', 'One.  \n\nTwo.').whitespaceOnly).toBe(true);
+    expect(diffLines('', '\n\n').whitespaceOnly).toBe(true);
+    expect(diffLines('Same.', 'Same.').whitespaceOnly).toBe(false);
+    expect(diffLines('One.', 'Two.').whitespaceOnly).toBe(false);
   });
 
   it('marks identical texts as unchanged rows with paragraph breaks', () => {

@@ -16,6 +16,8 @@ export interface LineDiff {
   rows: LineRow[];
   addedWords: number;
   removedWords: number;
+  /** The texts differ, but only in spacing or blank lines, which rows do not show. */
+  whitespaceOnly: boolean;
 }
 
 // Below this share of kept words a pair reads as a rewrite, not an edit, and
@@ -196,7 +198,8 @@ export function diffLines(before: string, after: string): LineDiff {
       addedWords += countWords(row.text);
     }
   }
-  return { rows, addedWords, removedWords };
+  const whitespaceOnly = before !== after && rows.every((row) => row.kind === 'same');
+  return { rows, addedWords, removedWords, whitespaceOnly };
 }
 
 export type SideCell =

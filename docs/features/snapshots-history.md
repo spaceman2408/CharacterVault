@@ -30,7 +30,7 @@ The left sidebar lists every snapshot for the character, ordered newest-first, w
 
 - **Badge** — Shows the snapshot type (Opened card, Manual save point, Post-restore save point).
 - **Timestamp** — The time the snapshot was created.
-- **Changed indicator** — An amber dot appears when the snapshot's content differs from your current draft.
+- **Changed indicator** — An amber dot appears when the snapshot's content differs from your current draft. It uses the same check as the diff, so a dot always means there is something to see.
 - **Delete button** — Non-baseline snapshots can be deleted individually (the trash icon on the right). Baseline snapshots are protected and cannot be removed.
 
 Opening History reads a lightweight metadata index. Full snapshot payloads load only when you select a revision, so large cards do not pull every save into memory at once.
@@ -43,27 +43,29 @@ Click **Save snapshot** in the modal header to create a manual snapshot of the c
 
 ## Diff Viewer
 
-Select any snapshot in the timeline to load a side-by-side comparison against your current draft:
+Select any snapshot in the timeline to compare it against your current draft. Each change is a card, laid out like the [Agent review](/features/ai-agent):
 
-- The **left pane** shows the snapshot (with changes highlighted in amber).
-- The **right pane** shows the current draft (with changes highlighted in green).
-- Changed text is highlighted inline so you can see exactly what was added, removed, or modified.
+- **Revision** (red) is the snapshot and **Current** (green) is your draft. The words that changed are highlighted inside each line.
+- Wide screens show the two side by side; phones show one column with **−** and **+** lines.
+- Long stretches of unchanged lines fold away. Click **Show N unchanged lines** to open them.
+- Each card header shows how many words were added and removed.
 
-### Section-Specific Diff Views
+A missing field and an empty one count as the same, and so do Windows and Unix line endings, so neither shows up as a change. If only spaces or blank lines changed, the card says so.
 
-Different card sections get specialised diff layouts:
+### What Each Card Shows
 
-| Section | Diff Behaviour |
+| Section | Cards |
 | :--- | :--- |
-| **Text fields** (name, description, personality, etc.) | Side-by-side diff with per-line change highlighting. Added or removed lines stay correctly paired. |
-| **Image** | Side-by-side image previews — snapshot on the left, current draft on the right. Shows "No image" if the value is missing. |
-| **Lorebook** | Compares entries by ID. Only entries with changes to name, trigger keys, content, or internal notes are shown. Unchanged entries are hidden. |
-| **Alternate Greetings** | Only greetings that actually changed are displayed. Unchanged greetings are omitted. |
-| **Extensions** | JSON diff of the extensions object. |
+| **Text fields** (name, description, personality, etc.) | One card per field with a line and word diff. |
+| **Image** | The snapshot image and the current image side by side. Shows "No image" if one is missing. |
+| **Alternate Greetings** | One card per greeting that was added, deleted, or edited. Deleting greeting 2 of 5 shows one deletion, not four edits. |
+| **Lorebook** | One card per entry that was added, deleted, or updated (matched by ID), with its keys, a diff of its content, and any changed flags or settings (for example Constant, Position, or AI context). Book name, scan settings, and entry order changes get a **Book settings** card. |
+| **Tags** | One tag per line. |
+| **Extensions** | One `key: value` line per setting. |
 
-### Collapsed Sections
+### Expanding Cards
 
-When you select a snapshot, only the section you are currently editing is expanded by default. Other changed sections are collapsed — click a section header to expand it. Sections that match the current draft are not shown at all.
+When you select a snapshot, the first change in the section you are editing is expanded (or the first change overall). Click a card header to expand or collapse it, or use **Expand all** / **Collapse all**. Sections that match the current draft are not shown at all.
 
 An **Active** badge marks the section you currently have open in the editor.
 
@@ -76,7 +78,7 @@ If a snapshot's data could not be loaded (e.g., due to corruption or a failed sa
 You have two rollback options:
 
 - **Restore card** — Replaces the entire character with the selected snapshot's state. A rollback snapshot is automatically created afterwards, so you can undo the restore if needed.
-- **Restore section** — Restores only one changed section (e.g., just the Description, or just the First Message) while leaving every other section untouched. After a section restore, the diff refreshes automatically so you can see the updated state.
+- **Restore** on a card — Restores only that section (e.g., just the Description, or just the First Message) while leaving every other section untouched. Greetings and the lorebook restore as a whole, from the **Restore** button next to their heading. After a section restore, the diff refreshes automatically so you can see the updated state.
 
 Both actions require confirmation before they are applied. The dialog explains exactly what will happen:
 

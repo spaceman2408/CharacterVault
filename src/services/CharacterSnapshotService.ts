@@ -16,6 +16,12 @@ import type {
 } from '../db/characterTypes';
 import { CHARACTER_SECTIONS, characterDb } from '../db';
 import { compareSnapshotTimeline } from '../utils/snapshotTimeline';
+import { snapshotValuesMatch, stableSerialize } from '../utils/snapshotCompare';
+
+export interface CharacterHashes {
+  imageHash: string | null;
+  payloadHash: string;
+}
 
 export type SnapshotRestoreAction =
   | { kind: 'image'; value: string }
@@ -56,25 +62,6 @@ const DIFFABLE_SECTIONS: Array<SnapshotDiffEntry['section']> = [
   'extensions',
   'avatar',
 ];
-
-function stableSerialize(value: unknown): string {
-  if (value === null || value === undefined) {
-    return JSON.stringify(value);
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map(item => stableSerialize(item)).join(',')}]`;
-  }
-
-  if (typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .filter(([, entryValue]) => entryValue !== undefined)
-      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey));
-    return `{${entries.map(([key, entryValue]) => `${JSON.stringify(key)}:${stableSerialize(entryValue)}`).join(',')}}`;
-  }
-
-  return JSON.stringify(value);
-}
 
 function hashParts(parts: string[]): string {
   let hashA = 0x811c9dc5;
@@ -400,19 +387,38 @@ class CharacterSnapshotService {
       return {
         section,
         label: getSectionLabel(section),
-        changed: stableSerialize(snapshotValue) !== stableSerialize(currentValue),
+        changed: !snapshotValuesMatch(snapshotValue, currentValue),
         snapshotValue,
         currentValue,
       };
     });
   }
 
-  countChangedSections(snapshot: CharacterSnapshot, character: Character): number {
-    return DIFFABLE_SECTIONS.reduce((count, section) => {
-      const snapshotValue = getSectionValue(snapshot.payload, section);
-      const currentValue = getCharacterSectionValue(character, section);
-      return count + (stableSerialize(snapshotValue) !== stableSerialize(currentValue) ? 1 : 0);
-    }, 0);
+  /**
+   * Same verdict as diffSnapshotAgainstCharacter without resolving images:
+   * the image is compared by hash, since stored payloads carry no bytes.
+   */
+  hasChanges(snapshot: CharacterSnapshot, character: Character, currentImageHash: string | null): boolean {
+    if ((snapshot.imageHash ?? null) !== currentImageHash) {
+      return true;
+    }
+    return DIFFABLE_SECTIONS.some(section =>
+      section !== 'image' &&
+      !snapshotValuesMatch(getSectionValue(snapshot.payload, section), getCharacterSectionValue(character, section)),
+    );
+  }
+
+  /**
+   * Whether a revision differs from the character. A matching payload hash
+   * settles it; otherwise the payload is loaded and compared section by
+   * section, so a revision is never flagged when its diff would be empty.
+   */
+  async snapshotHasChanges(metadata: SnapshotMetadata, character: Character, hashes: CharacterHashes): Promise<boolean> {
+    if (metadata.payloadHash === hashes.payloadHash) {
+      return false;
+    }
+    const snapshot = await this.loadSnapshotForDiff(metadata.id);
+    return snapshot ? this.hasChanges(snapshot, character, hashes.imageHash) : false;
   }
 
   async restoreWholeCharacter(currentCharacter: Character, snapshot: CharacterSnapshot): Promise<UpdateCharacterInput> {
@@ -518,17 +524,21 @@ class CharacterSnapshotService {
   }
 
   /**
-   * Compute the current character's payload hash
-   * Use this to compare with snapshot payloadHash for cheap diff detection
-   * @param {Character} character - Current character
-   * @returns {Promise<string>} Payload hash
+   * The current character's image and payload hashes, to compare with
+   * snapshot metadata. Hashing only reads the payload, so the card data is
+   * not cloned the way buildPayload clones it for storage.
    */
-  async computeCharacterPayloadHash(character: Character): Promise<string> {
-    const payload = this.buildPayload(character);
+  async computeCharacterHashes(character: Character): Promise<CharacterHashes> {
     const imageHash = character.imageData
       ? await this.computeImageHash(character.imageData, character.thumbnailData)
       : null;
-    return this.buildPayloadHash(payload, imageHash);
+    const payloadHash = await this.buildPayloadHash({
+      name: character.name,
+      imageData: character.imageData,
+      thumbnailData: character.thumbnailData,
+      data: character.data,
+    }, imageHash);
+    return { imageHash, payloadHash };
   }
 
   /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diffWords } from '../../../src/agent/review/wordDiff';
+import { diffWords } from '../../../src/components/diff/wordDiff';
 
 function renderLeft(before: string, after: string): string {
   const { segments } = diffWords(before, after);
