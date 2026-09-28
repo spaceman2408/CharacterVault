@@ -12,6 +12,7 @@ import { CharacterSelectionView } from './components/vault';
 import { StagingTesterNotes } from './components/StagingTesterNotes';
 import { ImportPage } from './pages/ImportPage';
 import { AICreationStudio } from './pages/ai-creation-studio/AICreationStudio';
+import { blockStrayFileDrop } from './utils/strayFileDrop';
 
 function AppContent(): React.ReactNode {
   const { isCharacterOpen, openCharacter, closeCharacter } = useCharacterContext();
@@ -86,6 +87,15 @@ function AppContent(): React.ReactNode {
 }
 
 function App(): React.ReactElement {
+  useEffect(() => {
+    window.addEventListener('dragover', blockStrayFileDrop);
+    window.addEventListener('drop', blockStrayFileDrop);
+    return () => {
+      window.removeEventListener('dragover', blockStrayFileDrop);
+      window.removeEventListener('drop', blockStrayFileDrop);
+    };
+  }, []);
+
   return (
     <CharacterProvider>
       <LorebookProvider>
