@@ -233,8 +233,8 @@ export function StagingTesterNotes(): ReactElement | null {
               aria-label="Close test notes"
               onClick={dismiss}
             />
-            <div className="relative w-full max-w-md rounded-t-2xl border border-border bg-surface p-4 shadow-2xl sm:mx-4 sm:rounded-2xl sm:p-5">
-              <div className="flex items-start justify-between gap-3">
+            <div className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-md flex-col rounded-t-2xl border border-border bg-surface p-4 shadow-2xl sm:mx-4 sm:rounded-2xl sm:p-5">
+              <div className="flex shrink-0 items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h2 id="staging-notes-title" className="flex items-center gap-2 text-sm font-semibold text-fg">
                     <FlaskConical className="h-4 w-4 shrink-0 text-accent" aria-hidden />
@@ -257,7 +257,7 @@ export function StagingTesterNotes(): ReactElement | null {
               {STAGING_TEST_NOTES.length === 0 ? (
                 <p className="mt-3 text-sm text-fg-muted italic">No specific test requests right now.</p>
               ) : (
-                <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-fg">
+                <ul className="mt-3 min-h-0 list-disc space-y-1.5 overflow-y-auto overscroll-contain pl-5 text-sm text-fg">
                   {STAGING_TEST_NOTES.map((note) => (
                     <li key={note}>{note}</li>
                   ))}
@@ -267,7 +267,7 @@ export function StagingTesterNotes(): ReactElement | null {
               <button
                 type="button"
                 onClick={dismiss}
-                className="mt-4 w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90"
+                className="mt-4 w-full shrink-0 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90"
               >
                 Got it
               </button>
@@ -275,7 +275,7 @@ export function StagingTesterNotes(): ReactElement | null {
                 <button
                   type="button"
                   onClick={handleResetPos}
-                  className="mt-2 w-full rounded-xl px-4 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent"
+                  className="mt-2 w-full shrink-0 rounded-xl px-4 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent"
                 >
                   Reset floating button position
                 </button>
