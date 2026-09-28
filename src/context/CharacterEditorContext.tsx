@@ -121,7 +121,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const [isSnapshotsLoading, setIsSnapshotsLoading] = useState(false);
   const specFieldRequestVersionRef = useRef<Map<string, number>>(new Map());
   const specSaveTimerRef = useRef<Map<string, number>>(new Map());
-  const specPendingValueRef = useRef<Map<string, string | string[]>>(new Map());
+  // Boxed so each queued edit has its own identity: a commit clears only the entry it wrote,
+  // even when a later edit queued the same string.
+  const specPendingValueRef = useRef<Map<string, { value: string | string[] }>>(new Map());
   const specPendingResolversRef = useRef<Map<string, {
     resolve: Array<(value: Character) => void>;
     reject: Array<(reason?: unknown) => void>;
@@ -225,9 +227,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     try {
       const updated = await updateCharacterBase(characterId, queuedInput);
       clearCommittedInput();
-      failedSaveKeysRef.current.delete(requestKey);
 
       if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
+        failedSaveKeysRef.current.delete(requestKey);
         settleSaveStatus();
       }
 
@@ -235,9 +237,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       return updated;
     } catch (error) {
       clearCommittedInput();
-      failedSaveKeysRef.current.add(requestKey);
 
       if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
+        failedSaveKeysRef.current.add(requestKey);
         setSaveStatus('error');
       }
 
@@ -251,8 +253,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     characterId: string,
     field: keyof Character['data']['spec'],
   ): Promise<Character | null> => {
-    const queuedValue = specPendingValueRef.current.get(requestKey);
-    if (queuedValue === undefined) {
+    const queued = specPendingValueRef.current.get(requestKey);
+    if (!queued) {
       return null;
     }
 
@@ -262,17 +264,17 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     const currentResolvers = specPendingResolversRef.current.get(requestKey);
     specPendingResolversRef.current.delete(requestKey);
     const clearCommittedValue = () => {
-      if (specPendingValueRef.current.get(requestKey) === queuedValue) {
+      if (specPendingValueRef.current.get(requestKey) === queued) {
         specPendingValueRef.current.delete(requestKey);
       }
     };
 
     try {
-      const updated = await updateSpecFieldBase(characterId, field, queuedValue);
+      const updated = await updateSpecFieldBase(characterId, field, queued.value);
       clearCommittedValue();
-      failedSaveKeysRef.current.delete(requestKey);
 
       if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
+        failedSaveKeysRef.current.delete(requestKey);
         settleSaveStatus();
       }
 
@@ -280,9 +282,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       return updated;
     } catch (error) {
       clearCommittedValue();
-      failedSaveKeysRef.current.add(requestKey);
 
       if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
+        failedSaveKeysRef.current.add(requestKey);
         console.error('Failed to save spec field:', error);
         setSaveStatus('error');
       }
@@ -544,7 +546,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
     const requestKey = `${character.id}:${String(field)}`;
     const characterId = character.id;
-    specPendingValueRef.current.set(requestKey, value);
+    specPendingValueRef.current.set(requestKey, { value });
     setIsDirty(true);
     setSaveStatus('saving');
 
