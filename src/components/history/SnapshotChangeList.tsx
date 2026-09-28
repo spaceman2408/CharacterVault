@@ -14,7 +14,15 @@ import {
   User,
 } from 'lucide-react';
 import type { SnapshotDiffEntry } from '../../db/characterTypes';
-import { DiffLegend, DiffStat, LineDiffView, diffLines, type DiffLabels } from '../diff';
+import {
+  DiffLegend,
+  DiffStat,
+  LineDiffView,
+  diffLines,
+  useLazyLineDiff,
+  type DiffLabels,
+  type TextPair,
+} from '../diff';
 import type { SettingChange, SnapshotChange, SnapshotChangeGroup } from './snapshotChanges';
 
 const SNAPSHOT_LABELS: DiffLabels = { before: 'Revision', after: 'Current' };
@@ -60,7 +68,7 @@ function ChangeIcon({ change, section }: { change: SnapshotChange; section: Snap
   }
 }
 
-function textPair(change: SnapshotChange): { before: string; after: string } | null {
+function textPair(change: SnapshotChange): TextPair | null {
   switch (change.kind) {
     case 'text':
     case 'greeting':
@@ -183,13 +191,7 @@ function ChangeCard({
 }: ChangeCardProps): React.ReactElement {
   const { label, detail } = changeTitle(change);
   const pair = useMemo(() => textPair(change), [change]);
-  const stat = useMemo(() => {
-    if (!pair) return null;
-    const { addedWords, removedWords } = diffLines(pair.before, pair.after);
-    return { addedWords, removedWords };
-  }, [pair]);
-  // A revision can differ in hundreds of entries, so only open cards keep their rows.
-  const lineDiff = useMemo(() => (pair && expanded ? diffLines(pair.before, pair.after) : null), [pair, expanded]);
+  const { counts, diff: lineDiff } = useLazyLineDiff(pair, expanded);
 
   return (
     <article className="overflow-hidden rounded-xl border border-border bg-surface">
@@ -213,7 +215,7 @@ function ChangeCard({
           </span>
         </button>
         {isActive && <ActiveBadge />}
-        {stat && <DiffStat addedWords={stat.addedWords} removedWords={stat.removedWords} />}
+        {counts && <DiffStat addedWords={counts.addedWords} removedWords={counts.removedWords} />}
         {restore && <RestoreButton label={label} disabled={restore.disabled} onRestore={restore.onRestore} />}
       </div>
 

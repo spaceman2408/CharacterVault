@@ -17,7 +17,13 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { DiffStat, LineDiffView, diffLines, type DiffLabels } from '../../components/diff';
+import {
+  DiffStat,
+  LineDiffView,
+  useLazyLineDiff,
+  type DiffLabels,
+  type TextPair,
+} from '../../components/diff';
 import { countApproved, defaultDecisions, formatGreetingsForEdit } from './diff';
 import type { AgentReviewChange, ReviewDecision, ReviewDecisions } from './types';
 
@@ -86,7 +92,7 @@ function entryProposedKeys(change: EntryEditChange): string[] {
   return change.kind === 'entry-added' ? change.keys : change.afterKeys;
 }
 
-function changeTextPair(change: AgentReviewChange): { before: string; after: string } | null {
+function changeTextPair(change: AgentReviewChange): TextPair | null {
   switch (change.kind) {
     case 'field':
     case 'greeting':
@@ -245,7 +251,7 @@ function ChangeRow({
   const [isEditing, setIsEditing] = useState(false);
   const { label, detail } = changeTitle(change);
   const pair = useMemo(() => changeTextPair(change), [change]);
-  const lineDiff = useMemo(() => (pair ? diffLines(pair.before, pair.after) : null), [pair]);
+  const { counts, diff: lineDiff } = useLazyLineDiff(pair, expanded && decision.approved && !isEditing);
   const editable =
     change.kind === 'field' ||
     change.kind === 'greeting' ||
@@ -287,8 +293,8 @@ function ChangeRow({
             <span className="block truncate text-[11px] text-fg-subtle">{detail}</span>
           </span>
         </button>
-        {lineDiff && (
-          <DiffStat addedWords={lineDiff.addedWords} removedWords={lineDiff.removedWords} />
+        {counts && (
+          <DiffStat addedWords={counts.addedWords} removedWords={counts.removedWords} />
         )}
         {change.kind === 'greetings' && (
           <GreetingsStat before={change.before} after={change.after} />
