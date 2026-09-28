@@ -60,6 +60,7 @@ import {
   FileJson,
   Image as ImageIcon,
 } from 'lucide-react';
+import { ConfirmDeleteDialog } from '../editor/ConfirmDeleteDialog';
 
 interface ToastNotification {
   id: string;
@@ -281,6 +282,7 @@ function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsPr
 function ImageEditor(): React.ReactElement {
   const { currentCharacter, updateCharacter } = useCharacterEditorContext();
   const [isDragging, setIsDragging] = React.useState(false);
+  const [isConfirmingRemove, setIsConfirmingRemove] = React.useState(false);
 
   const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -332,19 +334,11 @@ function ImageEditor(): React.ReactElement {
       {/* Image Preview */}
       <div className="flex justify-center">
         {currentCharacter?.imageData ? (
-          <div className="relative group">
-            <img
-              src={currentCharacter.imageData}
-              alt={currentCharacter.name}
-              className="w-96 h-96 max-w-full max-h-[60vh] object-contain rounded-2xl border-2 border-border shadow-lg"
-            />
-            <button
-              onClick={() => currentCharacter && void updateCharacter({ imageData: '', thumbnailData: '' })}
-              className="absolute top-2 right-2 p-2 bg-danger hover:opacity-90 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          <img
+            src={currentCharacter.imageData}
+            alt={currentCharacter.name}
+            className="w-96 h-96 max-w-full max-h-[60vh] object-contain rounded-2xl border-2 border-border shadow-lg"
+          />
         ) : (
           <div
             onDrop={handleDrop}
@@ -366,7 +360,7 @@ function ImageEditor(): React.ReactElement {
       </div>
 
       {/* Upload Button */}
-      <div className="flex justify-center">
+      <div className="flex flex-wrap justify-center gap-2">
         <label className="cursor-pointer">
           <input
             type="file"
@@ -379,7 +373,28 @@ function ImageEditor(): React.ReactElement {
             {currentCharacter?.imageData ? 'Change Image' : 'Upload Image'}
           </span>
         </label>
+        {currentCharacter?.imageData && (
+          <button
+            type="button"
+            onClick={() => setIsConfirmingRemove(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border font-medium text-fg-muted transition-colors duration-200 hover:border-danger/40 hover:bg-danger-soft hover:text-danger"
+          >
+            <Trash2 className="w-4 h-4" />
+            Remove Image
+          </button>
+        )}
       </div>
+      <ConfirmDeleteDialog
+        open={isConfirmingRemove}
+        title="Remove image?"
+        message="The image will be removed from this card."
+        confirmLabel="Remove"
+        onConfirm={() => {
+          setIsConfirmingRemove(false);
+          void updateCharacter({ imageData: '', thumbnailData: '' });
+        }}
+        onCancel={() => setIsConfirmingRemove(false)}
+      />
     </div>
   );
 }
