@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../src/db/characterTypes';
 import type { AIConfig, SamplerSettings } from '../../src/db/characterTypes';
-import { AIService } from '../../src/services/AIService';
+import { AIService, STREAM_IDLE_TIMEOUT_MS, STREAM_MAX_BYTES } from '../../src/services/AIService';
 import { ReasoningParser } from '../../src/services/ReasoningParser';
 
 function baseConfig(overrides: Partial<AIConfig> = {}): AIConfig {
@@ -210,6 +210,59 @@ describe('AIService stream cleanup', () => {
     const service = new AIService(baseConfig(), baseSampler());
     const result = await service.askAIWithConversation('hello', [], [], undefined, () => {});
     expect(result.content).toContain('Hi');
+  });
+
+  it('fails with a network error when the stream goes silent', async () => {
+    vi.useFakeTimers();
+    try {
+      const encoder = new TextEncoder();
+      let sent = false;
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (!sent) {
+            sent = true;
+            controller.enqueue(encoder.encode(sseChunk({ content: 'Hi' })));
+            return;
+          }
+          return new Promise<void>(() => {});
+        },
+      });
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }))
+      );
+
+      const service = new AIService(baseConfig(), baseSampler());
+      const pending = service.askAIWithConversation('hello', [], [], undefined, () => {});
+      const assertion = expect(pending).rejects.toMatchObject({ type: 'network' });
+      await vi.advanceTimersByTimeAsync(STREAM_IDLE_TIMEOUT_MS + 1);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops a stream that exceeds the size cap', async () => {
+    let sent = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (!sent) {
+          sent = true;
+          controller.enqueue(new Uint8Array(STREAM_MAX_BYTES + 1));
+          return;
+        }
+        return new Promise<void>(() => {});
+      },
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }))
+    );
+
+    const service = new AIService(baseConfig(), baseSampler());
+    await expect(
+      service.askAIWithConversation('hello', [], [], undefined, () => {})
+    ).rejects.toMatchObject({ message: 'The response was too large and was stopped.' });
   });
 
   it('abort before stream starts rejects as cancelled', async () => {

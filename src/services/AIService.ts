@@ -70,6 +70,15 @@ export function estimateTokens(text: string): number {
 /** Overhead reserved per context chunk for join separators / framing. */
 const CONTEXT_CHUNK_SEPARATOR_TOKENS = 5;
 
+/**
+ * Longest gap between stream bytes before giving up. Generous because hidden
+ * chain-of-thought models can stay silent for minutes before the first token.
+ */
+export const STREAM_IDLE_TIMEOUT_MS = 180_000;
+
+/** Upper bound on one streamed response, far above any real completion. */
+export const STREAM_MAX_BYTES = 32 * 1024 * 1024;
+
 /** Don't partial-fill with a sliver smaller than this (tokens). */
 const MIN_PARTIAL_CONTEXT_TOKENS = 48;
 
@@ -1156,6 +1165,29 @@ Provide only the generated text without any additional commentary.`;
     };
   }
 
+  private async readWithIdleTimeout(
+    reader: ReadableStreamDefaultReader<Uint8Array>
+  ): Promise<ReadableStreamReadResult<Uint8Array>> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const stalled = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () =>
+          reject(
+            new AIError(
+              `The provider stopped sending data for ${Math.round(STREAM_IDLE_TIMEOUT_MS / 1000)} seconds.`,
+              'network'
+            )
+          ),
+        STREAM_IDLE_TIMEOUT_MS
+      );
+    });
+    try {
+      return await Promise.race([reader.read(), stalled]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   /**
    * Handle streaming response from the API
    */
@@ -1171,6 +1203,7 @@ Provide only the generated text without any additional commentary.`;
     let finishReason: string | null = null;
     let doneSentinel = false;
     let pendingLine = '';
+    let bytesRead = 0;
 
     const emitDeltas = (contentDelta?: string, reasoningDelta?: string) => {
       if (contentDelta || reasoningDelta) {
@@ -1188,10 +1221,15 @@ Provide only the generated text without any additional commentary.`;
           throw new AIError('Request was cancelled', 'unknown');
         }
 
-        const { done, value } = await reader.read();
+        const { done, value } = await this.readWithIdleTimeout(reader);
 
         if (done) {
           break;
+        }
+
+        bytesRead += value.byteLength;
+        if (bytesRead > STREAM_MAX_BYTES) {
+          throw new AIError('The response was too large and was stopped.', 'unknown');
         }
 
         // A network chunk can split an SSE line, so keep the trailing fragment
