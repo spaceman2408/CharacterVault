@@ -286,8 +286,11 @@ function ImageEditor(): React.ReactElement {
   const { currentCharacter, updateCharacter } = useCharacterEditorContext();
   const [isDragging, setIsDragging] = React.useState(false);
   const [isConfirmingRemove, setIsConfirmingRemove] = React.useState(false);
+  const [pendingReplacement, setPendingReplacement] = React.useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const hasImage = !!currentCharacter?.imageData;
 
-  const handleFileSelect = async (file: File) => {
+  const handleFileSelect = React.useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
       showEphemeralToast({ type: 'error', title: 'Invalid file', message: 'Please select an image file.' });
       return;
@@ -302,7 +305,29 @@ function ImageEditor(): React.ReactElement {
       }
     };
     reader.readAsDataURL(file);
-  };
+  }, [currentCharacter, updateCharacter]);
+
+  // A dropped or pasted image replaces the current one only after a confirm.
+  const offerImage = React.useCallback((file: File) => {
+    if (hasImage && file.type.startsWith('image/')) {
+      setPendingReplacement(file);
+      return;
+    }
+    void handleFileSelect(file);
+  }, [handleFileSelect, hasImage]);
+
+  React.useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea'))) return;
+      const file = Array.from(event.clipboardData?.files ?? []).find((item) => item.type.startsWith('image/'));
+      if (!file) return;
+      event.preventDefault();
+      offerImage(file);
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [offerImage]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -310,7 +335,7 @@ function ImageEditor(): React.ReactElement {
     
     const file = e.dataTransfer.files[0];
     if (file) {
-      void handleFileSelect(file);
+      offerImage(file);
     }
   };
 
@@ -319,8 +344,8 @@ function ImageEditor(): React.ReactElement {
     setIsDragging(true);
   };
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsDragging(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -331,53 +356,67 @@ function ImageEditor(): React.ReactElement {
     }
   };
 
+  const openFilePicker = () => fileInputRef.current?.click();
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-fg">Character Image</h2>
       
       {/* Image Preview */}
-      <div className="flex justify-center">
-        {currentCharacter?.imageData ? (
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        className="flex flex-col items-center gap-2"
+      >
+        {hasImage ? (
           <img
-            src={currentCharacter.imageData}
-            alt={currentCharacter.name}
-            className="w-96 h-96 max-w-full max-h-[60vh] object-contain rounded-2xl border-2 border-border shadow-lg"
+            src={currentCharacter?.imageData}
+            alt={currentCharacter?.name}
+            className={`w-96 h-96 max-w-full max-h-[60vh] object-contain rounded-2xl border-2 shadow-lg transition-colors duration-200 ${
+              isDragging ? 'border-accent' : 'border-border'
+            }`}
           />
         ) : (
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
+          <button
+            type="button"
+            onClick={openFilePicker}
             className={`w-96 h-96 max-w-full max-h-[60vh] rounded-2xl border-2 border-dashed 
               ${isDragging 
                 ? 'border-accent bg-muted/50' 
-                : 'border-border-strong bg-bg/30'
+                : 'border-border-strong bg-bg/30 hover:border-accent/50'
               }
               flex flex-col items-center justify-center gap-3 transition-colors duration-200`}
           >
             <Image className="w-16 h-16 text-fg-subtle" />
-            <p className="text-sm text-fg-muted text-center px-4">
+            <span className="text-sm text-fg-muted text-center px-4">
               Drag and drop an image here<br />or click to browse
-            </p>
-          </div>
+            </span>
+          </button>
         )}
+        <p className="text-xs text-fg-subtle text-center">
+          {hasImage ? 'Drop or paste an image to replace this one.' : 'You can also paste an image.'}
+        </p>
       </div>
 
       {/* Upload Button */}
       <div className="flex flex-wrap justify-center gap-2">
-        <label className="cursor-pointer">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleInputChange}
-            className="hidden"
-          />
-          <span className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:opacity-90 text-white rounded-xl font-medium transition-colors duration-200 cursor-pointer">
-            <Upload className="w-4 h-4" />
-            {currentCharacter?.imageData ? 'Change Image' : 'Upload Image'}
-          </span>
-        </label>
-        {currentCharacter?.imageData && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleInputChange}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={openFilePicker}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:opacity-90 text-white rounded-xl font-medium transition-colors duration-200"
+        >
+          <Upload className="w-4 h-4" />
+          {hasImage ? 'Change Image' : 'Upload Image'}
+        </button>
+        {hasImage && (
           <button
             type="button"
             onClick={() => setIsConfirmingRemove(true)}
@@ -398,6 +437,18 @@ function ImageEditor(): React.ReactElement {
           void updateCharacter({ imageData: '', thumbnailData: '' });
         }}
         onCancel={() => setIsConfirmingRemove(false)}
+      />
+      <ConfirmDeleteDialog
+        open={pendingReplacement !== null}
+        title="Replace image?"
+        message="The current image will be replaced with the one you dropped or pasted."
+        confirmLabel="Replace"
+        onConfirm={() => {
+          const file = pendingReplacement;
+          setPendingReplacement(null);
+          if (file) void handleFileSelect(file);
+        }}
+        onCancel={() => setPendingReplacement(null)}
       />
     </div>
   );
