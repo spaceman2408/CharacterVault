@@ -73,7 +73,6 @@ function edgePath(from: NodePos, to: NodePos, meta?: BackEdgeMeta): string {
 export type RecursionWebViewProps = {
   entries: LorebookEntry[];
   graph: RecursionGraph;
-  indexById: Map<number, number>;
   inspectedId: number | null;
   selectedIds: Set<number>;
   showStandalone: boolean;
@@ -85,7 +84,6 @@ export type RecursionWebViewProps = {
 export const RecursionWebView = React.memo(function RecursionWebView({
   entries,
   graph,
-  indexById,
   inspectedId,
   selectedIds,
   showStandalone,
@@ -511,8 +509,8 @@ export const RecursionWebView = React.memo(function RecursionWebView({
                 strokeWidth={1.25}
               >
                 <title>
-                  {entryDisplayName(fromEntry, indexById.get(edge.fromId))} →{' '}
-                  {entryDisplayName(toEntry, indexById.get(edge.toId))} via{' '}
+                  {entryDisplayName(fromEntry)} →{' '}
+                  {entryDisplayName(toEntry)} via{' '}
                   {edge.matchedKeys.join(', ')}
                 </title>
               </path>
@@ -562,9 +560,9 @@ export const RecursionWebView = React.memo(function RecursionWebView({
                 tabIndex={0}
                 role="button"
                 aria-pressed={isInspected}
-                aria-label={`Entry ${entryDisplayName(entry, indexById.get(entry.id))}. Click to inspect, click again to clear, Ctrl-click to select.`}
+                aria-label={`Entry ${entryDisplayName(entry)}. Click to inspect, click again to clear, Ctrl-click to select.`}
               >
-                <title>{entryDisplayName(entry, indexById.get(entry.id))}</title>
+                <title>{entryDisplayName(entry)}</title>
                 <rect
                   width={NODE_W}
                   height={NODE_H}
@@ -587,7 +585,7 @@ export const RecursionWebView = React.memo(function RecursionWebView({
                     p.componentIndex === -1 ? 'opacity-70' : ''
                   }`}
                 >
-                  {truncateLabel(entryDisplayName(entry, indexById.get(entry.id)), 18)}
+                  {truncateLabel(entryDisplayName(entry), 18)}
                 </text>
                 <NodeFlagDots entry={entry} present={flagsPresent(entry)} />
               </g>

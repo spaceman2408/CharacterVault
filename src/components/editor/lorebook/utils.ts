@@ -29,6 +29,14 @@ export function hasNonDefaultOptions(entry: LorebookEntry): boolean {
   );
 }
 
+/** Content, keys, and title: the same per-entry estimate for book totals and AI context. */
+export function estimateEntryTokens(entry: LorebookEntry): number {
+  let tokens = estimateTokens(entry.content || '');
+  if (entry.keys?.length) tokens += estimateTokens(entry.keys.join(','));
+  if (entry.comment) tokens += estimateTokens(entry.comment);
+  return tokens;
+}
+
 export function computeContextUsage(
   entries: LorebookEntry[],
   tokenBudget: number | undefined,
@@ -41,9 +49,7 @@ export function computeContextUsage(
     if (!entry.enabled) continue;
     if (!isEntryContextEnabled(entry)) continue;
     included += 1;
-    tokens += estimateTokens(entry.content || '');
-    if (entry.keys?.length) tokens += estimateTokens(entry.keys.join(','));
-    if (entry.comment) tokens += estimateTokens(entry.comment);
+    tokens += estimateEntryTokens(entry);
   }
 
   tokens += extraTokens;

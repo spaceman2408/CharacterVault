@@ -14,22 +14,22 @@ function LorebookEntryListItem({
 }: LorebookEntryListItemProps): React.ReactElement {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDelete();
+    onDelete(entry.id);
   };
   const handleDuplicate = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDuplicate();
+    onDuplicate(entry.id);
   };
   const handleToggleContext = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onToggleContext();
+    onToggleContext(entry.id);
   };
 
   const label = (entry.comment || entry.name || '').trim();
 
   return (
     <div
-      onClick={onSelect}
+      onClick={() => onSelect(entry.id)}
       className={`
         relative cursor-pointer rounded-xl border p-2.5 transition-colors touch-manipulation
         ${isSelected
@@ -68,13 +68,17 @@ function LorebookEntryListItem({
             onClick={handleToggleContext}
             className={`
               rounded-lg p-2 transition-colors touch-manipulation
-              ${isContextEnabled
+              ${isContextEnabled && entry.enabled
                 ? 'text-success hover:bg-success-soft'
                 : 'text-fg-muted hover:bg-hover hover:text-fg'
               }
             `}
             title={
-              isContextEnabled ? 'In context (click to exclude)' : 'Not in context (click to include)'
+              !entry.enabled
+                ? 'Disabled entries are not sent to AI context'
+                : isContextEnabled
+                  ? 'In context (click to exclude)'
+                  : 'Not in context (click to include)'
             }
             aria-label={isContextEnabled ? 'Exclude from context' : 'Include in context'}
           >

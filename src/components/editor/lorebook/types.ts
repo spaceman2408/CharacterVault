@@ -58,10 +58,11 @@ export interface LorebookEntryListItemProps {
   tokenCount: number | null;
   isSelected: boolean;
   isContextEnabled: boolean;
-  onSelect: () => void;
-  onDelete: () => void;
-  onDuplicate: () => void;
-  onToggleContext: () => void;
+  /** Handlers take the entry id so the parent can pass stable functions and memo holds. */
+  onSelect: (entryId: number) => void;
+  onDelete: (entryId: number) => void;
+  onDuplicate: (entryId: number) => void;
+  onToggleContext: (entryId: number) => void;
 }
 
 export interface LorebookEntryDetailProps {

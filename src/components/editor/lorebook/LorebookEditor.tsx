@@ -291,6 +291,37 @@ function LorebookEditorInner({
     return indexById;
   }, [entries]);
 
+  // Rows get stable handlers that call the latest logic, so a content save only re-renders the edited row.
+  const rowActionsRef = useRef<Record<'remove' | 'duplicate' | 'toggleContext', (index: number) => void> | null>(null);
+  rowActionsRef.current = {
+    remove: handleDeleteEntry,
+    duplicate: handleDuplicateEntry,
+    toggleContext: (index) => {
+      const entry = entries[index];
+      if (!entry) return;
+      const newEntries = [...entries];
+      newEntries[index] = {
+        ...entry,
+        extensions: { ...entry.extensions, context_enabled: !isEntryContextEnabled(entry) },
+      };
+      persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
+    },
+  };
+  const rowHandlers = useMemo(() => {
+    const indexOf = (id: number) => entriesRef.current.findIndex((entry) => entry.id === id);
+    return {
+      onSelect: (id: number) => {
+        const index = indexOf(id);
+        if (index < 0) return;
+        setSelectedEntryIndex(index);
+        setIsMobileViewOpen(true);
+      },
+      onDelete: (id: number) => rowActionsRef.current?.remove(indexOf(id)),
+      onDuplicate: (id: number) => rowActionsRef.current?.duplicate(indexOf(id)),
+      onToggleContext: (id: number) => rowActionsRef.current?.toggleContext(indexOf(id)),
+    };
+  }, []);
+
   const handleUpdateRecursionFlags = useCallback(
     (
       ids: number[],
@@ -683,24 +714,10 @@ function LorebookEditorInner({
                   tokenCount={originalIndex === safeSelectedIndex ? selectedEntryTokenCount : null}
                   isSelected={originalIndex === safeSelectedIndex}
                   isContextEnabled={isEntryContextEnabled(entry)}
-                  onSelect={() => {
-                    setSelectedEntryIndex(originalIndex);
-                    setIsMobileViewOpen(true);
-                  }}
-                  onDelete={() => handleDeleteEntry(originalIndex)}
-                  onDuplicate={() => handleDuplicateEntry(originalIndex)}
-                  onToggleContext={() => {
-                    const updatedEntry = {
-                      ...entry,
-                      extensions: {
-                        ...entry.extensions,
-                        context_enabled: !isEntryContextEnabled(entry),
-                      },
-                    };
-                    const newEntries = [...entries];
-                    newEntries[originalIndex] = updatedEntry;
-                    persistLorebook(buildUpdatedLorebook(newEntries, bookName, bookDescription));
-                  }}
+                  onSelect={rowHandlers.onSelect}
+                  onDelete={rowHandlers.onDelete}
+                  onDuplicate={rowHandlers.onDuplicate}
+                  onToggleContext={rowHandlers.onToggleContext}
                 />
               );
             })
@@ -757,7 +774,7 @@ function LorebookEditorInner({
                   onChange={(e) =>
                     handleEntryPersistUpdate({ ...selectedEntry, comment: e.target.value })
                   }
-                  placeholder={selectedEntry.name || `Entry ${safeSelectedIndex}`}
+                  placeholder={selectedEntry.name || `Entry #${selectedEntry.id}`}
                   aria-label="Entry title"
                   className="w-full min-w-0 truncate bg-transparent text-sm font-semibold text-fg outline-none placeholder:text-fg-subtle focus:ring-0"
                 />

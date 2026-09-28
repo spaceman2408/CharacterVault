@@ -25,6 +25,7 @@ import { usePersistedPanelWidth } from '../ai/hooks/usePersistedPanelWidth';
 import { LinkedCharactersMenu } from './LinkedCharactersMenu';
 import { flushChatSessions } from '../../utils/chatSessionFlush';
 import { flushLorebookDraft } from '../editor/lorebook/draftFlush';
+import { estimateEntryTokens } from '../editor/lorebook/utils';
 import type {
   CharacterBook,
   CharacterSection,
@@ -41,7 +42,6 @@ import {
 } from '../../db/characterTypes';
 import { applyMacroHighlightColors } from '../../editor/extensions/macroHighlight';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
-import { estimateTokens } from '../../services/AIService';
 import { applyModelBinding } from '../../services/resolveOperationConfig';
 import {
   customContextService,
@@ -183,7 +183,7 @@ export function LorebookWorkspace(): React.ReactElement {
   const entryCount = currentLorebook?.book?.entries?.length ?? 0;
   const totalTokens = useMemo(() => {
     const entries = currentLorebook?.book?.entries ?? [];
-    return entries.reduce((sum, entry) => sum + estimateTokens(entry.content || ''), 0);
+    return entries.reduce((sum, entry) => sum + estimateEntryTokens(entry), 0);
   }, [currentLorebook?.book?.entries]);
 
   const buildBookContextChunks = useCallback((): string[] => {

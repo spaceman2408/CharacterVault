@@ -388,11 +388,9 @@ export function applyEntryFlagPatch(
 
 export const applyEntryPatch = applyEntryFlagPatch;
 
-export function entryDisplayName(entry: LorebookEntry, fallbackIndex?: number): string {
+export function entryDisplayName(entry: LorebookEntry): string {
   const label = (entry.comment || entry.name || '').trim();
-  if (label) return label;
-  if (fallbackIndex !== undefined) return `Entry ${fallbackIndex}`;
-  return `Entry #${entry.id}`;
+  return label || `Entry #${entry.id}`;
 }
 
 /** Prefer list mode when the book is large enough that a free layout is noisy. */

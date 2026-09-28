@@ -117,7 +117,6 @@ function LinkRow({
   edge,
   direction,
   other,
-  otherIndex,
   ownerKeys,
   onInspect,
   onChangeOwnerKeys,
@@ -125,7 +124,6 @@ function LinkRow({
   edge: RecursionEdge;
   direction: 'in' | 'out';
   other: LorebookEntry;
-  otherIndex?: number;
   ownerKeys: string[];
   onInspect: () => void;
   onChangeOwnerKeys: (keys: string[]) => void;
@@ -150,7 +148,7 @@ function LinkRow({
           onClick={onInspect}
           className="block w-full truncate text-left text-sm font-medium text-fg hover:text-accent touch-manipulation"
         >
-          {entryDisplayName(other, otherIndex)}
+          {entryDisplayName(other)}
         </button>
         <p className="mt-0.5 text-[11px] text-fg-muted">
           {direction === 'in'
@@ -235,7 +233,6 @@ function FlagToggleRow({
 
 function InspectorBody({
   inspectedEntry,
-  indexById,
   entryById,
   inbound,
   outbound,
@@ -246,7 +243,6 @@ function InspectorBody({
   onInspect,
 }: {
   inspectedEntry: LorebookEntry;
-  indexById: Map<number, number>;
   entryById: Map<number, LorebookEntry>;
   inbound: RecursionEdge[];
   outbound: RecursionEdge[];
@@ -265,7 +261,7 @@ function InspectorBody({
               Inspecting
             </p>
             <p className="truncate text-base font-semibold text-fg">
-              {entryDisplayName(inspectedEntry, indexById.get(inspectedEntry.id))}
+              {entryDisplayName(inspectedEntry)}
             </p>
             <div className="mt-1.5 flex flex-wrap gap-1">
               <RecursionFlagChips entry={inspectedEntry} />
@@ -353,7 +349,6 @@ function InspectorBody({
                     edge={edge}
                     direction="in"
                     other={other}
-                    otherIndex={indexById.get(other.id)}
                     ownerKeys={inspectedEntry.keys ?? []}
                     onInspect={() => onInspect(other.id)}
                     onChangeOwnerKeys={(nextKeys) =>
@@ -389,7 +384,6 @@ function InspectorBody({
                     edge={edge}
                     direction="out"
                     other={other}
-                    otherIndex={indexById.get(other.id)}
                     ownerKeys={other.keys ?? []}
                     onInspect={() => onInspect(other.id)}
                     onChangeOwnerKeys={(nextKeys) => onPatchEntry(other.id, { keys: nextKeys })}
@@ -629,12 +623,6 @@ export function RecursionBookPanel({
 
   const stats = useMemo(() => getBookRecursionStats(entries, graph), [entries, graph]);
 
-  const indexById = useMemo(() => {
-    const map = new Map<number, number>();
-    entries.forEach((e, i) => map.set(e.id, i));
-    return map;
-  }, [entries]);
-
   const entryById = useMemo(() => {
     const map = new Map<number, LorebookEntry>();
     for (const e of entries) map.set(e.id, e);
@@ -672,7 +660,7 @@ export function RecursionBookPanel({
 
     if (q) {
       filtered = filtered.filter(({ entry }) => {
-        const name = entryDisplayName(entry, indexById.get(entry.id)).toLowerCase();
+        const name = entryDisplayName(entry).toLowerCase();
         const keys = (entry.keys ?? []).join(' ').toLowerCase();
         return name.includes(q) || keys.includes(q) || (entry.content ?? '').toLowerCase().includes(q);
       });
@@ -681,7 +669,7 @@ export function RecursionBookPanel({
     // Stable ST uid order so bulk flag edits (which change graph degrees) do not reshuffle.
     filtered.sort((a, b) => a.entry.id - b.entry.id);
     return filtered;
-  }, [entries, graph, query, filter, indexById]);
+  }, [entries, graph, query, filter]);
 
   // Rendering goes through the map, so a deleted entry reads as "nothing inspected".
   const inspectedEntry = inspectedId != null ? entryById.get(inspectedId) ?? null : null;
@@ -877,7 +865,6 @@ export function RecursionBookPanel({
           <RecursionWebView
             entries={entries}
             graph={graph}
-            indexById={indexById}
             inspectedId={inspectedId}
             selectedIds={activeSelectedIds}
             showStandalone={showStandalone}
@@ -922,7 +909,7 @@ export function RecursionBookPanel({
                           className="min-w-0 flex-1 px-1 py-2.5 text-left touch-manipulation md:py-2"
                         >
                           <p className="truncate text-sm font-medium text-fg">
-                            {entryDisplayName(entry, indexById.get(entry.id))}
+                            {entryDisplayName(entry)}
                           </p>
                           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-fg-muted">
                             {inN + outN === 0 ? (
@@ -951,7 +938,6 @@ export function RecursionBookPanel({
               <div className="min-h-0 shrink-0 space-y-3 overflow-y-auto border-t border-border bg-surface p-3 max-h-[min(60dvh,28rem)]">
                 <InspectorBody
                   inspectedEntry={inspectedEntry}
-                  indexById={indexById}
                   entryById={entryById}
                   inbound={inbound}
                   outbound={outbound}
@@ -1011,7 +997,6 @@ export function RecursionBookPanel({
               <div className="pointer-events-auto flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto rounded-2xl border border-border bg-surface/95 p-3 shadow-2xl backdrop-blur-md">
                 <InspectorBody
                   inspectedEntry={inspectedEntry}
-                  indexById={indexById}
                   entryById={entryById}
                   inbound={inbound}
                   outbound={outbound}

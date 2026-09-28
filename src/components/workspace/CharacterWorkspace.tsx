@@ -891,6 +891,11 @@ function CharacterWorkspaceInner({
     },
     [setActiveSection],
   );
+
+  // The lorebook editor remounts per visit; a kept focus would reselect that entry every time.
+  useEffect(() => {
+    if (activeSection !== 'lorebook') setLorebookFocusEntry(null);
+  }, [activeSection]);
   const [agentRunning, setAgentRunning] = useState(false);
 
   const customContextIncluded =
