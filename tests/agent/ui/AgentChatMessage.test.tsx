@@ -48,3 +48,54 @@ describe('AgentChatMessage turn-limit notice', () => {
     expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
   });
 });
+
+function renderUserMessage(onEdit?: () => void, isProcessing = false, onCancelEdit?: () => void) {
+  return render(
+    <AgentChatMessage
+      message={{ id: 'u1', role: 'user', content: 'Write a greeting', timestamp: 1 }}
+      messageIndex={0}
+      chatHistoryLength={1}
+      isProcessing={isProcessing}
+      showReasoning={false}
+      showRegenerate={false}
+      notices={[]}
+      toolEvents={[]}
+      onRegenerate={() => undefined}
+      onDelete={() => undefined}
+      onEdit={onEdit}
+      onCancelEdit={onCancelEdit}
+    />,
+  );
+}
+
+describe('AgentChatMessage edit', () => {
+  it('offers edit on the last user message', () => {
+    const onEdit = vi.fn();
+    renderUserMessage(onEdit);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit and resend' }));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides edit on older user messages', () => {
+    renderUserMessage();
+    expect(screen.queryByRole('button', { name: 'Edit and resend' })).toBeNull();
+  });
+
+  it('disables edit while a run is in progress', () => {
+    const onEdit = vi.fn();
+    renderUserMessage(onEdit, true);
+    const button = screen.getByRole('button', { name: 'Edit and resend' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.click(button);
+    expect(onEdit).not.toHaveBeenCalled();
+  });
+
+  it('shows Editing and Cancel while the message is being edited', () => {
+    const onCancelEdit = vi.fn();
+    renderUserMessage(vi.fn(), false, onCancelEdit);
+    expect(screen.getByText('· Editing')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Edit and resend' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel edit' }));
+    expect(onCancelEdit).toHaveBeenCalledTimes(1);
+  });
+});

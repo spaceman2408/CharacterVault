@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, type ReactNode } from 'react';
+import React, { useState, useRef, useCallback, useLayoutEffect, type ReactNode } from 'react';
 import {
   MessageSquare,
   MessageSquarePlus,
@@ -50,7 +50,11 @@ export interface AIChatViewProps {
   onLoadOlder?: () => void | Promise<void>;
   /** One-shot starter prompts in the empty state; clicking one sends it. */
   emptySuggestions?: readonly string[];
-  renderMessage?: (message: ChatMessage, index: number) => ReactNode;
+  renderMessage?: (
+    message: ChatMessage,
+    index: number,
+    setComposerText: (text: string) => void,
+  ) => ReactNode;
   renderAfterMessage?: (message: ChatMessage) => ReactNode;
   showStreamDraft?: boolean;
   processingIndicator?: ReactNode;
@@ -60,6 +64,11 @@ export interface AIChatViewProps {
     percentage: number;
     status: 'good' | 'warning' | 'danger';
   };
+}
+
+function fitComposerHeight(input: HTMLTextAreaElement): void {
+  input.style.height = 'auto';
+  input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
 }
 
 export function AIChatView({
@@ -100,6 +109,7 @@ export function AIChatView({
   contextUsage,
 }: AIChatViewProps): React.ReactElement {
   const [askQuestion, setAskQuestion] = useState('');
+  const [composerTextRequest, setComposerTextRequest] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [contextExpanded, setContextExpanded] = useState(true);
   const [isConfirmingNewChat, setIsConfirmingNewChat] = useState(false);
@@ -129,6 +139,18 @@ export function AIChatView({
     inputRef.current?.focus();
   }, []);
 
+  const setComposerText = useCallback((text: string) => {
+    setAskQuestion(text);
+    setComposerTextRequest((count) => count + 1);
+  }, []);
+
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (composerTextRequest === 0 || !input) return;
+    fitComposerHeight(input);
+    input.focus();
+  }, [composerTextRequest]);
+
   const handleSubmit = async () => {
     if (composerDisabled) return;
     if (!askQuestion.trim()) {
@@ -155,9 +177,7 @@ export function AIChatView({
       (!!askQuestion.trim() || canRetryEmptySend(chatHistory, showRegenerate)));
 
   const onComposerInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
-    const target = e.currentTarget;
-    target.style.height = 'auto';
-    target.style.height = `${Math.min(target.scrollHeight, 160)}px`;
+    fitComposerHeight(e.currentTarget);
   }, []);
 
   return (
@@ -331,7 +351,7 @@ export function AIChatView({
 
         {chatHistory.map((message, index) => {
           const rendered = renderMessage ? (
-            renderMessage(message, index)
+            renderMessage(message, index, setComposerText)
           ) : (
             <ChatMessageComponent
               message={message}

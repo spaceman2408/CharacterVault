@@ -51,6 +51,8 @@ Do not add `if (host === 'lorebook')` in `core/`.
 
 `LorebookWorkspace` and `CharacterWorkspace` import from `../../agent`. `AIChatPanel` / `useAIChat` must not import this package. Shared chrome is `AIChatView` in `components/ai`.
 
+Edit on the last user message (`ui/useEditLastMessage.ts`) loads its text with the `setComposerText` that `AIChatView` hands to `renderMessage`. Nothing is trimmed until the edited text is sent through the composer (Continue never commits an edit). Like Send and Regenerate, it opens a pending review instead, so the review outcome still lands on its own run.
+
 On the character workspace, Agent mode always mounts `CharacterAgentChat` (tab changes do not remount the chat). Standalone lorebook workspace still mounts `LorebookAgentChat`. Orion stays the non-agent panel.
 
 ## Renderer / persist

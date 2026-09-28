@@ -32,6 +32,7 @@ import {
 } from './notices';
 import type { AgentToolTarget } from './types';
 import { useCharacterAgent, type PersistAgentCard } from './useCharacterAgent';
+import { useEditLastMessage } from './useEditLastMessage';
 
 export interface CharacterAgentChatProps {
   aiConfig: AIConfig;
@@ -163,6 +164,30 @@ export function CharacterAgentChat({
     return session.handleRegenerate();
   }, [review, session]);
 
+  const { lastUserIndex, editingId, startEdit, cancelEdit, commitEdit } = useEditLastMessage(
+    session.chatHistory,
+    session.handleDeleteMessage,
+  );
+
+  const handleEditGuarded = useCallback(
+    (message: ChatMessage, setComposerText: (text: string) => void) => {
+      if (review) {
+        setReviewOpen(true);
+        return;
+      }
+      startEdit(message, setComposerText);
+    },
+    [review, startEdit],
+  );
+
+  const handleComposerAsk = useCallback(
+    (question: string) => {
+      if (!review) commitEdit();
+      return handleAskGuarded(question);
+    },
+    [commitEdit, handleAskGuarded, review],
+  );
+
   const contextLabels = useMemo(() => {
     const labels = ['Field catalog', 'Entry catalog'];
     if (customContextIncluded) labels.unshift('Custom context');
@@ -201,7 +226,7 @@ export function CharacterAgentChat({
   ]);
 
   const renderMessage = useCallback(
-    (message: ChatMessage, index: number) => {
+    (message: ChatMessage, index: number, setComposerText: (text: string) => void) => {
       const events = session.toolEventsByMessageId[message.id] ?? [];
       const notices = messageNotices(session.errorByMessageId[message.id]);
       const toolEvents = visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS);
@@ -238,13 +263,25 @@ export function CharacterAgentChat({
               ? handleContinue
               : undefined
           }
+          onEdit={
+            index === lastUserIndex
+              ? () => handleEditGuarded(message, setComposerText)
+              : undefined
+          }
+          onCancelEdit={
+            message.id === editingId ? () => cancelEdit(setComposerText) : undefined
+          }
         />
       );
     },
     [
       aiConfig.showReasoning,
+      cancelEdit,
+      editingId,
       handleContinue,
+      handleEditGuarded,
       handleRegenerateGuarded,
+      lastUserIndex,
       onOpenTarget,
       session.chatHistory.length,
       session.errorByMessageId,
@@ -294,7 +331,7 @@ export function CharacterAgentChat({
       isStreaming={session.isStreaming}
       streamingContent={session.streamingContent}
       streamingReasoning={session.streamingReasoning}
-      handleAsk={handleAskGuarded}
+      handleAsk={handleComposerAsk}
       handleRegenerate={handleRegenerateGuarded}
       handleNewChat={session.handleNewChat}
       handleDeleteMessage={session.handleDeleteMessage}
