@@ -133,8 +133,10 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     // Exclusive workspace: never hold a full vault lorebook while a card is open
     dropOpenLorebookPayload();
     const created = await characterDb.createCharacter(input);
-    // Creating here also opens the card, so record the open like openCharacter does
-    const character = { ...created, lastOpenedAt: await characterDb.updateLastOpened(created.id) };
+    // Creating here also opens the card, so record the open like openCharacter does.
+    // The card is already saved; a failed timestamp write must not report the create as failed.
+    const lastOpenedAt = await characterDb.updateLastOpened(created.id).catch(() => undefined);
+    const character = { ...created, lastOpenedAt };
     // Only keep the open card in memory - never stack full characters
     setCharacters([character]);
     setCharacterListItems((prev) => [toCharacterListItem(character), ...prev]);
