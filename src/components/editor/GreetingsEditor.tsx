@@ -45,7 +45,7 @@ interface GreetingsEditorProps {
 interface GreetingListItemProps {
   greeting: string;
   index: number;
-  tokenCount: number | null;
+  tokenCount: number;
   isSelected: boolean;
   canMoveUp: boolean;
   canMoveDown: boolean;
@@ -129,20 +129,27 @@ function GreetingListItem({
           )}
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-fg">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect();
+          }}
+          aria-current={isSelected ? 'true' : undefined}
+          className="min-w-0 flex-1 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        >
+          <span className="block text-sm font-medium text-fg">
             Greeting {index + 1}
-          </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-muted">
-            {tokenCount !== null ? <span>{tokenCount.toLocaleString()} tokens</span> : null}
-            {!hasContent ? <span>Empty</span> : null}
-          </div>
+          </span>
+          <span className="mt-0.5 block text-xs text-fg-muted">
+            {hasContent ? `${tokenCount.toLocaleString()} tokens` : 'Empty'}
+          </span>
           {hasContent && (
-            <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-fg-subtle">
+            <span className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-fg-subtle">
               {preview}
-            </p>
+            </span>
           )}
-        </div>
+        </button>
 
         <div className="flex shrink-0 items-center gap-0.5">
           <button
@@ -406,10 +413,9 @@ export function GreetingsEditor({
   useEffect(() => {
     onSelectedIndexChange?.(safeSelectedIndex);
   }, [onSelectedIndexChange, safeSelectedIndex]);
-  const selectedGreetingTokenCount = useMemo(
-    () => (selectedGreeting !== undefined ? estimateTokens(selectedGreeting) : null),
-    [selectedGreeting],
-  );
+  const tokenCounts = useMemo(() => greetingsList.map((greeting) => estimateTokens(greeting)), [greetingsList]);
+  const totalTokens = useMemo(() => tokenCounts.reduce((sum, count) => sum + count, 0), [tokenCounts]);
+  const selectedGreetingTokenCount = tokenCounts[safeSelectedIndex] ?? null;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden md:flex-row">
@@ -430,6 +436,7 @@ export function GreetingsEditor({
               <p className="text-sm font-semibold text-fg">Greetings</p>
               <p className="text-xs text-fg-muted">
                 {greetingsList.length} greeting{greetingsList.length !== 1 ? 's' : ''}
+                {greetingsList.length > 0 ? ` · ${totalTokens.toLocaleString()} tokens` : ''}
               </p>
             </div>
           </div>
@@ -448,7 +455,7 @@ export function GreetingsEditor({
                 key={index}
                 greeting={greeting}
                 index={index}
-                tokenCount={index === safeSelectedIndex ? selectedGreetingTokenCount : null}
+                tokenCount={tokenCounts[index] ?? 0}
                 isSelected={index === safeSelectedIndex}
                 canMoveUp={index > 0}
                 canMoveDown={index < greetingsList.length - 1}
@@ -492,8 +499,8 @@ export function GreetingsEditor({
                 <ChevronLeft className="h-4 w-4" />
                 Back
               </button>
-              <div className="hidden min-w-0 md:block">
-                <p className="text-sm font-semibold text-fg">Greeting {safeSelectedIndex + 1}</p>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-fg">Greeting {safeSelectedIndex + 1}</p>
                 {selectedGreetingTokenCount !== null && (
                   <p className="text-xs text-fg-muted">
                     {selectedGreetingTokenCount.toLocaleString()} tokens
