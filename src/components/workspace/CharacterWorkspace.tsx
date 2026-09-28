@@ -106,6 +106,7 @@ function ToastContainer({
             type="button"
             onClick={() => onRemove(toast.id)}
             className="rounded p-1 hover:bg-hover"
+            aria-label="Dismiss notification"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -123,6 +124,7 @@ const iconMap: Record<string, React.ElementType> = {
   User,
   Map,
   MessageCircle,
+  MessageSquare,
   MessagesSquare,
   Terminal,
   History,
@@ -322,6 +324,7 @@ function ImageEditor(): React.ReactElement {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (file) {
       void handleFileSelect(file);
     }
@@ -428,7 +431,7 @@ function CharacterHeader({
   agentRunning = false,
 }: CharacterHeaderProps): React.ReactElement {
   const { currentCharacter } = useCharacterContext();
-  const { saveStatus, isDirty } = useCharacterEditorContext();
+  const { saveStatus, isDirty, flushPendingSaves } = useCharacterEditorContext();
 
   if (!currentCharacter) return <></>;
 
@@ -445,15 +448,22 @@ function CharacterHeader({
   const saveTextClass =
     saveStatus === 'error' ? 'text-danger' : saveStatus === 'saving' || isDirty ? 'text-fg-muted' : 'text-fg-subtle';
 
+  const latestForExport = async () => {
+    flushLorebookDraft();
+    return (await flushPendingSaves()) ?? currentCharacter;
+  };
+
   const handleExportJSON = async () => {
     if (!currentCharacter) return;
-    
-    const result = await characterExportService.exportAsJSON(currentCharacter);
+    const character = await latestForExport();
+    if (!character) return;
+
+    const result = await characterExportService.exportAsJSON(character);
     if (result.success && result.blob) {
       const url = URL.createObjectURL(result.blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = result.filename || `${currentCharacter.name}.json`;
+      a.download = result.filename || `${character.name}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -465,13 +475,15 @@ function CharacterHeader({
 
   const handleExportPNG = async () => {
     if (!currentCharacter) return;
-    
-    const result = await characterExportService.exportAsPNG(currentCharacter);
+    const character = await latestForExport();
+    if (!character) return;
+
+    const result = await characterExportService.exportAsPNG(character);
     if (result.success && result.blob) {
       const url = URL.createObjectURL(result.blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = result.filename || `${currentCharacter.name}.png`;
+      a.download = result.filename || `${character.name}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

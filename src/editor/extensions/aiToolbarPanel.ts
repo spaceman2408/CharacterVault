@@ -542,6 +542,7 @@ function createToolbarPanel(
   searchBtn.className = 'ai-toolbar-btn-search';
   searchBtn.innerHTML = '🔍';
   searchBtn.title = 'Search & Replace (Ctrl+F)';
+  searchBtn.setAttribute('aria-label', 'Search and replace');
   searchBtn.style.cssText = `
     display: flex;
     align-items: center;

@@ -133,6 +133,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     resolve: Array<(value: Character) => void>;
     reject: Array<(reason?: unknown) => void>;
   }>>(new Map());
+  /** Request keys whose last save failed; cleared when that key saves again. */
+  const failedSaveKeysRef = useRef<Set<string>>(new Set());
   const openedCharacterIdRef = useRef<string | null>(null);
   const currentCharacterRef = useRef<Character | null>(currentCharacter);
   const selectedTextRef = useRef(selectedText);
@@ -184,6 +186,25 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
   }, [refreshSnapshotsForCharacter]);
 
+  // One field finishing must not report "Saved" while another is still queued or has failed.
+  const settleSaveStatus = useCallback(() => {
+    if (failedSaveKeysRef.current.size > 0) {
+      setSaveStatus('error');
+      return;
+    }
+    const hasPending =
+      updateCharacterSaveTimerRef.current.size > 0
+      || specSaveTimerRef.current.size > 0
+      || updateCharacterPendingInputRef.current.size > 0
+      || specPendingValueRef.current.size > 0;
+    if (hasPending) {
+      setSaveStatus('saving');
+      return;
+    }
+    setIsDirty(false);
+    setSaveStatus('saved');
+  }, []);
+
   const commitQueuedCharacterUpdate = useCallback(async (requestKey: string, characterId: string): Promise<Character | null> => {
     const queuedInput = updateCharacterPendingInputRef.current.get(requestKey);
     if (!queuedInput) {
@@ -198,10 +219,10 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
       updateCharacterPendingInputRef.current.delete(requestKey);
       updateCharacterPendingResolversRef.current.delete(requestKey);
+      failedSaveKeysRef.current.delete(requestKey);
 
       if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
-        setIsDirty(false);
-        setSaveStatus('saved');
+        settleSaveStatus();
       }
 
       currentResolvers?.resolve.forEach(fn => fn(updated));
@@ -210,6 +231,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
       updateCharacterPendingInputRef.current.delete(requestKey);
       updateCharacterPendingResolversRef.current.delete(requestKey);
+      failedSaveKeysRef.current.add(requestKey);
 
       if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
         setSaveStatus('error');
@@ -218,7 +240,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       currentResolvers?.reject.forEach(fn => fn(error));
       throw error;
     }
-  }, [updateCharacterBase]);
+  }, [settleSaveStatus, updateCharacterBase]);
 
   const commitQueuedSpecFieldUpdate = useCallback(async (
     requestKey: string,
@@ -238,10 +260,10 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       const currentResolvers = specPendingResolversRef.current.get(requestKey);
       specPendingValueRef.current.delete(requestKey);
       specPendingResolversRef.current.delete(requestKey);
+      failedSaveKeysRef.current.delete(requestKey);
 
       if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
-        setIsDirty(false);
-        setSaveStatus('saved');
+        settleSaveStatus();
       }
 
       currentResolvers?.resolve.forEach(fn => fn(updated));
@@ -250,6 +272,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       const currentResolvers = specPendingResolversRef.current.get(requestKey);
       specPendingValueRef.current.delete(requestKey);
       specPendingResolversRef.current.delete(requestKey);
+      failedSaveKeysRef.current.add(requestKey);
 
       if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
         console.error('Failed to save spec field:', error);
@@ -258,7 +281,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       currentResolvers?.reject.forEach(fn => fn(error));
       throw error;
     }
-  }, [updateSpecFieldBase]);
+  }, [settleSaveStatus, updateSpecFieldBase]);
 
   const flushPendingSaves = useCallback(async (): Promise<Character | null> => {
     const character = currentCharacterRef.current;
@@ -401,6 +424,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setActiveSection('name');
       setIsDirty(false);
       setSaveStatus('saved');
+      failedSaveKeysRef.current.clear();
       setSelectedText('');
       // Context pins are global settings — leave them so they restore for the next character
       // Clear any pending debounce timers

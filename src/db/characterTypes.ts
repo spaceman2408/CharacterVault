@@ -395,7 +395,7 @@ export const CHARACTER_SECTIONS: SectionMeta[] = [
   { id: 'name', label: 'Name', icon: 'Type', description: 'Character name' },
   { id: 'description', label: 'Description', icon: 'FileText', description: 'Character description' },
   { id: 'first_mes', label: 'First Message', icon: 'MessageCircle', description: 'First greeting message' },
-  { id: 'alternate_greetings', label: 'Greetings', icon: 'Greeting', description: 'Alternate greetings' },
+  { id: 'alternate_greetings', label: 'Greetings', icon: 'MessageSquare', description: 'Alternate greetings' },
   { id: 'mes_example', label: 'Examples', icon: 'MessagesSquare', description: 'Message examples' },
   { id: 'scenario', label: 'Scenario', icon: 'Map', description: 'Roleplay scenario' },
   { id: 'physical_description', label: 'Appearance', icon: 'Eye', description: 'Physical description' },

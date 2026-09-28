@@ -453,7 +453,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
   if (section === 'image') {
     return (
       <div className="h-full flex items-center justify-center text-fg-muted animate-fade-in-slow">
-        <p>Use the Image section in the left sidebar to upload a character image.</p>
+        <p>Use the Image tab to upload a character image.</p>
       </div>
     );
   }
