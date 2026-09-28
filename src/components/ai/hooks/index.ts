@@ -10,6 +10,7 @@ export {
   type UseAIChatOptions,
   type UseAIChatReturn,
 } from './useAIChat';
+export { useEditLastMessage } from './useEditLastMessage';
 export {
   usePersistedPanelWidth,
   type UsePersistedPanelWidthOptions,

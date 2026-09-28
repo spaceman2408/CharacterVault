@@ -51,7 +51,7 @@ Do not add `if (host === 'lorebook')` in `core/`.
 
 `LorebookWorkspace` and `CharacterWorkspace` import from `../../agent`. `AIChatPanel` / `useAIChat` must not import this package. Shared chrome is `AIChatView` in `components/ai`. The review's line and word diff views live in `components/diff`, shared with the character snapshot history.
 
-Edit on the last user message (`ui/useEditLastMessage.ts`) loads its text with the `setComposerText` that `AIChatView` hands to `renderMessage`. Nothing is trimmed until the edited text is sent through the composer (Continue never commits an edit). Like Send and Regenerate, it opens a pending review instead, so the review outcome still lands on its own run.
+Edit on the last user message (`useEditLastMessage` in `components/ai/hooks`, shared with Orion's `AIChatPanel`) loads its text with the `setComposerText` that `AIChatView` hands to `renderMessage`. Nothing is trimmed until the edited text is sent through the composer (Continue never commits an edit). Like Send and Regenerate, it opens a pending review instead, so the review outcome still lands on its own run.
 
 The agent chats pass `mentionOptions` (`ui/mentions.ts`) to `AIChatView`. Picking one inserts plain `@Label` text; the message format does not change. `MENTIONS_GUIDE` in `core/prompts.ts` tells the model what `@Name` means, so keep the labels in step with the field and entry catalogs.
 

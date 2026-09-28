@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { useEditLastMessage } from '../../../src/agent/ui/useEditLastMessage';
+import { useEditLastMessage } from '../../../src/components/ai/hooks/useEditLastMessage';
 import type { ChatMessage } from '../../../src/components/ai/types';
 
 afterEach(cleanup);

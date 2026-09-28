@@ -17,3 +17,6 @@ export type { ChatMessageProps } from './ChatMessage';
 
 export { DeleteMessageButton } from './DeleteMessageButton';
 export type { DeleteMessageButtonProps } from './DeleteMessageButton';
+
+export { EditMessageButton } from './EditMessageButton';
+export type { EditMessageButtonProps } from './EditMessageButton';

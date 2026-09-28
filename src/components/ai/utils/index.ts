@@ -51,6 +51,13 @@ export function clipCommitReasoning(text?: string): string | undefined {
   return `…${text.slice(-COMMIT_REASONING_MAX_CHARS)}`;
 }
 
+export function lastUserMessageIndex(history: ReadonlyArray<{ role: string }>): number {
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    if (history[i].role === 'user') return i;
+  }
+  return -1;
+}
+
 export function canRetryEmptySend(
   chatHistory: ReadonlyArray<{ role: string; content?: string }>,
   showRegenerate: boolean,

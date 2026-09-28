@@ -6,6 +6,7 @@ import {
   clipCommitReasoning,
   COMMIT_REASONING_MAX_CHARS,
   generateMessageId,
+  lastUserMessageIndex,
   toResponseStats,
   type AccumulatedResponseStats,
 } from '../../components/ai/utils';
@@ -83,12 +84,7 @@ function toServiceMessages(messages: AgentMessage[]): ServiceChatMessage[] {
   }));
 }
 
-export function lastUserMessageIndex(history: Array<{ role: string }>): number {
-  for (let i = history.length - 1; i >= 0; i -= 1) {
-    if (history[i].role === 'user') return i;
-  }
-  return -1;
-}
+export { lastUserMessageIndex };
 
 /** RAM window only; older rows stay in IndexedDB. */
 export function clipAgentHistoryWindow(

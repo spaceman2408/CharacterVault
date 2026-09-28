@@ -1,8 +1,8 @@
 import React, { memo, useCallback } from 'react';
-import { Pencil, X } from 'lucide-react';
 import { stripFences } from '../core/stripFences';
 import { CopyButton } from '../../components/ai/components/CopyButton';
 import { DeleteMessageButton } from '../../components/ai/components/DeleteMessageButton';
+import { EditMessageButton } from '../../components/ai/components/EditMessageButton';
 import { LazyMarkdown } from '../../components/ai/components/LazyMarkdown';
 import { RegenerateButton } from '../../components/ai/components/RegenerateButton';
 import type { ChatMessage } from '../../components/ai/types';
@@ -64,29 +64,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
         >
           <p className={`${onEdit || onCancelEdit ? 'pr-15' : 'pr-8'} text-sm whitespace-pre-wrap`}>{message.content}</p>
           <div className="absolute top-1.5 right-1.5 flex gap-0.5">
-            {onCancelEdit ? (
-              <button
-                type="button"
-                onClick={onCancelEdit}
-                disabled={isProcessing}
-                className="p-1.5 rounded-md transition-all disabled:opacity-40 disabled:pointer-events-none text-accent-fg bg-white/20 hover:bg-white/25"
-                title="Cancel edit"
-                aria-label="Cancel edit"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            ) : onEdit ? (
-              <button
-                type="button"
-                onClick={onEdit}
-                disabled={isProcessing}
-                className="p-1.5 rounded-md transition-all focus:opacity-100 disabled:opacity-40 disabled:pointer-events-none opacity-100 md:opacity-0 md:group-hover:opacity-100 text-accent-fg/70 hover:text-accent-fg hover:bg-white/15"
-                title="Edit and resend"
-                aria-label="Edit and resend"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-            ) : null}
+            <EditMessageButton onEdit={onEdit} onCancelEdit={onCancelEdit} disabled={isProcessing} />
             <DeleteMessageButton onDelete={handleDelete} disabled={isProcessing} variant="onAccent" />
           </div>
           <span className="mt-1.5 flex items-center text-[11px] text-accent-fg/70">

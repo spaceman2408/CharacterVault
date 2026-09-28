@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
+import { useEditLastMessage } from '../../components/ai/hooks/useEditLastMessage';
 import type { ChatMessage } from '../../components/ai/types';
 import type {
   AIConfig,
@@ -34,7 +35,6 @@ import { characterMentions } from './mentions';
 import { characterSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
 import { useCharacterAgent, type PersistAgentCard } from './useCharacterAgent';
-import { useEditLastMessage } from './useEditLastMessage';
 
 export interface CharacterAgentChatProps {
   aiConfig: AIConfig;

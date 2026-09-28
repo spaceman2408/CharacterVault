@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
+import { useEditLastMessage } from '../../components/ai/hooks/useEditLastMessage';
 import type { ChatMessage } from '../../components/ai/types';
 import type {
   AIConfig,
@@ -30,7 +31,6 @@ import {
 import { lorebookMentions } from './mentions';
 import { lorebookSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
-import { useEditLastMessage } from './useEditLastMessage';
 import { useLorebookAgent, type SetAgentBook } from './useLorebookAgent';
 
 export interface LorebookAgentChatProps {

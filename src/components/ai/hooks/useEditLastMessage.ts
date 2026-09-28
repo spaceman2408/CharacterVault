@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { ChatMessage } from '../../components/ai/types';
-import { lastUserMessageIndex } from './useAgentSession';
+import type { ChatMessage } from '../types';
+import { lastUserMessageIndex } from '../utils';
 
 type SetComposerText = (text: string) => void;
 
