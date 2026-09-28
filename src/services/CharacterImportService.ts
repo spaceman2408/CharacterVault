@@ -17,6 +17,9 @@ import { generateThumbnail } from '../utils/thumbnail';
 
 const IMPORTED_CHARACTER_FLAG = 'character_vault_imported';
 
+/** Cap on a decompressed iTXt card chunk, far above any real card. */
+const MAX_INFLATED_CARD_BYTES = 64 * 1024 * 1024;
+
 /**
  * Character Import Service
  */
@@ -539,8 +542,28 @@ export class CharacterImportService {
    * Inflate a zlib stream (PNG compression method 0).
    */
   private async inflate(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
-    const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate'));
-    return new Uint8Array(await new Response(stream).arrayBuffer());
+    const reader = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate')).getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        // A small crafted chunk can inflate to gigabytes and crash the tab.
+        if (total > MAX_INFLATED_CARD_BYTES) throw new Error('Compressed card data is too large');
+        chunks.push(value);
+      }
+    } finally {
+      void reader.cancel().catch(() => undefined);
+    }
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      out.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return out;
   }
 
   /**

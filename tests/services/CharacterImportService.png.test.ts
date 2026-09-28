@@ -95,4 +95,18 @@ describe('CharacterImportService PNG chunks', () => {
     expect(result.success).toBe(true);
     expect(result.character?.name).toBe('Zipped');
   });
+
+  it('refuses a compressed chunk that inflates past the size cap', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const stream = new Blob([new Uint8Array(65 * 1024 * 1024)]).stream().pipeThrough(new CompressionStream('deflate'));
+    const bomb = new Uint8Array(await new Response(stream).arrayBuffer());
+    const header = concat([encoder.encode('chara'), new Uint8Array([0, 1, 0, 0, 0])]);
+
+    const result = await service.importFromFile(png(chunk('iTXt', concat([header, bomb]))));
+
+    expect(result.success).toBe(false);
+    expect(createCharacter).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('Failed to decompress iTXt chunk:', expect.any(Error));
+    warn.mockRestore();
+  });
 });
