@@ -161,6 +161,50 @@ describe('LorebookConverter', () => {
     expect(reimported?.entries).toHaveLength(2);
   });
 
+  it('keys exported ST entries by uid after an entry was deleted', () => {
+    const entry = (id: number): LorebookEntry => ({
+      id,
+      keys: [`k${id}`],
+      content: `Entry ${id}`,
+      extensions: {},
+      enabled: true,
+    });
+
+    const exported = convertToSTLorebook({ entries: [entry(0), entry(2), entry(5)], extensions: {} });
+    expect(Object.keys(exported.entries)).toEqual(['0', '2', '5']);
+    for (const [key, stEntry] of Object.entries(exported.entries)) {
+      expect(stEntry.uid).toBe(Number(key));
+    }
+
+    const reimported = importLorebook(exported);
+    expect(reimported?.entries.map((e) => e.id)).toEqual([0, 2, 5]);
+    expect(reimported?.entries.map((e) => e.content)).toEqual(['Entry 0', 'Entry 2', 'Entry 5']);
+  });
+
+  it('gives duplicate or missing entry ids a free uid instead of dropping entries', () => {
+    const entry = (id: number, content: string): LorebookEntry => ({
+      id,
+      keys: [],
+      content,
+      extensions: {},
+      enabled: true,
+    });
+
+    const exported = convertToSTLorebook({
+      entries: [entry(1, 'a'), entry(1, 'b'), entry(undefined as unknown as number, 'c'), entry(0, 'd')],
+      extensions: {},
+    });
+
+    expect(Object.keys(exported.entries)).toEqual(['0', '1', '2', '3']);
+    for (const [key, stEntry] of Object.entries(exported.entries)) {
+      expect(stEntry.uid).toBe(Number(key));
+    }
+    expect(exported.entries['1'].content).toBe('a');
+    expect(exported.entries['2'].content).toBe('b');
+    expect(exported.entries['3'].content).toBe('c');
+    expect(exported.entries['0'].content).toBe('d');
+  });
+
   it('imports book-level scan settings from ST originalData', () => {
     const book = convertSTLorebook({
       entries: {

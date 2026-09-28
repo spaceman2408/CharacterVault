@@ -480,9 +480,20 @@ export function convertToSTEntry(entry: LorebookEntry, displayIndex: number): ST
  */
 export function convertToSTLorebook(book: CharacterBook): STLorebookExport {
   const entries: Record<string, STLorebookEntry> = {};
+  const takenIds = new Set(book.entries.map((entry) => entry.id));
+  const usedUids = new Set<number>();
+  let freeUid = 0;
 
+  // SillyTavern looks entries up by `data.entries[uid]`, so each key must equal its uid.
   book.entries.forEach((entry, index) => {
-    entries[String(index)] = convertToSTEntry(entry, index);
+    const stEntry = convertToSTEntry(entry, index);
+    if (!Number.isFinite(stEntry.uid) || usedUids.has(stEntry.uid)) {
+      while (takenIds.has(freeUid)) freeUid += 1;
+      stEntry.uid = freeUid;
+      takenIds.add(freeUid);
+    }
+    usedUids.add(stEntry.uid);
+    entries[String(stEntry.uid)] = stEntry;
   });
 
   return {
