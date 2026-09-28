@@ -67,4 +67,17 @@ describe('prompt reset', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
     expect(headerFor('Name Prompt').textContent).not.toContain('edited');
   });
+
+  it('asks before resetting all Studio prompts', () => {
+    render(<Harness tab={CreationStudioTab} />);
+
+    fireEvent.click(screen.getByText('Reset to defaults'));
+    expect(screen.getByText('Reset all Studio prompts?')).toBeTruthy();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(headerFor('Name Prompt').textContent).toContain('edited');
+
+    fireEvent.click(screen.getByText('Reset to defaults'));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    expect(headerFor('Name Prompt').textContent).not.toContain('edited');
+  });
 });

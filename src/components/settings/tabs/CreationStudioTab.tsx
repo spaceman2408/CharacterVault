@@ -13,6 +13,7 @@ import type { StudioPromptKey } from '../../../pages/ai-creation-studio/generati
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
 import { EditedBadge, ResetPromptButton } from '../components/ResetPromptButton';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import type { SettingsTabProps } from '../types';
 
 const STUDIO_OPTIONAL_FIELDS: Array<{ key: StudioGenerationField; label: string; hint: string }> = [
@@ -86,6 +87,7 @@ const StudioPromptEditor: React.FC<{
 
 export const CreationStudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   const [expandedPrompts, setExpandedPrompts] = useState<Record<string, boolean>>({});
+  const [confirmingResetAll, setConfirmingResetAll] = useState(false);
 
   const setStudioPrompt = (key: StudioPromptKey, value: string) => {
     setDraft((prev) => ({
@@ -200,7 +202,7 @@ export const CreationStudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft 
           </h3>
           <button
             type="button"
-            onClick={resetStudioPrompts}
+            onClick={() => setConfirmingResetAll(true)}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-fg-muted hover:text-accent hover:bg-accent-soft rounded-lg transition-colors"
             title="Reset all Studio prompts to defaults"
           >
@@ -224,6 +226,17 @@ export const CreationStudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft 
             onChange={(v) => setStudioPrompt(key, v)}
           />
         ))}
+        <ConfirmDialog
+          open={confirmingResetAll}
+          title="Reset all Studio prompts?"
+          message="All five generation prompts will be replaced with the defaults."
+          confirmLabel="Reset"
+          onConfirm={() => {
+            setConfirmingResetAll(false);
+            resetStudioPrompts();
+          }}
+          onCancel={() => setConfirmingResetAll(false)}
+        />
       </SettingsCard>
 
       <SettingsCard>
