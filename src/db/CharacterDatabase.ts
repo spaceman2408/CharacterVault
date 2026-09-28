@@ -612,7 +612,6 @@ export class CharacterDatabase extends Dexie {
       version: 1,
       createdAt: timestamp,
       updatedAt: timestamp,
-      lastOpenedAt: timestamp,
     };
 
     await this.transaction('rw', this.characters, this.characterListIndex, async () => {
@@ -787,7 +786,7 @@ export class CharacterDatabase extends Dexie {
       },
       createdAt: timestamp,
       updatedAt: timestamp,
-      lastOpenedAt: timestamp,
+      lastOpenedAt: undefined,
     };
 
     await this.transaction(
@@ -915,7 +914,6 @@ export class CharacterDatabase extends Dexie {
       version: 1,
       createdAt: timestamp,
       updatedAt: timestamp,
-      lastOpenedAt: timestamp,
     };
 
     await this.transaction('rw', this.characters, this.characterListIndex, async () => {

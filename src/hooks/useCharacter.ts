@@ -132,7 +132,9 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
   const createCharacter = useCallback(async (input: CreateCharacterInput): Promise<Character> => {
     // Exclusive workspace: never hold a full vault lorebook while a card is open
     dropOpenLorebookPayload();
-    const character = await characterDb.createCharacter(input);
+    const created = await characterDb.createCharacter(input);
+    // Creating here also opens the card, so record the open like openCharacter does
+    const character = { ...created, lastOpenedAt: await characterDb.updateLastOpened(created.id) };
     // Only keep the open card in memory - never stack full characters
     setCharacters([character]);
     setCharacterListItems((prev) => [toCharacterListItem(character), ...prev]);
