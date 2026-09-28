@@ -8,6 +8,7 @@ import type { ChatMessage as ChatMessageType } from '../types';
 import { formatTime } from '../utils';
 import { CopyButton } from './CopyButton';
 import { DeleteMessageButton } from './DeleteMessageButton';
+import { EditMessageButton } from './EditMessageButton';
 import { FoldedText } from './FoldedText';
 import { LazyMarkdown } from './LazyMarkdown';
 import { RegenerateButton } from './RegenerateButton';
@@ -22,6 +23,10 @@ export interface ChatMessageProps {
   isProcessing: boolean;
   onRegenerate: () => void;
   onDelete: (messageId: string) => void;
+  /** Pass only for the last user message. */
+  onEdit?: () => void;
+  /** Pass only while this message is being edited. */
+  onCancelEdit?: () => void;
 }
 
 const AssistantMessageBody = memo(function AssistantMessageBody({
@@ -57,6 +62,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(
     isProcessing,
     onRegenerate,
     onDelete,
+    onEdit,
+    onCancelEdit,
   }) => {
     const isUser = message.role === 'user';
     const animationClass = message.suppressInitialAnimation ? '' : 'message-animate';
@@ -76,8 +83,11 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(
         >
           {isUser ? (
             <>
-              <p className="text-sm whitespace-pre-wrap pr-8">{message.content}</p>
+              <p className={`text-sm whitespace-pre-wrap ${onEdit || onCancelEdit ? 'pr-15' : 'pr-8'}`}>
+                {message.content}
+              </p>
               <div className="absolute top-1.5 right-1.5 flex gap-0.5">
+                <EditMessageButton onEdit={onEdit} onCancelEdit={onCancelEdit} disabled={isProcessing} />
                 <DeleteMessageButton
                   onDelete={handleDelete}
                   disabled={isProcessing}
@@ -112,6 +122,11 @@ export const ChatMessage: React.FC<ChatMessageProps> = memo(
             }`}
           >
             {formatTime(message.timestamp)}
+            {onCancelEdit ? (
+              <span className="ml-1.5" title="Send to replace this message and the replies after it">
+                · Editing
+              </span>
+            ) : null}
             {!isUser && message.stats ? <StatsInfoButton stats={message.stats} /> : null}
           </span>
         </div>

@@ -47,6 +47,10 @@ The Orion thread for this character or standalone lorebook is stored in the brow
 
 **Load earlier messages** pages older turns back in. The on-screen window stays small; oldest rows drop past 500 saved messages per panel.
 
+### Editing your last message
+
+The pencil on your last message puts its text back in the box. Nothing is removed until you send; then that message and the replies after it are replaced. The **×** cancels and keeps the chat as it was. You can't edit while Orion is replying.
+
 ### Cancelling a Request
 
 You can abort an in-progress request at any time. The current generation stops immediately.
