@@ -21,6 +21,7 @@ import { ChatModeSwitch } from '../ai/ChatModeSwitch';
 import { usePersistedPanelWidth } from '../ai/hooks';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { CharacterHistoryModal } from '../history/CharacterHistoryModal';
+import { estimateCharacterCardTokens, formatTokenEstimate } from '../../services/AIService';
 import { characterExportService } from '../../services/CharacterExportService';
 import { characterSnapshotService } from '../../services/CharacterSnapshotService';
 import { customContextService } from '../../services/CustomContextService';
@@ -432,6 +433,10 @@ function CharacterHeader({
 }: CharacterHeaderProps): React.ReactElement {
   const { currentCharacter } = useCharacterContext();
   const { saveStatus, isDirty, flushPendingSaves } = useCharacterEditorContext();
+  const cardTokens = React.useMemo(
+    () => (currentCharacter ? estimateCharacterCardTokens(currentCharacter.data, currentCharacter.name) : null),
+    [currentCharacter],
+  );
 
   if (!currentCharacter) return <></>;
 
@@ -539,6 +544,15 @@ function CharacterHeader({
                 <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${saveDotClass}`} />
                 <span className="hidden sm:inline">{saveLabel}</span>
               </span>
+              {cardTokens ? (
+                <span
+                  className="hidden whitespace-nowrap tabular-nums text-fg-subtle md:inline"
+                  title={`Active: ${cardTokens.active.toLocaleString()} tokens sent every message (name, description, appearance, personality, scenario, system, post-history, examples). Total: ${cardTokens.total.toLocaleString()}, adding greetings and lorebook entries.`}
+                >
+                  <span className="text-accent">{formatTokenEstimate(cardTokens.active)}</span> active ·{' '}
+                  {formatTokenEstimate(cardTokens.total)} total tokens
+                </span>
+              ) : null}
               {agentRunning ? (
                 <span
                   role="status"
