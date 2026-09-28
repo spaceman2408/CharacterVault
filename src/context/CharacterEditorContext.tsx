@@ -137,6 +137,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   }>>(new Map());
   /** Request keys whose last save failed; cleared when that key saves again. */
   const failedSaveKeysRef = useRef<Set<string>>(new Set());
+  const lastGreetingIndexRef = useRef<Map<string, number>>(new Map());
   const openedCharacterIdRef = useRef<string | null>(null);
   const currentCharacterRef = useRef<Character | null>(currentCharacter);
   const selectedTextRef = useRef(selectedText);
@@ -352,6 +353,14 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   }, []);
 
   useEffect(() => registerPendingSaveDiscard(discardPendingSaves), [discardPendingSaves]);
+
+  const getLastGreetingIndex = useCallback(
+    (characterId: string) => lastGreetingIndexRef.current.get(characterId) ?? 0,
+    [],
+  );
+  const rememberGreetingIndex = useCallback((characterId: string, index: number) => {
+    lastGreetingIndexRef.current.set(characterId, index);
+  }, []);
 
   /**
    * Visible sections: sectionOrder minus hiddenSections.
@@ -1261,6 +1270,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     updateCharacter,
     updateSpecField,
     flushPendingSaves,
+    getLastGreetingIndex,
+    rememberGreetingIndex,
     setFontSize,
     setSelectedText,
     setContextSectionIds: setContextSectionIdsCallback,

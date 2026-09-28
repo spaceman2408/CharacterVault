@@ -22,7 +22,7 @@ describe('parseToolTarget', () => {
     });
     expect(parseToolTarget('move_greeting', true, 'ok moved greeting 3 → 1 (4 greetings)')).toEqual({
       type: 'greeting',
-      index: 3,
+      index: 1,
     });
   });
 

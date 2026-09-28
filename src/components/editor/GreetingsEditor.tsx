@@ -21,6 +21,11 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 interface GreetingsEditorProps {
   greetings: string[];
   onChange: (greetings: string[]) => void;
+  /** Greeting selected when the editor mounts. */
+  initialIndex?: number;
+  onSelectedIndexChange?: (index: number) => void;
+  /** Select this greeting (0-based) when nonce changes. */
+  focusGreeting?: { index: number; nonce: number } | null;
   selectedText: string;
   setSelectedText: (text: string) => void;
   contextSectionIds: CharacterSection[];
@@ -252,6 +257,9 @@ function GreetingDetail({
 export function GreetingsEditor({
   greetings,
   onChange,
+  initialIndex = 0,
+  onSelectedIndexChange,
+  focusGreeting,
   setSelectedText,
   contextSectionIds,
   aiConfig,
@@ -266,7 +274,7 @@ export function GreetingsEditor({
   roleplayHighlight,
 }: GreetingsEditorProps): React.ReactElement {
   const [greetingsList, setGreetingsList] = useState<string[]>(greetings);
-  const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(0);
+  const [selectedGreetingIndex, setSelectedGreetingIndex] = useState<number>(initialIndex);
   const [isMobileViewOpen, setIsMobileViewOpen] = useState(false);
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
   const [pendingDuplicateIndex, setPendingDuplicateIndex] = useState<number | null>(null);
@@ -277,6 +285,14 @@ export function GreetingsEditor({
     setSelectedGreetingIndex(index);
     setDetailKey((key) => key + 1);
   }, []);
+
+  // Apply each jump once, during render, so the editor mounts on the right greeting.
+  const [handledFocusNonce, setHandledFocusNonce] = useState<number | null>(null);
+  if (focusGreeting && focusGreeting.nonce !== handledFocusNonce) {
+    setHandledFocusNonce(focusGreeting.nonce);
+    showOtherGreeting(Math.max(0, Math.min(focusGreeting.index, greetingsList.length - 1)));
+    setIsMobileViewOpen(true);
+  }
 
   // Sync list from persisted state
   useEffect(() => {
@@ -386,6 +402,10 @@ export function GreetingsEditor({
   // Ensure selected index is valid
   const safeSelectedIndex = selectedGreetingIndex < greetingsList.length ? selectedGreetingIndex : 0;
   const selectedGreeting = greetingsList[safeSelectedIndex];
+
+  useEffect(() => {
+    onSelectedIndexChange?.(safeSelectedIndex);
+  }, [onSelectedIndexChange, safeSelectedIndex]);
   const selectedGreetingTokenCount = useMemo(
     () => (selectedGreeting !== undefined ? estimateTokens(selectedGreeting) : null),
     [selectedGreeting],

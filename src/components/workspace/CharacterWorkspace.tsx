@@ -861,6 +861,7 @@ function CharacterWorkspaceInner({
   const [lorebookFocusEntry, setLorebookFocusEntry] = useState<{ id: number; nonce: number } | null>(
     null,
   );
+  const [greetingFocus, setGreetingFocus] = useState<{ index: number; nonce: number } | null>(null);
   const { 
     currentCharacter,
     activeSection,
@@ -898,6 +899,7 @@ function CharacterWorkspaceInner({
       }
       if (target.type === 'greeting') {
         setActiveSection('alternate_greetings');
+        setGreetingFocus({ index: target.index - 1, nonce: Date.now() });
         return;
       }
       setActiveSection('lorebook');
@@ -906,9 +908,10 @@ function CharacterWorkspaceInner({
     [setActiveSection],
   );
 
-  // The lorebook editor remounts per visit; a kept focus would reselect that entry every time.
+  // Section editors remount per visit; a kept focus would reselect that item every time.
   useEffect(() => {
     if (activeSection !== 'lorebook') setLorebookFocusEntry(null);
+    if (activeSection !== 'alternate_greetings') setGreetingFocus(null);
   }, [activeSection]);
   const [agentRunning, setAgentRunning] = useState(false);
 
@@ -1154,7 +1157,11 @@ function CharacterWorkspaceInner({
                 {activeSection === 'image' ? (
                   <ImageEditor />
                 ) : (
-                  <SectionEditor section={activeSection} focusEntry={lorebookFocusEntry} />
+                  <SectionEditor
+                    section={activeSection}
+                    focusEntry={lorebookFocusEntry}
+                    focusGreeting={greetingFocus}
+                  />
                 )}
               </div>
             </div>

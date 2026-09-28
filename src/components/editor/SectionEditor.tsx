@@ -21,6 +21,8 @@ import type { Extension } from '@codemirror/state';
 interface SectionEditorProps {
   section: CharacterSection;
   focusEntry?: { id: number; nonce: number } | null;
+  /** Select this greeting (0-based) when nonce changes (Agent tool-line navigation). */
+  focusGreeting?: { index: number; nonce: number } | null;
 }
 
 interface MinimalSectionHeaderProps {
@@ -241,7 +243,7 @@ function getSectionValue(character: { data: { spec: { name: string; description:
  * Section Editor with CodeMirror and AI integration
  * Uses fixed AI toolbar panel at top of editor - no floating elements, no drag needed
  */
-export function SectionEditor({ section, focusEntry }: SectionEditorProps): React.ReactElement {
+export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEditorProps): React.ReactElement {
   const {
     currentCharacter,
     updateCharacter,
@@ -260,6 +262,8 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     markdownImageOpenLinks,
     creatorNotesRemoteWarning,
     roleplayHighlight,
+    getLastGreetingIndex,
+    rememberGreetingIndex,
   } = useCharacterEditorContext();
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
@@ -489,11 +493,17 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
 
   // Handle alternate_greetings section specially
   if (section === 'alternate_greetings') {
+    const characterId = currentCharacter?.id;
     return (
       <div className="absolute inset-0 h-full w-full animate-fade-in-slow">
         <GreetingsEditor
           greetings={currentCharacter?.data?.spec?.alternate_greetings || []}
           onChange={(greetings) => void updateSpecField(section, greetings)}
+          initialIndex={characterId ? getLastGreetingIndex(characterId) : 0}
+          onSelectedIndexChange={(index) => {
+            if (characterId) rememberGreetingIndex(characterId, index);
+          }}
+          focusGreeting={focusGreeting}
           selectedText={''}
           setSelectedText={setSelectedText}
           contextSectionIds={contextSectionIds}

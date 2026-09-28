@@ -130,7 +130,10 @@ export interface CharacterEditorContextValue {
   updateSpecField: (field: keyof Character['data']['spec'], value: string | string[]) => Promise<Character>;
   /** Commit queued debounced character/spec saves and return the latest card */
   flushPendingSaves: () => Promise<Character | null>;
-  
+  /** Greeting index last shown for a character while the workspace is open; 0 when none. */
+  getLastGreetingIndex: (characterId: string) => number;
+  rememberGreetingIndex: (characterId: string, index: number) => void;
+
   /** Set font size */
   setFontSize: (size: number) => void;
   

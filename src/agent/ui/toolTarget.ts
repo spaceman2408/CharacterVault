@@ -24,7 +24,7 @@ export function parseToolTarget(toolName: string, ok: boolean, message: string):
   if (GREETING_TOOLS.has(toolName)) {
     const deleted = /^ok deleted greeting (\d+)/.exec(message);
     if (deleted) return { type: 'greeting', index: Number(deleted[1]) };
-    const moved = /^ok moved greeting (\d+)/.exec(message);
+    const moved = /^ok moved greeting \d+ → (\d+)/.exec(message);
     if (moved) return { type: 'greeting', index: Number(moved[1]) };
     const slot = /^ok greeting (\d+)\//.exec(message);
     if (slot) return { type: 'greeting', index: Number(slot[1]) };
