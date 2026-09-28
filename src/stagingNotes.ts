@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.8.1 staging 2';
+export const STAGING_VERSION = 'v1.8.1 staging 3';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -32,4 +32,12 @@ export const STAGING_TEST_NOTES: string[] = [
   'Snapshots: lorebook entry settings (enabled, position, order, keys) and entry order changes now show in the diff.',
   'Chat header: the Orion / Agent icons at the left switch modes. The highlighted one is active.',
   'Orion: hover your last message and click the pencil to edit and resend it. × cancels and keeps the chat as it was.',
+  'Workspace header: card tokens (active / total) next to the save status, on wider screens.',
+  'Greetings: rows show tokens, Tab + Enter pick one, and the open greeting stays open across sections.',
+  'Agent: after it edits a greeting, click that line in the chat to open the greeting.',
+  'Image tab: drop or paste an image to set it. Replacing an existing image asks first.',
+  'Lorebook: every entry row shows its content token count.',
+  'Orion: if a reply fails, click Retry on the banner or press Enter in the empty box. Esc stops a reply.',
+  'Inline AI toolbar: after Reject, Stop, or closing an error, your text is selected again.',
+  'Settings → Prompts / Studio: changed prompts show "edited" and Reset to default. Resets ask first.',
 ];
