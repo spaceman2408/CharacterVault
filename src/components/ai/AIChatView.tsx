@@ -9,6 +9,7 @@ import {
   Square,
   Send,
   Layers,
+  RotateCcw,
 } from 'lucide-react';
 import { StreamingText } from './StreamingText';
 import type { ChatMessage } from './types';
@@ -166,15 +167,19 @@ export function AIChatView({
     input.focus();
   }, [composerTextRequest]);
 
+  const canRetry = !composerDisabled && canRetryEmptySend(chatHistory, showRegenerate);
+  const retriesOnSend = canRetry && !askQuestion.trim();
+
+  const handleRetry = async () => {
+    const retry = handleRegenerate();
+    focusComposer();
+    await retry;
+  };
+
   const handleSubmit = async () => {
     if (composerDisabled) return;
     if (!askQuestion.trim()) {
-      if (canRetryEmptySend(chatHistory, showRegenerate)) {
-        const retry = handleRegenerate();
-        focusComposer();
-        await retry;
-        return;
-      }
+      if (canRetry) await handleRetry();
       return;
     }
 
@@ -186,10 +191,7 @@ export function AIChatView({
     if ((await ask) === false) setComposerText(draft);
   };
 
-  const canSend =
-    isProcessing ||
-    (!composerDisabled &&
-      (!!askQuestion.trim() || canRetryEmptySend(chatHistory, showRegenerate)));
+  const canSend = isProcessing || (!composerDisabled && (!!askQuestion.trim() || canRetry));
 
   const onComposerInput = useCallback((e: React.FormEvent<HTMLTextAreaElement>) => {
     fitComposerHeight(e.currentTarget);
@@ -303,6 +305,16 @@ export function AIChatView({
         <div className="mx-3 mt-3 p-3 bg-danger-soft border border-danger/30 rounded-xl flex items-start gap-2 text-danger text-sm shrink-0">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span className="flex-1 min-w-0">{error}</span>
+          {canRetry && !isProcessing && (
+            <button
+              type="button"
+              onClick={() => void handleRetry()}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 -my-0.5 text-xs font-medium text-danger hover:bg-danger/10 rounded-md transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Retry
+            </button>
+          )}
           <button
             type="button"
             onClick={clearError}
@@ -467,7 +479,18 @@ export function AIChatView({
             className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-40 transition-all disabled:cursor-not-allowed disabled:opacity-60"
             onKeyDown={(e) => {
               if (mentions.handleKeyDown(e)) return;
-              if (e.key === 'Enter' && !e.shiftKey && !isProcessing && !composerDisabled && askQuestion.trim()) {
+              if (e.key === 'Escape' && isProcessing) {
+                e.preventDefault();
+                handleAbort();
+                return;
+              }
+              if (
+                e.key === 'Enter'
+                && !e.shiftKey
+                && !isProcessing
+                && !composerDisabled
+                && (askQuestion.trim() || canRetry)
+              ) {
                 e.preventDefault();
                 void handleSubmit();
               }
@@ -494,7 +517,15 @@ export function AIChatView({
                   : 'bg-accent text-accent-fg hover:opacity-90 active:scale-[0.98]'
               }
             `}
-            title={isProcessing ? 'Stop' : composerDisabled ? effectiveHint : 'Send'}
+            title={
+              isProcessing
+                ? 'Stop'
+                : composerDisabled
+                  ? effectiveHint
+                  : retriesOnSend
+                    ? 'Retry'
+                    : 'Send'
+            }
           >
             {isProcessing ? <Square className="w-4 h-4" /> : <Send className="w-4 h-4" />}
           </button>
