@@ -90,6 +90,23 @@ export const markdownComponents: Components = {
     );
   },
 
+  // Auto-loading a model-chosen URL leaks data (prompt injection can put
+  // chat context in the query string), so images only open on click.
+  img({ src, alt }) {
+    if (typeof src !== 'string' || !src) return <>{alt}</>;
+    return (
+      <a
+        href={src}
+        title={src}
+        className="text-fg-muted hover:underline"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {alt ? `Image: ${alt}` : 'Image'}
+      </a>
+    );
+  },
+
   ul({ children }) {
     return <ul className="list-disc pl-5 my-2">{children}</ul>;
   },
