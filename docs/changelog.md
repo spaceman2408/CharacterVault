@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.8.0 (2026-09-27)
+
+CharacterVault 1.8.0 makes the AI Agent easier to steer, follow, and review: edit and resend your last message, @-mention fields and entries, see what each run is doing and what earlier runs changed, and check its edits in a clearer diff. Full notes: [v1.8.0 release notes](/releases/v1.8.0).
+
+### Highlights
+
+- **Steer the Agent** — pencil on your last message to edit and resend (nothing removed until you send), type `@` to mention a field, greeting, or entry, card-aware starter suggestions on an empty chat, and **Continue** after the 32-turn limit
+- **Know what it is doing** — the status line names the target (*Updating Description*), each request carries notes on what earlier runs changed and your review choices, and the tab title reads **Agent finished** when a run ends while you are away
+- **Clearer review diffs** — with **Settings → Character Workspace → Review agent edits before applying** on: side by side on wide screens, inline on phones, word highlights, and **Show N unchanged lines** folds
+- Editor edits made during a run are kept; transient provider errors retry with backoff; long runs trim old tool results to fit **Context Length**
+
+Details: [AI Agent](/features/ai-agent) · [What's New](/whats-new)
+
+---
+
 ## 1.7.5 (2026-09-24)
 
 Clearer agent-review greeting diffs and custom tags in Creation Studio gender rules. Full notes: [v1.7.5 release notes](/releases/v1.7.5).

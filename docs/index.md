@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.7.5
-Clearer agent-review greeting diffs and custom tags in Creation Studio gender rules, plus steadier thinking and chat autoscroll.
+::: tip CharacterVault 1.8.0
+An AI Agent that is easier to steer, follow, and review: edit and resend, @-mentions, run status and memory, and clearer review diffs.
 
-[Try it](https://vault.charactervault.app) · [Review edits](/features/ai-agent#review-edits) · [Feeling Lucky](/features/ai-creation-studio#feeling-lucky)
+[Try it](https://vault.charactervault.app) · [Chat controls](/features/ai-agent#chat-controls) · [Review edits](/features/ai-agent#review-edits)
 :::
 
 # CharacterVault
