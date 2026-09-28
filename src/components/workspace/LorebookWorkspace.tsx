@@ -7,7 +7,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   Book,
-  Bot,
   Download,
   History,
   Loader2,
@@ -21,6 +20,7 @@ import { LorebookEditor } from '../editor/LorebookEditor';
 import { LorebookHistoryModal } from '../history/LorebookHistoryModal';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
+import { ChatModeSwitch } from '../ai/ChatModeSwitch';
 import { usePersistedPanelWidth } from '../ai/hooks/usePersistedPanelWidth';
 import { LinkedCharactersMenu } from './LinkedCharactersMenu';
 import { flushChatSessions } from '../../utils/chatSessionFlush';
@@ -471,6 +471,13 @@ export function LorebookWorkspace(): React.ReactElement {
 
   const toggleChat = () => setIsChatOpen((open) => !open);
 
+  const chatModeSwitch = (
+    <ChatModeSwitch
+      mode={agentMode ? 'agent' : 'orion'}
+      onChange={(mode) => setAgentMode(mode === 'agent')}
+    />
+  );
+
   if (!currentLorebook) {
     return (
       <div className="flex h-dvh items-center justify-center bg-bg text-fg-muted">
@@ -684,18 +691,7 @@ export function LorebookWorkspace(): React.ReactElement {
                   customContextCharLength={
                     customContextMeta.enabled ? customContextMeta.charLength : 0
                   }
-                  headerActions={
-                    <button
-                      type="button"
-                      onClick={() => setAgentMode(false)}
-                      className="inline-flex items-center gap-1 text-xs text-accent px-2 py-1 rounded-lg bg-accent-soft"
-                      title="Switch to Orion chat"
-                      aria-pressed
-                    >
-                      <Bot className="w-3.5 h-3.5" />
-                      Agent
-                    </button>
-                  }
+                  headerLeading={chatModeSwitch}
                   onClose={() => setIsChatOpen(false)}
                   onRunningChange={setAgentRunning}
                   onOpenTarget={openAgentTarget}
@@ -718,18 +714,7 @@ export function LorebookWorkspace(): React.ReactElement {
                   isMobile={isMobile}
                   chatOwnerType="lorebook"
                   chatOwnerId={currentLorebook.id}
-                  headerActions={
-                    <button
-                      type="button"
-                      onClick={() => setAgentMode(true)}
-                      className="inline-flex items-center gap-1 text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors"
-                      title="Switch to Agent mode"
-                      aria-pressed={false}
-                    >
-                      <Bot className="w-3.5 h-3.5" />
-                      Agent
-                    </button>
-                  }
+                  headerLeading={chatModeSwitch}
                 />
               )}
             </div>

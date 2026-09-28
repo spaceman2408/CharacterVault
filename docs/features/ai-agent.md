@@ -20,11 +20,11 @@ When a run finishes, changes land in this card or book — unless [review](#revi
 | **Writes the card?** | No | Yes, when the run finishes (or after you apply a [review](#review-edits)) |
 | **Context** | Sections you pin, plus optional custom notes | Field and entry catalogs, plus optional custom notes. It reads bodies with tools. |
 | **Model** | Always **Settings → AI Config** | **Settings → Prompts → Agent**, or AI Config if you leave Default |
-| **Where** | Character workspace and lorebook vault workspace | Same two workspaces, behind the **Agent** toggle |
+| **Where** | Character workspace and lorebook vault workspace | Same two workspaces, from the robot icon in the chat header |
 
-You can switch back to Orion at any time. The two chats do not share a thread. Each one is saved on that character or lorebook and comes back when you reopen Ask AI.
+You can switch back to Orion at any time with the chat bubble icon next to it. The two chats do not share a thread. Each one is saved on that character or lorebook and comes back when you reopen Ask AI.
 
-To open Agent by default, set **Settings → Character Workspace → Chat panel** to **Agent**. That applies the next time you open a character or lorebook. The header toggle still works for the current session.
+To open Agent by default, set **Settings → Character Workspace → Chat panel** to **Agent**. That applies the next time you open a character or lorebook. The header switch still works for the current session.
 
 ## Opening the Agent
 
@@ -32,7 +32,7 @@ To open Agent by default, set **Settings → Character Workspace → Chat panel*
 
 1. Open the character in the workspace.
 2. Open the **Ask AI** panel (right side; header toggle).
-3. Click **Agent** in the chat header so it stays on (skip this if Agent is already your Studio default).
+3. At the left of the chat header, click the robot icon (**Agent**). The chat bubble next to it (**Orion**) switches back. Skip this if Agent is already your default.
 4. Type what you want written. **Enter** sends; **Shift+Enter** adds a line.
 
 The left **AI Context** panel still has [custom context](/features/ai-context#custom-context). Section pins hide in Agent mode; they come back when you switch to Orion. The Agent reads the card through tools, so you do not pick Description vs Personality by hand.

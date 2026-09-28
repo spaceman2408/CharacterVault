@@ -30,6 +30,8 @@ export interface AIChatViewProps {
   composerDisabled?: boolean;
   composerDisabledPlaceholder?: string;
   composerDisabledHint?: string;
+  /** Replaces the chat icon at the left of the header, e.g. the Orion / Agent switch. */
+  headerLeading?: ReactNode;
   headerActions?: ReactNode;
   showReasoning?: boolean;
   showRegenerate?: boolean;
@@ -85,6 +87,7 @@ export function AIChatView({
   composerDisabled = false,
   composerDisabledPlaceholder,
   composerDisabledHint,
+  headerLeading,
   headerActions,
   showReasoning = true,
   showRegenerate = true,
@@ -195,7 +198,7 @@ export function AIChatView({
     <div className="h-full flex flex-col bg-bg border-l border-border animate-fade-in-slow">
       <div className="@container flex items-center justify-between gap-2 px-3 py-2.5 border-b border-border bg-muted/50 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <MessageSquare className="w-4 h-4 text-fg-muted shrink-0" />
+          {headerLeading ?? <MessageSquare className="w-4 h-4 text-fg-muted shrink-0" />}
           <h2 className="font-semibold text-fg truncate text-sm">{title}</h2>
         </div>
         <div className="flex items-center gap-0.5 shrink-0">

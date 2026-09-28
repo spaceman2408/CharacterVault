@@ -15,7 +15,7 @@ The workspace has two docked panels:
 - **Context Panel** (left) — Choose which character sections (and optional custom notes) the AI can see.
 - **Ask AI Panel** (right) — Chat with the AI assistant.
 
-Both panels can be toggled from the workspace header. In the chat header, **Agent** switches this panel to the writing Agent. Switch it off to come back to Orion. The two threads stay separate, and each is saved on the open character or lorebook.
+Both panels can be toggled from the workspace header. At the left of the chat header, a two-icon switch picks the chat: the chat bubble is Orion and the robot is the writing Agent. The highlighted icon is the one in use. The two threads stay separate, and each is saved on the open character or lorebook.
 
 ## Using the Context Panel
 

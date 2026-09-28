@@ -17,6 +17,7 @@ import { flushChatSessions } from '../../utils/chatSessionFlush';
 import { flushLorebookDraft } from '../editor/lorebook/draftFlush';
 import { ContextPanel } from '../ai/ContextPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
+import { ChatModeSwitch } from '../ai/ChatModeSwitch';
 import { usePersistedPanelWidth } from '../ai/hooks';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { CharacterHistoryModal } from '../history/CharacterHistoryModal';
@@ -52,7 +53,6 @@ import {
   PanelRight,
   Sparkles,
   MessageSquare,
-  Bot,
   ChevronDown,
   Book,
   AlertCircle,
@@ -960,21 +960,11 @@ function CharacterWorkspaceInner({
     await characterSnapshotService.createSnapshot(character, 'auto');
   }, [currentCharacter, flushPendingSaves]);
 
-  const agentToggle = (
-    <button
-      type="button"
-      onClick={() => setAgentMode((mode) => !mode)}
-      className={
-        agentMode
-          ? 'inline-flex items-center gap-1 text-xs text-accent px-2 py-1 rounded-lg bg-accent-soft'
-          : 'inline-flex items-center gap-1 text-xs text-fg-subtle hover:text-accent px-2 py-1 rounded-lg hover:bg-accent-soft transition-colors'
-      }
-      title={agentMode ? 'Switch to Orion chat' : 'Switch to Agent'}
-      aria-pressed={agentMode}
-    >
-      <Bot className="w-3.5 h-3.5" />
-      Agent
-    </button>
+  const chatModeSwitch = (
+    <ChatModeSwitch
+      mode={agentMode ? 'agent' : 'orion'}
+      onChange={(mode) => setAgentMode(mode === 'agent')}
+    />
   );
 
   const stableGetContextContent = useCallback(
@@ -1177,7 +1167,7 @@ function CharacterWorkspaceInner({
                   takeSnapshot={takeAgentSnapshot}
                   customContextIncluded={customContextIncluded}
                   customContextCharLength={customContextCharLength}
-                  headerActions={agentToggle}
+                  headerLeading={chatModeSwitch}
                   onClose={() => setIsChatOpen(false)}
                   onRunningChange={setAgentRunning}
                   onOpenTarget={openAgentTarget}
@@ -1198,7 +1188,7 @@ function CharacterWorkspaceInner({
                   activeSection={activeSection}
                   onClose={() => setIsChatOpen(false)}
                   isMobile={isMobile}
-                  headerActions={agentToggle}
+                  headerLeading={chatModeSwitch}
                   chatOwnerType="character"
                   chatOwnerId={currentCharacter?.id ?? ''}
                 />

@@ -48,6 +48,7 @@ export interface CharacterAgentChatProps {
   takeSnapshot: () => Promise<void>;
   customContextIncluded: boolean;
   customContextCharLength?: number;
+  headerLeading?: ReactNode;
   headerActions?: ReactNode;
   onClose?: () => void;
   onRunningChange?: (running: boolean) => void;
@@ -69,6 +70,7 @@ export function CharacterAgentChat({
   takeSnapshot,
   customContextIncluded,
   customContextCharLength = 0,
+  headerLeading,
   headerActions,
   onClose,
   onRunningChange,
@@ -306,6 +308,7 @@ export function CharacterAgentChat({
       composerDisabled={hasPendingReview}
       composerDisabledPlaceholder="Pending agent writes. Accept or reject via the yellow Review button…"
       composerDisabledHint="Review pending. Accept or reject via the yellow Review button above"
+      headerLeading={headerLeading}
       headerActions={
         <>
           <AgentToolModeChip mode={session.toolMode} />

@@ -50,6 +50,7 @@ export interface AIChatPanelProps {
   activeSection?: string | null;
   onClose?: () => void;
   isMobile?: boolean;
+  headerLeading?: ReactNode;
   headerActions?: ReactNode;
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;

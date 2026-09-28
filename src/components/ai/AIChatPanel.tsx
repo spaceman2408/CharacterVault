@@ -14,6 +14,7 @@ export function AIChatPanel({
   promptSettings,
   getContextContent,
   onClose,
+  headerLeading,
   headerActions,
   isMobile: _isMobile = false,
   chatOwnerType,
@@ -79,6 +80,7 @@ export function AIChatPanel({
       placeholder="Message Orion…"
       contextLabels={contextLabels}
       contextEmptyHint="No context pinned. Use the AI Context panel so Orion can see card sections or custom notes."
+      headerLeading={headerLeading}
       headerActions={headerActions}
       showReasoning={aiConfig.showReasoning ?? true}
       chatHistory={chatHistory}
