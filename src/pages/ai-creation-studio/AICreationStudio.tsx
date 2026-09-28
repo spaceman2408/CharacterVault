@@ -20,6 +20,7 @@ import {
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { CharacterSettingsPanel } from '../../components/settings/CharacterSettingsPanel';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
+import { showEphemeralToast } from '../../utils/ephemeralToast';
 import { useAIGeneration } from './useAIGeneration';
 import { useStudioTags } from './useStudioTags';
 import { ConceptInput } from './ConceptInput';
@@ -244,8 +245,12 @@ export const AICreationStudio: React.FC = () => {
 
       setSavedCharacterId(character.id);
       setSaveSuccess(true);
-    } catch {
-      // Error is handled by UI state
+    } catch (error) {
+      showEphemeralToast({
+        type: 'error',
+        title: 'Could not save to vault',
+        message: error instanceof Error && error.message ? error.message : 'Please try again.',
+      });
     } finally {
       setIsSaving(false);
     }
