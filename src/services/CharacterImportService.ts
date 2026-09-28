@@ -235,7 +235,7 @@ export class CharacterImportService {
     try {
       const arrayBuffer = await file.arrayBuffer();
       
-      const charaData = this.extractCharaFromPNG(arrayBuffer);
+      const charaData = await this.extractCharaFromPNG(arrayBuffer);
 
       if (!charaData) {
         return {
@@ -385,10 +385,11 @@ export class CharacterImportService {
   }
 
   /**
-   * Extract character data from PNG chunks
+   * Extract character data from PNG chunks. Prefers `ccv3` over `chara`, like SillyTavern.
    */
-  private extractCharaFromPNG(arrayBuffer: ArrayBuffer): string | null {
+  private async extractCharaFromPNG(arrayBuffer: ArrayBuffer): Promise<string | null> {
     const dataView = new DataView(arrayBuffer);
+    const cardTexts = new Map<string, string>();
     let offset = 0;
 
     // Check PNG signature
@@ -426,23 +427,17 @@ export class CharacterImportService {
 
       const chunkData = new Uint8Array(arrayBuffer, offset + 8, length);
 
-      // Check for tEXt chunk with 'chara' keyword
-      if (type === 'tEXt') {
+      if (type === 'tEXt' || type === 'iTXt') {
         const keyword = this.readNullTerminatedString(chunkData);
-        if (keyword === 'chara') {
-          // Extract the data after the null byte
-          const keywordBytes = new TextEncoder().encode(keyword);
-          const dataBytes = chunkData.slice(keywordBytes.length + 1);
-          const text = new TextDecoder().decode(dataBytes);
-          return text;
-        }
-      }
-
-      // Check for iTXt chunk (international text, might be compressed)
-      if (type === 'iTXt') {
-        const result = this.parseITXtChunk(chunkData);
-        if (result.keyword === 'chara') {
-          return result.text;
+        const cardKey = keyword.toLowerCase();
+        if ((cardKey === 'chara' || cardKey === 'ccv3') && !cardTexts.has(cardKey)) {
+          if (type === 'tEXt') {
+            const keywordBytes = new TextEncoder().encode(keyword);
+            const dataBytes = chunkData.slice(keywordBytes.length + 1);
+            cardTexts.set(cardKey, new TextDecoder().decode(dataBytes));
+          } else {
+            cardTexts.set(cardKey, (await this.parseITXtChunk(chunkData)).text);
+          }
         }
       }
 
@@ -454,7 +449,7 @@ export class CharacterImportService {
       offset += 12 + length; // 4 (length) + 4 (type) + length + 4 (CRC)
     }
 
-    return null;
+    return cardTexts.get('ccv3') ?? cardTexts.get('chara') ?? null;
   }
 
   /**
@@ -487,7 +482,7 @@ export class CharacterImportService {
   /**
    * Parse iTXt chunk (international text)
    */
-  private parseITXtChunk(data: Uint8Array): { keyword: string; text: string } {
+  private async parseITXtChunk(data: Uint8Array): Promise<{ keyword: string; text: string }> {
     let offset = 0;
     
     // Read keyword (null-terminated)
@@ -529,7 +524,7 @@ export class CharacterImportService {
       try {
         // Try to decompress using zlib
         const compressed = new Uint8Array(data.slice(offset));
-        const decompressed = this.inflate(compressed);
+        const decompressed = await this.inflate(compressed);
         return { keyword, text: new TextDecoder().decode(decompressed) };
       } catch (e) {
         console.warn('Failed to decompress iTXt chunk:', e);
@@ -541,13 +536,11 @@ export class CharacterImportService {
   }
 
   /**
-   * Simple zlib inflate (for compressed PNG chunks)
-   * This is a simplified version - real implementation would need zlib library
+   * Inflate a zlib stream (PNG compression method 0).
    */
-  private inflate(data: Uint8Array): Uint8Array {
-    // For now, just return the data as-is
-    // Real implementation would use pako or similar library
-    return data;
+  private async inflate(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
+    const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
   }
 
   /**
