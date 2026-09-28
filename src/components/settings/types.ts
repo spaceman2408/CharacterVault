@@ -66,6 +66,8 @@ export interface SettingsPanelHelpers {
   selectedBaseUrlPreset: string;
   isFetchingModels: boolean;
   isFetchingModelsForCurrentUrl: boolean;
+  /** Last model-fetch error for the current base URL; cleared by a successful fetch. */
+  modelFetchErrorForCurrentUrl: string | null;
   modelProviders: ModelProvider[];
   isFetchingProviders: boolean;
   supportsProviderSelection: boolean;

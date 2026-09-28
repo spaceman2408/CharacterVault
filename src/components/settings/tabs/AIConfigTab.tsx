@@ -40,6 +40,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
     selectedBaseUrlPreset,
     isFetchingModels,
     isFetchingModelsForCurrentUrl,
+    modelFetchErrorForCurrentUrl,
     modelProviders,
     isFetchingProviders,
     supportsProviderSelection,
@@ -265,6 +266,11 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
             isFetching={isFetchingModels || isFetchingModelsForCurrentUrl}
             disabled={false}
           />
+          {modelFetchErrorForCurrentUrl && !isFetchingModels && !isFetchingModelsForCurrentUrl && (
+            <p role="alert" className="text-xs text-danger">
+              Couldn't load models: {modelFetchErrorForCurrentUrl}
+            </p>
+          )}
 
           {hiddenCotNote && (
             <div

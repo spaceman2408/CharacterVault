@@ -201,6 +201,7 @@ export function CharacterSettingsPanel({
     selectedBaseUrlPreset: modelCatalog.selectedBaseUrlPreset,
     isFetchingModels: modelCatalog.isFetchingModels,
     isFetchingModelsForCurrentUrl: modelCatalog.isFetchingModelsForCurrentUrl,
+    modelFetchErrorForCurrentUrl: modelCatalog.modelFetchErrorForCurrentUrl,
     modelProviders: modelCatalog.modelProviders,
     isFetchingProviders: modelCatalog.isFetchingProviders,
     supportsProviderSelection: modelCatalog.supportsProviderSelection,

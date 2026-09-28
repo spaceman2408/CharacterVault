@@ -39,6 +39,13 @@ interface UseModelCatalogOptions {
   addToast: AddToast;
 }
 
+function withoutKey(record: Record<string, string>, key: string): Record<string, string> {
+  if (!(key in record)) return record;
+  const next = { ...record };
+  delete next[key];
+  return next;
+}
+
 export function useModelCatalog({
   isOpen,
   isLoading,
@@ -48,6 +55,7 @@ export function useModelCatalog({
 }: UseModelCatalogOptions) {
   const [isFetchingModels, setIsFetchingModels] = useState(false);
   const [modelsByBaseUrl, setModelsByBaseUrl] = useState<Record<string, CachedModels>>({});
+  const [modelFetchErrorByBaseUrl, setModelFetchErrorByBaseUrl] = useState<Record<string, string>>({});
   const [fetchingModelsByBaseUrl, setFetchingModelsByBaseUrl] = useState<Record<string, boolean>>(
     {}
   );
@@ -143,11 +151,16 @@ export function useModelCatalog({
             ...prev,
             [normalizedUrl]: { models, fetchedAt: Date.now(), subscriptionOnly },
           }));
+          setModelFetchErrorByBaseUrl((prev) => withoutKey(prev, normalizedUrl));
         }
         return models;
       } catch (err) {
         if (isAbortError(err)) {
           return modelsByBaseUrlRef.current[normalizedUrl]?.models ?? [];
+        }
+        if (mountedRef.current && isOpenRef.current) {
+          const message = err instanceof AIError ? err.message : 'Failed to fetch models';
+          setModelFetchErrorByBaseUrl((prev) => ({ ...prev, [normalizedUrl]: message }));
         }
         return [];
       } finally {
@@ -251,14 +264,13 @@ export function useModelCatalog({
           ...prev,
           [normalizedUrl]: { models, fetchedAt: Date.now(), subscriptionOnly },
         }));
+        setModelFetchErrorByBaseUrl((prev) => withoutKey(prev, normalizedUrl));
         addToast('success', `Fetched ${models.length} models`);
       } catch (err) {
         if (!mountedRef.current || !isOpenRef.current || isAbortError(err)) return;
-        if (err instanceof AIError) {
-          addToast('error', err.message);
-        } else {
-          addToast('error', 'Failed to fetch models');
-        }
+        const message = err instanceof AIError ? err.message : 'Failed to fetch models';
+        setModelFetchErrorByBaseUrl((prev) => ({ ...prev, [normalizeBaseUrl(draftRef.current.ai.baseUrl)]: message }));
+        addToast('error', message);
       } finally {
         if (mountedRef.current && isOpenRef.current) setIsFetchingModels(false);
       }
@@ -512,6 +524,8 @@ export function useModelCatalog({
 
   const isFetchingModelsForCurrentUrl =
     !!fetchingModelsByBaseUrl[normalizeBaseUrl(draft.ai.baseUrl)];
+  const modelFetchErrorForCurrentUrl =
+    modelFetchErrorByBaseUrl[normalizeBaseUrl(draft.ai.baseUrl)] ?? null;
 
   const resetProviderState = useCallback(() => {
     setModelProviders([]);
@@ -548,6 +562,7 @@ export function useModelCatalog({
   return {
     isFetchingModels,
     isFetchingModelsForCurrentUrl,
+    modelFetchErrorForCurrentUrl,
     modelsByBaseUrl: modelsByBaseUrlList,
     isFetchingModelsForUrl,
     modelProviders,
