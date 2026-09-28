@@ -247,11 +247,13 @@ function createToolbarPanel(
     const btn = document.createElement('button');
     btn.className = `ai-toolbar-btn ai-toolbar-btn-${def.id}`;
     btn.dataset.opId = def.id;
-    const escapedLabel = def.label
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    btn.innerHTML = `<span style="margin-right: 4px;">${def.icon}</span><span class="ai-toolbar-btn-label">${escapedLabel}</span>`;
+    const iconSpan = document.createElement('span');
+    iconSpan.style.marginRight = '4px';
+    iconSpan.textContent = def.icon;
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'ai-toolbar-btn-label';
+    labelSpan.textContent = def.label;
+    btn.append(iconSpan, labelSpan);
     if (def.label.length > 12) btn.title = def.label;
     btn.style.cssText = `
       display: flex;
