@@ -32,11 +32,13 @@ export function ConfirmDialog({
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
+        event.stopPropagation();
         onCancelRef.current();
       }
     };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
+    // Capture phase so Escape closes only this dialog, not the panel or modal underneath.
+    document.addEventListener('keydown', handleKey, true);
+    return () => document.removeEventListener('keydown', handleKey, true);
   }, [open]);
 
   if (!open) return null;
