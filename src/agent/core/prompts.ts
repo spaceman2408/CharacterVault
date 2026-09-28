@@ -21,6 +21,9 @@ export const NATIVE_TOOL_INTRO =
 export const HISTORY_NOTES_GUIDE =
   'Earlier replies may end with [App note: …] lines. The app adds them to list what that run changed and what the user kept after review. Never write them yourself.';
 
+export const MENTIONS_GUIDE =
+  'In user messages, @Name points at the field, greeting, or entry with that name, e.g. @Description, @Greeting 2, or @“Harbor” (#4) for entry #4.';
+
 export function formatAgentToolGuide(
   mode: AgentToolMode,
   toolList: string,
@@ -33,7 +36,9 @@ ${toolList}
 
 You may emit up to 12 actions per reply, then wait for tool results. Finish each call with complete JSON arguments before starting the next.
 
-${HISTORY_NOTES_GUIDE}`;
+${HISTORY_NOTES_GUIDE}
+
+${MENTIONS_GUIDE}`;
   }
   return `${xmlSyntax}
 
@@ -41,5 +46,7 @@ ${toolList}
 
 You may emit up to 12 actions per reply, then wait for tool results. Close every </tool_call> before starting the next.
 
-${HISTORY_NOTES_GUIDE}`;
+${HISTORY_NOTES_GUIDE}
+
+${MENTIONS_GUIDE}`;
 }

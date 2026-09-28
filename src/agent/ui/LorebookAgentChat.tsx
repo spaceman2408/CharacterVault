@@ -27,6 +27,7 @@ import {
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
+import { lorebookMentions } from './mentions';
 import { lorebookSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
 import { useEditLastMessage } from './useEditLastMessage';
@@ -337,6 +338,7 @@ export function LorebookAgentChat({
       onLoadOlder={session.handleLoadOlder}
       onClose={onClose}
       emptySuggestions={lorebookSuggestions(getBook(), customContextIncluded)}
+      mentionOptions={() => lorebookMentions(getBook())}
       renderMessage={renderMessage}
       processingIndicator={
         <div className="py-1 text-fg-muted">

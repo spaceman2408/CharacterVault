@@ -53,6 +53,8 @@ Do not add `if (host === 'lorebook')` in `core/`.
 
 Edit on the last user message (`ui/useEditLastMessage.ts`) loads its text with the `setComposerText` that `AIChatView` hands to `renderMessage`. Nothing is trimmed until the edited text is sent through the composer (Continue never commits an edit). Like Send and Regenerate, it opens a pending review instead, so the review outcome still lands on its own run.
 
+The agent chats pass `mentionOptions` (`ui/mentions.ts`) to `AIChatView`. Picking one inserts plain `@Label` text; the message format does not change. `MENTIONS_GUIDE` in `core/prompts.ts` tells the model what `@Name` means, so keep the labels in step with the field and entry catalogs.
+
 On the character workspace, Agent mode always mounts `CharacterAgentChat` (tab changes do not remount the chat). Standalone lorebook workspace still mounts `LorebookAgentChat`. Orion stays the non-agent panel.
 
 ## Renderer / persist

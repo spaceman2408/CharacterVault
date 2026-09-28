@@ -15,6 +15,7 @@ import type { ChatMessage } from './types';
 import { ChatMessage as ChatMessageComponent, FoldedText } from './components';
 import { useAutoScroll } from './hooks';
 import { canRetryEmptySend } from './utils';
+import { useComposerMentions, type ComposerMention } from './composerMentions';
 import { CHAT_UI_HARD_WINDOW } from '../../services/ChatHistoryService';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -56,6 +57,8 @@ export interface AIChatViewProps {
     setComposerText: (text: string) => void,
   ) => ReactNode;
   renderAfterMessage?: (message: ChatMessage) => ReactNode;
+  /** Typing `@` in the composer lists these; picking one inserts `@label` as plain text. */
+  mentionOptions?: () => ComposerMention[];
   showStreamDraft?: boolean;
   processingIndicator?: ReactNode;
   contextUsage?: {
@@ -104,6 +107,7 @@ export function AIChatView({
   emptySuggestions,
   renderMessage,
   renderAfterMessage,
+  mentionOptions,
   showStreamDraft = true,
   processingIndicator,
   contextUsage,
@@ -143,6 +147,13 @@ export function AIChatView({
     setAskQuestion(text);
     setComposerTextRequest((count) => count + 1);
   }, []);
+
+  const mentions = useComposerMentions(
+    askQuestion,
+    setComposerText,
+    inputRef,
+    composerDisabled ? undefined : mentionOptions,
+  );
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -407,11 +418,43 @@ export function AIChatView({
       </div>
 
       <div className="p-3 border-t border-border bg-muted/50 shrink-0">
-        <div className="flex items-end gap-2">
+        <div className="relative flex items-end gap-2">
+          {mentions.matches.length > 0 && (
+            <ul
+              role="listbox"
+              aria-label="Mentions"
+              className="absolute bottom-full left-0 right-12 z-10 mb-2 rounded-xl border border-border bg-surface py-1 shadow-lg"
+            >
+              {mentions.matches.map((option, index) => (
+                <li
+                  key={option.label}
+                  role="option"
+                  aria-selected={index === mentions.activeIndex}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={() => mentions.setActiveIndex(index)}
+                  onClick={() => mentions.pick(option)}
+                  className={`flex cursor-pointer items-baseline gap-2 px-3 py-1.5 text-sm ${
+                    index === mentions.activeIndex ? 'bg-accent-soft text-accent' : 'text-fg'
+                  }`}
+                >
+                  <span className="truncate">{option.label}</span>
+                  {option.detail && (
+                    <span className="ml-auto max-w-[50%] shrink-0 truncate text-[11px] text-fg-subtle">
+                      {option.detail}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
           <textarea
             ref={inputRef}
             value={askQuestion}
-            onChange={(e) => setAskQuestion(e.target.value)}
+            onChange={(e) => {
+              setAskQuestion(e.target.value);
+              mentions.onInputChange(e.target);
+            }}
+            onSelect={(e) => mentions.trackCaret(e.currentTarget)}
             placeholder={effectivePlaceholder}
             rows={1}
             disabled={composerDisabled}
@@ -419,6 +462,7 @@ export function AIChatView({
             title={composerDisabled ? effectiveHint : undefined}
             className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-40 transition-all disabled:cursor-not-allowed disabled:opacity-60"
             onKeyDown={(e) => {
+              if (mentions.handleKeyDown(e)) return;
               if (e.key === 'Enter' && !e.shiftKey && !isProcessing && !composerDisabled && askQuestion.trim()) {
                 e.preventDefault();
                 void handleSubmit();

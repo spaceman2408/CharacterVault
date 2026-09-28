@@ -30,6 +30,7 @@ import {
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
+import { characterMentions } from './mentions';
 import { characterSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
 import { useCharacterAgent, type PersistAgentCard } from './useCharacterAgent';
@@ -337,6 +338,7 @@ export function CharacterAgentChat({
       onLoadOlder={session.handleLoadOlder}
       onClose={onClose}
       emptySuggestions={characterSuggestions(getSpec(), getBook(), customContextIncluded)}
+      mentionOptions={() => characterMentions(getSpec(), getBook())}
       renderMessage={renderMessage}
       processingIndicator={
         <div className="py-1 text-fg-muted">
