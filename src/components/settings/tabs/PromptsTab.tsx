@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, ArrowDown, ArrowUp, Bot, ChevronDown, ChevronUp, Lock, MessageSquare, Plus, RotateCcw, SlidersHorizontal, Sparkles, Target, Trash2 } from 'lucide-react';
 import type { CustomToolbarOp, PromptModelBinding, PromptSettings, ToolbarConfig } from '../../../db/characterTypes';
-import { DEFAULT_CUSTOM_BUTTON_COLOR, TOOLBAR_COLOR_PALETTE, normalizeToolbarConfig } from '../../../db/characterTypes';
+import { DEFAULT_CUSTOM_BUTTON_COLOR, DEFAULT_SETTINGS, TOOLBAR_COLOR_PALETTE, normalizeToolbarConfig } from '../../../db/characterTypes';
 import {
   BUILTIN_TOOLBAR_BUTTONS,
   TOOLBAR_ICON_PALETTE,
@@ -20,6 +20,7 @@ import {
 import { SettingsCard } from '../components/SettingsCard';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { PromptModelBindingSelect } from '../components/PromptModelBindingSelect';
+import { EditedBadge, ResetPromptButton } from '../components/ResetPromptButton';
 import type { SettingsTabProps } from '../types';
 
 const PRIMARY_PROMPTS = ['expand', 'rewrite', 'instruct'] as const;
@@ -61,6 +62,8 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
     !!helpers && endpoint
       ? helpers.isFetchingModelsForUrl(endpoint)
       : false;
+  const defaultValue = DEFAULT_SETTINGS.prompts[promptType];
+  const edited = value !== defaultValue;
 
   return (
     <div className="border border-border rounded-lg mb-3 last:mb-0 overflow-visible">
@@ -72,7 +75,10 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
         <span className="flex items-start sm:items-center gap-2 text-sm font-semibold text-fg-muted min-w-0">
           <MessageSquare className="w-4 h-4 text-fg-muted shrink-0 mt-0.5 sm:mt-0" />
           <span className="min-w-0 flex flex-col sm:flex-row sm:items-center sm:gap-2">
-            <span className="capitalize truncate">{promptLabel(promptType)}</span>
+            <span className="flex items-center gap-1.5 min-w-0">
+              <span className="capitalize truncate">{promptLabel(promptType)}</span>
+              {edited && <EditedBadge />}
+            </span>
             {binding?.modelId && (
               <span className="normal-case font-normal text-xs text-fg-muted truncate max-w-full sm:max-w-[14rem]">
                 → {binding.modelId}
@@ -94,7 +100,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             className="w-full min-h-28 h-32 px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 resize-y transition-all duration-200"
             placeholder={`Enter ${promptType} prompt...`}
           />
-          <div className="mt-2 text-xs space-y-1">
+          <div className="mt-2 text-xs flex items-start justify-between gap-2">
             {promptType === 'instruct' ? (
               <span className="text-fg-muted">
                 <span className="font-semibold text-danger">Required:</span> Must contain ${'{text}'}{' '}
@@ -104,6 +110,9 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
               <span className="text-fg-muted">
                 <span className="font-semibold text-danger">Required:</span> Must contain ${'{text}'}
               </span>
+            )}
+            {edited && (
+              <ResetPromptButton label={promptLabel(promptType)} onReset={() => onChange(defaultValue)} />
             )}
           </div>
           {!value.includes('${text}') && (

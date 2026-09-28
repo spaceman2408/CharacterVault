@@ -12,6 +12,7 @@ import { STUDIO_PROMPT_REQUIRED_VARS } from '../../../pages/ai-creation-studio/g
 import type { StudioPromptKey } from '../../../pages/ai-creation-studio/generationPrompts';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
+import { EditedBadge, ResetPromptButton } from '../components/ResetPromptButton';
 import type { SettingsTabProps } from '../types';
 
 const STUDIO_OPTIONAL_FIELDS: Array<{ key: StudioGenerationField; label: string; hint: string }> = [
@@ -38,6 +39,8 @@ const StudioPromptEditor: React.FC<{
 }> = ({ promptKey, label, hint, value, expanded, onToggle, onChange }) => {
   const required = STUDIO_PROMPT_REQUIRED_VARS[promptKey];
   const missing = required.filter((v) => !value.includes(`\${${v}}`));
+  const defaultValue = DEFAULT_STUDIO_PROMPTS[promptKey];
+  const edited = value !== defaultValue;
   return (
     <div className="border border-border rounded-lg mb-3 last:mb-0 overflow-hidden">
       <button
@@ -48,6 +51,7 @@ const StudioPromptEditor: React.FC<{
         <span className="flex items-center gap-2 text-sm font-semibold text-fg-muted min-w-0">
           <MessageSquare className="w-4 h-4 text-fg-muted shrink-0" />
           <span className="truncate">{label}</span>
+          {edited && <EditedBadge />}
           {missing.length > 0 && <AlertCircle className="w-4 h-4 text-danger shrink-0" />}
         </span>
         {expanded ? (
@@ -64,7 +68,10 @@ const StudioPromptEditor: React.FC<{
             className="w-full min-h-28 h-40 px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-base sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent/50 resize-y transition-all duration-200"
             placeholder={`Enter ${label.toLowerCase()}...`}
           />
-          <p className="mt-2 text-xs text-fg-muted">{hint}</p>
+          <div className="mt-2 flex items-start justify-between gap-2">
+            <p className="text-xs text-fg-muted">{hint}</p>
+            {edited && <ResetPromptButton label={label} onReset={() => onChange(defaultValue)} />}
+          </div>
           {missing.map((v) => (
             <p key={v} className="mt-1 text-xs text-danger flex items-start gap-1">
               <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
