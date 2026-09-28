@@ -79,6 +79,9 @@ export const STREAM_IDLE_TIMEOUT_MS = 180_000;
 /** Upper bound on one streamed response, far above any real completion. */
 export const STREAM_MAX_BYTES = 32 * 1024 * 1024;
 
+/** Some gateways echo the prompt in 400 bodies; keep only enough to diagnose. */
+const LOGGED_ERROR_BODY_CHARS = 500;
+
 /** Don't partial-fill with a sliver smaller than this (tokens). */
 const MIN_PARTIAL_CONTEXT_TOKENS = 48;
 
@@ -986,7 +989,7 @@ Provide only the generated text without any additional commentary.`;
         if (response.status !== 400) break;
 
         const errorText = await response.text().catch(() => '');
-        console.warn(`[AIService] Attempt ${attempt + 1} failed with 400. Response body:`, errorText);
+        console.warn(`[AIService] Attempt ${attempt + 1} failed with 400. Response body:`, errorText.slice(0, LOGGED_ERROR_BODY_CHARS));
         let errorData: Record<string, unknown>;
         try { errorData = JSON.parse(errorText); } catch { errorData = {}; }
 
@@ -1067,7 +1070,7 @@ Provide only the generated text without any additional commentary.`;
 
       if (response.status === 400) {
         const errorText = await response.text().catch(() => '');
-        console.error('[AIService] Final 400 after retries. Response body:', errorText);
+        console.error('[AIService] Final 400 after retries. Response body:', errorText.slice(0, LOGGED_ERROR_BODY_CHARS));
         let errorData: Record<string, unknown>;
         try { errorData = JSON.parse(errorText); } catch { errorData = {}; }
         throw new AIError(
