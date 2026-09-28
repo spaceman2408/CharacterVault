@@ -56,6 +56,7 @@ function makeDraft(): BackupDraftTarget {
     markdownImageOpenLinks: true,
     defaultChatPanel: 'orion',
     requireAgentReview: false,
+    creatorNotesRemoteWarning: true,
     roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
     macroHighlight: { ...DEFAULT_MACRO_HIGHLIGHT_SETTINGS },
     spellcheckEnabled: true,

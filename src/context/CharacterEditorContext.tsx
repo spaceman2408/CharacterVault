@@ -23,6 +23,7 @@ import {
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_REQUIRE_AGENT_REVIEW,
+  DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   EMPTY_CUSTOM_CONTEXT_META,
   normalizeDefaultChatPanel,
   normalizeMacroHighlight,
@@ -88,6 +89,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   );
   const [requireAgentReview, setRequireAgentReview] = useState(
     () => settings?.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
+  );
+  const [creatorNotesRemoteWarning, setCreatorNotesRemoteWarning] = useState(
+    () => settings?.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   );
   const [roleplayHighlight, setRoleplayHighlight] = useState<RoleplayHighlightSettings>(() =>
     normalizeRoleplayHighlight(settings?.ui.roleplayHighlight),
@@ -358,6 +362,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       );
       setDefaultChatPanel(normalizeDefaultChatPanel(settings.ui.defaultChatPanel));
       setRequireAgentReview(settings.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW);
+      setCreatorNotesRemoteWarning(
+        settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
+      );
       setRoleplayHighlight(normalizeRoleplayHighlight(settings.ui.roleplayHighlight));
       setMacroHighlight(normalizeMacroHighlight(settings.ui.macroHighlight));
       setContextSectionIdsState(contextIds);
@@ -1213,6 +1220,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     markdownImageOpenLinks,
     defaultChatPanel,
     requireAgentReview,
+    creatorNotesRemoteWarning,
     roleplayHighlight,
     macroHighlight,
     setActiveSection,

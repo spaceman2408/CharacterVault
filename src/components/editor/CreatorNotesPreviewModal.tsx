@@ -9,6 +9,7 @@ import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 
 interface CreatorNotesPreviewModalProps {
   content: string;
+  showRemoteWarning?: boolean;
   isOpen: boolean;
   onClose: () => void;
   onAddToEditor: () => void;
@@ -16,6 +17,7 @@ interface CreatorNotesPreviewModalProps {
 
 export function CreatorNotesPreviewModal({
   content,
+  showRemoteWarning,
   isOpen,
   onClose,
   onAddToEditor,
@@ -74,6 +76,7 @@ export function CreatorNotesPreviewModal({
 
         <CreatorNotesPreviewPane
           content={content}
+          showRemoteWarning={showRemoteWarning}
           frameClassName="flex-1 overflow-auto rounded-[1.25rem] border border-vault-600 bg-vault-800 shadow-[0_20px_60px_rgba(17,24,39,0.35)]"
           emptyClassName="flex-1 overflow-auto rounded-[1.25rem] border-dashed border-vault-500 bg-vault-800 px-5 py-6 text-center text-sm text-fg-subtle"
         />

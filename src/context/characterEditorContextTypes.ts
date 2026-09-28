@@ -109,6 +109,8 @@ export interface CharacterEditorContextValue {
   defaultChatPanel: DefaultChatPanel;
   /** Studio gate: review Agent edits before they are applied. */
   requireAgentReview: boolean;
+  /** Warn when the Creator Notes preview loads remote resources. */
+  creatorNotesRemoteWarning: boolean;
   /** Prose color coding for "dialogue", narration, and *actions*. */
   roleplayHighlight: RoleplayHighlightSettings;
   /** `{{char}}` / `{{user}}` colors. Blank entries follow the theme. */

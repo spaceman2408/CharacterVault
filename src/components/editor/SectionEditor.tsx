@@ -258,6 +258,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
     setFontSize,
     spellcheck,
     markdownImageOpenLinks,
+    creatorNotesRemoteWarning,
     roleplayHighlight,
   } = useCharacterEditorContext();
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
@@ -621,6 +622,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
           <div className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-vault-800 shadow-inner border-border lg:w-1/2">
             <CreatorNotesPreviewPane
               content={livePreviewValue}
+              showRemoteWarning={creatorNotesRemoteWarning}
               frameClassName="block h-full w-full bg-vault-800"
               emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-fg-subtle"
             />
@@ -631,6 +633,7 @@ export function SectionEditor({ section, focusEntry }: SectionEditorProps): Reac
       {section === 'creator_notes' && (
         <CreatorNotesPreviewModal
           content={livePreviewValue}
+          showRemoteWarning={creatorNotesRemoteWarning}
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}
           onAddToEditor={() => {

@@ -41,6 +41,7 @@ export interface SettingsDraft {
   markdownImageOpenLinks: boolean;
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
+  creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
   spellcheckEnabled: boolean;

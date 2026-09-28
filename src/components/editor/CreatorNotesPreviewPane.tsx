@@ -4,9 +4,11 @@
  */
 
 import React from 'react';
+import { hasRemoteReference } from '../../utils/creatorNotesRemote';
 
 interface CreatorNotesPreviewPaneProps {
   content: string;
+  showRemoteWarning?: boolean;
   style?: React.CSSProperties;
   frameClassName?: string;
   emptyClassName?: string;
@@ -33,6 +35,7 @@ const SKELETON_DOC = `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https:; img-src data: blob: https:; font-src data: https:" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       :root { color-scheme: dark; }
@@ -56,6 +59,7 @@ const SKELETON_DOC = `<!DOCTYPE html>
 
 export function CreatorNotesPreviewPane({
   content,
+  showRemoteWarning = true,
   style,
   frameClassName = '',
   emptyClassName = '',
@@ -82,22 +86,36 @@ export function CreatorNotesPreviewPane({
     );
   }
 
+  const warn = showRemoteWarning && hasRemoteReference(deferredContent);
+
   return (
-    <iframe
-      ref={iframeRef}
-      title="Creator Notes Preview"
-      sandbox="allow-same-origin"
-      srcDoc={SKELETON_DOC}
-      className={frameClassName}
-      style={style}
-      onLoad={() => {
-        isLoadedRef.current = true;
-        const iframe = iframeRef.current;
-        if (iframe?.contentDocument) {
-          iframe.contentDocument.body.innerHTML = bodyContent;
-        }
-      }}
-    />
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      {warn && (
+        <div
+          role="note"
+          className="shrink-0 border-b border-warning/40 bg-warning-soft px-4 py-2 text-xs text-warning-soft-fg"
+        >
+          These notes load images, fonts, or styles from other websites. Those sites can see
+          your IP address and that you opened this card. Scripts never run. Turn this warning
+          off in Settings → Character Workspace.
+        </div>
+      )}
+      <iframe
+        ref={iframeRef}
+        title="Creator Notes Preview"
+        sandbox="allow-same-origin"
+        srcDoc={SKELETON_DOC}
+        className={`min-h-0 flex-1 ${frameClassName}`}
+        style={style}
+        onLoad={() => {
+          isLoadedRef.current = true;
+          const iframe = iframeRef.current;
+          if (iframe?.contentDocument) {
+            iframe.contentDocument.body.innerHTML = bodyContent;
+          }
+        }}
+      />
+    </div>
   );
 }
 

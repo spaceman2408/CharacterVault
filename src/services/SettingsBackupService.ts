@@ -15,6 +15,7 @@ import type {
 import {
   CHARACTER_SECTIONS,
   DEFAULT_CHARACTER_VAULT_SETTINGS,
+  DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   DEFAULT_SECTION_ORDER,
   DEFAULT_SETTINGS,
   DEFAULT_SPELLCHECK_SETTINGS,
@@ -209,6 +210,10 @@ function normalizeBackupUi(value: unknown): CharacterVaultSettings['ui'] {
     markdownImageOpenLinks: asBoolean(raw.markdownImageOpenLinks, true),
     defaultChatPanel: normalizeDefaultChatPanel(raw.defaultChatPanel),
     requireAgentReview: asBoolean(raw.requireAgentReview, false),
+    creatorNotesRemoteWarning: asBoolean(
+      raw.creatorNotesRemoteWarning,
+      DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
+    ),
     roleplayHighlight: normalizeRoleplayHighlight(
       isRecord(raw.roleplayHighlight) ? raw.roleplayHighlight : undefined,
     ),
@@ -331,6 +336,7 @@ export interface BackupDraftTarget {
   markdownImageOpenLinks: boolean;
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
+  creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
   spellcheckEnabled: boolean;
@@ -368,6 +374,8 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
     markdownImageOpenLinks: settings.ui.markdownImageOpenLinks ?? true,
     defaultChatPanel: normalizeDefaultChatPanel(settings.ui.defaultChatPanel),
     requireAgentReview: settings.ui.requireAgentReview ?? false,
+    creatorNotesRemoteWarning:
+      settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
     roleplayHighlight: normalizeRoleplayHighlight(settings.ui.roleplayHighlight),
     macroHighlight: normalizeMacroHighlight(settings.ui.macroHighlight),
     spellcheckEnabled: spellcheck.enabled,

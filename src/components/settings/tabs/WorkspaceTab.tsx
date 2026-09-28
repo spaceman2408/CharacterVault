@@ -1,5 +1,5 @@
 /**
- * @fileoverview Character workspace preferences tab (default chat, agent edits, editor links, spellcheck).
+ * @fileoverview Character workspace preferences tab (default chat, agent edits, editor links, Creator Notes warning, spellcheck).
  * @module components/settings/tabs/WorkspaceTab
  */
 
@@ -259,6 +259,23 @@ export const WorkspaceTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) =>
             </>
           }
         />
+        <div className="mt-4">
+          <SettingsToggle
+            stacked
+            checked={draft.creatorNotesRemoteWarning}
+            onChange={(checked) =>
+              setDraft((prev) => ({ ...prev, creatorNotesRemoteWarning: checked }))
+            }
+            label="Warn about remote content in Creator Notes preview"
+            description={
+              <>
+                The preview loads images, fonts, and stylesheets from web addresses in the notes.
+                Each load tells that site your IP address and that you opened the card, so an
+                imported card can track when it is viewed. Scripts never run.
+              </>
+            }
+          />
+        </div>
       </SettingsCard>
 
       <SettingsCard>

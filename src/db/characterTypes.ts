@@ -506,6 +506,8 @@ export interface CharacterVaultSettings {
     defaultChatPanel?: DefaultChatPanel;
     /** When true, Agent tool-loop edits need review before they are applied. */
     requireAgentReview?: boolean;
+    /** Warn when a Creator Notes preview loads remote resources. Missing = on. */
+    creatorNotesRemoteWarning?: boolean;
     spellcheck?: SpellcheckSettings;
     /** Missing = highlighting on with built-in default colors. */
     roleplayHighlight?: RoleplayHighlightSettings;
@@ -615,6 +617,8 @@ export const DEFAULT_CHAT_PANEL: DefaultChatPanel = 'orion';
 
 /** Default for Studio → Agent review gate (auto-apply preserves legacy behavior). */
 export const DEFAULT_REQUIRE_AGENT_REVIEW = false;
+
+export const DEFAULT_CREATOR_NOTES_REMOTE_WARNING = true;
 
 export function normalizeDefaultChatPanel(value: unknown): DefaultChatPanel {
   return value === 'agent' ? 'agent' : 'orion';
