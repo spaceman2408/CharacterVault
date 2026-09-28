@@ -3,7 +3,7 @@
  * @module @pages/ImportPage
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useClipboardImport } from '../hooks/useClipboardImport';
 import { useCharacterContext, useLorebookContext } from '../context';
@@ -194,14 +194,12 @@ const CharacterPreviewCard: React.FC<CharacterPreviewCardProps> = ({
 
 interface ManualPasteSectionProps {
   onPaste: (text: string) => void;
-  errorMessage: string | null;
 }
 
-const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
-  onPaste,
-  errorMessage,
-}) => {
+const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({ onPaste }) => {
   const [text, setText] = useState('');
+  const [clipboardError, setClipboardError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -217,16 +215,17 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
     <div className="space-y-4">
       <form onSubmit={handleSubmit} className="space-y-4">
         <textarea
+          ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Paste character JSON here..."
           className="w-full h-48 p-4 bg-surface border border-border rounded-xl text-sm font-mono resize-none focus:outline-hidden focus:ring-2 focus:ring-accent"
           spellCheck={false}
         />
-        {errorMessage && (
+        {clipboardError && (
           <div className="flex items-center gap-2 text-danger text-sm">
             <AlertCircle className="w-4 h-4" />
-            <span>{errorMessage}</span>
+            <span>{clipboardError}</span>
           </div>
         )}
         <div className="flex gap-3">
@@ -236,11 +235,14 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({
               try {
                 const clipboardText = await navigator.clipboard.readText();
                 if (clipboardText.trim()) {
+                  setClipboardError(null);
                   onPaste(clipboardText.trim());
+                } else {
+                  setClipboardError('The clipboard is empty.');
                 }
               } catch {
-                // If clipboard read fails, focus the textarea for manual paste
-                // This can happen if permission is denied
+                setClipboardError('Could not read the clipboard. Paste into the box with Ctrl+V instead.');
+                textareaRef.current?.focus();
               }
             }}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
@@ -336,7 +338,7 @@ export const ImportPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <ManualPasteSection onPaste={parseManualInput} errorMessage={null} />
+            <ManualPasteSection onPaste={parseManualInput} />
           </div>
         )}
 
@@ -431,7 +433,7 @@ export const ImportPage: React.FC = () => {
                 {errorMessage || 'Something went wrong while importing the character.'}
               </p>
             </div>
-            <ManualPasteSection onPaste={parseManualInput} errorMessage={null} />
+            <ManualPasteSection onPaste={parseManualInput} />
             <div className="flex justify-center">
               <button
                 onClick={goToLibrary}

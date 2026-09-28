@@ -226,6 +226,12 @@ export function useVaultIO({
       const list = Array.from(files);
       const zip = list.find(isZipFile);
       if (zip) {
+        if (list.length > 1) {
+          showStatus(
+            `Opened the backup ZIP. Skipped ${list.length - 1} other file${list.length === 2 ? '' : 's'}; import them separately.`,
+            7000
+          );
+        }
         await openRestore(zip);
         return;
       }
@@ -235,7 +241,7 @@ export function useVaultIO({
       }
       await importCharacterFiles(list);
     },
-    [importCharacterFiles, importLorebookFiles, openRestore]
+    [importCharacterFiles, importLorebookFiles, openRestore, showStatus]
   );
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -388,7 +394,10 @@ export function useVaultIO({
     e.stopPropagation();
     dragDepthRef.current = 0;
     setIsDragOver(false);
-    if (isImporting) return;
+    if (isImporting) {
+      showStatus('Still importing. Drop the files again when it finishes.');
+      return;
+    }
     const files = e.dataTransfer.files;
     if (files?.length) {
       await importFiles(files);

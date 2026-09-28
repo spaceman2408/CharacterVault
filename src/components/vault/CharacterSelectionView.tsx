@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Book, Upload, User, X } from 'lucide-react';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { PromoBanner } from '../PromoBanner';
@@ -51,6 +51,7 @@ export function CharacterSelectionView({
   const [lorebookSearch, setLorebookSearch] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<ConfirmTarget | null>(null);
   const [copyConfirm, setCopyConfirm] = useState<ConfirmTarget | null>(null);
+  const confirmBusyRef = useRef(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const selectTab = (tab: VaultTab) => {
@@ -93,6 +94,22 @@ export function CharacterSelectionView({
     setIsDark(newDark);
     document.documentElement.classList.toggle('dark', newDark);
     localStorage.setItem('theme', newDark ? 'dark' : 'light');
+  };
+
+  const runConfirm = async (
+    target: ConfirmTarget | null,
+    errorTitle: string,
+    action: (target: ConfirmTarget) => Promise<void>,
+  ) => {
+    if (!target || confirmBusyRef.current) return;
+    confirmBusyRef.current = true;
+    try {
+      await action(target);
+    } catch {
+      showEphemeralToast({ type: 'error', title: errorTitle, message: 'Please try again.' });
+    } finally {
+      confirmBusyRef.current = false;
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -225,20 +242,20 @@ export function CharacterSelectionView({
           }}
           createPlaceholder={isLorebooksTab ? 'Lorebook name...' : 'Character name...'}
           deleteConfirm={deleteConfirm}
-          onDeleteConfirm={async () => {
-            if (deleteConfirm) {
-              await deleteCharacter(deleteConfirm.id);
+          onDeleteConfirm={() =>
+            runConfirm(deleteConfirm, 'Failed to delete character', async (target) => {
+              await deleteCharacter(target.id);
               setDeleteConfirm(null);
-            }
-          }}
+            })
+          }
           onDeleteCancel={() => setDeleteConfirm(null)}
           copyConfirm={copyConfirm}
-          onCopyConfirm={async () => {
-            if (copyConfirm) {
-              await duplicateCharacter(copyConfirm.id, `${copyConfirm.name} (Copy)`);
+          onCopyConfirm={() =>
+            runConfirm(copyConfirm, 'Failed to copy character', async (target) => {
+              await duplicateCharacter(target.id, `${target.name} (Copy)`);
               setCopyConfirm(null);
-            }
-          }}
+            })
+          }
           onCopyCancel={() => setCopyConfirm(null)}
           backupConfirmOpen={io.backupConfirmOpen}
           isExportingVault={io.isExportingVault}
