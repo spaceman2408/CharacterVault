@@ -41,7 +41,8 @@ export interface AIChatViewProps {
   isStreaming: boolean;
   streamingContent: string;
   streamingReasoning: string;
-  handleAsk: (question: string) => Promise<void>;
+  /** Resolve false when nothing was sent; the composer then gets its text back. */
+  handleAsk: (question: string) => Promise<boolean | void>;
   handleRegenerate: () => Promise<void>;
   handleNewChat: () => void;
   handleDeleteMessage: (messageId: string) => void;
@@ -177,12 +178,12 @@ export function AIChatView({
       return;
     }
 
-    const question = askQuestion.trim();
+    const draft = askQuestion;
     setAskQuestion('');
     resetComposerHeight();
-    const ask = handleAsk(question);
+    const ask = handleAsk(draft.trim());
     focusComposer();
-    await ask;
+    if ((await ask) === false) setComposerText(draft);
   };
 
   const canSend =

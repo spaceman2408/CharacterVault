@@ -59,7 +59,8 @@ export interface UseAIChatReturn {
   isStreaming: boolean;
   streamingContent: string;
   streamingReasoning: string;
-  handleAsk: (question: string) => Promise<void>;
+  /** Resolves false when nothing was sent. `beforeSend` runs only once the send is accepted. */
+  handleAsk: (question: string, beforeSend?: () => void) => Promise<boolean>;
   handleRegenerate: () => Promise<void>;
   handleNewChat: () => void;
   handleDeleteMessage: (messageId: string) => void;
@@ -802,14 +803,14 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
   }, [isAIConfigured, runAssistantTurn]);
 
   const handleAsk = useCallback(
-    async (question: string) => {
+    async (question: string, beforeSend?: () => void): Promise<boolean> => {
       if (
         leavingRef.current
         || isProcessingRef.current
         || hydratingRef.current
         || !historyReadyRef.current
       ) {
-        return;
+        return false;
       }
 
       if (!question.trim()) {
@@ -819,16 +820,17 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
           (lastMessage?.role === 'assistant' && !lastMessage.content.trim())
         ) {
           await handleRegenerate();
-          return;
+          return true;
         }
-        return;
+        return false;
       }
 
       if (!isAIConfigured) {
         setError('Please configure AI settings first');
-        return;
+        return false;
       }
 
+      beforeSend?.();
       const trimmedQuestion = question.trim();
       const priorHistory = chatHistoryRef.current;
       const userMessage: ChatMessage = {
@@ -847,6 +849,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         historyForContext: priorHistory,
         historyToKeep,
       });
+      return true;
     },
     [isAIConfigured, applyVisible, handleRegenerate, persistMessage, runAssistantTurn]
   );

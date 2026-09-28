@@ -60,10 +60,7 @@ export function AIChatPanel({
   );
 
   const handleComposerAsk = useCallback(
-    (question: string) => {
-      commitEdit();
-      return handleAsk(question);
-    },
+    (question: string) => handleAsk(question, commitEdit),
     [commitEdit, handleAsk],
   );
 
