@@ -213,12 +213,18 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
     const nextVersion = (updateCharacterRequestVersionRef.current.get(requestKey) ?? 0) + 1;
     updateCharacterRequestVersionRef.current.set(requestKey, nextVersion);
+    // Edits queued during the write keep their own entry, timer, and resolvers.
+    const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
+    updateCharacterPendingResolversRef.current.delete(requestKey);
+    const clearCommittedInput = () => {
+      if (updateCharacterPendingInputRef.current.get(requestKey) === queuedInput) {
+        updateCharacterPendingInputRef.current.delete(requestKey);
+      }
+    };
 
     try {
       const updated = await updateCharacterBase(characterId, queuedInput);
-      const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
-      updateCharacterPendingInputRef.current.delete(requestKey);
-      updateCharacterPendingResolversRef.current.delete(requestKey);
+      clearCommittedInput();
       failedSaveKeysRef.current.delete(requestKey);
 
       if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
@@ -228,9 +234,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       currentResolvers?.resolve.forEach(fn => fn(updated));
       return updated;
     } catch (error) {
-      const currentResolvers = updateCharacterPendingResolversRef.current.get(requestKey);
-      updateCharacterPendingInputRef.current.delete(requestKey);
-      updateCharacterPendingResolversRef.current.delete(requestKey);
+      clearCommittedInput();
       failedSaveKeysRef.current.add(requestKey);
 
       if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
@@ -254,12 +258,18 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
     const nextVersion = (specFieldRequestVersionRef.current.get(requestKey) ?? 0) + 1;
     specFieldRequestVersionRef.current.set(requestKey, nextVersion);
+    // Edits queued during the write keep their own entry, timer, and resolvers.
+    const currentResolvers = specPendingResolversRef.current.get(requestKey);
+    specPendingResolversRef.current.delete(requestKey);
+    const clearCommittedValue = () => {
+      if (specPendingValueRef.current.get(requestKey) === queuedValue) {
+        specPendingValueRef.current.delete(requestKey);
+      }
+    };
 
     try {
       const updated = await updateSpecFieldBase(characterId, field, queuedValue);
-      const currentResolvers = specPendingResolversRef.current.get(requestKey);
-      specPendingValueRef.current.delete(requestKey);
-      specPendingResolversRef.current.delete(requestKey);
+      clearCommittedValue();
       failedSaveKeysRef.current.delete(requestKey);
 
       if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
@@ -269,9 +279,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       currentResolvers?.resolve.forEach(fn => fn(updated));
       return updated;
     } catch (error) {
-      const currentResolvers = specPendingResolversRef.current.get(requestKey);
-      specPendingValueRef.current.delete(requestKey);
-      specPendingResolversRef.current.delete(requestKey);
+      clearCommittedValue();
       failedSaveKeysRef.current.add(requestKey);
 
       if (specFieldRequestVersionRef.current.get(requestKey) === nextVersion) {
