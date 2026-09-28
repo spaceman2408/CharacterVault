@@ -57,7 +57,7 @@ function LorebookEntryListItem({
             <span>
               {entry.keys.length} key{entry.keys.length !== 1 ? 's' : ''}
             </span>
-            {tokenCount !== null ? <span>{tokenCount.toLocaleString()} tokens</span> : null}
+            <span>{tokenCount.toLocaleString()} tokens</span>
             {!isContextEnabled ? <span className="text-fg-subtle">Hidden from context</span> : null}
           </div>
         </div>

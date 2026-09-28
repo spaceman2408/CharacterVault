@@ -339,10 +339,8 @@ function LorebookEditorInner({
     },
     [handleUpdateRecursionFlags],
   );
-  const selectedEntryTokenCount = useMemo(
-    () => (selectedEntry ? estimateTokens(selectedEntry.content) : null),
-    [selectedEntry],
-  );
+  const contentTokens = useMemo(() => entries.map((entry) => estimateTokens(entry.content)), [entries]);
+  const selectedEntryTokenCount = selectedEntry ? (contentTokens[safeSelectedIndex] ?? 0) : null;
 
   const customContextTokens =
     customContext?.meta.enabled && customContext.meta.charLength > 0
@@ -711,7 +709,7 @@ function LorebookEditorInner({
                   key={entry.id}
                   entry={entry}
                   index={originalIndex}
-                  tokenCount={originalIndex === safeSelectedIndex ? selectedEntryTokenCount : null}
+                  tokenCount={contentTokens[originalIndex] ?? 0}
                   isSelected={originalIndex === safeSelectedIndex}
                   isContextEnabled={isEntryContextEnabled(entry)}
                   onSelect={rowHandlers.onSelect}

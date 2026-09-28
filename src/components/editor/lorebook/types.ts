@@ -55,7 +55,7 @@ export interface LorebookAttachmentControls {
 export interface LorebookEntryListItemProps {
   entry: LorebookEntry;
   index: number;
-  tokenCount: number | null;
+  tokenCount: number;
   isSelected: boolean;
   isContextEnabled: boolean;
   /** Handlers take the entry id so the parent can pass stable functions and memo holds. */
