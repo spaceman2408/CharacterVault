@@ -74,9 +74,16 @@ export function CreatorNotesPreviewPane({
     const iframe = iframeRef.current;
     if (!iframe || !isLoadedRef.current) return;
     const doc = iframe.contentDocument;
-    if (!doc) return;
+    // Only the srcdoc document has the CSP. After the pane was empty, the remounted
+    // iframe still holds its initial about:blank until the srcdoc loads.
+    if (!doc || doc.URL !== 'about:srcdoc') return;
     doc.body.innerHTML = bodyContent;
   }, [bodyContent]);
+
+  const hasRemote = React.useMemo(
+    () => showRemoteWarning && hasRemoteReference(deferredContent),
+    [showRemoteWarning, deferredContent],
+  );
 
   if (!content.trim()) {
     return (
@@ -86,11 +93,9 @@ export function CreatorNotesPreviewPane({
     );
   }
 
-  const warn = showRemoteWarning && hasRemoteReference(deferredContent);
-
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
-      {warn && (
+      {hasRemote && (
         <div
           role="note"
           className="shrink-0 border-b border-warning/40 bg-warning-soft px-4 py-2 text-xs text-warning-soft-fg"
