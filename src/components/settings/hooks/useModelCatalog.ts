@@ -230,6 +230,7 @@ export function useModelCatalog({
   const fetchModels = useCallback(
     async (options?: FetchModelsCallOptions) => {
       if (mountedRef.current) setIsFetchingModels(true);
+      const fetchedUrl = normalizeBaseUrl(draftRef.current.ai.baseUrl);
       try {
         const { ai, sampler } = draftRef.current;
         const subscriptionOnly =
@@ -269,7 +270,7 @@ export function useModelCatalog({
       } catch (err) {
         if (!mountedRef.current || !isOpenRef.current || isAbortError(err)) return;
         const message = err instanceof AIError ? err.message : 'Failed to fetch models';
-        setModelFetchErrorByBaseUrl((prev) => ({ ...prev, [normalizeBaseUrl(draftRef.current.ai.baseUrl)]: message }));
+        setModelFetchErrorByBaseUrl((prev) => ({ ...prev, [fetchedUrl]: message }));
         addToast('error', message);
       } finally {
         if (mountedRef.current && isOpenRef.current) setIsFetchingModels(false);
