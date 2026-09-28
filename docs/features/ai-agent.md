@@ -106,7 +106,7 @@ The Agent remembers earlier requests in the same chat. Each past run carries a s
 - **Turn limit:** a run that stops at the [loop-turn cap](#limits-per-run) says so on its last message, with a **Continue** button that sends “Continue where you left off.”
 - **Starter suggestions:** an empty chat offers a few first requests based on what the card or book is missing, such as *Write a description*, *Write 2 alternate greetings*, or *Build a lorebook from my custom context*. It never suggests Appearance, Personality, Scenario, System prompt, or Post-history. A finished card gets the usual *Audit this card* style chips.
 - **Header:** a shield icon means [review](#review-edits) is on, and a yellow **Review N** button means a proposal is waiting. **New chat** is the speech bubble with a plus. The **Native** / **XML** chip hides when the panel is narrow.
-- **Finished in the background:** if a run ends while you are on another tab, the page title starts with **Agent finished** until you come back.
+- **Finished in the background:** if a run ends while you are on another tab or in another app, the page title starts with **Agent finished** until you come back.
 - **Thinking:** streams in an expanded **Thinking** fold while it is live; after the reply it collapses
 - **Live token count:** catalogs, custom context, and the current prompt (including tool results)
 - **TTFT / t/s:** on the assistant message info tooltip when the reply finishes, same as Orion
