@@ -34,14 +34,17 @@ The preview renders inside an isolated frame with security restrictions:
 
 - Your HTML and CSS are isolated from the rest of the app, so styles won't leak out
 - Scripts and form submissions are blocked for security
+- Only https images, fonts, and stylesheets load, plus images embedded in the notes (`data:` URLs). Everything else is blocked
 - The preview environment uses a dark gradient background and a base sans-serif font stack
+
+When the notes pull images, fonts, or styles from another site, the preview shows a warning: that site can see your IP address and that you opened the card. The warning is on by default; turn it off in **Settings → Character Workspace → Warn about remote content in Creator Notes preview**.
 
 ::: tip
 Always design your CSS for a dark background. The preview environment uses a dark color scheme by default, and most SillyTavern setups do too.
 :::
 
 ::: tip
-Keep your styles self-contained. External resources like fonts or images may not load inside the sandbox. Include styles inline or in `<style>` tags instead.
+Keep your styles self-contained. Plain http resources never load in the preview, and remote https ones can tell their host who opened the card. Include styles inline or in `<style>` tags instead.
 :::
 
 ## Example

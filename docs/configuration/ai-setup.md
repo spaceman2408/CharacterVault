@@ -226,6 +226,7 @@ Workspace UI preferences (this used to share a **Studio** tab with Creation Stud
 
 - **Chat panel:** default Ask AI chat when you open a character or lorebook: **Orion** (talks, does not write the card) or **Agent** (writes the open card or book). You can still switch in the chat header. See [AI Agent](/features/ai-agent).
 - **Agent edits:** **Review agent edits before applying** stages Agent writes into a diff modal instead of applying them when the run finishes. See [AI Agent → Review edits](/features/ai-agent#review-edits).
+- **Creator Notes:** **Warn about remote content in Creator Notes preview** (on by default) says when the notes load images, fonts, or styles from another site. See [Creator Notes → Sandboxed Rendering](/features/creator-notes#sandboxed-rendering).
 - **Editor links** and **Spellcheck:** covered under [Editor](/features/editor).
 
 ## Creation Studio Tab

@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.8.0
-An AI Agent that is easier to steer, follow, and review: edit and resend, @-mentions, run status and memory, and clearer review diffs.
+::: tip CharacterVault 1.8.1
+Snapshot diffs like the Agent review, one Orion / Agent chat header, a safer Creator Notes preview, and a large round of fixes.
 
-[Try it](https://vault.charactervault.app) · [Chat controls](/features/ai-agent#chat-controls) · [Review edits](/features/ai-agent#review-edits)
+[Try it](https://vault.charactervault.app) · [Snapshot diffs](/features/snapshots-history#diff-viewer) · [Creator Notes](/features/creator-notes#sandboxed-rendering)
 :::
 
 # CharacterVault

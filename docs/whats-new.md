@@ -6,6 +6,16 @@ Quick overview of recent updates to CharacterVault.
 
 ## September 2026
 
+### 1.8.1
+
+CharacterVault 1.8.1 brings snapshot diffs laid out like the Agent review, a one-click Orion / Agent switch with edit-and-resend in Orion, and a Creator Notes preview that can't quietly phone home, plus a large round of fixes to saving, import, export, and the lorebook editor.
+
+- **Snapshot diffs** in **Snapshots**: one card per change, side by side or inline, **Restore** per card, and one card per greeting and lorebook entry
+- **One chat header**: the chat bubble (Orion) and robot (Agent) at the left switch modes, and the pencil on your last Orion message edits and resends
+- **Remote content**: the Creator Notes preview loads only https images, fonts, and styles and warns when they come from another site (**Settings → Character Workspace**, on by default); images in chat replies are links
+
+[Release 1.8.1 →](/releases/v1.8.1) · [Snapshots →](/features/snapshots-history#diff-viewer) · [Creator Notes →](/features/creator-notes#sandboxed-rendering)
+
 ### 1.8.0
 
 CharacterVault 1.8.0 makes the AI Agent easier to steer, follow, and review: edit and resend your last message, @-mention fields and entries, see what each run is doing and what earlier runs changed, and check its edits in a clearer diff.
