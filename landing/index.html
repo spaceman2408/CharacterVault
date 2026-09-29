@@ -3,18 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CharacterVault | A local-first studio for AI character cards</title>
-  <meta name="description" content="CharacterVault is a free character card and lorebook studio that runs entirely in your browser. Write, edit, and organize SillyTavern V2/V3 cards and lorebooks, with an AI co-writer when you want one.">
-  <meta property="og:title" content="CharacterVault | A local-first studio for AI character cards">
-  <meta property="og:description" content="Write, edit, and organize SillyTavern-compatible character cards and lorebooks in your browser. No account, no server, no lock-in.">
+  <title>CharacterVault | Free character card and lorebook editor for SillyTavern</title>
+  <meta name="description" content="CharacterVault is a free, open-source studio for SillyTavern character cards and lorebooks. Edit every V2/V3 field, map how your lore connects, and write with optional AI help. Runs in your browser, no account needed.">
+  <meta name="theme-color" content="#0d0e17">
+  <link rel="canonical" href="https://charactervault.app/">
+  <meta property="og:site_name" content="CharacterVault">
+  <meta property="og:title" content="CharacterVault | Free character card and lorebook editor">
+  <meta property="og:description" content="Write, edit, and organize SillyTavern character cards and lorebooks in your browser. Free and open source, with no account and no lock-in.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://charactervault.app/">
+  <meta property="og:image" content="https://charactervault.app/assets/screenshots/editor.png">
+  <meta property="og:image:alt" content="The CharacterVault card editor with the Orion chat panel">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/svg+xml" href="assets/CharacterVaultFavicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <a class="skip-link" href="#top">Skip to content</a>
 
   <header class="site-header">
     <nav class="nav container" aria-label="Main navigation">
@@ -25,11 +34,23 @@
         <span></span><span></span><span></span>
       </button>
       <div class="nav-links" id="nav-links">
-        <a href="#features">Features</a>
-        <a href="#screenshots">Screenshots</a>
+        <a href="#editor">Editor</a>
+        <a href="#lorebooks">Lorebooks</a>
+        <a href="#ai">AI</a>
+        <a href="#free">Pricing</a>
+        <a href="#faq">FAQ</a>
         <a href="https://vault.charactervault.app/docs/" target="_blank" rel="noopener">Docs</a>
-        <a href="https://github.com/spaceman2408/CharacterVault" target="_blank" rel="noopener">GitHub</a>
-        <a class="btn btn-primary btn-sm" href="https://vault.charactervault.app/" target="_blank" rel="noopener">Launch App</a>
+        <span class="nav-icons">
+          <a class="nav-icon" href="https://github.com/spaceman2408/CharacterVault" target="_blank" rel="noopener" aria-label="CharacterVault on GitHub">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+            <span class="nav-icon-label">GitHub</span>
+          </a>
+          <a class="nav-icon" href="https://discord.gg/T9jbbArPrF" target="_blank" rel="noopener" aria-label="CharacterVault on Discord">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.1 14.1 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.029 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.055c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.029ZM8.02 15.331c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.332-.956 2.418-2.157 2.418Zm7.975 0c-1.183 0-2.157-1.086-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.332-.946 2.418-2.157 2.418Z"/></svg>
+            <span class="nav-icon-label">Discord</span>
+          </a>
+        </span>
+        <a class="btn btn-primary btn-sm" href="https://vault.charactervault.app/" target="_blank" rel="noopener">Open the app</a>
       </div>
     </nav>
   </header>
@@ -37,473 +58,432 @@
   <main id="top">
 
     <section class="hero">
-      <div class="hero-stars" aria-hidden="true"></div>
       <div class="container hero-inner">
         <div class="hero-copy">
-          <a class="hero-pill reveal" href="https://vault.charactervault.app/docs/releases/v1.8.1" target="_blank" rel="noopener">
-            New in 1.8.1: Clearer snapshot diffs, one chat header, and a safer Creator Notes preview
+          <a class="hero-note reveal" href="https://vault.charactervault.app/docs/releases/v1.8.1" target="_blank" rel="noopener">
+            <span class="hero-note-tag">New in 1.8.1</span>
+            <span class="hero-note-text">Snapshot diffs you can restore one change at a time</span>
             <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
-          <p class="hero-eyebrow reveal">Free and open source</p>
-          <h1 class="reveal">A proper home for <br><span class="hero-keyword">your <span class="accent-text"><span class="word-rotate" id="heroWord">AI characters</span></span><span class="caret" aria-hidden="true"></span></span></h1>
+          <h1 class="reveal">Write characters worth <em>keeping</em>.</h1>
           <p class="hero-sub reveal">
-            CharacterVault is a studio for character cards and the lorebooks behind
-            them that runs entirely in your browser. Write and organize
-            SillyTavern-compatible cards, and bring in an AI co-writer when you want a
-            second pair of eyes.
+            CharacterVault is a free, open-source studio for SillyTavern character cards
+            and lorebooks. Edit every field, see how your lore connects, and bring in an AI
+            co-writer when you want one. It all runs in your browser.
           </p>
           <div class="hero-cta reveal">
             <a class="btn btn-primary btn-lg" href="https://vault.charactervault.app/" target="_blank" rel="noopener">
-              Launch the app
+              Open CharacterVault
               <svg class="btn-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </a>
-            <a class="btn btn-ghost btn-lg" href="https://github.com/spaceman2408/CharacterVault" target="_blank" rel="noopener">Star on GitHub</a>
+            <a class="btn btn-ghost btn-lg" href="#editor">See what's inside</a>
           </div>
-          <ul class="hero-facts reveal" aria-label="Key facts">
-            <li>No account needed</li>
+          <ul class="hero-proof reveal" aria-label="Key facts">
+            <li>Free, no sign-up</li>
+            <li>Nothing to install</li>
             <li>Cards stay on your device</li>
-            <li>SillyTavern V2 and V3</li>
           </ul>
         </div>
 
-        <div class="hero-visual reveal" aria-hidden="true">
-          <div class="mock-stack">
-            <div class="mock-card mock-card-back"></div>
-            <div class="mock-card">
-              <div class="mock-portrait">
-                <img src="assets/screenshots/vault-card-example.jpg" alt="" loading="lazy" decoding="async" />
-              </div>
-              <div class="mock-body">
-                <h3 class="mock-name">Aria Voss</h3>
-                <div class="mock-tags">
-                  <span class="mock-tag">sci-fi</span>
-                  <span class="mock-tag">cartographer</span>
-                  <span class="mock-tag">slow burn</span>
-                  <span class="mock-tag mock-tag-more">+12</span>
+        <div class="hero-visual" role="img" aria-label="A character card opened up into its fields: description, personality, scenario, first message, three alternate greetings, and a 14-entry lorebook.">
+          <div class="unpack" aria-hidden="true">
+            <div class="uc-stack">
+              <span class="uc-ghost uc-ghost-1"></span>
+              <span class="uc-ghost uc-ghost-2"></span>
+              <div class="uc-card">
+                <div class="uc-portrait">
+                  <img src="assets/screenshots/vault-card-example.jpg" alt="" decoding="async" fetchpriority="high">
                 </div>
-                <div class="mock-activity">
-                  <span>
-                    <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 5.5V10l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                    Opened 2d ago
+                <div class="uc-body">
+                  <span class="uc-file">aria-voss.png</span>
+                  <span class="uc-name">Aria Voss</span>
+                  <span class="uc-tags">
+                    <span class="uc-tag">sci-fi</span>
+                    <span class="uc-tag">cartographer</span>
+                    <span class="uc-tag uc-tag-more">+12</span>
                   </span>
-                  <span>
-                    <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.5 3.5a2.1 2.1 0 0 1 3 3L7 16l-4 1 1-4 9.5-9.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                    Edited 5h ago
-                  </span>
-                </div>
-                <div class="mock-tokens">
-                  <span class="t-active">~1.4k</span>
-                  <span class="t-sep">/</span>
-                  <span class="t-total">~5.5k</span>
-                  <span class="t-unit">tok</span>
+                  <span class="uc-tokens"><span class="t-active">~1.4k</span><span class="t-sep">/</span><span class="t-total">~5.5k</span><span class="t-unit">tok</span></span>
                 </div>
               </div>
-              <div class="mock-glare" aria-hidden="true"></div>
             </div>
+            <ul class="unpack-fields">
+              <li class="uf" style="--i:0">
+                <span class="uf-head"><span class="uf-key">description</span><span class="uf-tok">~700 tok</span></span>
+                <span class="uf-text">Charts dead star systems for whoever pays. A thin scar splits her left brow.</span>
+              </li>
+              <li class="uf" style="--i:1">
+                <span class="uf-head"><span class="uf-key">personality</span><span class="uf-tok">~148 tok</span></span>
+                <span class="uf-text">Dry, patient, and slow to make promises she can't keep.</span>
+              </li>
+              <li class="uf" style="--i:2">
+                <span class="uf-head"><span class="uf-key">scenario</span><span class="uf-tok">~204 tok</span></span>
+                <span class="uf-text"><span class="uf-macro">{{user}}</span> books passage on her survey skiff, the Longitude.</span>
+              </li>
+              <li class="uf" style="--i:3">
+                <span class="uf-head"><span class="uf-key">first_mes</span><span class="uf-tok">~296 tok</span></span>
+                <span class="uf-text"><em>*The airlock hisses.*</em> "You're late. The star's already dead."</span>
+              </li>
+              <li class="uf" style="--i:4">
+                <span class="uf-head"><span class="uf-key">alternate_greetings</span><span class="uf-tok">3 greetings</span></span>
+                <span class="uf-text">The salvage bid, the distress call, the wrong coordinates.</span>
+              </li>
+              <li class="uf" style="--i:5">
+                <span class="uf-head"><span class="uf-key">character_book</span><span class="uf-tok">14 entries</span></span>
+                <span class="uf-text">The Meridian Compact, The Old Keep, Longitude, and 11 more.</span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="spec-strip">
-      <div class="container spec-inner reveal">
-        <div class="spec-track">
-          <div class="spec-group">
-            <span>PNG and JSON import/export</span>
-            <span>Snapshots and rollback</span>
-            <span>IndexedDB storage</span>
-            <span>OpenAI-compatible providers</span>
-            <span>GPL-3.0 licensed</span>
-          </div>
-          <div class="spec-group" aria-hidden="true">
-            <span>PNG and JSON import/export</span>
-            <span>Snapshots and rollback</span>
-            <span>IndexedDB storage</span>
-            <span>OpenAI-compatible providers</span>
-            <span>GPL-3.0 licensed</span>
-          </div>
+    <section class="compat" aria-label="Compatibility">
+      <div class="container compat-inner">
+        <div class="compat-row">
+          <p class="compat-label">Opens and saves</p>
+          <ul class="compat-list">
+            <li>SillyTavern</li>
+            <li>Card V2 and V3</li>
+            <li>PNG and JSON</li>
+            <li>World Info lorebooks</li>
+          </ul>
+        </div>
+        <div class="compat-row">
+          <p class="compat-label">AI, if you want it</p>
+          <ul class="compat-list">
+            <li>OpenRouter</li>
+            <li>NanoGPT</li>
+            <li>LM Studio</li>
+            <li>Any OpenAI-compatible API</li>
+          </ul>
         </div>
       </div>
     </section>
 
-    <section class="section container" id="features">
-      <p class="section-label reveal">Features</p>
-      <h2 class="reveal">Built for people who write a lot of characters</h2>
-      <p class="section-sub reveal">From a rough idea to a finished card, the whole workflow lives in one tab.</p>
-      <div class="features-grid">
-        <article class="feature-card reveal">
-          <div class="feature-top"><span class="feature-num">01</span>
-            <svg class="feature-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5.5A1.5 1.5 0 0 1 4.5 4h3L9 5.5h6.5A1.5 1.5 0 0 1 17 7v7.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5v-9Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    <section class="section chapter" id="editor">
+      <div class="container">
+        <div class="chapter-head">
+          <div>
+            <p class="eyebrow reveal">The editor</p>
+            <h2 class="reveal">Every field, with room to&nbsp;write.</h2>
           </div>
-          <h3>A library that scales with your cast</h3>
-          <p>Import cards from PNG or JSON, search and sort everything, and export back to SillyTavern whenever you like. No lock-in, ever.</p>
-        </article>
-        <article class="feature-card reveal">
-          <div class="feature-top"><span class="feature-num">02</span>
-            <svg class="feature-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13.5 3.5a2.1 2.1 0 0 1 3 3L7 16l-4 1 1-4 9.5-9.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <div>
+            <p class="lede reveal">
+              Description, personality, scenario, greetings, example dialogue, system
+              prompt, creator notes. Each one gets a real editor instead of a cramped text box.
+            </p>
+            <ul class="points reveal">
+              <li>Every V2 and V3 field, alternate greetings included</li>
+              <li>Colors for "dialogue", *actions*, and {{macros}}, plus spellcheck</li>
+              <li>Token estimates on every card, so you know what fits</li>
+              <li>Creator Notes with a safe, live HTML preview</li>
+            </ul>
           </div>
-          <h3>An editor that goes deep</h3>
-          <p>Every field of the V2 and V3 spec is editable: description, personality, scenario, alternate greetings, and full SillyTavern World Info lorebook fields.</p>
-        </article>
-        <article class="feature-card reveal">
-          <div class="feature-top"><span class="feature-num">03</span>
-            <svg class="feature-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M15.5 13.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z" fill="currentColor"/></svg>
-          </div>
-          <h3>Orion, your co-writer</h3>
-          <p>Highlight any passage and ask Orion to tighten it, expand it, or take it somewhere new. Or open a chat and brainstorm from scratch.</p>
-        </article>
-        <article class="feature-card reveal">
-          <div class="feature-top"><span class="feature-num">04</span>
-            <svg class="feature-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 6h7M14 6h3M3 14h3M10 14h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="6" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="14" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
-          </div>
-          <h3>Context you control</h3>
-          <p>Every section of the card is a toggle, down to single lorebook entries. The AI sees what you pick, and nothing else.</p>
-        </article>
-        <article class="feature-card reveal">
-          <div class="feature-top"><span class="feature-num">05</span>
-            <svg class="feature-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 5.5V10l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-          </div>
-          <h3>Snapshots you can trust</h3>
-          <p>CharacterVault saves versions as you work. Try the risky rewrite; if it flops, roll back to any earlier snapshot in one click.</p>
-        </article>
-        <article class="feature-card reveal">
-          <div class="feature-top"><span class="feature-num">06</span>
-            <svg class="feature-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 4 5v4.5c0 3.8 2.6 6.6 6 8 3.4-1.4 6-4.2 6-8V5l-6-2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7.5 10l1.8 1.8L12.8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <h3>Private by default</h3>
-          <p>Cards live in your browser's IndexedDB. There is no account to make, no server copy, and nothing to leak.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="section" id="lorebooks">
-      <div class="container studio-grid">
-        <figure class="screenshot studio-shot reveal">
+        </div>
+        <figure class="shot reveal">
           <div class="window-bar" aria-hidden="true">
             <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-            <span class="wb-url">charactervault / lorebooks</span>
+            <span class="wb-url">vault.charactervault.app / editor</span>
           </div>
-          <img src="assets/screenshots/lorebook-vault.png" alt="Lorebook Vault library showing standalone lorebooks beside the character vault" class="zoomable" loading="lazy" onerror="this.closest('figure').style.display='none'">
+          <img src="assets/screenshots/editor.png" alt="The card editor showing a character's description, the section tabs, and the Orion chat panel" class="zoomable" loading="lazy" width="1909" height="949" style="--focus: 0% 0%">
         </figure>
-        <div class="studio-copy">
-          <p class="section-label reveal">Lorebook Vault</p>
-          <h2 class="reveal">Your lorebooks,<br>unbundled.</h2>
-          <p class="ctx-sub reveal">
-            Lorebooks get a library of their own, right next to your characters. Create,
-            search, import, and export standalone books. Then link one book to many
-            characters and edit in one place. Everything stays local, in your browser.
-          </p>
-          <ul class="ctx-points reveal">
-            <li>Standalone library beside your characters</li>
-            <li>Link one book to many characters, edits sync</li>
-            <li>SillyTavern scan settings round-trip on import and export</li>
-          </ul>
-          <a class="section-link reveal" href="https://vault.charactervault.app/docs/features/lorebook-vault" target="_blank" rel="noopener">
-            Lorebook Vault docs
-            <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </a>
-        </div>
       </div>
     </section>
 
-    <section class="section" id="recursion-map">
-      <div class="container studio-grid">
-        <div class="studio-copy">
-          <p class="section-label reveal">Recursion map</p>
-          <h2 class="reveal">See every unlock path<br>at a glance.</h2>
-          <p class="ctx-sub reveal">
-            Open a book as a fullscreen web of entries. Arrows show which entries can
-            unlock which. Pan, zoom, and hover to trace chains, pin paths to inspect them,
-            and fix your book without ever leaving the map.
-          </p>
-          <ul class="ctx-points reveal">
-            <li>Visual web of which entries unlock which</li>
-            <li>Edit keys and flags without leaving the map</li>
-            <li>Staged bulk edits: review, apply, or discard</li>
-          </ul>
-          <a class="section-link reveal" href="https://vault.charactervault.app/docs/features/recursion-map-guide" target="_blank" rel="noopener">
-            Recursion map guide
-            <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </a>
+    <section class="section chapter" id="lorebooks">
+      <div class="container">
+        <div class="chapter-head">
+          <div>
+            <p class="eyebrow reveal">Lorebooks</p>
+            <h2 class="reveal">See how your lore connects.</h2>
+          </div>
+          <div>
+            <p class="lede reveal">
+              Lorebooks get their own library beside your characters. Link one book to as many
+              characters as you like, then open the recursion map to see which entries trigger
+              which, and fix the keys right there.
+            </p>
+            <ul class="points reveal">
+              <li>Standalone books, linked to many characters and kept in sync</li>
+              <li>A map of every unlock path in the book</li>
+              <li>Every SillyTavern World Info field survives import and export</li>
+            </ul>
+            <a class="text-link reveal" href="https://vault.charactervault.app/docs/features/recursion-map-guide" target="_blank" rel="noopener">
+              Read the recursion map guide
+              <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
         </div>
-        <figure class="screenshot studio-shot reveal">
+        <figure class="shot reveal">
           <div class="window-bar" aria-hidden="true">
             <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-            <span class="wb-url">charactervault / recursion map</span>
+            <span class="wb-url">vault.charactervault.app / recursion map</span>
           </div>
-          <img src="assets/screenshots/recursion-map.png" alt="Fullscreen recursion map showing a web of lorebook entries and their unlock paths" class="zoomable" loading="lazy" onerror="this.closest('figure').style.display='none'">
+          <img src="assets/screenshots/recursion-map.png" alt="The recursion map showing a web of lorebook entries, with one entry's keys and unlock paths open in the side panel" class="zoomable" loading="lazy" width="1916" height="942" style="--focus: 28% 50%">
         </figure>
       </div>
     </section>
 
     <section class="section" id="ai">
       <div class="container">
-        <p class="section-label reveal">AI co-writer</p>
-        <h2 class="reveal">Highlight. Instruct. Accept.</h2>
-        <p class="section-sub reveal">Select any passage, tell Orion what you want, and watch the rewrite preview in place. Nothing changes until you accept it.</p>
-        <div class="ai-editor reveal" id="ai-demo-editor">
-          <div class="window-bar" aria-hidden="true">
-            <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-            <span class="wb-url">charactervault / editor</span>
+        <div class="chapter-head">
+          <div>
+            <p class="eyebrow reveal">AI, optional</p>
+            <h2 class="reveal">A co-writer on call. Never in the way.</h2>
           </div>
-          <div class="ai-editor-body">
-            <div class="ai-toolbar-mock" aria-hidden="true">
-              <span class="ai-sparkle">✦</span>
-              <span class="ai-toolbar-name">Orion</span>
-              <span class="ai-instruction"></span>
-            </div>
-            <p class="ai-text"><span class="ai-before"></span><span class="ai-target"></span><span class="ai-after"></span></p>
-            <div class="ai-actions" aria-hidden="true">
-              <span class="ai-action ai-accept">Accept</span>
-              <span class="ai-action">Reject</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="agent">
-      <div class="container">
-        <p class="section-label reveal">The Agent</p>
-        <h2 class="reveal">Describe the edit.<br>The Agent writes the card.</h2>
-        <p class="section-sub reveal">Orion talks back. The Agent rolls up its sleeves: it reads your open character or lorebook through tools, then fills, rewrites, and cuts for real — while you watch the tool calls live. Optional review puts those writes in a word-level diff until you approve them.</p>
-        <div class="agent-demo reveal" id="agent-demo">
-          <div class="window-bar" aria-hidden="true">
-            <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-            <span class="wb-url">charactervault / agent</span>
-          </div>
-          <div class="agent-body">
-            <div class="agent-banner" id="agentBanner" aria-hidden="true">Agent is writing. Changes appear when the run finishes.</div>
-            <div class="agent-turn agent-user reveal-static">
-              <span class="agent-role">You</span>
-              <p class="agent-bubble">Rekey the lorebook entries to proper nouns and trim anything empty.</p>
-            </div>
-            <div class="agent-turn agent-bot">
-              <span class="agent-role">Agent</span>
-              <div class="agent-thread" id="agentThread"></div>
-            </div>
-            <div class="agent-foot">
-              <span class="agent-foot-item"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> Catalogs read</span>
-              <span class="agent-foot-item agent-meter"><span class="agent-meter-dot"></span> <span id="agentTokens">1.2k</span> tok live</span>
-              <span class="agent-foot-item agent-thinking" id="agentThinking">Thinking…</span>
-            </div>
-          </div>
-        </div>
-        <ul class="agent-bullets reveal">
-          <li>Snippet edits match existing text — no rewriting the whole field</li>
-          <li>Whole-book and whole-card tools: search, replace-everywhere, audit</li>
-          <li>Own model slot, native function calling, writes once per run</li>
-          <li>Optional review diff: approve, edit, or deny before anything lands</li>
-        </ul>
-        <a class="section-link reveal" href="https://vault.charactervault.app/docs/features/ai-agent" target="_blank" rel="noopener" style="display:flex;justify-content:center;margin-top:1.8rem">
-          Read the Agent docs
-          <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </a>
-      </div>
-    </section>
-
-    <section class="section" id="context">
-      <div class="container ctx-grid">
-        <div class="ctx-copy">
-          <p class="section-label reveal">Context</p>
-          <h2 class="reveal">Send what you need,<br>not what you have.</h2>
-          <p class="ctx-sub reveal">
-            Every section of the card is a toggle. Orion only sees the parts you pick,
-            so prompts stay lean and answers stay on target.
-          </p>
-          <ul class="ctx-points reveal">
-            <li>Per-section toggles for every field</li>
-            <li>Custom notes you can paste per character</li>
-            <li>Live token estimate against your limit</li>
-          </ul>
-          <div class="lore-demo reveal">
-            <span class="ctx-mini-label">In the lorebook, per entry</span>
-            <div class="lore-entry" id="loreEntryDemo">
-              <div class="lore-entry-text">
-                <span class="lore-entry-name">The Meridian Compact</span>
-                <span class="lore-entry-meta">6 keys · 111 tokens <em class="lore-hidden-note">Hidden from context</em></span>
-              </div>
-              <button type="button" class="lore-eye" id="loreEye" aria-pressed="true" title="Toggle context for this entry">
-                <svg class="eye-on" width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.4" stroke="currentColor" stroke-width="1.5"/></svg>
-                <svg class="eye-off" width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 4.5l13 11M8.4 5.1A8.6 8.6 0 0 1 10 5c5 0 8 5 8 5a13.6 13.6 0 0 1-2.2 2.9M5.9 6.9A13 13 0 0 0 2 10s3 5 8 5c1 0 1.9-.2 2.7-.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="ctx-demo reveal">
-          <div class="ctx-panel" id="ctx-demo">
-            <div class="ctx-head">
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-              <span>AI Context</span>
-              <span class="ctx-count" id="ctxCount">3</span>
-            </div>
-            <div class="ctx-usage">
-              <div class="ctx-usage-row">
-                <span>Usage</span>
-                <span class="ctx-tokens" id="ctxTokens" data-status="good">696 / 8,192</span>
-              </div>
-              <div class="ctx-bar"><div class="ctx-bar-fill" id="ctxBar" data-status="good"></div></div>
-            </div>
-            <div class="ctx-selected">
-              <span class="ctx-mini-label">Selected</span>
-              <div class="ctx-chips" id="ctxChips"></div>
-            </div>
-            <ul class="ctx-list" id="ctxList">
-              <li><button type="button" class="ctx-item" data-label="Name" data-tokens="12">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">Name</span><span class="ctx-item-desc">Character name</span></span>
-                <span class="ctx-cost">~12</span>
-              </button></li>
-              <li><button type="button" class="ctx-item on" data-label="Description" data-tokens="412">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">Description <em>editing</em></span><span class="ctx-item-desc">Character description</span></span>
-                <span class="ctx-cost">~412</span>
-              </button></li>
-              <li><button type="button" class="ctx-item" data-label="First Message" data-tokens="220">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">First Message</span><span class="ctx-item-desc">First greeting message</span></span>
-                <span class="ctx-cost">~220</span>
-              </button></li>
-              <li><button type="button" class="ctx-item" data-label="Greetings" data-tokens="510">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">Greetings</span><span class="ctx-item-desc">Alternate greetings</span></span>
-                <span class="ctx-cost">~510</span>
-              </button></li>
-              <li><button type="button" class="ctx-item" data-label="Examples" data-tokens="340">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">Examples</span><span class="ctx-item-desc">Message examples</span></span>
-                <span class="ctx-cost">~340</span>
-              </button></li>
-              <li><button type="button" class="ctx-item on" data-label="Scenario" data-tokens="188">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">Scenario</span><span class="ctx-item-desc">Roleplay scenario</span></span>
-                <span class="ctx-cost">~188</span>
-              </button></li>
-              <li><button type="button" class="ctx-item" data-label="Appearance" data-tokens="145">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">Appearance</span><span class="ctx-item-desc">Physical description</span></span>
-                <span class="ctx-cost">~145</span>
-              </button></li>
-              <li><button type="button" class="ctx-item on" data-label="Personality" data-tokens="96">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">Personality</span><span class="ctx-item-desc">Personality traits</span></span>
-                <span class="ctx-cost">~96</span>
-              </button></li>
-              <li><button type="button" class="ctx-item" data-label="Lorebook" data-tokens="700">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">Lorebook</span><span class="ctx-item-desc">Character lore entries</span></span>
-                <span class="ctx-cost">~700</span>
-              </button></li>
-              <li><button type="button" class="ctx-item" data-label="Creator Notes" data-tokens="74">
-                <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                <span class="ctx-item-text"><span class="ctx-item-label">Creator Notes</span><span class="ctx-item-desc">Notes from the creator</span></span>
-                <span class="ctx-cost">~74</span>
-              </button></li>
-            </ul>
-          </div>
-          <p class="ctx-hint">Live demo. Click a section to toggle it.</p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="studio">
-      <div class="container studio-grid">
-        <figure class="screenshot studio-shot reveal">
-          <div class="window-bar" aria-hidden="true">
-            <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-            <span class="wb-url">charactervault / studio</span>
-          </div>
-          <img src="assets/screenshots/ai-studio.png" alt="AI Creation Studio generating a character from a concept" class="zoomable" loading="lazy">
-        </figure>
-        <div class="studio-copy">
-          <p class="section-label reveal">New in 1.5.0 — AI Creation Studio</p>
-          <h2 class="reveal">From a sentence<br>to a full character.</h2>
-          <p class="ctx-sub reveal">
-            Describe who you are imagining, or pick from guided trait tags, and the studio
-            drafts the card in front of you. Edit the prompts, skip fields you do not need,
-            star tags you reuse. Stop it mid-stream, reroll what you don't like, then save
-            straight to your library.
-          </p>
-          <ul class="ctx-points reveal">
-            <li>Free-text concept or guided tag picker, including Dynamic and NSFW tags</li>
-            <li>Custom prompts and toggles for First Message and Examples</li>
-            <li>Favorites, recents, custom tags — nothing saves until you approve it</li>
-          </ul>
-          <a class="btn btn-primary btn-lg studio-cta reveal" href="https://vault.charactervault.app/#/ai-create" target="_blank" rel="noopener">
-            Try the Studio
-            <svg class="btn-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="screenshots">
-      <div class="container">
-        <p class="section-label reveal">Screenshots</p>
-        <h2 class="reveal">Take a look inside</h2>
-        <p class="section-sub reveal">The library, the editor, the vault, and the map.</p>
-        <div class="screenshots-grid">
-          <figure class="screenshot reveal">
-            <div class="window-bar" aria-hidden="true">
-              <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-              <span class="wb-url">charactervault / library</span>
-            </div>
-            <img src="assets/screenshots/library.png" alt="CharacterVault library view showing a grid of character cards" class="zoomable" loading="lazy">
-            <figcaption>The library. Your whole cast, searchable in one place.</figcaption>
-          </figure>
-          <figure class="screenshot reveal">
-            <div class="window-bar" aria-hidden="true">
-              <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-              <span class="wb-url">charactervault / editor</span>
-            </div>
-            <img src="assets/screenshots/editor.png" alt="CharacterVault card editor with character fields and lorebook" class="zoomable" loading="lazy">
-            <figcaption>The editor. Every field, from scenario to lorebook.</figcaption>
-          </figure>
-          <figure class="screenshot reveal">
-            <div class="window-bar" aria-hidden="true">
-              <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-              <span class="wb-url">charactervault / studio</span>
-            </div>
-            <img src="assets/screenshots/ai-studio.png" alt="AI Creation Studio generating a character from a concept" class="zoomable" loading="lazy">
-            <figcaption>The studio. Full characters from a single sentence.</figcaption>
-          </figure>
-          <figure class="screenshot reveal">
-            <div class="window-bar" aria-hidden="true">
-              <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-              <span class="wb-url">charactervault / lorebooks</span>
-            </div>
-            <img src="assets/screenshots/lorebook-vault.png" alt="Lorebook Vault library with standalone lorebooks" class="zoomable" loading="lazy" onerror="this.closest('figure').style.display='none'">
-            <figcaption>The vault. Standalone lorebooks, linkable to your whole cast.</figcaption>
-          </figure>
-          <figure class="screenshot reveal">
-            <div class="window-bar" aria-hidden="true">
-              <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
-              <span class="wb-url">charactervault / recursion map</span>
-            </div>
-            <img src="assets/screenshots/recursion-map.png" alt="Recursion map web view of lorebook entry unlock paths" class="zoomable" loading="lazy" onerror="this.closest('figure').style.display='none'">
-            <figcaption>The map. Every unlock path in the book, on one canvas.</figcaption>
-          </figure>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="extension">
-      <div class="container">
-        <div class="ext-panel reveal">
-          <div class="ext-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M10 3v8m0 0 3-3m-3 3L7 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13.5v2.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          </div>
-          <div class="ext-copy">
-            <p class="section-label">Companion extension</p>
-            <h2>Straight from SillyTavern.</h2>
-            <p class="ext-sub">
-              The CharacterVault Export extension adds an "Export to CharacterVault" option right
-              inside SillyTavern's export menu. One click and the card lands in your vault, image included.
+          <div>
+            <p class="lede reveal">
+              Connect OpenRouter, NanoGPT, a local model in LM Studio, or any OpenAI-compatible
+              API. Your prompts go straight from your browser to that provider, and nothing on
+              your card changes until you accept it.
             </p>
-            <p class="ext-note">On mobile the export falls back to plain JSON, so the card's image stays behind.</p>
           </div>
-          <a class="btn btn-ghost btn-lg ext-cta" href="https://github.com/spaceman2408/SillyTavern-CharacterVaultExport" target="_blank" rel="noopener">
+        </div>
+
+        <div class="tabs reveal">
+          <div class="tab-list" role="tablist" aria-label="AI tools">
+            <button type="button" class="tab" role="tab" id="tab-rewrite" aria-controls="panel-rewrite" aria-selected="true">Rewrite a passage</button>
+            <button type="button" class="tab" role="tab" id="tab-agent" aria-controls="panel-agent" aria-selected="false" tabindex="-1">Hand off an edit</button>
+            <button type="button" class="tab" role="tab" id="tab-context" aria-controls="panel-context" aria-selected="false" tabindex="-1">Choose what it sees</button>
+            <button type="button" class="tab" role="tab" id="tab-studio" aria-controls="panel-studio" aria-selected="false" tabindex="-1">Draft a new card</button>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-rewrite" aria-labelledby="tab-rewrite" tabindex="0">
+            <div class="panel-copy">
+              <h3>Highlight. Instruct. Accept.</h3>
+              <p>Select any passage and tell the AI toolbar what you want. The rewrite previews in place, and you decide whether it stays.</p>
+              <ul class="points">
+                <li>Enhance, rephrase, shorten, lengthen, or fix</li>
+                <li>Add your own buttons with your own prompts</li>
+                <li>Orion, the built-in chat, for brainstorming beside the editor</li>
+              </ul>
+            </div>
+            <div class="panel-demo">
+              <div class="ai-editor" id="ai-demo-editor">
+                <div class="window-bar" aria-hidden="true">
+                  <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
+                  <span class="wb-url">charactervault / editor</span>
+                </div>
+                <div class="ai-editor-body">
+                  <div class="ai-toolbar-mock" aria-hidden="true">
+                    <span class="ai-sparkle">✦</span>
+                    <span class="ai-toolbar-name">Orion</span>
+                    <span class="ai-instruction"></span>
+                  </div>
+                  <p class="ai-text"><span class="ai-before"></span><span class="ai-target"></span><span class="ai-after"></span></p>
+                  <div class="ai-actions" aria-hidden="true">
+                    <span class="ai-action ai-accept">Accept</span>
+                    <span class="ai-action">Reject</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-agent" aria-labelledby="tab-agent" tabindex="0" hidden>
+            <div class="panel-copy">
+              <h3>Describe the edit. The Agent makes it.</h3>
+              <p>The Agent reads your open card or lorebook, then fills, rewrites, and trims it while you watch each step. Turn on review to approve every change in a diff first.</p>
+              <ul class="points">
+                <li>Edits only the text that needs to change</li>
+                <li>Search, replace, and audit across a whole card or book</li>
+                <li>@-mention a field or entry to point it at the right spot</li>
+              </ul>
+              <a class="text-link" href="https://vault.charactervault.app/docs/features/ai-agent" target="_blank" rel="noopener">
+                Read the Agent docs
+                <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="panel-demo">
+              <div class="agent-demo" id="agent-demo">
+                <div class="window-bar" aria-hidden="true">
+                  <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
+                  <span class="wb-url">charactervault / agent</span>
+                </div>
+                <div class="agent-body">
+                  <div class="agent-banner" id="agentBanner" aria-hidden="true">Agent is writing. Changes appear when the run finishes.</div>
+                  <div class="agent-turn agent-user">
+                    <span class="agent-role">You</span>
+                    <p class="agent-bubble">Rekey the lorebook entries to proper nouns and trim anything empty.</p>
+                  </div>
+                  <div class="agent-turn agent-bot">
+                    <span class="agent-role">Agent</span>
+                    <div class="agent-thread" id="agentThread"></div>
+                  </div>
+                  <div class="agent-foot">
+                    <span class="agent-foot-item"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg> Catalogs read</span>
+                    <span class="agent-foot-item agent-meter"><span class="agent-meter-dot"></span> <span id="agentTokens">1.2k</span> tok live</span>
+                    <span class="agent-foot-item agent-thinking" id="agentThinking">Thinking…</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-context" aria-labelledby="tab-context" tabindex="0" hidden>
+            <div class="panel-copy">
+              <h3>Send what matters, not everything.</h3>
+              <p>Every card section and every lorebook entry has a toggle. The AI sees what you pick and nothing else, so prompts stay lean and answers stay on target.</p>
+              <ul class="points">
+                <li>Per-section toggles with token estimates</li>
+                <li>Hide single lorebook entries from context</li>
+                <li>Pin your own notes to each character</li>
+              </ul>
+              <div class="lore-demo">
+                <span class="ctx-mini-label">In the lorebook, per entry</span>
+                <div class="lore-entry" id="loreEntryDemo">
+                  <div class="lore-entry-text">
+                    <span class="lore-entry-name">The Meridian Compact</span>
+                    <span class="lore-entry-meta">6 keys · 111 tokens <em class="lore-hidden-note">Hidden from context</em></span>
+                  </div>
+                  <button type="button" class="lore-eye" id="loreEye" aria-pressed="true" aria-label="Include this entry in AI context">
+                    <svg class="eye-on" width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.4" stroke="currentColor" stroke-width="1.5"/></svg>
+                    <svg class="eye-off" width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 4.5l13 11M8.4 5.1A8.6 8.6 0 0 1 10 5c5 0 8 5 8 5a13.6 13.6 0 0 1-2.2 2.9M5.9 6.9A13 13 0 0 0 2 10s3 5 8 5c1 0 1.9-.2 2.7-.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="panel-demo panel-demo-narrow">
+              <div class="ctx-panel" id="ctx-demo">
+                <div class="ctx-head">
+                  <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2l1.8 4.7L16.5 8.5l-4.7 1.8L10 15l-1.8-4.7L3.5 8.5l4.7-1.8L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                  <span>AI Context</span>
+                  <span class="ctx-count" id="ctxCount">3</span>
+                </div>
+                <div class="ctx-usage">
+                  <div class="ctx-usage-row">
+                    <span>Usage</span>
+                    <span class="ctx-tokens" id="ctxTokens" data-status="good">696 / 8,192</span>
+                  </div>
+                  <div class="ctx-bar"><div class="ctx-bar-fill" id="ctxBar" data-status="good"></div></div>
+                </div>
+                <div class="ctx-selected">
+                  <span class="ctx-mini-label">Selected</span>
+                  <div class="ctx-chips" id="ctxChips"></div>
+                </div>
+                <ul class="ctx-list" id="ctxList">
+                  <li><button type="button" class="ctx-item" data-label="Name" data-tokens="12">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">Name</span><span class="ctx-item-desc">Character name</span></span>
+                    <span class="ctx-cost">~12</span>
+                  </button></li>
+                  <li><button type="button" class="ctx-item on" data-label="Description" data-tokens="412">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">Description <em>editing</em></span><span class="ctx-item-desc">Character description</span></span>
+                    <span class="ctx-cost">~412</span>
+                  </button></li>
+                  <li><button type="button" class="ctx-item" data-label="First Message" data-tokens="220">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">First Message</span><span class="ctx-item-desc">First greeting message</span></span>
+                    <span class="ctx-cost">~220</span>
+                  </button></li>
+                  <li><button type="button" class="ctx-item" data-label="Greetings" data-tokens="510">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">Greetings</span><span class="ctx-item-desc">Alternate greetings</span></span>
+                    <span class="ctx-cost">~510</span>
+                  </button></li>
+                  <li><button type="button" class="ctx-item" data-label="Examples" data-tokens="340">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">Examples</span><span class="ctx-item-desc">Message examples</span></span>
+                    <span class="ctx-cost">~340</span>
+                  </button></li>
+                  <li><button type="button" class="ctx-item on" data-label="Scenario" data-tokens="188">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">Scenario</span><span class="ctx-item-desc">Roleplay scenario</span></span>
+                    <span class="ctx-cost">~188</span>
+                  </button></li>
+                  <li><button type="button" class="ctx-item" data-label="Appearance" data-tokens="145">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">Appearance</span><span class="ctx-item-desc">Physical description</span></span>
+                    <span class="ctx-cost">~145</span>
+                  </button></li>
+                  <li><button type="button" class="ctx-item on" data-label="Personality" data-tokens="96">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">Personality</span><span class="ctx-item-desc">Personality traits</span></span>
+                    <span class="ctx-cost">~96</span>
+                  </button></li>
+                  <li><button type="button" class="ctx-item" data-label="Lorebook" data-tokens="700">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">Lorebook</span><span class="ctx-item-desc">Character lore entries</span></span>
+                    <span class="ctx-cost">~700</span>
+                  </button></li>
+                  <li><button type="button" class="ctx-item" data-label="Creator Notes" data-tokens="74">
+                    <span class="ctx-box"><svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span class="ctx-item-text"><span class="ctx-item-label">Creator Notes</span><span class="ctx-item-desc">Notes from the creator</span></span>
+                    <span class="ctx-cost">~74</span>
+                  </button></li>
+                </ul>
+              </div>
+              <p class="ctx-hint">Live demo. Click a section to toggle it.</p>
+            </div>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-studio" aria-labelledby="tab-studio" tabindex="0" hidden>
+            <div class="panel-copy">
+              <h3>From one sentence to a full card.</h3>
+              <p>Describe a character, or pick traits from the tag library, and the Creation Studio drafts every field in front of you. Reroll what you don't like, then save it to your library.</p>
+              <ul class="points">
+                <li>Start from a concept or from guided tags</li>
+                <li>Edit the prompt behind each field</li>
+                <li>Nothing saves until you approve it</li>
+              </ul>
+              <a class="text-link" href="https://vault.charactervault.app/#/ai-create" target="_blank" rel="noopener">
+                Try the Creation Studio
+                <svg class="btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </a>
+            </div>
+            <div class="panel-demo">
+              <figure class="shot shot-compact">
+                <div class="window-bar" aria-hidden="true">
+                  <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
+                  <span class="wb-url">charactervault / studio</span>
+                </div>
+                <img src="assets/screenshots/ai-studio.png" alt="The AI Creation Studio with generation style options and a concept prompt" class="zoomable shot-crop" loading="lazy" width="1911" height="942">
+              </figure>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="private">
+      <div class="container">
+        <div class="chapter-head">
+          <div>
+            <p class="eyebrow reveal">Your work stays yours</p>
+            <h2 class="reveal">No account. No cloud. No lost drafts.</h2>
+          </div>
+          <div>
+            <p class="lede reveal">
+              Your library stays on your device, and every change can be compared, undone,
+              or backed up. Try the bold rewrite. You can always go back.
+            </p>
+          </div>
+        </div>
+        <div class="assurances">
+          <article class="assurance reveal">
+            <svg class="assurance-icon" width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 4 5v4.5c0 3.8 2.6 6.6 6 8 3.4-1.4 6-4.2 6-8V5l-6-2.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7.5 10l1.8 1.8L12.8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <h3>Local by default</h3>
+            <p>Cards, lorebooks, and settings live in your browser's own storage. There's no CharacterVault server holding a copy.</p>
+          </article>
+          <article class="assurance reveal">
+            <svg class="assurance-icon" width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 5.5V10l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <h3>Snapshots</h3>
+            <p>Save a point before the risky rewrite. Compare versions side by side, then restore the whole card or a single change.</p>
+          </article>
+          <article class="assurance reveal">
+            <svg class="assurance-icon" width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v8m0 0 3-3m-3 3L7 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13.5v2.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <h3>One-file backups</h3>
+            <p>Export your whole vault as a single ZIP. Import it to restore your library in any browser.</p>
+          </article>
+        </div>
+
+        <div class="ext-panel reveal" id="extension">
+          <div class="ext-copy">
+            <h3>Coming from SillyTavern?</h3>
+            <p>The companion extension adds <strong>Export to CharacterVault</strong> to SillyTavern's export menu. One click and the card lands in your vault, image included.</p>
+          </div>
+          <a class="btn btn-ghost ext-cta" href="https://github.com/spaceman2408/SillyTavern-CharacterVaultExport" target="_blank" rel="noopener">
             Get the extension
             <svg class="btn-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
@@ -511,16 +491,105 @@
       </div>
     </section>
 
-    <section class="section cta-section">
+    <section class="section pricing" id="free">
       <div class="container">
-        <div class="cta-panel reveal">
-          <p class="section-label">Get started</p>
-          <h2>Ready when you are<span class="caret" aria-hidden="true"></span></h2>
-          <p class="cta-sub">CharacterVault is free, open source, and lives in your browser. Your cards never touch a server.</p>
-          <a class="btn btn-primary btn-lg" href="https://vault.charactervault.app/" target="_blank" rel="noopener">
-            Open CharacterVault
-            <svg class="btn-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </a>
+        <div class="pricing-head">
+          <p class="eyebrow reveal">Pricing</p>
+          <h2 class="reveal">Free. Not a trial, not a&nbsp;tier.</h2>
+          <p class="lede reveal">Every feature is available to everyone. No account, no trial period, no paid plan waiting behind a button.</p>
+        </div>
+
+        <div class="price reveal">
+          <div class="price-card">
+            <p class="price-plan">CharacterVault</p>
+            <p class="price-amount"><span class="price-cur">$</span>0</p>
+            <p class="price-note">Everything below, for everyone</p>
+            <ul class="price-list">
+              <li>No caps on characters or lorebooks</li>
+              <li>The full V2 and V3 card editor</li>
+              <li>Lorebook library and recursion map</li>
+              <li>Snapshots and one-file backups</li>
+              <li>Every AI tool, with your own provider</li>
+            </ul>
+            <a class="btn btn-primary btn-lg price-cta" href="https://vault.charactervault.app/" target="_blank" rel="noopener">
+              Open CharacterVault
+              <svg class="btn-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+
+          <div class="catch">
+            <h3>So what's the catch?</h3>
+            <dl class="catch-list">
+              <div>
+                <dt>It's open source.</dt>
+                <dd>CharacterVault is licensed under GPL-3.0. Read the code, run your own copy, or send in a fix.</dd>
+              </div>
+              <div>
+                <dt>There's no server bill.</dt>
+                <dd>Your library lives in your browser, so there's no database to pay for. That's how it stays free.</dd>
+              </div>
+              <div>
+                <dt>AI is bring your own.</dt>
+                <dd>Use a key from the provider you already like and pay them directly, or run a local model at no cost. There's no markup because there's no middleman.</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="faq">
+      <div class="container faq-grid">
+        <div class="faq-intro">
+          <p class="eyebrow reveal">FAQ</p>
+          <h2 class="reveal">Questions, answered.</h2>
+          <p class="lede reveal">Something else on your mind? Ask on <a href="https://discord.gg/T9jbbArPrF" target="_blank" rel="noopener">Discord</a> or read the <a href="https://vault.charactervault.app/docs/faq" target="_blank" rel="noopener">full FAQ</a>.</p>
+        </div>
+        <div class="faq-list reveal">
+          <details>
+            <summary>Is CharacterVault really free?</summary>
+            <p>Yes. Every feature is free to use, with no account, trial, or paid tier. The project is open source under GPL-3.0.</p>
+          </details>
+          <details>
+            <summary>Do I need an AI subscription?</summary>
+            <p>No. The editor, lorebooks, import, export, snapshots, and backups all work without AI. If you want AI help, connect any OpenAI-compatible provider, including a free local model through LM Studio.</p>
+          </details>
+          <details>
+            <summary>Where are my cards stored?</summary>
+            <p>In your browser's storage, on your device. CharacterVault has no server that stores cards. Export a card or make a vault backup whenever you want a copy somewhere else.</p>
+          </details>
+          <details>
+            <summary>Will my SillyTavern cards work?</summary>
+            <p>Yes. Import PNG or JSON cards (V2 and V3) and standalone lorebook JSON, edit them, and export them back. The companion extension can also send cards straight from SillyTavern.</p>
+          </details>
+          <details>
+            <summary>Can I use it on my phone?</summary>
+            <p>Yes. The app runs in mobile browsers, with layouts made for small screens. A bigger screen is more comfortable for long writing sessions.</p>
+          </details>
+          <details>
+            <summary>What happens if I clear my browser data?</summary>
+            <p>Clearing site data removes your local library, as it would for any app that stores data in the browser. Use <strong>Backup</strong> in the library header to save a ZIP of your cards, lorebooks, and settings, and import it to restore.</p>
+          </details>
+          <details>
+            <summary>Can I run my own copy?</summary>
+            <p>Yes. Clone the <a href="https://github.com/spaceman2408/CharacterVault" target="_blank" rel="noopener">GitHub repo</a>, run <code>npm install</code> and <code>npm run dev</code>, and it runs on your machine.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="section final">
+      <div class="container">
+        <div class="final-panel reveal">
+          <h2>Your next character starts <em>here</em>.</h2>
+          <p>Open CharacterVault in your browser. No account, no download, no cost.</p>
+          <div class="final-cta">
+            <a class="btn btn-primary btn-lg" href="https://vault.charactervault.app/" target="_blank" rel="noopener">
+              Open CharacterVault
+              <svg class="btn-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a class="btn btn-ghost btn-lg" href="https://discord.gg/T9jbbArPrF" target="_blank" rel="noopener">Join the Discord</a>
+          </div>
         </div>
       </div>
     </section>
@@ -531,26 +600,29 @@
     <div class="container footer-grid">
       <div class="footer-brand">
         <img src="assets/CharacterVaultLogo.svg" alt="CharacterVault" class="footer-logo">
-        <p>A local-first studio for AI character cards.</p>
+        <p>The free, open-source studio for character cards and lorebooks.</p>
       </div>
       <nav class="footer-col" aria-label="Product">
         <h4>Product</h4>
-        <a href="https://vault.charactervault.app/" target="_blank" rel="noopener">Launch the app</a>
-        <a href="#features">Features</a>
-        <a href="#screenshots">Screenshots</a>
+        <a href="https://vault.charactervault.app/" target="_blank" rel="noopener">Open the app</a>
+        <a href="#editor">Editor</a>
+        <a href="#lorebooks">Lorebooks</a>
+        <a href="#ai">AI tools</a>
+        <a href="#free">Pricing</a>
       </nav>
       <nav class="footer-col" aria-label="Resources">
         <h4>Resources</h4>
         <a href="https://vault.charactervault.app/docs/" target="_blank" rel="noopener">Documentation</a>
         <a href="https://vault.charactervault.app/docs/whats-new" target="_blank" rel="noopener">What's new</a>
         <a href="https://vault.charactervault.app/docs/privacy" target="_blank" rel="noopener">Privacy</a>
-        <a href="https://github.com/spaceman2408/CharacterVault/issues" target="_blank" rel="noopener">Report an issue</a>
+        <a href="https://github.com/spaceman2408/SillyTavern-CharacterVaultExport" target="_blank" rel="noopener">SillyTavern extension</a>
       </nav>
-      <nav class="footer-col" aria-label="Project">
-        <h4>Project</h4>
+      <nav class="footer-col" aria-label="Community">
+        <h4>Community</h4>
+        <a href="https://discord.gg/T9jbbArPrF" target="_blank" rel="noopener">Discord</a>
         <a href="https://github.com/spaceman2408/CharacterVault" target="_blank" rel="noopener">GitHub</a>
         <a href="https://github.com/spaceman2408/CharacterVault/releases" target="_blank" rel="noopener">Releases</a>
-        <a href="https://github.com/spaceman2408/CharacterVault/blob/main/LICENSE" target="_blank" rel="noopener">GPL-3.0 license</a>
+        <a href="https://github.com/spaceman2408/CharacterVault/issues" target="_blank" rel="noopener">Report an issue</a>
       </nav>
     </div>
     <div class="container footer-legal">

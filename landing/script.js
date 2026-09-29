@@ -33,9 +33,9 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 
 const revealEls = document.querySelectorAll('.reveal');
 if (!reducedMotion) {
-  document.querySelectorAll('.features-grid, .screenshots-grid').forEach((grid) => {
+  document.querySelectorAll('.assurances').forEach((grid) => {
     grid.querySelectorAll('.reveal').forEach((el, i) => {
-      el.style.transitionDelay = `${i * 70}ms`;
+      el.style.transitionDelay = `${i * 80}ms`;
     });
   });
 }
@@ -57,96 +57,39 @@ if ('IntersectionObserver' in window && revealEls.length > 0) {
   revealEls.forEach((el) => el.classList.add('visible'));
 }
 
-if (!reducedMotion && window.matchMedia('(pointer: fine)').matches) {
-  document.querySelectorAll('.feature-card').forEach((card) => {
-    card.addEventListener('mousemove', (event) => {
-      const rect = card.getBoundingClientRect();
-      card.style.setProperty('--mx', `${event.clientX - rect.left}px`);
-      card.style.setProperty('--my', `${event.clientY - rect.top}px`);
-    });
-  });
-}
+/* ---------- AI tabs ---------- */
 
-/* ---------- Rotating hero word ---------- */
+const tabList = document.querySelector('.tab-list');
 
-const heroWord = document.getElementById('heroWord');
+if (tabList) {
+  const tabs = Array.from(tabList.querySelectorAll('[role="tab"]'));
 
-if (heroWord && !reducedMotion) {
-  const heroWords = ['AI characters', 'lorebooks', 'worlds'];
-  let wordIndex = 0;
+  const selectTab = (tab, focus) => {
+    for (const t of tabs) {
+      const selected = t === tab;
+      t.setAttribute('aria-selected', String(selected));
+      t.tabIndex = selected ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !selected;
+    }
+    if (focus) tab.focus();
+  };
 
-  setInterval(() => {
-    heroWord.classList.add('word-out');
-    setTimeout(() => {
-      wordIndex = (wordIndex + 1) % heroWords.length;
-      heroWord.textContent = heroWords[wordIndex];
-      heroWord.classList.add('word-off');
-      heroWord.classList.remove('word-out');
-      heroWord.classList.add('word-in');
-      void heroWord.offsetWidth;
-      heroWord.classList.remove('word-off');
-      heroWord.classList.remove('word-in');
-    }, 320);
-  }, 3200);
-}
-
-/* ---------- Hero card 3D tilt ---------- */
-
-const heroVisual = document.querySelector('.hero-visual');
-const mockStack = heroVisual ? heroVisual.querySelector('.mock-stack') : null;
-
-if (heroVisual && mockStack && !reducedMotion && window.matchMedia('(pointer: fine)').matches) {
-  const MAX_TILT = 8;
-  let tiltRaf = 0;
-
-  heroVisual.addEventListener('mousemove', (event) => {
-    const rect = heroVisual.getBoundingClientRect();
-    const px = (event.clientX - rect.left) / rect.width - 0.5;
-    const py = (event.clientY - rect.top) / rect.height - 0.5;
-
-    cancelAnimationFrame(tiltRaf);
-    tiltRaf = requestAnimationFrame(() => {
-      mockStack.style.transform = `rotateX(${(-py * MAX_TILT).toFixed(2)}deg) rotateY(${(px * MAX_TILT).toFixed(2)}deg)`;
-      mockStack.style.setProperty('--gx', `${((px + 0.5) * 100).toFixed(1)}%`);
-      mockStack.style.setProperty('--gy', `${((py + 0.5) * 100).toFixed(1)}%`);
-    });
+  tabList.addEventListener('click', (event) => {
+    const tab = event.target.closest('[role="tab"]');
+    if (tab) selectTab(tab, false);
   });
 
-  heroVisual.addEventListener('mouseenter', () => {
-    mockStack.classList.add('tilting');
-  });
-
-  heroVisual.addEventListener('mouseleave', () => {
-    cancelAnimationFrame(tiltRaf);
-    mockStack.classList.remove('tilting');
-    mockStack.style.transform = '';
-  });
-}
-
-/* ---------- Screenshot mouse-follow tilt ---------- */
-
-if (!reducedMotion && window.matchMedia('(pointer: fine)').matches) {
-  const SHOT_TILT = 5;
-
-  document.querySelectorAll('figure.screenshot').forEach((fig) => {
-    let shotRaf = 0;
-
-    fig.addEventListener('mousemove', (event) => {
-      const rect = fig.getBoundingClientRect();
-      const px = (event.clientX - rect.left) / rect.width - 0.5;
-      const py = (event.clientY - rect.top) / rect.height - 0.5;
-
-      cancelAnimationFrame(shotRaf);
-      shotRaf = requestAnimationFrame(() => {
-        fig.style.transform =
-          `perspective(900px) rotateX(${(-py * SHOT_TILT).toFixed(2)}deg) rotateY(${(px * SHOT_TILT).toFixed(2)}deg) translateY(-6px)`;
-      });
-    });
-
-    fig.addEventListener('mouseleave', () => {
-      cancelAnimationFrame(shotRaf);
-      fig.style.transform = '';
-    });
+  tabList.addEventListener('keydown', (event) => {
+    const index = tabs.indexOf(document.activeElement);
+    if (index < 0) return;
+    let next = -1;
+    if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    if (next < 0) return;
+    event.preventDefault();
+    selectTab(tabs[next], true);
   });
 }
 
