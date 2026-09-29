@@ -211,6 +211,32 @@ describe('CharacterSnapshotService change detection', () => {
     expect(service.hasChanges(await snapshotOf(character), character, 'other-image')).toBe(true);
   });
 
+  it('does not flag the vault-only AI context pin on a lorebook entry', async () => {
+    const service = new CharacterSnapshotService();
+    const withBook = (context_enabled: boolean, content = 'Harbor') => makeCharacter({
+      data: {
+        spec: makeSpec(),
+        extensions: {},
+        characterBook: {
+          name: 'Book',
+          extensions: {},
+          entries: [{ id: 1, keys: ['harbor'], content, enabled: true, extensions: { context_enabled } }],
+        },
+      },
+    });
+    const character = withBook(false);
+    const imageHash = await service.computeImageHash(character.imageData, character.thumbnailData);
+    const pinned = makeSnapshot({ payload: { ...service.buildPayload(withBook(true)), imageData: '', thumbnailData: '' }, imageHash });
+    const edited = makeSnapshot({ payload: { ...service.buildPayload(withBook(true, 'Old')), imageData: '', thumbnailData: '' }, imageHash });
+
+    const entries = await service.diffSnapshotAgainstCharacter(pinned, character);
+
+    expect(entries.find(entry => entry.section === 'lorebook')?.changed).toBe(false);
+    expect(service.hasChanges(pinned, character, imageHash)).toBe(false);
+    expect(service.hasChanges(edited, character, imageHash)).toBe(true);
+    expect(character.data.characterBook?.entries[0].extensions.context_enabled).toBe(false);
+  });
+
   it('computeCharacterHashes matches the hash stored with a snapshot', async () => {
     const service = new CharacterSnapshotService();
     const character = makeCharacter();

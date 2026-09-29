@@ -70,9 +70,8 @@ const BOOK_SETTING_LABELS: Record<string, string> = {
   recursive_scanning: 'Recursive scanning',
 };
 
-const EXTENSION_LABELS: Record<string, string> = {
-  context_enabled: 'AI context',
-};
+/** Vault-only extension keys that are not part of the card. */
+const IGNORED_EXTENSION_KEYS: ReadonlySet<string> = new Set(['context_enabled']);
 
 const OPTION_LABELS: Record<string, ReadonlyArray<{ value: unknown; label: string }>> = {
   position: POSITION_OPTIONS,
@@ -159,10 +158,11 @@ function settingChanges(
     if (key === 'extensions') {
       const beforeExtensions = asRecord(before.extensions);
       const afterExtensions = asRecord(after.extensions);
-      for (const extensionKey of orderedKeys(EXTENSION_LABELS, beforeExtensions, afterExtensions)) {
+      for (const extensionKey of orderedKeys({}, beforeExtensions, afterExtensions)) {
+        if (IGNORED_EXTENSION_KEYS.has(extensionKey)) continue;
         if (snapshotValuesMatch(beforeExtensions[extensionKey], afterExtensions[extensionKey])) continue;
         changes.push(settingChange(
-          EXTENSION_LABELS[extensionKey] ?? `extensions.${extensionKey}`,
+          `extensions.${extensionKey}`,
           formatSetting(extensionKey, beforeExtensions[extensionKey]),
           formatSetting(extensionKey, afterExtensions[extensionKey]),
         ));

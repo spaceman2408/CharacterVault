@@ -124,12 +124,33 @@ function normalizeLorebook(book: CharacterBook | null | undefined): CharacterBoo
   return book;
 }
 
+/**
+ * The lorebook as the diff should see it. `extensions.context_enabled` is the
+ * vault-only AI context pin, not part of the entry, so toggling it is not a
+ * change. Only entries carrying the flag are copied, and only shallowly.
+ */
+function lorebookForDiff(book: CharacterBook | null | undefined): CharacterBook | null {
+  const normalized = normalizeLorebook(book);
+  if (!normalized || !normalized.entries.some(entry => entry.extensions && 'context_enabled' in entry.extensions)) {
+    return normalized;
+  }
+  return {
+    ...normalized,
+    entries: normalized.entries.map((entry) => {
+      if (!entry.extensions || !('context_enabled' in entry.extensions)) return entry;
+      const extensions = { ...entry.extensions };
+      delete extensions.context_enabled;
+      return { ...entry, extensions };
+    }),
+  };
+}
+
 function getSectionValue(payload: CharacterSnapshotPayload, section: SnapshotDiffEntry['section']): unknown {
   switch (section) {
     case 'image':
       return payload.imageData;
     case 'lorebook':
-      return normalizeLorebook(payload.data.characterBook ?? null);
+      return lorebookForDiff(payload.data.characterBook);
     case 'extensions':
       return payload.data.extensions ?? {};
     default:
@@ -142,7 +163,7 @@ function getCharacterSectionValue(character: Character, section: SnapshotDiffEnt
     case 'image':
       return character.imageData;
     case 'lorebook':
-      return normalizeLorebook(character.data.characterBook ?? null);
+      return lorebookForDiff(character.data.characterBook);
     case 'extensions':
       return character.data.extensions ?? {};
     default:

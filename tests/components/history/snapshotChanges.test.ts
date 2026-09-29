@@ -93,8 +93,16 @@ describe('diffLorebook', () => {
     expect(change.settings.map((setting) => `${setting.label}: ${setting.before} -> ${setting.after}`)).toEqual([
       'Constant:  -> on',
       'Position:  -> At Depth',
-      'AI context:  -> off',
     ]);
+  });
+
+  it('ignores the vault-only AI context pin', () => {
+    const [change] = diffLorebook(
+      book([entry(0, { extensions: { context_enabled: true } })]),
+      book([entry(0, { content: 'Changed', extensions: { context_enabled: false } })]),
+    );
+    if (change.kind !== 'entry') throw new Error('expected an entry change');
+    expect(change.settings).toEqual([]);
   });
 
   it('shows book settings and entry order', () => {
