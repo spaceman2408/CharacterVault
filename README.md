@@ -11,40 +11,84 @@
 </p>
 
 <p align="center">
+  <a href="https://vault.charactervault.app/"><strong>Try it online</strong></a> •
   <a href="https://charactervault.app">Website</a> •
-  <a href="https://vault.charactervault.app/">Try Online</a> •
-  <a href="https://vault.charactervault.app/docs/">Documentation</a> •
-  <a href="https://github.com/spaceman2408/CharacterVault">GitHub</a>
+  <a href="https://vault.charactervault.app/docs/">Docs</a> •
+  <a href="https://vault.charactervault.app/docs/whats-new">What's New</a> •
+  <a href="https://discord.gg/T9jbbArPrF">Discord</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/spaceman2408/CharacterVault/releases"><img src="https://img.shields.io/github/v/release/spaceman2408/CharacterVault?label=release" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License: GPL-3.0"></a>
+  <a href="https://discord.gg/T9jbbArPrF"><img src="https://img.shields.io/badge/discord-join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+</p>
+
+<p align="center">
+  <img src="landing/assets/screenshots/editor.png" alt="The CharacterVault card editor with the Orion chat panel" width="900">
 </p>
 
 ---
 
-## Features
+## What it does
 
-- **Character Library** - Grid view of all your characters with search and quick actions
-- **Lorebook Vault** - Standalone World Info library: create, search, import, export, duplicate, and link one book across characters
-- **Full Card Editor** - Edit every V2/V3 field: name, description, personality, scenario, greetings, lorebook, creator notes, and more
-- **AI Assistant Orion** - Built-in chat to help brainstorm and write character and lorebook content
-- **AI Agent** - Chat that writes the open character card or lorebook (optional review diff before writes land)
-- **AI Creation Studio** - Generate a full card from a concept or tags, with custom prompts and field toggles
-- **AI Toolbar** - Enhance, rephrase, shorten, lengthen, fix, or run your own custom buttons inline
-- **Lorebook Editor** - Shared editor for card books and vault books: ST fields, content-first layout, AI-generated keys
-- **Recursion Map** - Fullscreen web of unlock paths; inspect entries, edit keys in place, and bulk-edit flags
-- **Creator Notes** - HTML/CSS support with live preview
-- **Import & Export** - PNG cards with embedded data or JSON files, plus standalone lorebook JSON, compatible with SillyTavern and any frontend that accepts the same formats
-- **Vault Backup** - ZIP of cards, lorebooks, and settings; restore by importing the ZIP. Optional settings-only backup in Settings
-- **Snapshots & Rollback** - Save manual snapshots and restore a full card, individual sections, or a standalone lorebook
-- **Offline Storage** - All data stays in your browser via IndexedDB
+### Write
+
+- **Full card editor**: every V2/V3 field, including description, personality, scenario, greetings, example dialogue, system prompt, and creator notes
+- **Lorebook editor**: all SillyTavern entry fields, for books on a card or standalone books in the vault
+- **Recursion map**: a fullscreen map of which entries unlock which. Inspect entries, edit keys in place, and bulk-edit flags
+- **Creator Notes**: HTML and CSS with a live preview that blocks scripts and warns when the notes load content from other sites
+
+### Write with AI (optional)
+
+- **Orion**: a chat assistant for brainstorming and writing help on the card or book you have open
+- **AI Agent**: a chat that writes the open card or lorebook for you. You can review a diff before anything lands
+- **AI toolbar**: enhance, rephrase, shorten, lengthen, or fix selected text in place, or add your own buttons
+- **AI Creation Studio**: generate a full card from a concept or a set of tags
+
+### Organize
+
+- **Library**: all your characters in one grid, with search, sorting, and token counts
+- **Lorebook vault**: a library of standalone lorebooks you can link to several characters
+- **Import & export**: PNG cards with embedded data, JSON cards, and standalone lorebook JSON. Works with SillyTavern and any frontend that reads the same formats
+- **SillyTavern extension**: send cards straight from SillyTavern with the [companion extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)
+
+### Keep it safe
+
+- **Snapshots**: save points you can compare side by side and restore as a whole card or one section at a time
+- **Vault backup**: one ZIP with your cards, lorebooks, and settings. Import the ZIP to restore
+- **Local storage**: everything lives in your browser's IndexedDB. Nothing is uploaded
+
+<table>
+  <tr>
+    <td><img src="landing/assets/screenshots/lorebook-vault.png" alt="Lorebook vault"></td>
+    <td><img src="landing/assets/screenshots/recursion-map.png" alt="Recursion map"></td>
+    <td><img src="landing/assets/screenshots/ai-studio.png" alt="AI Creation Studio"></td>
+  </tr>
+  <tr>
+    <td align="center">Lorebook vault</td>
+    <td align="center">Recursion map</td>
+    <td align="center">AI Creation Studio</td>
+  </tr>
+</table>
 
 ---
 
-## Quick Start
+## AI is bring-your-own-key
 
-### Use Online
+Every AI feature is optional. The editor, lorebooks, import, export, and snapshots all work without it.
 
-Visit **[https://vault.charactervault.app](https://vault.charactervault.app)** (marketing site: [charactervault.app](https://charactervault.app))
+To turn AI on, add any OpenAI-compatible endpoint in **Settings → AI Config**. Presets are included for NanoGPT (with sign-in), OpenRouter, Synthetic, and local servers like LM Studio. Requests go straight from your browser to your provider. CharacterVault has no AI server of its own. See [AI Setup](https://vault.charactervault.app/docs/configuration/ai-setup).
 
-### Run Locally
+---
+
+## Quick start
+
+### Use it online
+
+Open **[vault.charactervault.app](https://vault.charactervault.app)**. There's nothing to install and no sign-up.
+
+### Run it locally
 
 ```bash
 git clone https://github.com/spaceman2408/CharacterVault
@@ -53,42 +97,46 @@ npm install
 npm run dev
 ```
 
-Then open `http://localhost:3000` in your browser.
+Then open `http://localhost:3000`.
 
 ---
 
 ## Documentation
 
-Full documentation is available at **[https://vault.charactervault.app/docs/](https://vault.charactervault.app/docs/)**
+The full docs are at **[vault.charactervault.app/docs](https://vault.charactervault.app/docs/)**:
 
-Topics include:
-
-- Installation and setup
-- Creating and editing characters
-- Lorebook vault, linking, and the recursion map
-- AI configuration (Orion, Agent, toolbar, prompts)
-- Import and export options
-- Snapshot and rollback guide
+- [Getting started](https://vault.charactervault.app/docs/)
+- [Lorebook editor](https://vault.charactervault.app/docs/features/lorebook-editor) and recursion map
+- [AI Agent](https://vault.charactervault.app/docs/features/ai-agent) and [AI setup](https://vault.charactervault.app/docs/configuration/ai-setup)
+- [Import & export](https://vault.charactervault.app/docs/features/import-export)
+- [Snapshots & history](https://vault.charactervault.app/docs/features/snapshots-history)
+- [FAQ](https://vault.charactervault.app/docs/faq) · [Changelog](https://vault.charactervault.app/docs/changelog)
 
 ---
 
 ## Troubleshooting
 
-**AI toolbar buttons are disabled?** Configure an AI provider in Settings → AI Config.
+**AI buttons are disabled?** Add a provider in **Settings → AI Config**.
 
-**Selection too long?** Reduce your text selection or increase Context Length in Settings → Sampler.
+**Selection too long?** Select less text, or raise **Context Length** in **Settings → Sampler**.
 
-**Need help?** Open an issue on [GitHub](https://github.com/spaceman2408/CharacterVault/issues).
+**Something else?** Check the [FAQ](https://vault.charactervault.app/docs/faq), ask on [Discord](https://discord.gg/T9jbbArPrF), or [open an issue](https://github.com/spaceman2408/CharacterVault/issues).
+
+---
+
+## Contributing
+
+Bug reports and ideas are welcome on [GitHub Issues](https://github.com/spaceman2408/CharacterVault/issues) or [Discord](https://discord.gg/T9jbbArPrF). For anything large, please open an issue first. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks, and PR guidelines.
 
 ---
 
 ## Privacy
 
-Character cards and lorebooks stay in your browser. See the [Privacy](https://vault.charactervault.app/docs/privacy) notice for hosting and optional AI details.
+Your cards and lorebooks stay in your browser. See the [Privacy](https://vault.charactervault.app/docs/privacy) notice for hosting and optional AI details.
 
 ## License
 
-GNU General Public License v3.0. See [LICENSE](LICENSE)
+GNU General Public License v3.0. See [LICENSE](LICENSE).
 
 ---
 
