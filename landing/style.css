@@ -16,7 +16,7 @@
   --accent-soft: rgba(129, 140, 248, 0.1);
   --pink: #f472b6;
   --radius: 14px;
-  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
@@ -116,15 +116,15 @@ a {
 
 h1,
 h2 {
-  font-family: var(--serif);
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
 h1 em,
 h2 em {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent);
 }
 
@@ -418,7 +418,7 @@ h2 em {
 }
 
 .hero h1 {
-  font-size: clamp(3rem, 5.6vw, 4.6rem);
+  font-size: clamp(3rem, 5.6vw, 4.3rem);
   line-height: 0.98;
   letter-spacing: -0.03em;
   margin-bottom: 1.6rem;
@@ -943,11 +943,11 @@ h2 em {
 
 .panel-copy h3 {
   text-wrap: balance;
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.75rem;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.15;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   margin-bottom: 0.8rem;
 }
 
@@ -1044,7 +1044,7 @@ h2 em {
 }
 
 .ai-text {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.15rem;
   line-height: 1.8;
   color: var(--fg);
@@ -1838,9 +1838,9 @@ h2 em {
 }
 
 .price-amount {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 6.5rem;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1;
   letter-spacing: -0.04em;
   margin: 0.8rem 0 0.3rem;
@@ -1894,11 +1894,10 @@ h2 em {
 }
 
 .catch h3 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 1.9rem;
-  font-weight: 500;
-  font-style: italic;
-  letter-spacing: -0.015em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin-bottom: 1.6rem;
 }
 
