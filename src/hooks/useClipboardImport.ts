@@ -125,15 +125,54 @@ function validateCharacterData(data: unknown): ClipboardValidationResult {
 }
 
 /**
+ * Parses and validates pasted or clipboard text
+ */
+function parseClipboardText(text: string): ClipboardValidationResult {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { success: false, error: 'Invalid JSON. Please paste valid character data.' };
+  }
+  return validateClipboardData(parsed);
+}
+
+/**
+ * Explains a failed automatic clipboard read in plain language
+ */
+function describeClipboardReadError(err: unknown): string {
+  const message = err instanceof Error ? err.message : '';
+
+  if (/not focused/i.test(message)) {
+    return 'The browser only lets this page read the clipboard while it has focus. Click anywhere on the page to try again, or paste the character below.';
+  }
+  if (/permission denied/i.test(message)) {
+    return 'Clipboard access is blocked for this site. Use Paste from Clipboard or paste the character below. To make this automatic, allow clipboard access in your browser\'s site settings.';
+  }
+  return 'Your browser needs you to paste the character yourself. Use Paste from Clipboard or paste it into the box below.';
+}
+
+/**
  * Hook for importing characters from clipboard
  */
-export function useClipboardImport(): UseClipboardImportReturn {
+interface UseClipboardImportOptions {
+  refreshCharacters: () => Promise<void>;
+}
+
+export function useClipboardImport({ refreshCharacters }: UseClipboardImportOptions): UseClipboardImportReturn {
   const [importState, setImportState] = useState<ImportState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<CharacterCardV2 | null>(null);
   const [avatarData, setAvatarData] = useState<string | null>(null);
   const [importedCharacter, setImportedCharacter] = useState<Character | null>(null);
   const autoReadAttempted = useRef(false);
+
+  const showPreview = useCallback((validation: ClipboardValidationResult) => {
+    setErrorMessage(null);
+    setPreviewData(validation.characterData || null);
+    setAvatarData(validation.avatarData || null);
+    setImportState('preview');
+  }, []);
 
   /**
    * Parse manually pasted text
@@ -142,18 +181,7 @@ export function useClipboardImport(): UseClipboardImportReturn {
     setErrorMessage(null);
 
     try {
-      // Parse JSON
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        setImportState('error');
-        setErrorMessage('Invalid JSON. Please paste valid character data.');
-        return;
-      }
-
-      // Validate the data
-      const validation = validateClipboardData(parsed);
+      const validation = parseClipboardText(text);
 
       if (!validation.success) {
         setImportState('error');
@@ -161,15 +189,12 @@ export function useClipboardImport(): UseClipboardImportReturn {
         return;
       }
 
-      // Store preview data
-      setPreviewData(validation.characterData || null);
-      setAvatarData(validation.avatarData || null);
-      setImportState('preview');
+      showPreview(validation);
     } catch (err) {
       setImportState('error');
       setErrorMessage(err instanceof Error ? err.message : 'Unknown error');
     }
-  }, []);
+  }, [showPreview]);
 
   /**
    * Attempt to read from clipboard automatically
@@ -185,7 +210,7 @@ export function useClipboardImport(): UseClipboardImportReturn {
       // Check if clipboard API is available
       if (!navigator.clipboard || !navigator.clipboard.readText) {
         setImportState('clipboard-unavailable');
-        setErrorMessage('Clipboard API not available in this browser');
+        setErrorMessage('This browser can\'t read the clipboard automatically. Paste the character into the box below.');
         return;
       }
 
@@ -194,7 +219,7 @@ export function useClipboardImport(): UseClipboardImportReturn {
 
       if (!text || text.trim().length === 0) {
         setImportState('clipboard-unavailable');
-        setErrorMessage('Clipboard is empty');
+        setErrorMessage('Your clipboard is empty. Export the character from SillyTavern again, then come back to this tab.');
         return;
       }
 
@@ -202,17 +227,29 @@ export function useClipboardImport(): UseClipboardImportReturn {
     } catch (err) {
       // Permission denied or other clipboard errors
       setImportState('clipboard-unavailable');
-      
-      const baseMessage = 'Automatic clipboard read was blocked due to browser permissions. Please paste the character data manually.';
-      const permissionHint = 'Some browsers (like Chromium-based browsers) allow automatic clipboard access if you grant permission when prompted.';
-      
-      if (err instanceof Error && err.message.includes('user activation')) {
-        setErrorMessage(`${baseMessage}\n\n${permissionHint}`);
-      } else {
-        setErrorMessage(err instanceof Error ? err.message : baseMessage);
-      }
+      setErrorMessage(describeClipboardReadError(err));
     }
   }, [parseManualInput]);
+
+  // A read can fail because the tab wasn't focused yet or the clipboard was still empty,
+  // so try again quietly whenever the page regains focus
+  useEffect(() => {
+    if (importState !== 'clipboard-unavailable' || !navigator.clipboard?.readText) return;
+
+    const retryRead = async (): Promise<void> => {
+      try {
+        const validation = parseClipboardText((await navigator.clipboard.readText()).trim());
+        if (validation.success) {
+          showPreview(validation);
+        }
+      } catch {
+        // Still blocked; the manual paste controls remain available
+      }
+    };
+
+    window.addEventListener('focus', retryRead);
+    return () => window.removeEventListener('focus', retryRead);
+  }, [importState, showPreview]);
 
   /**
    * Import the character to the database
@@ -235,13 +272,15 @@ export function useClipboardImport(): UseClipboardImportReturn {
         return;
       }
 
+      // Open Character only changes the hash, so the library list must be current before leaving
+      await refreshCharacters();
       setImportedCharacter(result.character);
       setImportState('success');
     } catch (err) {
       setImportState('error');
       setErrorMessage(err instanceof Error ? err.message : 'Unknown error during import');
     }
-  }, [previewData, avatarData]);
+  }, [previewData, avatarData, refreshCharacters]);
 
   /**
    * Reset the import state

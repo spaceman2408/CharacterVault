@@ -194,12 +194,14 @@ const CharacterPreviewCard: React.FC<CharacterPreviewCardProps> = ({
 
 interface ManualPasteSectionProps {
   onPaste: (text: string) => void;
+  prominentPaste?: boolean;
 }
 
-const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({ onPaste }) => {
+const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({ onPaste, prominentPaste = false }) => {
   const [text, setText] = useState('');
   const [clipboardError, setClipboardError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const canReadClipboard = Boolean(navigator.clipboard?.readText);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -211,8 +213,36 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({ onPaste }) => {
     [text, onPaste]
   );
 
+  const pasteFromClipboard = useCallback(async () => {
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      if (clipboardText.trim()) {
+        setClipboardError(null);
+        onPaste(clipboardText.trim());
+      } else {
+        setClipboardError('The clipboard is empty.');
+      }
+    } catch {
+      setClipboardError('Could not read the clipboard. Paste into the box instead (long-press on a phone, Ctrl+V on a computer).');
+      textareaRef.current?.focus();
+    }
+  }, [onPaste]);
+
   return (
     <div className="space-y-4">
+      {prominentPaste && canReadClipboard && (
+        <>
+          <button
+            type="button"
+            onClick={pasteFromClipboard}
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-accent text-accent-fg font-medium rounded-xl hover:opacity-90 transition-opacity"
+          >
+            <ClipboardPaste className="w-4 h-4" />
+            Paste from Clipboard
+          </button>
+          <p className="text-center text-sm text-fg-muted">or paste it into the box</p>
+        </>
+      )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <textarea
           ref={textareaRef}
@@ -229,27 +259,16 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({ onPaste }) => {
           </div>
         )}
         <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                const clipboardText = await navigator.clipboard.readText();
-                if (clipboardText.trim()) {
-                  setClipboardError(null);
-                  onPaste(clipboardText.trim());
-                } else {
-                  setClipboardError('The clipboard is empty.');
-                }
-              } catch {
-                setClipboardError('Could not read the clipboard. Paste into the box with Ctrl+V instead.');
-                textareaRef.current?.focus();
-              }
-            }}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
-          >
-            <ClipboardPaste className="w-4 h-4" />
-            Paste from Clipboard
-          </button>
+          {!prominentPaste && (
+            <button
+              type="button"
+              onClick={pasteFromClipboard}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
+            >
+              <ClipboardPaste className="w-4 h-4" />
+              Paste from Clipboard
+            </button>
+          )}
           <button
             type="submit"
             disabled={!text.trim()}
@@ -269,7 +288,7 @@ const ManualPasteSection: React.FC<ManualPasteSectionProps> = ({ onPaste }) => {
 export const ImportPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const source = searchParams.get('source');
-  const { closeCharacter } = useCharacterContext();
+  const { closeCharacter, refreshCharacters } = useCharacterContext();
   const { closeLorebook } = useLorebookContext();
   const {
     importState,
@@ -281,7 +300,7 @@ export const ImportPage: React.FC = () => {
     importCharacter,
     goToLibrary,
     openImportedCharacter,
-  } = useClipboardImport();
+  } = useClipboardImport({ refreshCharacters });
 
   // Drop full open workspaces so import does not retain card/book payloads
   useEffect(() => {
@@ -338,7 +357,7 @@ export const ImportPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <ManualPasteSection onPaste={parseManualInput} />
+            <ManualPasteSection onPaste={parseManualInput} prominentPaste />
           </div>
         )}
 
