@@ -33,6 +33,7 @@ import type {
 } from './characterTypes';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS, createEmptyCharacterBook } from './characterTypes';
 import { estimateCharacterCardTokens, estimateTokens } from '../services/AIService';
+import { normalizeCardBook } from '../services/LorebookConverter';
 import { compareSnapshotTimeline } from '../utils/snapshotTimeline';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -554,7 +555,12 @@ export class CharacterDatabase extends Dexie {
    * @returns {Promise<Character | undefined>} Character or undefined
    */
   async getCharacter(id: string): Promise<Character | undefined> {
-    return this.characters.get(id);
+    const character = await this.characters.get(id);
+    if (!character) return undefined;
+    const characterBook = normalizeCardBook(character.data.characterBook);
+    return characterBook === character.data.characterBook
+      ? character
+      : { ...character, data: { ...character.data, characterBook } };
   }
 
   /**
@@ -645,9 +651,11 @@ export class CharacterDatabase extends Dexie {
           ...character.data.spec,
           ...input.data?.spec,
         },
-        characterBook: input.data && 'characterBook' in input.data
-          ? input.data.characterBook
-          : character.data.characterBook,
+        characterBook: normalizeCardBook(
+          input.data && 'characterBook' in input.data
+            ? input.data.characterBook
+            : character.data.characterBook,
+        ),
         extensions: input.data?.extensions ?? character.data.extensions,
       },
       updatedAt: timestamp,
@@ -688,6 +696,7 @@ export class CharacterDatabase extends Dexie {
           ...character.data.spec,
           [field]: value,
         },
+        characterBook: normalizeCardBook(character.data.characterBook),
       },
       updatedAt: timestamp,
     };
@@ -1193,7 +1202,10 @@ export class CharacterDatabase extends Dexie {
   }
 
   async getLorebook(id: string): Promise<VaultLorebook | undefined> {
-    return this.lorebooks.get(id);
+    const lorebook = await this.lorebooks.get(id);
+    if (!lorebook) return undefined;
+    const book = normalizeCardBook(lorebook.book);
+    return book === lorebook.book ? lorebook : { ...lorebook, book };
   }
 
   /** True if a vault lorebook id exists. Uses the list index, not the full book. */
@@ -1239,13 +1251,15 @@ export class CharacterDatabase extends Dexie {
     }
 
     const timestamp = new Date().toISOString();
-    const nextBook = input.book
-      ? {
-          ...input.book,
-          extensions: input.book.extensions || {},
-          entries: input.book.entries || [],
-        }
-      : existing.book;
+    const nextBook = normalizeCardBook(
+      input.book
+        ? {
+            ...input.book,
+            extensions: input.book.extensions || {},
+            entries: input.book.entries || [],
+          }
+        : existing.book,
+    );
 
     const updated: VaultLorebook = {
       ...existing,

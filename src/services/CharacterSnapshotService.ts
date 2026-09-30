@@ -15,6 +15,7 @@ import type {
   SnapshotMetadata,
 } from '../db/characterTypes';
 import { CHARACTER_SECTIONS, characterDb } from '../db';
+import { normalizeCardBook } from './LorebookConverter';
 import { compareSnapshotTimeline } from '../utils/snapshotTimeline';
 import { snapshotValuesMatch, stableSerialize } from '../utils/snapshotCompare';
 
@@ -121,7 +122,7 @@ function normalizeLorebook(book: CharacterBook | null | undefined): CharacterBoo
   if (!book || book.entries.length === 0) {
     return null;
   }
-  return book;
+  return normalizeCardBook(book);
 }
 
 /**

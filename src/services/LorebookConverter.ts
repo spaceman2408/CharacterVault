@@ -172,18 +172,42 @@ function storedSTPosition(ext: Record<string, unknown>): number | undefined {
   return typeof stored === 'number' && Number.isInteger(stored) ? stored : undefined;
 }
 
+function cardPositionOf(ext: Record<string, unknown>): number | undefined {
+  const value = ext.position;
+  return typeof value === 'number' && Number.isInteger(value) ? value : undefined;
+}
+
+function needsCardNormalization(entry: LorebookEntry): boolean {
+  const ext = entry.extensions ?? {};
+  if (cardPositionOf(ext) !== undefined) return true;
+  if (entry.position !== undefined && !LOREBOOK_POSITIONS.has(entry.position)) return true;
+  const source = entry as unknown as Record<string, unknown>;
+  return CARD_EXTENSION_FIELDS.some(
+    ([field, extKey]) => source[field] === undefined && ext[extKey] !== undefined,
+  );
+}
+
 /**
  * Read a card `character_book` entry (SillyTavern keeps options in `extensions`)
  * into the top-level fields the editor uses. Top-level values win so edits made
- * in older CharacterVault exports are kept.
+ * in older CharacterVault versions are kept. Safe to run repeatedly.
  */
 export function cardBookEntryToEntry(entry: LorebookEntry): LorebookEntry {
-  const ext = entry.extensions ?? {};
+  const ext = { ...(entry.extensions ?? {}) };
   const next: LorebookEntry = { ...entry, extensions: ext };
 
-  const stPosition = storedSTPosition(ext);
-  if (stPosition !== undefined && POSITION_MAP[stPosition]) {
-    next.position = POSITION_MAP[stPosition];
+  const cardPosition = cardPositionOf(ext);
+  if (cardPosition !== undefined) {
+    // SillyTavern writes the spec string from its number (0 → before, else after).
+    // A different top-level value means the position was changed here, so keep it.
+    const specPosition: LorebookPosition = cardPosition === 0 ? 'before_char' : 'after_char';
+    const unchanged =
+      entry.position === undefined ||
+      entry.position === specPosition ||
+      !LOREBOOK_POSITIONS.has(entry.position);
+    next.position = unchanged ? POSITION_MAP[cardPosition] ?? specPosition : entry.position;
+    ext._st_position = cardPosition;
+    delete ext.position;
   } else if (entry.position !== undefined && !LOREBOOK_POSITIONS.has(entry.position)) {
     next.position = 'before_char';
   }
@@ -194,10 +218,24 @@ export function cardBookEntryToEntry(entry: LorebookEntry): LorebookEntry {
       target[field] = ext[extKey];
     }
   }
-  next.selectiveLogic = asSelectiveLogic(next.selectiveLogic);
+  if (next.selectiveLogic !== undefined) next.selectiveLogic = asSelectiveLogic(next.selectiveLogic);
   if (next.role !== undefined) next.role = asDepthRole(next.role) ?? null;
 
   return next;
+}
+
+/**
+ * Bring a stored book written before card options were mapped up to date.
+ * Returns the same object when nothing needs changing.
+ */
+export function normalizeCardBook<T extends CharacterBook | undefined>(book: T): T {
+  if (!book?.entries?.some(needsCardNormalization)) return book;
+  return {
+    ...book,
+    entries: book.entries.map((entry) =>
+      needsCardNormalization(entry) ? cardBookEntryToEntry(entry) : entry,
+    ),
+  };
 }
 
 /**

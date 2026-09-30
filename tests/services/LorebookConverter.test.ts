@@ -7,6 +7,7 @@ import {
   importLorebook,
   cardBookEntryToEntry,
   entryToCardBookEntry,
+  normalizeCardBook,
 } from '../../src/services/LorebookConverter';
 import type { LorebookEntry } from '../../src/db/characterTypes';
 
@@ -412,5 +413,49 @@ describe('LorebookConverter', () => {
       ],
     });
     expect(book?.entries[0].excludeRecursion).toBe(true);
+  });
+
+  it('keeps a position changed in CharacterVault over the stored SillyTavern one', () => {
+    const edited = cardBookEntryToEntry({
+      id: 0,
+      keys: ['a'],
+      content: '',
+      enabled: true,
+      position: 'before_example',
+      extensions: { position: 4 },
+    });
+    expect(edited.position).toBe('before_example');
+    expect(entryToCardBookEntry(edited).extensions.position).toBe(5);
+  });
+
+  it('takes the detailed SillyTavern position when the spec position is unchanged', () => {
+    const untouched = cardBookEntryToEntry({
+      id: 0,
+      keys: ['a'],
+      content: '',
+      enabled: true,
+      position: 'after_char',
+      extensions: { position: 4 },
+    });
+    expect(untouched.position).toBe('at_depth');
+    expect(untouched.extensions.position).toBeUndefined();
+    expect(untouched.extensions._st_position).toBe(4);
+  });
+
+  it('normalizes an old stored book once and then leaves it alone', () => {
+    const stored = {
+      entries: [
+        { id: 0, keys: ['a'], content: '', enabled: true, position: 'after_char' as const, extensions: { position: 4, depth: 6, exclude_recursion: true } },
+        { id: 1, keys: ['b'], content: '', enabled: true, position: 'before_char' as const, extensions: {} },
+      ],
+      extensions: {},
+    };
+
+    const once = normalizeCardBook(stored);
+    expect(once).not.toBe(stored);
+    expect(once.entries[0]).toMatchObject({ position: 'at_depth', depth: 6, excludeRecursion: true });
+    expect(once.entries[1]).toBe(stored.entries[1]);
+    expect(normalizeCardBook(once)).toBe(once);
+    expect(normalizeCardBook(undefined)).toBeUndefined();
   });
 });

@@ -1,4 +1,5 @@
 import type { CharacterBook, LorebookEntry, SnapshotDiffEntry } from '../../db/characterTypes';
+import { normalizeCardBook } from '../../services/LorebookConverter';
 import { snapshotValuesMatch } from '../../utils/snapshotCompare';
 import { DEPTH_ROLE_OPTIONS, POSITION_OPTIONS, SELECTIVE_LOGIC_OPTIONS } from '../editor/lorebook/constants';
 
@@ -327,7 +328,7 @@ export function diffLorebook(snapshotBook: CharacterBook | null, currentBook: Ch
 }
 
 function asBook(value: unknown): CharacterBook | null {
-  return value !== null && typeof value === 'object' && 'entries' in value ? (value as CharacterBook) : null;
+  return value !== null && typeof value === 'object' && 'entries' in value ? normalizeCardBook(value as CharacterBook) : null;
 }
 
 function asStrings(value: unknown): string[] {
