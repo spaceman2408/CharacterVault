@@ -352,6 +352,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const acceptRef = useRef<() => void>(() => {});
   const rejectRef = useRef<() => void>(() => {});
   const abortRef = useRef<() => void>(() => {});
+  const retryRef = useRef<(editedPrompt?: string) => void>(() => {});
 
   const clearSelectionLock = useCallback(() => {
     selectionLockRef.current = null;
@@ -702,7 +703,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     streamingReasoningRef.current.clear();
     aiReasoningRef.current = '';
     errorRef.current = null;
-    // Store the custom prompt for error recovery on instruct operations
+    // Kept until Accept: Retry reuses it, and Reject / errors reopen Custom with it
     if (operation === 'instruct' && customPrompt) {
       lastInstructPromptRef.current = customPrompt;
     } else {
@@ -835,7 +836,6 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       // Update result (keep selection lock until Accept/Reject)
       aiResultRef.current = normalizedContent;
       aiReasoningRef.current = response.reasoning || '';
-      lastInstructPromptRef.current = null; // Clear stored prompt on success
       setAiResult(normalizedContent);
       setIsProcessing(false);
       isProcessingRef.current = false;
@@ -1038,9 +1038,10 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
   // Handle reject - clear AI state
   const reject = useCallback(() => {
-    // Use ref so instruct recovery works even if reject was captured at editor init
+    // Use ref so instruct recovery works even if reject was captured at editor init.
+    // After an error the panel already reopened Custom, so don't overwrite the box.
     const isInstruct = currentOperationRef.current === 'instruct';
-    const savedPrompt = isInstruct ? lastInstructPromptRef.current : null;
+    const savedPrompt = isInstruct && !errorRef.current ? lastInstructPromptRef.current : null;
     const lock = selectionLockRef.current;
 
     // Clear streaming refs
@@ -1097,10 +1098,25 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     }
   }, []);
 
+  // Re-run the current op on the same locked range (result or error strip)
+  const retry = useCallback((editedPrompt?: string) => {
+    const view = viewRef.current;
+    const lock = selectionLockRef.current;
+    const operation = currentOperationRef.current;
+    if (!view || !lock || !operation || isProcessingRef.current) return;
+    const prompt = operation === 'instruct'
+      ? editedPrompt || lastInstructPromptRef.current
+      : undefined;
+    if (operation === 'instruct' && !prompt) return;
+    const { from, to } = clampSelectionLock(lock, view.state.doc.length);
+    void handleAIOperation(operation, lock.text, { from, to }, prompt ?? undefined);
+  }, [handleAIOperation]);
+
   // Keep action refs current for keymaps / panel callbacks captured at editor init
   acceptRef.current = accept;
   rejectRef.current = reject;
   abortRef.current = abort;
+  retryRef.current = retry;
 
   // Manually set editor content
   const setContent = useCallback((content: string) => {
@@ -1265,6 +1281,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           () => acceptRef.current(),
           () => rejectRef.current(),
           () => abortRef.current(),
+          (editedPrompt) => retryRef.current(editedPrompt),
           onFontSizeChange,
           toolbarActions,
           handlePreviewPayload,

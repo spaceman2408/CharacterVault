@@ -54,6 +54,12 @@ export type AIStreamingCallback = (update: {
 export type AIAbortCallback = () => void;
 
 /**
+ * Re-run the current op on the same range. `editedPrompt` replaces the Custom
+ * instruction when the user changed it in the reopened box.
+ */
+export type AIRetryCallback = (editedPrompt?: string) => void;
+
+/**
  * Callback for font size changes
  */
 export type FontSizeChangeCallback = (size: number) => void;
@@ -111,6 +117,7 @@ function createToolbarPanel(
   onAccept: () => void,
   onReject: () => void,
   onAbort: AIAbortCallback,
+  onRetry: AIRetryCallback,
   onFontSizeChange?: FontSizeChangeCallback,
   toolbarActions: ToolbarActionConfig[] = [],
   onPreviewPayload?: AIPreviewPayloadCallback,
@@ -422,6 +429,19 @@ function createToolbarPanel(
     isInstructMode = false;
     updateState();
     view.focus();
+  };
+
+  // An instruction edited in the reopened Custom box replaces the original
+  const retry = () => {
+    let editedPrompt: string | undefined;
+    if (isInstructMode && state.currentOperation === 'instruct') {
+      editedPrompt = instructInput.value.trim() || undefined;
+      if (document.activeElement === instructInput) view.focus();
+      isInstructMode = false;
+      instructInput.value = '';
+      instructInput.style.height = '';
+    }
+    onRetry(editedPrompt);
   };
 
   instructSendBtn.addEventListener('click', sendInstruct);
@@ -767,6 +787,27 @@ function createToolbarPanel(
   `;
   resultHeader.appendChild(resultStats);
 
+  const errorRetryBtn = document.createElement('button');
+  errorRetryBtn.textContent = '↻ Retry';
+  errorRetryBtn.title = 'Run the same request again';
+  errorRetryBtn.style.cssText = `
+    display: none;
+    margin-left: auto;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ai-toolbar-text-secondary);
+    background: transparent;
+    border: 1px solid var(--ai-toolbar-input-border);
+    border-radius: 4px;
+    cursor: pointer;
+  `;
+  errorRetryBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+  });
+  errorRetryBtn.addEventListener('click', () => retry());
+  resultHeader.appendChild(errorRetryBtn);
+
   const resultCloseBtn = document.createElement('button');
   resultCloseBtn.innerHTML = '✕';
   resultCloseBtn.title = 'Dismiss error (Escape)';
@@ -960,6 +1001,27 @@ function createToolbarPanel(
   });
   actionButtons.appendChild(rejectBtn);
 
+  const retryBtn = document.createElement('button');
+  retryBtn.textContent = '↻ Retry';
+  retryBtn.title = 'Discard this result and run the same request again';
+  retryBtn.style.cssText = `
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ai-toolbar-text-secondary);
+    background: transparent;
+    border: 1px solid var(--ai-toolbar-input-border);
+    border-radius: 6px;
+    cursor: pointer;
+  `;
+  retryBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    ensureEditorFocus();
+  });
+  retryBtn.addEventListener('click', () => retry());
+  actionButtons.appendChild(retryBtn);
+
   // Shortcuts for this editor's AI session — work even when focus fell to <body>
   // after the processing UI hid the button that was focused.
   const onPanelKeyDown = (e: KeyboardEvent) => {
@@ -1113,11 +1175,13 @@ function createToolbarPanel(
       processingIndicator.style.display = 'none';
       reasoningFold.style.display = 'none';
       reasoningText.textContent = '';
+      errorRetryBtn.style.display = 'inline';
       resultCloseBtn.style.display = 'inline';
       actionButtons.style.display = 'none';
       return;
     } else {
       errorDisplay.style.display = 'none';
+      errorRetryBtn.style.display = 'none';
       resultCloseBtn.style.display = 'none';
     }
 
@@ -1299,11 +1363,11 @@ function createToolbarPanel(
       reasoningText.textContent = '';
     }
 
-    // If there's an error and we have a stored instruct prompt, restore instruct mode
+    // A Custom op that errored or was rejected sends its instruction back: reopen the box
     let restoredInstructMode = false;
-    if (update.error && state.instructPrompt && state.currentOperation === 'instruct') {
+    if (update.instructPrompt) {
       isInstructMode = true;
-      instructInput.value = state.instructPrompt;
+      instructInput.value = update.instructPrompt;
       restoredInstructMode = true;
       // Clear the stored prompt so we don't re-enter instruct mode on subsequent updates
       state.instructPrompt = null;
@@ -1442,6 +1506,7 @@ export function aiToolbarPanel(
   onAccept: () => void,
   onReject: () => void,
   onAbort: AIAbortCallback,
+  onRetry: AIRetryCallback,
   onFontSizeChange?: FontSizeChangeCallback,
   toolbarActions: ToolbarActionConfig[] = [],
   onPreviewPayload?: AIPreviewPayloadCallback,
@@ -1456,6 +1521,7 @@ export function aiToolbarPanel(
         onAccept,
         onReject,
         onAbort,
+        onRetry,
         onFontSizeChange,
         toolbarActions,
         onPreviewPayload,
