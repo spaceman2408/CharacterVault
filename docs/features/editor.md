@@ -139,7 +139,7 @@ This is available in every text editor that uses the shared CodeMirror toolbar, 
 - **Roleplay colors** — `"dialogue"`, narration, and `*actions*` get distinct
   colors in every prose editor. Customize under **Character Workspace →
   Roleplay colors** in Settings.
-- **Markdown image links** — Image syntax is highlighted; optional click-to-open
+- **Markdown image links** — Image syntax is highlighted; Ctrl+click to open
   is controlled under **Settings → Character Workspace → Editor links**.
 
 ### Markdown image links
@@ -148,11 +148,12 @@ Markdown image syntax such as `![alt](https://example.com/art.png)` is
 highlighted in every shared text editor.
 
 - **Highlight** — Always on so image marks and URLs are easy to spot.
-- **Click to open** — When **Settings → Character Workspace → Editor links → Open Markdown
-  image links on click** is enabled, clicking an openable `http`/`https` URL
-  shows a leave-app safety warning, then opens the link in a new tab.
-- **Select without opening** — Drag to select text; a small movement cancels
-  the click-open action.
+- **Ctrl+click to open** — When **Settings → Character Workspace → Editor links → Open Markdown
+  image links with Ctrl+click** is enabled, Ctrl+click (⌘+click on Mac) an
+  openable `http`/`https` URL, or tap it on a touch screen. A leave-app safety
+  warning appears, then the link opens in a new tab.
+- **Edit without opening** — A plain click places the cursor, so you can edit
+  the URL like any other text.
 - **Spellcheck-friendly** — Image constructs are skipped by spellcheck so
   URLs and alt text don’t pile up wavy underlines.
 

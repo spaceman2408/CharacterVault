@@ -250,12 +250,12 @@ export const WorkspaceTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) =>
           onChange={(checked) =>
             setDraft((prev) => ({ ...prev, markdownImageOpenLinks: checked }))
           }
-          label="Open Markdown image links on click"
+          label="Open Markdown image links with Ctrl+click"
           description={
             <>
-              When enabled, clicking image syntax like{' '}
-              <code className="text-xs">![](https://…)</code> opens the URL after a safety warning.
-              Highlighting stays on either way. Drag to select text without opening.
+              When enabled, Ctrl+click (⌘+click on Mac) or tap image syntax like{' '}
+              <code className="text-xs">![](https://…)</code> to open the URL after a safety
+              warning. A plain click just places the cursor. Highlighting stays on either way.
             </>
           }
         />

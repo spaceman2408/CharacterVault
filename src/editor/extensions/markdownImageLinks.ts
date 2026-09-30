@@ -20,7 +20,7 @@ import {
 } from '../markdownImage/findMarkdownImages';
 
 export interface MarkdownImageLinksOptions {
-  /** When false, highlight still applies but clicks do not open. */
+  /** When false, highlight still applies but Ctrl+click / tap does not open. */
   openLinksEnabled: boolean;
 }
 
@@ -29,6 +29,13 @@ const markdownImageOpenLinksCompartment = new Compartment();
 const MARK_CLASS = 'cm-md-image';
 const URL_CLASS = 'cm-md-image-url';
 const OPENABLE_CLASS = 'cm-md-image-openable';
+const MOD_HELD_CLASS = 'cm-md-image-mod-held';
+
+const isMacPlatform =
+  typeof navigator !== 'undefined' &&
+  (/Mac|iPhone|iPad|iPod/i.test(navigator.platform) ||
+    (typeof navigator.userAgent === 'string' && /Mac OS X|Macintosh/i.test(navigator.userAgent)));
+const OPEN_HINT = `${isMacPlatform ? '⌘' : 'Ctrl'}+click to open link`;
 
 const CLICK_DRAG_PX = 5;
 
@@ -206,7 +213,12 @@ function buildImageDecorations(view: EditorView, openLinksEnabled: boolean): Dec
         const openable = openLinksEnabled && isOpenableHttpUrl(match.url);
         const markClass = openable ? `${MARK_CLASS} ${OPENABLE_CLASS}` : MARK_CLASS;
 
-        ranges.push(Decoration.mark({ class: markClass }).range(from, to));
+        ranges.push(
+          Decoration.mark({
+            class: markClass,
+            attributes: openable ? { title: OPEN_HINT } : undefined,
+          }).range(from, to),
+        );
         if (urlFrom < urlTo && urlFrom >= from && urlTo <= to) {
           ranges.push(
             Decoration.mark({
@@ -221,14 +233,36 @@ function buildImageDecorations(view: EditorView, openLinksEnabled: boolean): Dec
   return Decoration.set(ranges, true);
 }
 
+function setModHeld(view: EditorView, held: boolean): void {
+  view.dom.classList.toggle(MOD_HELD_CLASS, held);
+}
+
+// Like a code editor: Ctrl/⌘+click opens a link with a mouse, so a plain click
+// can place the cursor inside the URL. Touch has no modifier, so a tap opens.
 function imageLinksPlugin(openLinksEnabled: boolean) {
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet;
       down: { x: number; y: number; pos: number } | null = null;
+      pointerType = 'mouse';
+      readonly onModKey: (event: KeyboardEvent) => void;
+      readonly clearModHeld: () => void;
+      readonly view: EditorView;
 
       constructor(view: EditorView) {
+        this.view = view;
         this.decorations = buildImageDecorations(view, openLinksEnabled);
+        this.onModKey = (event) => {
+          if (event.key === 'Control' || event.key === 'Meta') {
+            setModHeld(view, event.type === 'keydown');
+          }
+        };
+        this.clearModHeld = () => setModHeld(view, false);
+        if (openLinksEnabled) {
+          window.addEventListener('keydown', this.onModKey, true);
+          window.addEventListener('keyup', this.onModKey, true);
+          window.addEventListener('blur', this.clearModHeld);
+        }
       }
 
       update(update: ViewUpdate) {
@@ -239,14 +273,31 @@ function imageLinksPlugin(openLinksEnabled: boolean) {
 
       destroy() {
         this.down = null;
+        window.removeEventListener('keydown', this.onModKey, true);
+        window.removeEventListener('keyup', this.onModKey, true);
+        window.removeEventListener('blur', this.clearModHeld);
+        setModHeld(this.view, false);
         dismissExternalLinkModal();
       }
     },
     {
       decorations: (value) => value.decorations,
       eventHandlers: {
+        pointerdown(event) {
+          this.pointerType = event.pointerType;
+          return false;
+        },
+        mousemove(event, view) {
+          if (openLinksEnabled) setModHeld(view, event.ctrlKey || event.metaKey);
+          return false;
+        },
+        mouseleave(_event, view) {
+          setModHeld(view, false);
+          return false;
+        },
         mousedown(event, view) {
-          if (!openLinksEnabled || event.button !== 0) {
+          const touch = this.pointerType === 'touch' || this.pointerType === 'pen';
+          if (!openLinksEnabled || event.button !== 0 || (!touch && !event.ctrlKey && !event.metaKey)) {
             this.down = null;
             return false;
           }
@@ -301,10 +352,10 @@ function makeBaseTheme(): Extension {
       textDecorationColor: 'color-mix(in srgb, var(--syntax-string, #059669) 45%, transparent)',
       textUnderlineOffset: '2px',
     },
-    [`.${OPENABLE_CLASS}`]: {
+    [`&.${MOD_HELD_CLASS} .${OPENABLE_CLASS}`]: {
       cursor: 'pointer',
     },
-    [`.${OPENABLE_CLASS}:hover`]: {
+    [`&.${MOD_HELD_CLASS} .${OPENABLE_CLASS}:hover`]: {
       backgroundColor: 'color-mix(in srgb, var(--accent, #7c3aed) 20%, transparent)',
     },
   });

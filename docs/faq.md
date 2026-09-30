@@ -29,7 +29,7 @@ Toggle it on or off in **Settings → Character Workspace → Spellcheck**. The 
 :::
 
 ::: details Can I open Markdown image links from the editor?
-Yes. Syntax like `![alt](https://…)` is always highlighted. To open the URL on click, enable **Settings → Character Workspace → Editor links → Open Markdown image links on click**. You’ll get a leave-app safety warning first. Drag to select text without opening.
+Yes. Syntax like `![alt](https://…)` is always highlighted. Ctrl+click it (⌘+click on Mac, or tap on a touch screen) to open the URL. You’ll get a leave-app safety warning first. A plain click just places the cursor. Turn this off under **Settings → Character Workspace → Editor links → Open Markdown image links with Ctrl+click**.
 
 [Learn more →](/features/editor#markdown-image-links)
 :::
