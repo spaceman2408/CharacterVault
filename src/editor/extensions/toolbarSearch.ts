@@ -5,7 +5,7 @@
 
 import { EditorView, keymap } from '@codemirror/view';
 import type { ViewUpdate } from '@codemirror/view';
-import { StateEffect, StateField } from '@codemirror/state';
+import { Prec, StateEffect, StateField } from '@codemirror/state';
 import {
   search,
   openSearchPanel,
@@ -114,8 +114,18 @@ export function openToolbarSearchReplace(view: EditorView): boolean {
 }
 
 export function closeToolbarSearch(view: EditorView): boolean {
+  // Not handled when closed, so Escape reaches the editor's other bindings
+  if (!view.state.field(searchPanelOpen) && !isSearchPanelOpen(view.state)) return false;
   view.dispatch({ effects: setSearchPanelOpen.of(false) });
   closeSearchPanel(view);
+  return true;
+}
+
+/** Jump to the next/previous match, or open search when there is nothing to find yet. */
+function stepToolbarSearch(view: EditorView, backwards: boolean): boolean {
+  if (!getSearchQuery(view.state).valid) return openToolbarSearch(view);
+  if (backwards) findPrevious(view);
+  else findNext(view);
   return true;
 }
 
@@ -246,7 +256,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   prevBtn.type = 'button';
   prevBtn.className = 'search-btn prev';
   prevBtn.textContent = '^';
-  prevBtn.title = 'Previous match (Shift+Enter)';
+  prevBtn.title = 'Previous match (Shift+Enter, Shift+F3)';
   prevBtn.setAttribute('aria-label', 'Previous match');
   prevBtn.style.cssText = `
     display: flex;
@@ -278,7 +288,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   nextBtn.type = 'button';
   nextBtn.className = 'search-btn next';
   nextBtn.textContent = 'v';
-  nextBtn.title = 'Next match (Enter)';
+  nextBtn.title = 'Next match (Enter, F3)';
   nextBtn.setAttribute('aria-label', 'Next match');
   nextBtn.style.cssText = prevBtn.style.cssText;
   nextBtn.addEventListener('mouseenter', () => {
@@ -382,7 +392,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   replaceBtn.type = 'button';
   replaceBtn.className = 'search-btn replace';
   replaceBtn.textContent = 'Replace';
-  replaceBtn.title = 'Replace current match';
+  replaceBtn.title = 'Replace current match (Enter in the Replace box)';
   replaceBtn.setAttribute('aria-label', 'Replace current match');
   replaceBtn.style.cssText = prevBtn.style.cssText;
   replaceBtn.addEventListener('mouseenter', () => {
@@ -484,47 +494,53 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   [searchInput, replaceInput].forEach(el => el.addEventListener('input', updateQuery));
   [caseCb, wordCb, regexpCb].forEach(el => el.addEventListener('change', updateQuery));
 
-  searchInput.addEventListener('keydown', (e) => {
-    if (isImeComposing(e)) return;
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (e.shiftKey) {
-        findPrevious(view);
-      } else {
-        findNext(view);
-      }
-      view.dispatch({ scrollIntoView: true });
-      refreshCount();
-    }
-  });
-
-  // Escape closes from anywhere in the panel (inputs, option pills, buttons)
-  dom.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || isImeComposing(e)) return;
-    e.preventDefault();
-    closeToolbarSearch(view);
-    view.focus();
-  });
-
-  prevBtn.addEventListener('click', () => {
-    findPrevious(view);
+  const step = (backwards: boolean) => {
+    if (backwards) findPrevious(view);
+    else findNext(view);
     view.dispatch({ scrollIntoView: true });
     refreshCount();
-  });
-  nextBtn.addEventListener('click', () => {
-    findNext(view);
-    view.dispatch({ scrollIntoView: true });
-    refreshCount();
-  });
-  closeBtn.addEventListener('click', () => { closeToolbarSearch(view); view.focus(); });
+  };
 
   // replaceNext already replaces the current match and selects the next one
-  replaceBtn.addEventListener('click', () => {
+  const replaceCurrent = () => {
     if (blockedByReadOnly()) return;
     notice = null;
     replaceNext(view);
     refreshCount();
+  };
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (isImeComposing(e) || e.key !== 'Enter') return;
+    e.preventDefault();
+    step(e.shiftKey);
   });
+
+  replaceInput.addEventListener('keydown', (e) => {
+    if (isImeComposing(e) || e.key !== 'Enter') return;
+    e.preventDefault();
+    replaceCurrent();
+  });
+
+  // Keys that work from anywhere in the panel (inputs, option pills, buttons)
+  dom.addEventListener('keydown', (e) => {
+    if (isImeComposing(e)) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeToolbarSearch(view);
+      view.focus();
+      return;
+    }
+    const modG = (e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'g';
+    if (e.key === 'F3' || modG) {
+      e.preventDefault();
+      step(e.shiftKey);
+    }
+  });
+
+  prevBtn.addEventListener('click', () => step(true));
+  nextBtn.addEventListener('click', () => step(false));
+  closeBtn.addEventListener('click', () => { closeToolbarSearch(view); view.focus(); });
+  replaceBtn.addEventListener('click', replaceCurrent);
 
   replaceAllBtn.addEventListener('click', () => {
     if (blockedByReadOnly()) return;
@@ -600,9 +616,13 @@ export function toolbarSearch() {
     searchPanelOpen,
     keymap.of([
       { key: 'Mod-f', run: openToolbarSearch },
-      { key: 'Mod-h', run: openToolbarSearchReplace },
-      { key: 'Escape', run: closeToolbarSearch },
+      // macOS takes Cmd+H (hide app) before the page sees it
+      { key: 'Mod-h', mac: 'Mod-Alt-f', run: openToolbarSearchReplace },
+      { key: 'F3', run: (view) => stepToolbarSearch(view, false), shift: (view) => stepToolbarSearch(view, true) },
+      { key: 'Mod-g', run: (view) => stepToolbarSearch(view, false), shift: (view) => stepToolbarSearch(view, true) },
     ]),
+    // Ahead of the default Escape (which collapses a selection first); a no-op when search is closed
+    Prec.high(keymap.of([{ key: 'Escape', run: closeToolbarSearch }])),
   ];
 }
 
