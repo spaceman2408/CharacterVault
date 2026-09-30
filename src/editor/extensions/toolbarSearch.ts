@@ -42,6 +42,7 @@ interface SearchPanelControls {
   regexpCb: HTMLInputElement;
   countEl: HTMLSpanElement;
   refreshCount: () => void;
+  clearNotice: () => void;
 }
 
 // Get selected text from editor (single selection only, not multiple selections)
@@ -270,6 +271,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   searchInput.setAttribute('aria-label', 'Find in editor');
   searchInput.style.cssText = `
     flex: 1;
+    min-width: 0;
     padding: 6px 10px;
     font-size: 16px;
     border: 1px solid var(--ai-toolbar-input-border);
@@ -338,6 +340,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
     font-weight: 500;
     color: var(--ai-toolbar-text-muted);
     padding: 0 6px;
+    white-space: nowrap;
   `;
   searchRow.appendChild(countEl);
 
@@ -505,8 +508,29 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   const wordCb = wordOption.input;
   const regexpCb = regexOption.input;
 
+  // Replaces the match count until the query, document or selection changes again
+  let notice: { text: string; title: string } | null = null;
+
   const refreshCount = () => {
+    countEl.title = notice?.title ?? '';
+    if (notice) {
+      countEl.textContent = notice.text;
+      countEl.style.display = 'inline';
+      return;
+    }
     renderMatchCount(view, countEl);
+  };
+
+  const clearNotice = () => {
+    notice = null;
+  };
+
+  // The editor is only read-only while an AI edit waits for Accept/Reject
+  const blockedByReadOnly = (): boolean => {
+    if (!view.state.readOnly) return false;
+    notice = { text: 'AI edit pending', title: 'Accept or reject the AI edit before replacing' };
+    refreshCount();
+    return true;
   };
 
   const syncControlsFromState = () => {
@@ -519,6 +543,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
       regexpCb,
       countEl,
       refreshCount,
+      clearNotice,
     });
   };
 
@@ -587,27 +612,21 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
 
   // replaceNext already replaces the current match and selects the next one
   replaceBtn.addEventListener('click', () => {
+    if (blockedByReadOnly()) return;
+    notice = null;
     replaceNext(view);
     refreshCount();
   });
 
-  // Replace all matches
   replaceAllBtn.addEventListener('click', () => {
-    replaceAll(view);
-    // Clear search to prevent re-replacing
-    const currentQuery = getSearchQuery(view.state);
-    view.dispatch({
-      effects: setSearchQuery.of(
-        new SearchQuery({
-          search: '',
-          replace: currentQuery.replace,
-          caseSensitive: currentQuery.caseSensitive,
-          wholeWord: currentQuery.wholeWord,
-          regexp: currentQuery.regexp,
-        })
-      )
-    });
-    syncControlsFromState();
+    if (blockedByReadOnly()) return;
+    const query = getSearchQuery(view.state);
+    let matches = 0;
+    if (query.valid) {
+      const cursor = query.getCursor(view.state);
+      while (!cursor.next().done) matches++;
+    }
+    notice = replaceAll(view) ? { text: `Replaced ${matches}`, title: '' } : null;
     refreshCount();
   });
 
@@ -622,6 +641,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
     regexpCb,
     countEl,
     refreshCount,
+    clearNotice,
   };
 }
 
@@ -648,6 +668,9 @@ function createSearchPanel(view: EditorView) {
       }
 
       if (queryChanged || update.docChanged || update.selectionSet) {
+        if (!update.transactions.some((tr) => tr.isUserEvent('input.replace'))) {
+          controls.clearNotice();
+        }
         scheduleCount();
       }
     },
