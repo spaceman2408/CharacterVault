@@ -45,7 +45,7 @@ export type AIStreamingCallback = (update: {
   currentOperation?: AIOperation | null;
   error?: string | null;
   instructPrompt?: string | null;
-  stats?: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string };
+  stats?: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string; truncated?: boolean };
 }) => void;
 
 /**
@@ -104,7 +104,7 @@ interface AIPanelState {
   currentOperation: AIOperation | null;
   error: string | null;
   instructPrompt: string | null;
-  stats: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string } | null;
+  stats: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string; truncated?: boolean } | null;
 }
 
 /**
@@ -759,8 +759,9 @@ function createToolbarPanel(
   const resultHeader = document.createElement('div');
   resultHeader.style.cssText = `
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 4px 8px;
     margin-bottom: 8px;
   `;
   resultContainer.appendChild(resultHeader);
@@ -774,6 +775,18 @@ function createToolbarPanel(
     letter-spacing: 0.5px;
   `;
   resultHeader.appendChild(resultTitle);
+
+  const cutOffNote = document.createElement('span');
+  cutOffNote.textContent = '⚠ Cut off at Max Tokens';
+  cutOffNote.title = 'The model hit the Max Tokens limit, so the text may end mid-sentence. Raise Max Tokens in the sampler settings and retry.';
+  cutOffNote.style.cssText = `
+    display: none;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--warning);
+  `;
+  resultHeader.appendChild(cutOffNote);
 
   // Stats display (shown when result is complete)
   const resultStats = document.createElement('span');
@@ -1216,6 +1229,7 @@ function createToolbarPanel(
     } else {
       resultStats.style.display = 'none';
     }
+    cutOffNote.style.display = hasStats && state.stats!.truncated ? 'inline' : 'none';
 
     // Action buttons (only when complete and has result)
     const showActions = !state.isProcessing && !state.isStreaming && state.aiResult && !state.error;

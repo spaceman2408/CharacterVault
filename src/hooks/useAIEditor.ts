@@ -300,7 +300,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     currentOperation?: AIOperation | null;
     error?: string | null;
     instructPrompt?: string | null;
-    stats?: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string };
+    stats?: { ttft?: number; tokensPerSecond?: number; modelId?: string; providerId?: string; truncated?: boolean };
   }) => void) | null>(null);
   const aiServiceRef = useRef<AIService | null>(null);
   /** False after the hook unmounts — blocks React setState / panel updates. */
@@ -869,6 +869,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           tokensPerSecond,
           modelId: currentConfig.modelId,
           providerId: getProviderSelectionId(currentConfig),
+          truncated: response.finishReason === 'length',
         },
       });
     } catch (err) {
