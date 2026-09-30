@@ -295,6 +295,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
 
   const countEl = document.createElement('span');
   countEl.className = 'search-match-count';
+  countEl.setAttribute('aria-live', 'polite');
   countEl.style.cssText = `
     font-size: 12px;
     font-weight: 500;
@@ -310,68 +311,19 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
     tooltip: string,
     ariaLabel: string
   ): { label: HTMLLabelElement; input: HTMLInputElement } => {
+    // Look (including the checked state) comes from toolbarSearchTheme so
+    // setting `.checked` from code restyles the pill too
     const label = document.createElement('label');
     label.className = 'search-option';
     label.title = tooltip;
-    label.style.cssText = `
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--ai-toolbar-text-secondary);
-      border: 1px solid var(--ai-toolbar-input-border);
-      border-radius: 4px;
-      cursor: pointer;
-      user-select: none;
-      transition: all 0.15s ease;
-    `;
 
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.className = cssClass;
     input.setAttribute('aria-label', ariaLabel);
-    input.title = tooltip;
-    input.style.cssText = 'display: none;';
 
     const span = document.createElement('span');
     span.textContent = text;
-
-    // Update label appearance when checkbox is toggled
-    const updateCheckedState = () => {
-      const isChecked = input.checked;
-      if (isChecked) {
-        label.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
-        label.style.borderColor = 'var(--ai-toolbar-active)';
-        label.style.color = 'var(--ai-toolbar-active)';
-        label.style.fontWeight = '700';
-      } else {
-        // Unchecked state: reset to default
-        label.style.backgroundColor = 'transparent';
-        label.style.borderColor = 'var(--ai-toolbar-input-border)';
-        label.style.color = 'var(--ai-toolbar-text-secondary)';
-        label.style.fontWeight = '500';
-      }
-    };
-    input.addEventListener('change', updateCheckedState);
-
-    // Override mouseenter/mouseleave to respect checked state
-    label.addEventListener('mouseenter', () => {
-      const isChecked = input.checked;
-      if (isChecked) {
-        label.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
-        label.style.borderColor = 'var(--ai-toolbar-active)';
-        label.style.color = 'var(--ai-toolbar-active)';
-      } else {
-        label.style.backgroundColor = 'var(--ai-toolbar-active-bg)';
-        label.style.borderColor = 'var(--ai-toolbar-active)';
-        label.style.color = 'var(--ai-toolbar-active)';
-      }
-    });
-    label.addEventListener('mouseleave', () => {
-      updateCheckedState();
-    });
 
     label.appendChild(input);
     label.appendChild(span);
@@ -543,18 +495,15 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
       }
       view.dispatch({ scrollIntoView: true });
       refreshCount();
-    } else if (e.key === 'Escape') {
-      closeToolbarSearch(view);
-      view.focus();
     }
   });
-  
-  replaceInput.addEventListener('keydown', (e) => {
-    if (isImeComposing(e)) return;
-    if (e.key === 'Escape') {
-      closeToolbarSearch(view);
-      view.focus();
-    }
+
+  // Escape closes from anywhere in the panel (inputs, option pills, buttons)
+  dom.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || isImeComposing(e)) return;
+    e.preventDefault();
+    closeToolbarSearch(view);
+    view.focus();
   });
 
   prevBtn.addEventListener('click', () => {
@@ -726,6 +675,7 @@ export function toolbarSearchTheme() {
       fontWeight: '600',
     },
     '& .cm-toolbar-search-panel .search-option': {
+      position: 'relative',
       display: 'flex',
       alignItems: 'center',
       gap: '4px',
@@ -737,14 +687,31 @@ export function toolbarSearchTheme() {
       borderRadius: '4px',
       cursor: 'pointer',
       userSelect: 'none',
+      transition: 'all 0.15s ease',
     },
     '& .cm-toolbar-search-panel .search-option:hover': {
       backgroundColor: 'var(--ai-toolbar-active-bg)',
       borderColor: 'var(--ai-toolbar-active)',
       color: 'var(--ai-toolbar-active)',
     },
+    '& .cm-toolbar-search-panel .search-option:has(input:checked)': {
+      backgroundColor: 'var(--ai-toolbar-active-bg)',
+      borderColor: 'var(--ai-toolbar-active)',
+      color: 'var(--ai-toolbar-active)',
+      fontWeight: '700',
+    },
+    '& .cm-toolbar-search-panel .search-option:has(input:focus-visible)': {
+      outline: '2px solid var(--ai-toolbar-active)',
+      outlineOffset: '1px',
+    },
+    // Visually hidden but still focusable, so Tab + Space toggle the option
     '& .cm-toolbar-search-panel .search-option input[type="checkbox"]': {
-      accentColor: 'var(--ai-toolbar-active)',
+      position: 'absolute',
+      width: '1px',
+      height: '1px',
+      margin: '0',
+      opacity: '0',
+      pointerEvents: 'none',
     },
     '& .cm-toolbar-search-panel .search-match-count': {
       fontSize: '12px',
