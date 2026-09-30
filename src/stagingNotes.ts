@@ -24,7 +24,19 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.8.2 staging 1';
+export const STAGING_VERSION = 'v1.8.2 staging 2';
 
 /** One short line per thing you want testers to try. */
-export const STAGING_TEST_NOTES: string[] = [];
+export const STAGING_TEST_NOTES: string[] = [
+  'Spellcheck: bigger dictionary, so fewer real words get flagged, and numbers like 6\'2 or 1-2 are no longer flagged. Long fields should still type smoothly.',
+  'Editor highlighting: *actions* after **bold** on the same line now highlight, and a height like 6\'2" no longer turns the rest of the line into dialogue.',
+  'Editor: typing char or user becomes {{char}} / {{user}} when you finish the word. Enter or paste right after should work normally.',
+  'Search (Ctrl+F, Ctrl+H to replace): the count matches the highlights, F3 or Ctrl+G steps through matches, Enter in Replace replaces, and the query stays after Replace All.',
+  'Inline AI toolbar: Retry on the result and on errors. Reject reopens Custom with your instruction so you can tweak it.',
+  'Inline AI toolbar: the result header shows the model, time to first token, and speed, and warns if the reply was cut off at Max Tokens.',
+  'Inline AI toolbar → Custom: the button reads Rewrite with a selection and Insert without one. Esc and Cancel keep what you typed.',
+  'Inline AI toolbar → Custom: ↑ in an empty box recalls recent instructions. The clock button lists them, with ✕ to remove one and Clear all (click twice).',
+  'Inline AI toolbar: an empty AI reply shows an error instead of locking the editor. Esc in a dialog or the font-size popup no longer rejects the result.',
+  'Japanese / Chinese / Korean input: Enter and Esc while composing no longer send or close things.',
+  'Snapshots: pinning a lorebook entry for AI context no longer shows as a change.',
+];
