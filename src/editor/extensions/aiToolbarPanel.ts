@@ -410,9 +410,17 @@ function createToolbarPanel(
 
     // Reset UI
     instructInput.value = '';
+    instructInput.style.height = '';
     updateState();
     // Leave the instruct textarea so shortcuts work during generation
     scheduleFocusWork(() => ensureEditorFocus());
+  };
+
+  // Esc / Cancel only hide the box; the draft stays for the next time Custom opens
+  const closeInstruct = () => {
+    isInstructMode = false;
+    updateState();
+    view.focus();
   };
 
   instructSendBtn.addEventListener('click', sendInstruct);
@@ -422,25 +430,20 @@ function createToolbarPanel(
       sendInstruct();
     }
     if (e.key === 'Escape') {
-      isInstructMode = false;
-      instructInput.value = '';
-      updateState();
+      e.preventDefault();
+      closeInstruct();
     }
   });
 
-  // Auto-grow textarea as user types
-  instructInput.addEventListener('input', () => {
+  function resizeInstructInput() {
     instructInput.style.height = 'auto';
     const newHeight = Math.min(instructInput.scrollHeight, 120);
     instructInput.style.height = `${newHeight}px`;
-  });
+  }
 
-  // Handle instruct cancel
-  instructCancelBtn.addEventListener('click', () => {
-    isInstructMode = false;
-    instructInput.value = '';
-    updateState();
-  });
+  instructInput.addEventListener('input', resizeInstructInput);
+
+  instructCancelBtn.addEventListener('click', closeInstruct);
 
   // Add "More" dropdown
   const moreBtn = document.createElement('button');
@@ -1169,10 +1172,6 @@ function createToolbarPanel(
     } else {
       currentSelection = null;
       selectedText = '';
-      if (!isInstructMode) {
-        // Don't clear instruct mode if we're in it - user can still type their prompt
-        instructInput.value = '';
-      }
       dropdown.style.display = 'none';
     }
 
@@ -1333,7 +1332,9 @@ function createToolbarPanel(
     // Error recovery: put the user back in the instruct box
     if (restoredInstructMode) {
       scheduleFocusWork(() => {
-        if (!panelDestroyed) instructInput.focus();
+        if (panelDestroyed) return;
+        resizeInstructInput();
+        instructInput.focus();
       });
     }
   };
@@ -1363,11 +1364,7 @@ function createToolbarPanel(
     },
     updateToolbarConfig: (c: ToolbarConfig) => {
       toolbarConfig = normalizeToolbarConfig(c);
-      // Leaving a removed Custom input box would strand its draft
-      if (isInstructMode) {
-        isInstructMode = false;
-        instructInput.value = '';
-      }
+      isInstructMode = false;
       buildToolbarButtons();
       updateState();
       relayoutToolbar();
