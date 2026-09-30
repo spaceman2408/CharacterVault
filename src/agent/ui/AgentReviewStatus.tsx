@@ -27,7 +27,7 @@ export function AgentReviewStatus({
   return (
     <span
       className="inline-flex shrink-0 items-center rounded-lg bg-accent-soft p-1.5 text-accent"
-      title="Agent edits need your review before they are applied (Studio settings)"
+      title="Agent edits need your review before they are applied (Settings → Character Workspace)"
       aria-label="Review required"
       role="img"
     >
