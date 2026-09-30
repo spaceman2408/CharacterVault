@@ -28,6 +28,7 @@ import {
   type TagCategory,
   type TaggedRef,
 } from './tags/tagData';
+import { isImeComposing } from '../../utils/imeComposing';
 
 interface TagSelectorProps {
   selections: Record<string, string[]>;
@@ -84,7 +85,7 @@ const AddCustomTagForm: React.FC<{
             if (error) setError(null);
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') void submit();
+            if (e.key === 'Enter' && !isImeComposing(e)) void submit();
           }}
           placeholder="Add your own tag..."
           disabled={isGenerating || isAdding}

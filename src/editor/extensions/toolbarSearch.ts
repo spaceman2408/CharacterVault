@@ -18,6 +18,7 @@ import {
   setSearchQuery,
   SearchQuery,
 } from '@codemirror/search';
+import { isImeComposing } from '../../utils/imeComposing';
 
 // State to track if search panel is open
 export const searchPanelOpen = StateField.define<boolean>({
@@ -548,6 +549,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   [caseCb, wordCb, regexpCb].forEach(el => el.addEventListener('change', updateQuery));
 
   searchInput.addEventListener('keydown', (e) => {
+    if (isImeComposing(e)) return;
     if (e.key === 'Enter') {
       e.preventDefault();
       if (e.shiftKey) {
@@ -564,6 +566,7 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   });
   
   replaceInput.addEventListener('keydown', (e) => {
+    if (isImeComposing(e)) return;
     if (e.key === 'Escape') {
       closeToolbarSearch(view);
       view.focus();

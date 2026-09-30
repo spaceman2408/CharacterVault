@@ -23,6 +23,7 @@ import {
   normalizeBaseUrl,
 } from '../config/aiBaseUrlPresets';
 import { useFocusOnOpen, useModalSheet } from '../hooks/useModalSheet';
+import { isImeComposing } from '../../../utils/imeComposing';
 
 const DEFAULT_ENDPOINT = '__default__';
 
@@ -236,7 +237,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && filteredModels.length > 0) {
+                  if (e.key === 'Enter' && filteredModels.length > 0 && !isImeComposing(e)) {
                     e.preventDefault();
                     handleSelectModel(filteredModels[0].id);
                   }

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { AIModelInfo } from '../../../db/characterTypes';
 import { useFocusOnOpen, useModalSheet } from '../hooks/useModalSheet';
+import { isImeComposing } from '../../../utils/imeComposing';
 
 interface ModelSelectProps {
   models: AIModelInfo[];
@@ -125,7 +126,7 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && filteredModels.length > 0) {
+                  if (e.key === 'Enter' && filteredModels.length > 0 && !isImeComposing(e)) {
                     e.preventDefault();
                     handleSelect(filteredModels[0].id);
                   }

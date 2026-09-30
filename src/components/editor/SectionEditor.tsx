@@ -15,6 +15,7 @@ import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { useAIEditor } from '../../hooks';
 import { creatorNotesExtensions } from '../../editor/extensions';
 import { estimateTokens } from '../../services/AIService';
+import { isImeComposing } from '../../utils/imeComposing';
 import { json } from '@codemirror/lang-json';
 import type { Extension } from '@codemirror/state';
 
@@ -139,6 +140,7 @@ function TagsFieldEditor({ tags, onChange, label, description }: TagsFieldEditor
   }, [addTags]);
 
   const handleKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isImeComposing(event)) return;
     if (event.key === 'Enter') {
       event.preventDefault();
       addTags(draftTag);

@@ -19,6 +19,7 @@ import { canRetryEmptySend } from './utils';
 import { useComposerMentions, type ComposerMention } from './composerMentions';
 import { CHAT_UI_HARD_WINDOW } from '../../services/ChatHistoryService';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { isImeComposing } from '../../utils/imeComposing';
 
 export interface AIChatViewProps {
   title: string;
@@ -478,6 +479,7 @@ export function AIChatView({
             title={composerDisabled ? effectiveHint : undefined}
             className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-40 transition-all disabled:cursor-not-allowed disabled:opacity-60"
             onKeyDown={(e) => {
+              if (isImeComposing(e)) return;
               if (mentions.handleKeyDown(e)) return;
               if (e.key === 'Escape' && isProcessing) {
                 e.preventDefault();

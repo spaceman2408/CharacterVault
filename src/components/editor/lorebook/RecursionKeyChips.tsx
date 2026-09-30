@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { addKey, parseKeyList, removeKey, replaceKey } from './recursionGraph';
+import { isImeComposing } from '../../../utils/imeComposing';
 
 export type RecursionKeyChipsProps = {
   keys: string[];
@@ -97,6 +98,7 @@ export function RecursionKeyChips({
             onChange={(e) => setDraft(e.target.value)}
             onBlur={commitEdit}
             onKeyDown={(e) => {
+              if (isImeComposing(e)) return;
               if (e.key === 'Enter') {
                 e.preventDefault();
                 commitEdit();
@@ -149,6 +151,7 @@ export function RecursionKeyChips({
             setAddValue(value);
           }}
           onKeyDown={(e) => {
+            if (isImeComposing(e)) return;
             if (e.key === 'Enter') {
               e.preventDefault();
               commitAdd(addValue);

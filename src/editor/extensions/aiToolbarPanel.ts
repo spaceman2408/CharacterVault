@@ -20,6 +20,7 @@ import { createFontSizeControl } from './fontSizeControl';
 import { clipLiveReasoning } from '../../components/ai/utils';
 import { AIService } from '../../services/AIService';
 import type { SamplerSettings } from '../../db/characterTypes';
+import { isImeComposing } from '../../utils/imeComposing';
 
 /**
  * Callback for AI operations
@@ -425,6 +426,7 @@ function createToolbarPanel(
 
   instructSendBtn.addEventListener('click', sendInstruct);
   instructInput.addEventListener('keydown', (e) => {
+    if (isImeComposing(e)) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendInstruct();
