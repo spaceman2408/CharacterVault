@@ -24,6 +24,7 @@ import {
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_REQUIRE_AGENT_REVIEW,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
+  DEFAULT_MACRO_AUTO_CONVERT,
   EMPTY_CUSTOM_CONTEXT_META,
   normalizeDefaultChatPanel,
   normalizeMacroHighlight,
@@ -31,6 +32,7 @@ import {
 } from '../db/characterTypes';
 import { applyModelBinding, normalizePromptModelMap } from '../services/resolveOperationConfig';
 import { applyMacroHighlightColors } from '../editor/extensions/macroHighlight';
+import { setMacroAutoConvert } from '../editor/extensions/characterMacroHelper';
 import type { SectionMeta } from '../db/characterTypes';
 import { bindSpellcheckCallbacks } from '../editor/extensions/spellcheck';
 import { useCharacterContext } from './useCharacterContext';
@@ -410,6 +412,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       );
       setRoleplayHighlight(normalizeRoleplayHighlight(settings.ui.roleplayHighlight));
       setMacroHighlight(normalizeMacroHighlight(settings.ui.macroHighlight));
+      setMacroAutoConvert(settings.ui.macroAutoConvert ?? DEFAULT_MACRO_AUTO_CONVERT);
       setContextSectionIdsState(contextIds);
     } catch (error) {
       console.error('Failed to load settings:', error);

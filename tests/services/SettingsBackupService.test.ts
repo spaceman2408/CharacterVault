@@ -59,6 +59,7 @@ function makeDraft(): BackupDraftTarget {
     creatorNotesRemoteWarning: true,
     roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
     macroHighlight: { ...DEFAULT_MACRO_HIGHLIGHT_SETTINGS },
+    macroAutoConvert: true,
     spellcheckEnabled: true,
     spellcheckLanguage: 'en',
     spellcheckIgnoredWords: [],

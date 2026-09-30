@@ -34,6 +34,7 @@ import type {
 } from '../../db/characterTypes';
 import {
   createEmptyCharacterBook,
+  DEFAULT_MACRO_AUTO_CONVERT,
   DEFAULT_SETTINGS,
   EMPTY_CUSTOM_CONTEXT_META,
   normalizeDefaultChatPanel,
@@ -41,6 +42,7 @@ import {
   normalizeRoleplayHighlight,
 } from '../../db/characterTypes';
 import { applyMacroHighlightColors } from '../../editor/extensions/macroHighlight';
+import { setMacroAutoConvert } from '../../editor/extensions/characterMacroHelper';
 import { DEFAULT_FONT_SIZE } from '../../editor/extensions/fontSizeControl';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { useSaveEditorFontSize } from '../../hooks/useSaveEditorFontSize';
@@ -160,13 +162,15 @@ export function LorebookWorkspace(): React.ReactElement {
     });
   }, [currentLorebook?.id]);
 
-  // Read from the database: the character editor saves the size without refreshing `settings`
+  // Read from the database: the character editor saves settings without refreshing `settings`
   useEffect(() => {
     let cancelled = false;
     characterSettingsService
       .getSettings()
       .then((stored) => {
-        if (!cancelled) setFontSize(stored.ui.editorFontSize ?? DEFAULT_FONT_SIZE);
+        if (cancelled) return;
+        setFontSize(stored.ui.editorFontSize ?? DEFAULT_FONT_SIZE);
+        setMacroAutoConvert(stored.ui.macroAutoConvert ?? DEFAULT_MACRO_AUTO_CONVERT);
       })
       .catch((error: unknown) => console.error('Failed to load font size:', error));
     return () => {
@@ -204,6 +208,11 @@ export function LorebookWorkspace(): React.ReactElement {
   useEffect(() => {
     applyMacroHighlightColors(macroHighlight);
   }, [macroHighlight]);
+
+  const macroAutoConvert = settings?.ui?.macroAutoConvert ?? DEFAULT_MACRO_AUTO_CONVERT;
+  useEffect(() => {
+    setMacroAutoConvert(macroAutoConvert);
+  }, [macroAutoConvert]);
   const requireAgentReview = settings?.ui?.requireAgentReview ?? false;
 
   const entryCount = currentLorebook?.book?.entries?.length ?? 0;

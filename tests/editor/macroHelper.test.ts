@@ -3,8 +3,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { EditorState } from '@codemirror/state';
-import { characterMacroHelper, resolveMacroReplacement } from '../../src/editor/extensions/characterMacroHelper';
+import { EditorState, type Transaction } from '@codemirror/state';
+import {
+  characterMacroHelper,
+  resolveMacroReplacement,
+  revertMacroConversion,
+  setMacroAutoConvert,
+} from '../../src/editor/extensions/characterMacroHelper';
 
 describe('resolveMacroReplacement', () => {
   it('resolves lowercase words', () => {
@@ -70,5 +75,65 @@ describe('characterMacroHelper typing', () => {
     });
     const tr = state.update({ changes: { from: 6, insert: ' ' }, userEvent: 'input.type' });
     expect(tr.state.doc.toString()).toBe('{{user }}');
+  });
+});
+
+describe('characterMacroHelper undo and off switch', () => {
+  const typeInto = (doc: string, insert: string) => {
+    const state = EditorState.create({
+      doc,
+      selection: { anchor: doc.length },
+      extensions: [characterMacroHelper()],
+    });
+    return state.update({
+      changes: { from: doc.length, insert },
+      selection: { anchor: doc.length + insert.length },
+      userEvent: 'input.type',
+    }).state;
+  };
+
+  const backspace = (state: EditorState) => {
+    let next = state;
+    const handled = revertMacroConversion({
+      state,
+      dispatch: (tr: Transaction) => {
+        next = tr.state;
+      },
+    });
+    return { handled, doc: next.doc.toString(), caret: next.selection.main.head, state: next };
+  };
+
+  it('Backspace right after a conversion restores the word as typed and keeps the typed character', () => {
+    expect(backspace(typeInto('Hello User', ' '))).toMatchObject({
+      handled: true,
+      doc: 'Hello User ',
+      caret: 11,
+    });
+    expect(backspace(typeInto('Ask char', '?')).doc).toBe('Ask char?');
+  });
+
+  it('only reverts once, and not after the caret moves or more is typed', () => {
+    const reverted = backspace(typeInto('Hi user', ' '));
+    expect(backspace(reverted.state).handled).toBe(false);
+
+    const converted = typeInto('Hi user', ' ');
+    const moved = converted.update({ selection: { anchor: 0 } }).state;
+    expect(backspace(moved).handled).toBe(false);
+
+    const typedMore = converted.update({
+      changes: { from: converted.doc.length, insert: 'x' },
+      selection: { anchor: converted.doc.length + 1 },
+      userEvent: 'input.type',
+    }).state;
+    expect(backspace(typedMore).handled).toBe(false);
+  });
+
+  it('does not convert when turned off', () => {
+    setMacroAutoConvert(false);
+    try {
+      expect(typeInto('Hello user', ' ').doc.toString()).toBe('Hello user ');
+    } finally {
+      setMacroAutoConvert(true);
+    }
   });
 });

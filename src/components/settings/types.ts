@@ -44,6 +44,7 @@ export interface SettingsDraft {
   creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
+  macroAutoConvert: boolean;
   spellcheckEnabled: boolean;
   spellcheckLanguage: string;
   spellcheckIgnoredWords: string[];

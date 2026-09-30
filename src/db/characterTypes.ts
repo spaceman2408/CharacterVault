@@ -513,6 +513,8 @@ export interface CharacterVaultSettings {
     roleplayHighlight?: RoleplayHighlightSettings;
     /** Missing = macros follow the theme default. */
     macroHighlight?: MacroHighlightSettings;
+    /** Typing `char` / `user` then a space or punctuation writes `{{char}}` / `{{user}}`. Missing = on. */
+    macroAutoConvert?: boolean;
   };
   ai?: AIConfig;
   sampler?: SamplerSettings;
@@ -551,6 +553,8 @@ export const DEFAULT_CHARACTER_VAULT_SETTINGS: Omit<CharacterVaultSettings, 'id'
 
 /** Default for Studio → open control on Markdown image links */
 export const DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS = true;
+
+export const DEFAULT_MACRO_AUTO_CONVERT = true;
 
 /**
  * Single color set for both themes; each default reads on light and dark.

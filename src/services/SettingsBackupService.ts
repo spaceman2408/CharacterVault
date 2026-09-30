@@ -16,6 +16,7 @@ import {
   CHARACTER_SECTIONS,
   DEFAULT_CHARACTER_VAULT_SETTINGS,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
+  DEFAULT_MACRO_AUTO_CONVERT,
   DEFAULT_SECTION_ORDER,
   DEFAULT_SETTINGS,
   DEFAULT_SPELLCHECK_SETTINGS,
@@ -220,6 +221,7 @@ function normalizeBackupUi(value: unknown): CharacterVaultSettings['ui'] {
     macroHighlight: normalizeMacroHighlight(
       isRecord(raw.macroHighlight) ? raw.macroHighlight : undefined,
     ),
+    macroAutoConvert: asBoolean(raw.macroAutoConvert, DEFAULT_MACRO_AUTO_CONVERT),
     spellcheck: {
       enabled: asBoolean(spellRaw.enabled, DEFAULT_SPELLCHECK_SETTINGS.enabled),
       language: asString(spellRaw.language, DEFAULT_SPELLCHECK_SETTINGS.language) || 'en',
@@ -339,6 +341,7 @@ export interface BackupDraftTarget {
   creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
+  macroAutoConvert: boolean;
   spellcheckEnabled: boolean;
   spellcheckLanguage: string;
   spellcheckIgnoredWords: string[];
@@ -378,6 +381,7 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
       settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
     roleplayHighlight: normalizeRoleplayHighlight(settings.ui.roleplayHighlight),
     macroHighlight: normalizeMacroHighlight(settings.ui.macroHighlight),
+    macroAutoConvert: settings.ui.macroAutoConvert ?? DEFAULT_MACRO_AUTO_CONVERT,
     spellcheckEnabled: spellcheck.enabled,
     spellcheckLanguage: spellcheck.language,
     spellcheckIgnoredWords: [...spellcheck.ignoredWords],

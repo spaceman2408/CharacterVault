@@ -135,7 +135,7 @@ This is available in every text editor that uses the shared CodeMirror toolbar, 
   plus "Ignore word" and "Add to dictionary".
 - **Name macros** — `{{char}}` and `{{user}}` are syntax-colored so they stand
   out while you write (case-insensitive; optional spaces inside the braces).
-  Recolor them under **Character Workspace → Name macro colors** in Settings.
+  Recolor them under **Character Workspace → Name macros** in Settings.
 - **Roleplay colors** — `"dialogue"`, narration, and `*actions*` get distinct
   colors in every prose editor. Customize under **Character Workspace →
   Roleplay colors** in Settings.
@@ -164,8 +164,12 @@ colors in the editor. Matching is case-insensitive so `{{Char}}` and
 `{{USER}}` highlight the same way.
 
 They follow the theme by default. To override one, open **Settings →
-Character Workspace → Name macro colors**, pick a color with the picker or
+Character Workspace → Name macros**, pick a color with the picker or
 type a hex value. Clear the field (back to `auto`) to return to automatic.
+
+Typing `char` or `user` followed by a space or punctuation writes `{{char}}`
+or `{{user}}`. Press Backspace right after to keep the plain word instead, or
+turn this off with **Turn typed char and user into macros** in the same place.
 
 ### Roleplay colors
 

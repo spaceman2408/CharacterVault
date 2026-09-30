@@ -253,6 +253,7 @@ export class VaultRestoreService {
         creatorNotesRemoteWarning: data.ui.creatorNotesRemoteWarning ?? true,
         roleplayHighlight: normalizeRoleplayHighlight(data.ui.roleplayHighlight),
         macroHighlight: normalizeMacroHighlight(data.ui.macroHighlight),
+        macroAutoConvert: data.ui.macroAutoConvert ?? true,
       },
       sectionOrder: data.sectionOrder,
       hiddenSections: data.hiddenSections,

@@ -338,9 +338,24 @@ export const WorkspaceTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) =>
       <SettingsCard>
         <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
           <Braces className="w-4 h-4" />
-          Name macro colors
+          Name macros
         </h3>
         <div className="space-y-4">
+          <SettingsToggle
+            stacked
+            checked={draft.macroAutoConvert}
+            onChange={(checked) => setDraft((prev) => ({ ...prev, macroAutoConvert: checked }))}
+            label="Turn typed char and user into macros"
+            description={
+              <>
+                Typing <code className="text-xs">char</code> or <code className="text-xs">user</code>{' '}
+                then a space or punctuation writes <code className="text-xs">{'{{char}}'}</code> or{' '}
+                <code className="text-xs">{'{{user}}'}</code>. Press Backspace right after to keep the
+                plain word.
+              </>
+            }
+          />
+
           <p className="text-xs text-fg-muted leading-relaxed">
             <code className="text-xs">{'{{char}}'}</code> and{' '}
             <code className="text-xs">{'{{user}}'}</code> follow the theme by default. Pick a
