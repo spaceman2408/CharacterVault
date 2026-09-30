@@ -7,22 +7,27 @@
  * - For any other language: returns `null` (unsupported). Future language
  *   packs should follow the same `public/dictionary/${lang}.{aff,dic}` +
  *   Dexie cache pattern.
+ * - Parsing and word checks run in a Web Worker (`spellWorker.ts`); nspell's
+ *   synchronous parse of the size-70 SCOWL list is too heavy for the main
+ *   thread on slower machines.
  *
  * Exposes `loadSpellchecker(language)` and `prefetchSpellchecker(language)`.
  *
  * @module editor/spellcheck/dictionary
  */
 
-import * as nspellModule from 'nspell';
 import type { SpellDictionaryCacheEntry } from '../../db/characterTypes';
 import { characterDb } from '../../db/CharacterDatabase';
-
-type NSpellFn = (aff: string, dic: string) => import('nspell').NSpell;
-const nspell: NSpellFn =
-  (nspellModule as unknown as { default?: NSpellFn }).default ?? (nspellModule as unknown as NSpellFn);
+import type { SpellWorkerRequest, SpellWorkerResponse } from './spellWorker';
 
 const LOAD_TIMEOUT_MS = 15_000;
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/**
+ * Bump when the files in `public/dictionary/` change so cached copies (keyed
+ * by `${language}:${revision}`) and the HTTP cache are bypassed.
+ */
+const DICTIONARY_REVISION = 'scowl70-2026.06';
 
 /** Bundled, supported languages. Add entries here as new dictionaries are added. */
 const SUPPORTED_LANGUAGES: ReadonlySet<string> = new Set(['en']);
@@ -30,10 +35,18 @@ const SUPPORTED_LANGUAGES: ReadonlySet<string> = new Set(['en']);
 export interface LoadedSpellchecker {
   /** The language code (e.g. "en") */
   language: string;
-  /** The nspell instance. Safe to use for `.correct(word)` and `.suggest(word)`. */
-  spell: import('nspell').NSpell;
   /** True if this instance was loaded from the IndexedDB cache (vs. fresh). */
   fromCache: boolean;
+  /**
+   * Last known result per word, filled by `check`. Lets the editor re-spell
+   * synchronously when every visible word has already been checked.
+   */
+  known: ReadonlyMap<string, boolean>;
+  /** Check words (hyphen-segment aware, see `isWordCorrect`). Results align with `words`. */
+  check(words: readonly string[]): Promise<boolean[]>;
+  suggest(word: string): Promise<string[]>;
+  /** Add words to the session dictionary; clears `known` so they re-check. */
+  add(words: readonly string[]): void;
 }
 
 export class UnsupportedSpellLanguageError extends Error {
@@ -64,7 +77,8 @@ export function loadSpellchecker(language: string): Promise<LoadedSpellchecker |
       return null;
     }
 
-    const cached = await readCache(key);
+    const cacheId = `${key}:${DICTIONARY_REVISION}`;
+    const cached = await readCache(cacheId);
     if (cached) {
       try {
         return await buildSpellchecker(key, cached.aff, cached.dic, true);
@@ -72,14 +86,14 @@ export function loadSpellchecker(language: string): Promise<LoadedSpellchecker |
         if (import.meta.env.DEV) {
           console.warn('[spellcheck] cached dictionary failed to load, refetching', error);
         }
-        await safeDeleteCache(key);
+        await safeDeleteCache(cacheId);
       }
     }
 
     try {
       const aff = await fetchWithTimeout(dictionaryUrl(key, 'aff'), LOAD_TIMEOUT_MS);
       const dic = await fetchWithTimeout(dictionaryUrl(key, 'dic'), LOAD_TIMEOUT_MS);
-      void writeCache({ id: key, aff, dic, cachedAt: Date.now() });
+      void writeCache({ id: cacheId, aff, dic, cachedAt: Date.now() }).then(() => safeDeleteCache(key));
       return await buildSpellchecker(key, aff, dic, false);
     } catch (error) {
       console.error(`[spellcheck] failed to load dictionary "${key}"`, error);
@@ -103,40 +117,82 @@ export async function prefetchSpellchecker(language: string): Promise<void> {
 
 function dictionaryUrl(language: string, ext: 'aff' | 'dic'): string {
   const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
-  return `${base}/dictionary/${language}.${ext}`;
+  return `${base}/dictionary/${language}.${ext}?v=${DICTIONARY_REVISION}`;
 }
 
-/**
- * Build the nspell instance.
- *
- * `nspell(aff, dic)` parses the entire affix + word list synchronously on the
- * main thread. The bundled English dictionary is ~550 KB / ~175k words, and
- * the parse can block for hundreds of ms to several seconds on slower
- * machines — enough to trip Chrome's renderer watchdog and surface as
- * `RESULT_CODE_HUNG` (which is what happens on first open of a section after
- * the spellcheck merge).
- *
- * `buildSpellchecker` is already invoked from an `async` context, so we yield
- * to the event loop first with `setTimeout(0)`. That hands the renderer a
- * chance to paint / process input before the synchronous parse runs, keeping
- * the page responsive.
- */
-async function buildSpellchecker(
+function buildSpellchecker(
   language: string,
   aff: string,
   dic: string,
   fromCache: boolean,
 ): Promise<LoadedSpellchecker> {
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  return { language, spell: nspell(aff, dic), fromCache };
+  const worker = new Worker(new URL('./spellWorker.ts', import.meta.url), { type: 'module' });
+  const pending = new Map<number, (response: SpellWorkerResponse) => void>();
+  const known = new Map<string, boolean>();
+  let nextId = 0;
+  let failure: SpellWorkerResponse | null = null;
+
+  const request = (message: SpellWorkerRequest & { id: number }): Promise<SpellWorkerResponse> =>
+    new Promise((resolve) => {
+      if (failure) return resolve(failure);
+      pending.set(message.id, resolve);
+      worker.postMessage(message);
+    });
+
+  worker.onmessage = (event: MessageEvent<SpellWorkerResponse>) => {
+    const resolve = pending.get(event.data.id);
+    if (!resolve) return;
+    pending.delete(event.data.id);
+    resolve(event.data);
+  };
+
+  const loaded: LoadedSpellchecker = {
+    language,
+    fromCache,
+    known,
+    async check(words) {
+      const response = await request({ type: 'check', id: nextId++, words: [...words] });
+      const correct = response.type === 'checked' ? response.correct : words.map(() => true);
+      words.forEach((word, i) => known.set(word, correct[i]));
+      return correct;
+    },
+    async suggest(word) {
+      const response = await request({ type: 'suggest', id: nextId++, word });
+      return response.type === 'suggested' ? response.suggestions : [];
+    },
+    add(words) {
+      if (words.length === 0) return;
+      known.clear();
+      worker.postMessage({ type: 'add', words: [...words] } satisfies SpellWorkerRequest);
+    },
+  };
+
+  return new Promise((resolve, reject) => {
+    worker.onerror = (event) => {
+      const message = event.message || 'Spellcheck worker failed';
+      failure = { type: 'loaded', id: -1, ok: false, error: message };
+      worker.terminate();
+      for (const settle of pending.values()) settle(failure);
+      pending.clear();
+      reject(new Error(message));
+    };
+    void request({ type: 'load', id: nextId++, aff, dic }).then((response) => {
+      if (response.type === 'loaded' && response.ok) {
+        resolve(loaded);
+      } else {
+        worker.terminate();
+        reject(new Error((response.type === 'loaded' && response.error) || 'Spellcheck worker failed to load'));
+      }
+    });
+  });
 }
 
-async function readCache(language: string): Promise<SpellDictionaryCacheEntry | undefined> {
+async function readCache(id: string): Promise<SpellDictionaryCacheEntry | undefined> {
   try {
-    const entry = await characterDb.spellDictionaryCache.get(language);
+    const entry = await characterDb.spellDictionaryCache.get(id);
     if (!entry) return undefined;
     if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
-      await safeDeleteCache(language);
+      await safeDeleteCache(id);
       return undefined;
     }
     return entry;
@@ -158,9 +214,9 @@ async function writeCache(entry: SpellDictionaryCacheEntry): Promise<void> {
   }
 }
 
-async function safeDeleteCache(language: string): Promise<void> {
+async function safeDeleteCache(id: string): Promise<void> {
   try {
-    await characterDb.spellDictionaryCache.delete(language);
+    await characterDb.spellDictionaryCache.delete(id);
   } catch {
     // ignore
   }

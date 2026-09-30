@@ -6,7 +6,7 @@
  *
  * - Underlines misspelled words with a wavy red marker.
  * - On hover or keyboard focus over a misspelled word, shows a tooltip with
- *   suggestions from nspell, plus "Ignore word" and "Add to dictionary".
+ *   suggestions from nspell (running in a Web Worker), plus "Ignore word" and "Add to dictionary".
  * - Honors the user's `ignoredWords` and `customWords` lists (passed in as
  *   options, refreshed via `Compartment.reconfigure`).
  * - Debounces re-tokenization and only re-spells the visible viewport.
@@ -40,7 +40,6 @@ import {
 import { syntaxTree } from '@codemirror/language';
 import { tokenize, DEFAULT_TOKENIZER_OPTIONS } from './tokenizer';
 import { loadSpellchecker, type LoadedSpellchecker } from './dictionary';
-import { isWordCorrect } from './wordCheck';
 import type { SpellcheckSettings } from '../../db/characterTypes';
 
 const MISSPELLING_DECORATION_CLASS = 'cm-spellerror';
@@ -380,6 +379,8 @@ function buildEnabledExtensions(
         private customWords: readonly string[];
         private customWordsAdded: Set<string> = new Set();
         private mode: 'prose' | 'html' | 'json';
+        private generation = 0;
+        private destroyed = false;
 
         constructor(view: EditorView) {
           this.view = view;
@@ -396,12 +397,13 @@ function buildEnabledExtensions(
         }
 
         destroy(): void {
+          this.destroyed = true;
           if (this.debounceTimer) clearTimeout(this.debounceTimer);
         }
 
         private async loadDictionaryAndRespell(immediate: boolean): Promise<void> {
           const loaded = await ensureSpellchecker(this.language);
-          if (!loaded) return;
+          if (!loaded || this.destroyed) return;
           this.loaded = loaded;
           this.syncCustomWords();
           this.scheduleRespell(immediate);
@@ -409,16 +411,14 @@ function buildEnabledExtensions(
 
         private syncCustomWords(): void {
           if (!this.loaded) return;
-          try {
-            for (const word of this.customWords) {
-              const key = word.toLowerCase();
-              if (this.customWordsAdded.has(key)) continue;
-              this.loaded.spell.add(key);
-              this.customWordsAdded.add(key);
-            }
-          } catch {
-            // nspell occasionally throws on malformed words; safe to ignore
+          const added: string[] = [];
+          for (const word of this.customWords) {
+            const key = word.toLowerCase();
+            if (this.customWordsAdded.has(key)) continue;
+            added.push(key);
+            this.customWordsAdded.add(key);
           }
+          this.loaded.add(added);
         }
 
         private scheduleRespell(immediate: boolean): void {
@@ -436,13 +436,13 @@ function buildEnabledExtensions(
           }
           const doc = view.state.doc;
           const viewport = view.viewport;
-          const mistakes: Mistake[] = [];
+          const candidates: Mistake[] = [];
 
           const startLine = doc.lineAt(viewport.from);
           const endLineNumber = Math.min(doc.lines, doc.lineAt(viewport.to).number);
           const inSkipRange = makeSkipRangePredicate(view.state, this.mode);
 
-          outer: for (let lineNo = startLine.number; lineNo <= endLineNumber; lineNo += 1) {
+          for (let lineNo = startLine.number; lineNo <= endLineNumber; lineNo += 1) {
             const line = doc.line(lineNo);
             const lineBase = line.from;
             const tokens = tokenize(line.text, DEFAULT_TOKENIZER_OPTIONS);
@@ -451,18 +451,28 @@ function buildEnabledExtensions(
               const absoluteFrom = lineBase + t.from;
               if (inSkipRange(absoluteFrom)) continue;
               if (this.ignored.has(t.wordLower)) continue;
-              if (mistakes.length >= DECORATION_CAP) break outer;
-              if (!isWordCorrect(loaded.spell, t.word)) {
-                mistakes.push({
-                  from: absoluteFrom,
-                  to: lineBase + t.to,
-                  word: t.word,
-                });
-              }
+              candidates.push({
+                from: absoluteFrom,
+                to: lineBase + t.to,
+                word: t.word,
+              });
             }
           }
 
-          this.commitMistakes(mistakes);
+          const pickMistakes = () =>
+            candidates.filter(c => loaded.known.get(c.word) === false).slice(0, DECORATION_CAP);
+          const unchecked = [...new Set(candidates.map(c => c.word))].filter(w => !loaded.known.has(w));
+          if (unchecked.length === 0) {
+            this.commitMistakes(pickMistakes());
+            return;
+          }
+
+          const generation = ++this.generation;
+          void loaded.check(unchecked).then(() => {
+            // A newer respell is pending or queued whenever the doc moved on; positions here would be stale.
+            if (this.destroyed || generation !== this.generation || view.state.doc !== doc) return;
+            this.commitMistakes(pickMistakes());
+          });
         }
 
         private commitMistakes(next: readonly Mistake[]): void {
@@ -607,7 +617,7 @@ async function spellcheckHover(
   if (!mistake) return null;
 
   const loaded = await ensureSpellchecker('en');
-  const suggestions = loaded ? loaded.spell.suggest(mistake.word).slice(0, 8) : [];
+  const suggestions = loaded ? await loaded.suggest(mistake.word) : [];
 
   // Pick the placement that has room. CodeMirror's own flip logic looks at
   // the editor's space rect — but with tall editors and small scroll margins
