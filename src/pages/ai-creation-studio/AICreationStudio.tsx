@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { CharacterSettingsPanel } from '../../components/settings/CharacterSettingsPanel';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { showEphemeralToast } from '../../utils/ephemeralToast';
 import { useAIGeneration } from './useAIGeneration';
@@ -84,6 +85,10 @@ export const AICreationStudio: React.FC = () => {
   const [vortexTags, setVortexTags] = useState<string[]>([]);
   const [showLuckyVortexSetting, setShowLuckyVortexSetting] = useState(true);
   const [fadeInputModal, setFadeInputModal] = useState(false);
+  const [pendingDiscard, setPendingDiscard] = useState<'goBack' | 'library' | null>(null);
+
+  const hasGeneratedContent = Object.keys(state.generatedData).length > 0;
+  const hasUnsavedCard = hasGeneratedContent && !saveSuccess;
 
   // Load "Show Lucky Vortex" setting on mount
   useEffect(() => {
@@ -262,7 +267,7 @@ export const AICreationStudio: React.FC = () => {
     }
   }, [savedCharacterId, navigate]);
 
-  const handleBackToLibrary = useCallback(() => {
+  const leaveToLibrary = useCallback(() => {
     // Abort any ongoing generation before navigating away
     if (isLoading) {
       abort();
@@ -271,6 +276,11 @@ export const AICreationStudio: React.FC = () => {
     // This prevents the editor from opening with a previously selected character
     window.location.href = import.meta.env.BASE_URL;
   }, [isLoading, abort]);
+
+  const handleBackToLibrary = useCallback(() => {
+    if (hasUnsavedCard) setPendingDiscard('library');
+    else leaveToLibrary();
+  }, [hasUnsavedCard, leaveToLibrary]);
 
   const handleCreateAnother = useCallback(() => {
     // Clear all form state
@@ -291,7 +301,7 @@ export const AICreationStudio: React.FC = () => {
     reset();
   }, [reset]);
 
-  const handleGoBack = useCallback(() => {
+  const goBackNow = useCallback(() => {
     // Abort any ongoing generation first
     if (isLoading) {
       abort();
@@ -304,7 +314,22 @@ export const AICreationStudio: React.FC = () => {
     setFadeInputModal(false);
   }, [reset, abort, isLoading]);
 
-  const hasGeneratedContent = Object.keys(state.generatedData).length > 0;
+  const handleGoBack = useCallback(() => {
+    if (hasUnsavedCard) setPendingDiscard('goBack');
+    else goBackNow();
+  }, [hasUnsavedCard, goBackNow]);
+
+  const handleConfirmDiscard = useCallback(() => {
+    const action = pendingDiscard;
+    setPendingDiscard(null);
+    if (action === 'library') leaveToLibrary();
+    else if (action === 'goBack') goBackNow();
+  }, [pendingDiscard, leaveToLibrary, goBackNow]);
+
+  const handleCancelDiscard = useCallback(() => {
+    setPendingDiscard(null);
+  }, []);
+
   const canSave = state.status === 'complete' || (hasGeneratedContent && state.generatedData.name);
   const showEmptyState = state.status === 'idle' && !saveSuccess;
   const activeFields = GENERATION_FIELDS.filter((f) => enabledFields[f.key] !== false);
@@ -314,6 +339,17 @@ export const AICreationStudio: React.FC = () => {
 
   return (
     <div className="h-dvh flex flex-col bg-bg text-fg overflow-hidden">
+      <ConfirmDialog
+        open={pendingDiscard !== null}
+        title="Discard this character?"
+        message="The generated character hasn't been saved to your vault. Save it first if you want to keep it."
+        confirmLabel="Discard"
+        cancelLabel="Keep"
+        variant="danger"
+        onConfirm={handleConfirmDiscard}
+        onCancel={handleCancelDiscard}
+      />
+
       {/* Vortex Animation Overlay */}
       <TagVortexOverlay
         selectedTags={vortexTags}

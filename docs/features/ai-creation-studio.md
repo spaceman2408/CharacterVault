@@ -112,7 +112,7 @@ Toggle First Message and Examples in **Settings → Creation Studio → Generati
 - Edit any field in place
 - Retry a failed field, or regenerate one you do not like
 - Continue if you stopped early
-- **Go Back** starts over without leaving the studio. It discards the unsaved card with no confirmation, so save first if you want to keep it.
+- **Go Back** starts over without leaving the studio. If the card isn't saved yet, it asks before discarding it (the same goes for the back arrow to the library).
 
 ## Preview & Editing
 
