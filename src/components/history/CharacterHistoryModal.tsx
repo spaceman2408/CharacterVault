@@ -746,6 +746,9 @@ export function CharacterHistoryModal({
       onClick={requestClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="character-history-title"
         className={`relative flex h-dvh w-full flex-col overflow-hidden bg-surface transition-all duration-200 sm:h-[min(88vh,860px)] sm:max-w-7xl sm:rounded-2xl sm:border sm:border-border sm:shadow-2xl ${
           isClosing ? 'translate-y-3 opacity-0 sm:translate-y-0 sm:scale-[0.98]' : 'translate-y-0 opacity-100 sm:scale-100'
         }`}
@@ -755,7 +758,7 @@ export function CharacterHistoryModal({
         <div className="flex items-center justify-between gap-4 border-b px-4 py-3 backdrop-blur-xl border-border bg-bg/90 sm:px-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Revisions</p>
-            <h2 className="text-lg font-semibold text-fg">{currentCharacter.name}</h2>
+            <h2 id="character-history-title" className="text-lg font-semibold text-fg">{currentCharacter.name}</h2>
           </div>
 
           <div className="flex items-center gap-2">

@@ -260,18 +260,22 @@ function createFontSizePopup(
   resetRow.appendChild(resetBtn);
   container.appendChild(resetRow);
 
-  // Close on escape key and return focus to the editor
+  // Close on escape key and return focus to the editor. Window capture runs
+  // before the editor keymap and the AI panel's document listener, so this
+  // Escape cannot also reject a pending AI result.
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
       onClose();
       view.focus();
     }
   };
-  document.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keydown', handleKeyDown, true);
 
   // Store cleanup function on the element
   (container as unknown as Record<string, () => void>).__cleanup = () => {
-    document.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('keydown', handleKeyDown, true);
   };
 
   return container;

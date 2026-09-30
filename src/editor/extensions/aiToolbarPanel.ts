@@ -209,37 +209,22 @@ function createToolbarPanel(
     }
   }
 
-  /** True when focus is in a text field that is not part of this editor/panel. */
-  function isForeignTextInput(el: EventTarget | null): boolean {
-    if (!(el instanceof HTMLElement)) return false;
-    if (dom.contains(el) || view.dom.contains(el)) return false;
-    const tag = el.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-    if (el.isContentEditable) return true;
-    return false;
-  }
-
-  /** Whether this panel should handle Accept/Reject shortcuts right now. */
-  function shouldHandleAiShortcuts(e: KeyboardEvent): boolean {
+  /**
+   * Whether this panel should handle Accept/Reject shortcuts right now: focus is
+   * in this editor (panel included), or fell to <body> with no modal open.
+   * Focus anywhere else (chat, settings, history, another editor) keeps its keys.
+   */
+  function shouldHandleAiShortcuts(): boolean {
     const hasSession =
       state.isProcessing || state.isStreaming || !!state.aiResult || !!state.error;
     if (!hasSession) return false;
 
-    // Never hijack typing in unrelated inputs (chat, settings, etc.)
-    if (isForeignTextInput(e.target) || isForeignTextInput(document.activeElement)) {
-      return false;
-    }
-
-    // If another CodeMirror editor has focus, let that instance handle keys
     const active = document.activeElement;
-    if (active instanceof HTMLElement) {
-      const otherEditor = active.closest('.cm-editor');
-      if (otherEditor && !view.dom.contains(active)) {
-        return false;
-      }
+    if (active && view.dom.contains(active)) return true;
+    if (!active || active === document.body) {
+      return !document.querySelector('[aria-modal="true"]');
     }
-
-    return true;
+    return false;
   }
 
   // Create button helper (uniform styling; overflow placement is handled by relayout)
@@ -985,7 +970,7 @@ function createToolbarPanel(
       return;
     }
 
-    if (!shouldHandleAiShortcuts(e)) return;
+    if (!shouldHandleAiShortcuts()) return;
 
     // Search panel owns Escape first
     if (e.key === 'Escape' && view.state.field(searchPanelOpen, false)) {
