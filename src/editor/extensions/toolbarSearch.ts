@@ -17,6 +17,7 @@ import {
   getSearchQuery,
   setSearchQuery,
   SearchQuery,
+  searchPanelOpen as isSearchPanelOpen,
 } from '@codemirror/search';
 import { isImeComposing } from '../../utils/imeComposing';
 
@@ -45,11 +46,19 @@ interface SearchPanelControls {
   clearNotice: () => void;
 }
 
-// Get selected text from editor (single selection only, not multiple selections)
-function getSelectedText(view: EditorView): string | null {
+const MAX_PREFILL_LENGTH = 100;
+
+/**
+ * Query text for a selection of up to MAX_PREFILL_LENGTH characters, escaped
+ * for the current mode. Both modes read `\n` as a newline, so multi-line
+ * selections still match; plain mode also unescapes `\\` and `\t`.
+ */
+function selectionSearchText(view: EditorView, regexp: boolean): string | null {
   const selection = view.state.selection.main;
-  if (selection.from === selection.to) return null; // No selection
-  return view.state.doc.sliceString(selection.from, selection.to);
+  if (selection.empty || selection.to - selection.from > MAX_PREFILL_LENGTH) return null;
+  const text = view.state.doc.sliceString(selection.from, selection.to);
+  const escaped = regexp ? text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : text.replace(/\\/g, '\\\\');
+  return escaped.replace(/\r?\n/g, '\\n');
 }
 
 /** Per-view initial focus target, consumed when the search panel is created.
@@ -73,30 +82,25 @@ function focusPanelInput(view: EditorView, target: 'search' | 'replace'): void {
 
 function openToolbarSearchWithFocus(view: EditorView, target: 'search' | 'replace'): boolean {
   pendingSearchFocusByView.set(view, target);
-  const selectedText = getSelectedText(view);
-  const currentQuery = getSearchQuery(view.state);
+  const previous = getSearchQuery(view.state);
+  const selectedText = selectionSearchText(view, previous.regexp);
 
-  // Update search query with selected text if there is a selection
-  // This also updates when panel is already open with a new selection
-  if (selectedText !== null) {
-    const newQuery = new SearchQuery({
-      search: selectedText,
-      caseSensitive: currentQuery.caseSensitive,
-      wholeWord: currentQuery.wholeWord,
-      regexp: currentQuery.regexp,
-      replace: currentQuery.replace,
-    });
-    view.dispatch({
-      effects: [
-        setSearchQuery.of(newQuery),
-        setSearchPanelOpen.of(true)
-      ]
-    });
-  } else {
-    view.dispatch({ effects: setSearchPanelOpen.of(true) });
-  }
-
-  openSearchPanel(view);
+  view.dispatch({ effects: setSearchPanelOpen.of(true) });
+  // openSearchPanel prefills from the selection itself (unescaped, dropping the
+  // replace text), so settle the query after it. On an open panel it would also
+  // focus the input first, which blocks syncing the query into it.
+  if (!isSearchPanelOpen(view.state)) openSearchPanel(view);
+  view.dispatch({
+    effects: setSearchQuery.of(
+      new SearchQuery({
+        search: selectedText ?? previous.search,
+        caseSensitive: previous.caseSensitive,
+        wholeWord: previous.wholeWord,
+        regexp: previous.regexp,
+        replace: previous.replace,
+      })
+    ),
+  });
   focusPanelInput(view, target);
   return true;
 }
