@@ -15,12 +15,12 @@ The recursion map draws those chain reactions for the current book so you can se
 :::
 
 ::: details Reading the picture
-Open the map from book settings (**Map**) or an entry's **Options** panel (**Map**). You get a full-screen view where:
+Open the map from book settings (**Map**) or an entry's **Options** panel (**Map**). On a desktop or tablet you get a full-screen view where:
 
 - **Each box is an entry.**
-- **Each arrow is a possible unlock.** An arrow from A to B means A's content mentions one of B's keys. Hover the arrow (or the boxes) for the actual key.
+- **Each arrow is a possible unlock.** An arrow from A to B means A's content mentions one of B's keys. To see which key, click an entry: the inspector's **Unlocked by** and **Unlocks** rows show the matched keys.
 - **Clusters are families.** Boxes that can reach each other sit together. Separate clusters are independent: nothing in one cluster can wake up anything in another.
-- **Dots on a box are flags.** The legend at the bottom decodes them: blue for non-recursable, green for prevent further, grey for delay until recursion, yellow for disabled entries.
+- **Dots on a box are flags.** The legend at the bottom decodes them: your theme's accent colour for non-recursable, green for prevent further, grey for delay until recursion, amber for disabled entries.
 
 Entries with no connections are hidden by default to keep the picture clean. **Show standalone** (top right) brings them in as dim boxes below the clusters. Useful for spotting entries you expected to be wired up but aren't.
 :::
@@ -29,7 +29,7 @@ Entries with no connections are hidden by default to keep the picture clean. **S
 - **Drag** the background to pan, **scroll** to zoom toward your cursor.
 - **Reset view** fits the whole book back on screen.
 - **Hover** an entry to spotlight just its connections and fade the rest. **Click** to pin those paths and open the inspector. Click the same entry again to clear the pin so the whole map is even.
-- The **List** button (top right) swaps the picture for a searchable table. Handy on very large books, which open in list mode automatically.
+- The **List** button (top right) swaps the picture for a searchable table. Handy on very large books, which open in list mode automatically. On a phone the map is always a list, and there is no List / Web toggle.
 :::
 
 ::: details A first inspection
@@ -70,7 +70,7 @@ The camera stays where you left it when arrows appear or vanish. **Reset view** 
 Two combinations cover most needs:
 
 - **Standalone entry**: non-recursable + prevent further. Fully out of the web; activates only from chat and chains nowhere.
-- **Seed entry**: prevent further off, non-recursable on. Starts chains but nothing can recursively start it. Typical for hub entries like a location.
+- **Seed entry**: turn on **Non-recursable** only. It can start chains, but other entries can't trigger it. Typical for hub entries like a location.
 :::
 
 ::: details Changing many entries at once
@@ -80,7 +80,7 @@ Sometimes a whole cluster needs taming. That's what selection is for:
 2. **Stage a change.** In the bar that appears at the bottom, press On or Off next to a flag, or press **Isolate: block both directions**. Nothing happens yet. The bar shows exactly what is staged, which direction, and for how many entries.
 3. **Commit or back out.** Press **Apply** to write the change, or **Discard** to drop it. Staging something else, or changing the selection, clears the pending change. On selections above 25 entries, Apply asks for a second confirmation click.
 
-The map does not rearrange itself while you work. Flag changes don't add or remove paths (paths come from keys and content), so boxes stay put; only the flag dots update.
+**Non-recursable** and **Prevent further recursion** remove the arrows they block, so the layout can shift after you apply them. The camera stays put. Use **Reset view** to fit the book back on screen.
 :::
 
 ## Common repairs
@@ -90,7 +90,7 @@ Inspect the entry where the explosion starts and look at its "Unlocks" list. Usu
 :::
 
 ::: details Two entries keep re-triggering each other
-A mentions B's key, B mentions A's key. Flags can't break the loop by themselves. If the hop is a key you do not actually want, remove that chip on the Unlocks row. If the word should stay as a trigger but should not appear in the other entry's **content**, close the map and edit that prose.
+A mentions B's key, B mentions A's key. SillyTavern won't re-activate an entry that is already active, so this doesn't loop forever. To cut the hop anyway, set **Non-recursable** on the target or **Prevent further recursion** on the source. If the hop is a key you do not actually want, remove that chip on the Unlocks row. If the word should stay as a trigger but should not appear in the other entry's **content**, close the map and edit that prose.
 :::
 
 ::: details An entry never fires recursively
@@ -108,6 +108,8 @@ The picture is built from primary keys in content. It deliberately ignores:
 - activation probability
 - token budgets that might cut an entry mid-chain
 - how many scan steps SillyTavern actually runs
+
+Disabled entries still draw arrows, but SillyTavern never fires them.
 
 So the map shows what *can* connect, not what *will* fire in a specific chat. It's for shaping the wiring, not predicting a single conversation. If **Recursive scanning** is off for the book, the map shows potential connections and reminds you that SillyTavern won't follow them until scanning is enabled.
 :::

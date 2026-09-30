@@ -2,10 +2,17 @@
 
 The **Lorebook** editor manages SillyTavern-style **World Info** entries: text that can activate on keywords (or always, for constants) and inject into the model context during roleplay.
 
-The same editor is used in two places:
+There are two kinds of lorebook:
+
+- **On a card.** Every character can carry its own lorebook. It is saved inside the card's PNG or JSON, so it travels with the character.
+- **In the library.** The **Lorebooks** tab holds standalone books. You can reuse them and attach them to characters.
+
+The same editor is used for both:
 
 1. **Character** workspace → **Lorebook** tab (the lorebook that lives on the card)
 2. **Lorebook vault** → open a standalone book ([Lorebook Vault](/features/lorebook-vault))
+
+A few terms: **ST** is SillyTavern. **World Info** is SillyTavern's name for lorebooks. **Title** is what SillyTavern calls the entry memo (or comment).
 
 ::: tip
 Field help icons (**?**) next to labels summarize SillyTavern World Info behavior. Prefer those for short definitions; this page covers the CharacterVault layout and tools.
@@ -15,7 +22,7 @@ Field help icons (**?**) next to labels summarize SillyTavern World Info behavio
 
 Content stays in front. Extra controls open from the header so the editor can use the space.
 
-- **Left sidebar** – Book settings, search, AI context usage, entry list, import/export, new entry
+- **Left sidebar** – Book settings, search, AI context usage, entry list, export, new entry
 - **Right panel** – Entry title, keys, Enabled / Constant, and the content editor
 
 **Options** and (on a character) **Attach** sit in the entry header. Click either to open a panel over the editor; click again, **Done**, or **Escape** to close. Opening one closes the other.
@@ -36,11 +43,13 @@ Expand **Lorebook** at the top of the sidebar:
 | **Map** | Opens the [Recursion map](#recursion-map) |
 | **Delete lorebook** | Characters only: remove the lorebook from the card (when offered) |
 
+**Scan depth**, **Token budget**, and **Recursive scanning** are saved in the book for compatibility. SillyTavern normally applies its own global World Info settings instead. CharacterVault uses the budget for its AI context bar and the recursion setting for the map warning.
+
 ## Entry list
 
 Each row shows a title (entry title / memo, or a fallback), key count, the token count of its content, context eye, **Duplicate**, and delete.
 
-**Duplicate** asks for confirmation, then inserts a copy immediately after the original. The copy gets the **next available entry ID** (SillyTavern entry ids are unique integers, not a list index). Title, keys, content, flags, and other fields are copied.
+**Duplicate** asks for confirmation, then creates a copy. The copy gets the **lowest free entry ID**, which the confirm dialog shows (SillyTavern entry ids are unique integers, not a list index). The list is ordered by ID, so the copy appears at that spot. Title, keys, content, flags, and other fields are copied.
 
 ### Search
 
@@ -55,19 +64,18 @@ A compact **AI context** block shows how many entries are included and a token u
 | **Eye** on a row | Include or exclude that entry from Orion / AI toolbar context |
 | **All** / **None** | Enable or disable context for every entry |
 
-This is **separate** from **Enabled** (SillyTavern activation). See [AI Context → Lorebook](/features/ai-context#lorebook-in-context).
+The eye only affects CharacterVault's AI. It is **separate** from **Enabled** (SillyTavern activation). An entry is sent to the AI only when it is both **Enabled** and eye-on. See [AI Context → Lorebook](/features/ai-context#lorebook-in-context).
 
-### Import & export
+### Sidebar footer
 
 Bottom of the sidebar:
 
-- **Import** – Replace the current book’s entries with a JSON lorebook (confirmation if entries already exist)
 - **Export** – Download ST-compatible JSON
 - **New Entry** – Append a blank entry and open it
 
 ## Entry detail
 
-The header title is the ST entry title (memo). It is not sent as content. Next to it: **Attach** (characters only), **Options**, and **Delete**. **Options** shows a small accent dot when this entry has non-default settings.
+The header title is the ST entry title (memo). It is not sent as content. Next to it: **Attach** (characters only), **Options**, **Duplicate**, and **Delete**. **Options** shows a small accent dot when this entry has non-default settings.
 
 Always on screen:
 
@@ -97,7 +105,11 @@ Click **Options** to cover the content editor. **Done** or **Escape** closes it.
 | **Non-recursable** | Other entries cannot unlock this one via recursive scanning |
 | **Prevent further recursion** | When this activates, it will not unlock further entries |
 | **Delay until recursion** | Only activates on recursive passes, not the first chat scan |
-| **Internal notes** | Optional notes (stored as the entry name field; not ST memo) |
+| **Internal notes** | Optional notes (stored as the entry name field; not ST memo). Not included in standalone lorebook JSON, so they are lost on re-import. In card exports they fill the title if the entry has no title. |
+
+SillyTavern positions such as Author's Note top/bottom and outlet show here as Before or After Character. They are kept on export unless you change **Position**.
+
+Sticky, cooldown, delay, group, triggers, character filter, automation ID, outlet name, and per-entry scan depth survive standalone JSON round-trips, but you can't edit them here.
 
 At-a-glance counts: **Triggers N · Triggered by M** (or “No recursion links”), plus **Map**.
 
@@ -107,10 +119,10 @@ A full-screen map of how your entries unlock each other. If entry A's **content*
 
 ### Open the map
 
-- Entry → **Options** → **Map** (opens with that entry already inspected)
-- Book settings → **Map** (opens the whole book)
+- Entry → **Options** → **Map**
+- Book settings → **Map**
 
-Both open the same view; the only difference is whether an entry is pre-selected.
+Both open the same whole-book map, with the currently selected entry already inspected.
 
 ### The web view
 
@@ -129,7 +141,7 @@ Hover an entry to light up just its connections and fade everything else. A lege
 
 ### The list view
 
-Switch to **List** next to the Web button for a plain table of every entry, with search and All / Linked / Standalone filters. Same actions: click a row to inspect (again to clear), use the checkbox to select. For very large books the map opens in list mode first, since a wall of boxes is slower to read and slower to draw.
+Switch to **List** next to the Web button for a plain table of every entry, with search and All / Linked / Standalone filters. Same actions: click a row to inspect (again to clear), use the checkbox to select. Books with more than 150 entries or more than 400 links open in list mode first, since a wall of boxes is slower to read and slower to draw. On a phone the map is always a list, with no **Web** toggle.
 
 ### Inspecting an entry
 
@@ -137,7 +149,7 @@ The right-hand panel shows the clicked entry: its keys, flags, who can unlock it
 
 - Edit **primary keys** as chips under **Keys**. Click a chip to rename it, **X** to remove it, or type in the field to add one (Enter or comma). These write to the actual entry and update the map immediately. They are the real trigger keys, not map-only labels.
 - On **Unlocked by** / **Unlocks** rows, the matched keywords are chips too. **Unlocked by** edits this entry’s keys (`Mentions these keys in its content`). **Unlocks** edits the *other* entry’s keys (`These keys match in this content`). Removing a matched chip on an Unlocks row drops that hop.
-- Toggle **Non-recursable**, **Prevent further**, or **Delay until recursion** for just this entry. These apply right away.
+- Toggle **Non-recursable**, **Prevent further recursion**, or **Delay until recursion** for just this entry. These apply right away.
 - **Select** it to add it to a bulk selection.
 
 Escape while renaming a chip cancels the rename and leaves the map open. Pan and zoom stay put when arrows appear or vanish; use **Reset view** to recenter.
@@ -184,23 +196,20 @@ Works for both the lorebook on a character and a library book.
 
 ### Import
 
-1. Click **Import** and choose a JSON file.
-2. If the book already has entries, confirm replacement.
-3. Supported shapes include CharacterVault / ST lorebook JSON (`character_book`, `entries`, etc.).
+The editor has no import button. To bring in a lorebook JSON, import it on the vault **Lorebooks** tab ([Lorebook Vault](/features/lorebook-vault)). Then **Attach** it to the character and accept the copy prompt.
 
-::: tip
-Standalone library import (multiple files, keep books separate) is on the [Lorebook Vault](/features/lorebook-vault) tab. Character/vault **editor** import replaces the **current** book’s entries.
-:::
+Accepted files:
+
+- SillyTavern World Info JSON
+- A bare V2 `character_book` object (an `entries` array)
+
+Full character cards, or wrappers with a top-level `character_book` key, are not accepted. Books with zero entries fail to import.
 
 ## Linking a library book (characters)
 
 On a character, **Attach** in the entry header (or next to book settings on a phone) opens the link panel: **Open in vault**, **Attach** / **Replace**, copy, and **Detach**. The button label is **Attach**, the linked book’s name, or **Missing**.
 
-A character can link **one** book from the Lorebooks library. After you link, you’ll be asked whether to copy that book onto the character (this replaces the lorebook already on the card).
-
-Once linked, they stay in sync: **Open in vault** writes the character’s current lorebook to the library book; edits in the library workspace update every linked character. The link itself stays in CharacterVault; exporting a card includes the lorebook on that character.
-
-See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
+For how linking, syncing, and card export work, see [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
 
 ## Next steps
 

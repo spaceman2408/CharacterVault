@@ -1,6 +1,6 @@
 # Text Editor
 
-Every text field in Character Vault uses a **CodeMirror 6** editor — a fast, keyboard-friendly editor with AI tools built directly into the toolbar.
+Most text fields in Character Vault use a **CodeMirror 6** editor — a fast, keyboard-friendly editor with AI tools built directly into the toolbar. **Name** and **Creator** are plain text boxes, and **Tags** uses a chip editor (see [Name, Creator, and Tags](#name-creator-and-tags)).
 
 ::: tip
 AI toolbar operations require an AI provider to be configured. If you haven't set one up, see [AI Setup](/configuration/ai-setup).
@@ -9,6 +9,8 @@ AI toolbar operations require an AI provider to be configured. If you haven't se
 ## AI Toolbar
 
 A fixed toolbar sits at the top of every editor. When you select text, the AI buttons become active. Buttons run left to right in your order; when space runs out, extras collapse into **▼ More** automatically. Labels longer than 12 characters are shortened (hover a button for its full name).
+
+Select text, then click a button. Only **Custom** works without a selection (it writes at the cursor). **▼ More** also needs a selection.
 
 ### Built-in Buttons
 
@@ -25,14 +27,14 @@ The default set covers the common edits:
 | ❤️ **Emotion** | Emotion | Enhance emotional expression |
 | 🪄 **Fix** | Grammar | Fix grammar and improve clarity |
 
-The **Custom** button opens an inline text input instead of running immediately. Type your instruction, then press **Enter** or click **Send**. Press **Escape** or **Cancel** to close it without running.
+The **Custom** button opens an inline text input instead of running immediately. Type your instruction, then press **Enter** or click the send button. It reads **Rewrite** when text is selected and **Insert** when nothing is selected (the result is written at the cursor). Press **Escape** or **Cancel** to close the box without running; what you typed is kept for next time.
 
 ::: tip Multi-line Input
 All AI toolbar inputs support multi-line text. Press **Shift+Enter** to insert line breaks when writing detailed custom instructions.
 :::
 
 ::: tip
-Custom works even without a selection — you can give instructions about the whole section. For example, type "add more detail" to enhance the entire field at once.
+Custom works without a selection, but then it writes new text at the cursor instead of changing existing text. To rewrite a whole field, select all first (`Ctrl+A` / `⌘+A`).
 :::
 
 ### Customizing the Toolbar
@@ -73,14 +75,24 @@ AI suggestions appear **in the editor** as glowing ghost text at the exact place
 
 - Ghost text soft-pulses so you can tell it is ready to decide.
 - Accept / Reject appear in the slim result strip under the toolbar.
-- Optional performance stats (TTFT, T/S) show in that strip when available.
+- The strip header shows small pills for the model, time to first token (TTFT), and speed (t/s) when available.
+- If the reply hit the Max Tokens limit, a **⚠ Cut off at Max Tokens** warning appears.
 
 **Accept or Reject**
 
 - **✓ Accept** (`Ctrl+Enter` / `⌘+Enter`) — Commits the ghost text into the document at the locked range. A short success toast confirms the edit. `Ctrl+Z` / `⌘+Z` undoes just that accept.
-- **✕ Reject** (`Escape`) — Discards the ghost and restores your original text.
+- **✕ Reject** (`Escape`) — Discards the ghost and restores your original text. Rejecting a Custom result reopens the Custom box with your instruction so you can tweak it.
 
-The replace target is **locked** when the operation starts. Document saves are held until you Accept, Reject, or cancel, so unaccepted AI text is never written to storage.
+While a suggestion is pending you can't type in that editor, and nothing is saved until you Accept or Reject.
+
+**Retry & recall**
+
+- **↻ Retry** — On the result strip (and on the error strip), runs the same request again.
+- **Recent instructions** — In an empty Custom box, press `↑` to step back through your recent instructions (the last 10 are kept). The clock button lists them; click one to reuse it, **✕** to remove it, or **Clear all** (click twice to confirm) to empty the list.
+
+**Preview the request**
+
+With text selected, the **{ }** button (**Preview AI request payload**) shows the exact request that would be sent to the AI, without sending it.
 
 **Selection Info**
 
@@ -94,23 +106,25 @@ If the operation **errors**, a **✕** appears on the result strip to dismiss it
 
 ## Search & Replace
 
-Click the 🔍 button in the toolbar, or press `Ctrl+F` / `Cmd+F`.
+Click the 🔍 button in the toolbar, or press `Ctrl+F` / `Cmd+F`. Press `Ctrl+H` (`⌘+Alt+F` on Mac) to open it with Replace ready.
 
 - **Find** — Type in the search field. Matches are highlighted in the editor.
-- **Navigate** — Use the **^** and **v** buttons (or `Enter` / `Shift+Enter`) to jump between matches.
-- **Replace** — Type a replacement string and use **Replace** (current match) or **Replace All**.
+- **Navigate** — Use the **^** and **v** buttons (or `Enter` / `Shift+Enter`) to jump between matches. `F3` / `Shift+F3` and `Ctrl+G` / `Shift+Ctrl+G` also step through matches.
+- **Replace** — Type a replacement string and use **Replace** (current match) or **Replace All**. Pressing `Enter` in the Replace box replaces the current match.
 - **Options** — Toggle **Aa** (case-sensitive), **ab** (whole word), or **.*** (regular expression).
 - **Match counter** — Shows the current match index and total count (e.g., "3/12").
 - **Close** — Press `Escape` or click **×**.
 
-If you have text selected when opening search, it automatically fills the search field.
+If you have text selected when opening search (up to 100 characters), it automatically fills the search field.
 
 ## Font Size
 
 Click the **aA** button in the toolbar to open a font size slider.
 
-- Drag the slider to adjust size (6px – 32px).
-- The size updates on release and is remembered across sections.
+- Drag the slider to adjust size (6px – 32px, default 16px). Text resizes live while you drag and is saved when you let go.
+- The size applies to every editor, including Greetings and Lorebook entries.
+- **Reset (16px)** returns to the default.
+- Shortcuts: `Ctrl+=` / `⌘+=` and `Ctrl+-` / `⌘+-` step the size up or down; `Ctrl+0` / `⌘+0` resets it.
 - The slider popup closes when you click outside it.
 
 ## Normalize HTML Entities
@@ -136,11 +150,19 @@ This is available in every text editor that uses the shared CodeMirror toolbar, 
 - **Name macros** — `{{char}}` and `{{user}}` are syntax-colored so they stand
   out while you write (case-insensitive; optional spaces inside the braces).
   Recolor them under **Character Workspace → Name macros** in Settings.
+- **Macro auto-convert** — Typing `char` or `user` as a word turns it into
+  `{{char}}` or `{{user}}`. On by default; press Backspace right after to keep
+  the plain word. See [Name macros](#name-macros).
 - **Roleplay colors** — `"dialogue"`, narration, and `*actions*` get distinct
   colors in every prose editor. Customize under **Character Workspace →
   Roleplay colors** in Settings.
 - **Markdown image links** — Image syntax is highlighted; Ctrl+click to open
   is controlled under **Settings → Character Workspace → Editor links**.
+- **Undo/Redo** — Standard `Ctrl+Z` / `Ctrl+Shift+Z` support.
+- **Line wrapping** — Long lines wrap automatically.
+- **Theme sync** — The editor follows the app's dark/light mode.
+- **Auto-save** — Changes are saved as you type. The character workspace header shows **Saving…**, **Saved**, **Unsaved**, or **Save failed**. A failed save stays local and retries on the next change. Press `Ctrl+S` / `⌘+S` to flush pending saves immediately (including a lorebook draft) instead of the browser’s Save Page dialog.
+- **Live counts** — Section headers show characters, words, and an estimated token count as you type (same byte-based estimator as the AI context panel).
 
 ### Markdown image links
 
@@ -149,9 +171,10 @@ highlighted in every shared text editor.
 
 - **Highlight** — Always on so image marks and URLs are easy to spot.
 - **Ctrl+click to open** — When **Settings → Character Workspace → Editor links → Open Markdown
-  image links with Ctrl+click** is enabled, Ctrl+click (⌘+click on Mac) an
-  openable `http`/`https` URL, or tap it on a touch screen. A leave-app safety
-  warning appears, then the link opens in a new tab.
+  image links with Ctrl+click** is enabled (it is on by default), Ctrl+click
+  (⌘+click on Mac) an openable `http`/`https` URL, or tap it on a touch
+  screen. A **Leaving CharacterVault** warning appears, then the link opens in
+  a new tab.
 - **Edit without opening** — A plain click places the cursor, so you can edit
   the URL like any other text.
 - **Spellcheck-friendly** — Image constructs are skipped by spellcheck so
@@ -167,14 +190,22 @@ They follow the theme by default. To override one, open **Settings →
 Character Workspace → Name macros**, pick a color with the picker or
 type a hex value. Clear the field (back to `auto`) to return to automatic.
 
-Typing `char` or `user` followed by a space or punctuation writes `{{char}}`
-or `{{user}}`. Press Backspace right after to keep the plain word instead, or
-turn this off with **Turn typed char and user into macros** in the same place.
+**Auto-convert** is on by default. Typing `char` or `user` as a whole word
+writes `{{char}}` or `{{user}}`. It is case-insensitive, so `User` becomes
+`{{user}}` too. It runs when you type a space, punctuation, Enter, or Tab after
+the word, and when the editor loses focus. It works in every editor, including
+Creator Notes and Extensions JSON.
+
+Press Backspace right after a conversion to keep the plain word instead. To
+turn it off, clear **Turn typed char and user into macros** under **Settings →
+Character Workspace → Name macros**.
 
 ### Roleplay colors
 
 Prose editors color-code roleplay text so dialogue, narration, and actions
-are easy to tell apart. Coloring is on by default in every prose editor.
+are easy to tell apart. Coloring is on by default in every prose editor. Turn
+it off with **Color dialogue, narration, and actions** under **Settings →
+Character Workspace → Roleplay colors**.
 
 - **Dialogue** — Text in `"double quotes"` (straight or curly). Defaults to amber.
 - **Narration** — Plain prose outside quotes and asterisks. Follows the editor
@@ -183,8 +214,8 @@ are easy to tell apart. Coloring is on by default in every prose editor.
   markers are never treated as actions, and unclosed quotes stay narration.
 
 Change the colors under **Settings → Character Workspace → Roleplay colors**:
-each row has a color picker and a hex field, plus a live preview and a reset
-to defaults. `{{char}}` and `{{user}}` always keep their macro colors, even
+each row has a color picker and a hex field, plus a live preview and a
+**Reset to default colors** button. `{{char}}` and `{{user}}` always keep their macro colors, even
 inside quotes.
 
 ### Spellcheck
@@ -212,22 +243,15 @@ How it works:
   `` `code` `` spans, `{{macro}}` placeholders, Markdown image constructs,
   HTML tags, URLs/emails, numeric tokens, and ALL-CAPS acronyms. Add more words
   to your **ignored** or **personal dictionary** lists from the tooltip; they
-  persist in your settings and apply across all cards.
+  persist in your settings and apply across all cards. There is currently no
+  screen to review or remove these words.
 - **Debounced + viewport-only** — Only the visible portion of large lorebooks
   is checked, so editing stays fast.
 - **Offline** — The English Hunspell dictionary is fetched once on first use
   and cached in IndexedDB for subsequent visits.
 
-Toggle or switch language in **Settings → Character Workspace → Spellcheck**. Currently the
-only bundled language is **English (en-US)**; additional languages can be added
-by dropping `public/dictionary/<lang>.aff` and `public/dictionary/<lang>.dic`
-into the project and listing the code in
-`src/editor/spellcheck/dictionary.ts`.
-- **Undo/Redo** — Standard `Ctrl+Z` / `Ctrl+Shift+Z` support.
-- **Line wrapping** — Long lines wrap automatically.
-- **Theme sync** — The editor follows the app's dark/light mode.
-- **Auto-save** — Changes are saved as you type. The character workspace header shows **Saving…**, **Saved**, **Unsaved**, or **Save failed**. A failed save stays local and retries on the next change. Press `Ctrl+S` / `⌘+S` to flush pending saves immediately (including a lorebook draft) instead of the browser’s Save Page dialog.
-- **Live counts** — Section headers show characters, words, and an estimated token count as you type (same byte-based estimator as the AI context panel).
+Toggle or switch language in **Settings → Character Workspace → Spellcheck**.
+Only English (en-US) is available today.
 
 ## Section Layout
 
@@ -238,11 +262,11 @@ Each section tab shows a title, description, and the editor. Some sections have 
 | **Name** and **Creator** | Simple text fields for quick edits |
 | **Tags** | Tag chips with quick add, paste, and remove controls |
 | **Description**, **Personality**, **Scenario**, etc. | Standard single editor |
-| **Creator Notes** | Editor with a **Preview CSS** button — opens a sandboxed preview modal, or click again for a side-by-side split view. See [Creator Notes Preview](/features/creator-notes). |
+| **Creator Notes** | Editor with a **Preview CSS** button that opens a sandboxed preview. **Add to Editor** inside the preview switches to a split view (not on phones). See [Creator Notes Preview](/features/creator-notes). |
 | **Greetings** | Special multi-greeting editor. Duplicate and reorder from the sidebar. See [Greetings Editor](/features/greetings-editor). |
 | **Lorebook** | Two-panel editor with ST fields, recursion map, search, and AI key generation. Same UI for embedded books and the [Lorebook Vault](/features/lorebook-vault). See [Lorebook Editor](/features/lorebook-editor). |
 | **Image** | Image upload panel (not a text editor) |
-| **Extensions** | JSON editor with validation. Invalid JSON shows a warning and is not saved; empty JSON writes `{}`. |
+| **Extensions** | JSON editor with validation. The JSON must be an object (`{ ... }`). Invalid JSON shows a warning and is not saved; empty JSON writes `{}`. |
 
 ## Name, Creator, and Tags
 
@@ -269,7 +293,7 @@ Prompts must include certain placeholders to work. The system validates these be
 
 | Placeholder | Used In | Purpose |
 | :--- | :--- | :--- |
-| `${text}` | All operations, including custom buttons | The selected or full editor content |
+| `${text}` | All operations, including custom buttons | The selected text |
 | `${instruction}` | Custom only | The custom instruction text |
 
 ::: info What is a placeholder?
@@ -281,12 +305,12 @@ A **placeholder** is a special token that gets replaced with actual content befo
 
 **Primary prompts** (Enhance, Rephrase) need `${text}`. **Polish prompts** (Shorten, Lengthen, Vivid, Emotion, Fix) also need `${text}`. **Custom button prompts** need `${text}` as well — validated when the button is created and on save.
 
-**Custom** is special — it needs both `${instruction}` and `${text}`. When the editor has content, your template is used. When it's empty, the system swaps in a generation template instead.
+**Custom** is special — it needs both `${instruction}` and `${text}`. When text is selected, your template is used. When nothing is selected, the system swaps in a generation template instead, and the result is inserted at the cursor.
 
-::: details How Custom works with empty editors
-When the editor is empty, the system swaps the entire prompt template for a generation-oriented one. This lets the Custom button work both as a text modifier **and** a text generator.
+::: details How Custom works without a selection
+When nothing is selected, the system swaps the entire prompt template for a generation-oriented one. This lets the Custom button work both as a text modifier **and** a text generator.
 
-**Default Custom template (with editor content):**
+**Default Custom template (with a selection):**
 ```
 Please apply the following instruction to the text below:
 
@@ -300,7 +324,7 @@ ${text}
 Provide only the modified text without any additional commentary.
 ```
 
-**When the editor is empty**, the template is replaced entirely:
+**When nothing is selected**, the template is replaced entirely:
 ```
 Please generate text based on the following instruction:
 
@@ -310,7 +334,7 @@ Provide only the generated text without any additional commentary.
 ```
 
 ::: warning Not yet customizable
-The empty-editor prompt is currently hardcoded and cannot be edited in the Prompts tab. Customization for this prompt is planned for a future release.
+The no-selection prompt is currently hardcoded and cannot be edited in the Prompts tab. Customization for this prompt is planned for a future release.
 :::
 
 > Don't worry if you forget — you can't save a prompt without the required placeholders. An error message will remind you to include them.
@@ -320,7 +344,7 @@ The empty-editor prompt is currently hardcoded and cannot be edited in the Promp
 By default every toolbar op uses the model from **Settings → AI Config**. You can override that per prompt:
 
 1. Expand a prompt (e.g. **Fix**).
-2. Under **Model for this prompt**, change **Endpoint** from **Default (AI Config)** to Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio, or a custom URL that already has a key on AI Config.
+2. Under **Model for this prompt**, change **Endpoint** from **Default (AI Config)** to Nano-GPT, Synthetic, OpenRouter, Minimax, **LM Studio / localhost**, or a custom URL that already has a key on AI Config.
 3. Choose a model from the sheet, **Fetch models** for that endpoint, or type a model ID.
 4. Save settings.
 

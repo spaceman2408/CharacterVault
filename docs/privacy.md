@@ -9,6 +9,8 @@ CharacterVault is open source under the [GNU General Public License v3.0](https:
 - Character cards and settings are stored **in your browser** (IndexedDB and related local storage).
 - CharacterVault does **not** provide accounts, cloud sync, or a backend that stores your cards.
 - Optional **AI features** send content to the provider **you** configure; that is outside CharacterVault’s control.
+- The NanoGPT subscription-usage check passes through a small CharacterVault proxy that does not log or store your key. See [NanoGPT usage check](#nanogpt-usage-check).
+- The Creator Notes preview can load images, fonts, and styles from other sites. See [Imported cards and remote content](#imported-cards-and-remote-content).
 - The public app is served from **Cloudflare Pages**; Cloudflare may process standard website access data under their policies.
 
 ## Local data
@@ -33,11 +35,27 @@ If you run CharacterVault yourself (local build or your own host), only that hos
 
 AI tools (Orion chat, the Agent, the AI toolbar, AI Creation Studio, and similar) only work after you configure a provider (API base URL, key, and model, or a sign-in flow such as NanoGPT where offered).
 
-When you use those features, text and context you send (for example selected sections of a card, enabled custom context notes, chat messages, Agent catalogs and field or entry bodies it reads, or generation prompts) are transmitted to **that provider** so a model can respond. CharacterVault does not intermediate those requests through a CharacterVault-owned AI backend for the standard open-source app.
+When you use those features, text and context you send (for example selected sections of a card, enabled custom context notes, chat messages, Agent catalogs and field or entry bodies it reads, or generation prompts) are transmitted to **that provider** so a model can respond. These requests go straight from your browser to the provider. CharacterVault does not run an AI backend in between.
 
 - Your provider’s privacy policy and terms apply to that traffic.
 - API keys and related credentials are stored **locally** in your browser settings, not on CharacterVault servers.
 - If you self-host optional helpers (for example a NanoGPT usage proxy), traffic and logs for that component follow **your** deployment and configuration.
+
+### NanoGPT usage check
+
+There is one exception. With the NanoGPT preset, the **NanoGPT Account** card in **Settings → AI Config** checks your subscription usage automatically. NanoGPT does not allow that call from browsers, so on the official site it goes through a small proxy that CharacterVault runs on its Cloudflare hosting.
+
+- Your NanoGPT API key is forwarded to NanoGPT for that one request.
+- The proxy does not log or store your key.
+- The proxy only allows the subscription-usage lookup. It cannot be used for other NanoGPT requests.
+
+All other AI requests, including chat and generation with NanoGPT, go straight from your browser to the provider.
+
+## Imported cards and remote content
+
+A card’s **Creator Notes** can name images, fonts, or styles hosted on other sites. When the Creator Notes preview loads them, each load reveals your IP address to that site, and that you opened the card.
+
+**Settings → Character Workspace → Warn about remote content in Creator Notes preview** is on by default. It shows a notice above the preview when the notes load content from other sites. It does not block the loads. Scripts in Creator Notes never run. See [Creator Notes Preview](/features/creator-notes).
 
 ## What we do not do
 

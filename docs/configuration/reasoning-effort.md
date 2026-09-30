@@ -8,7 +8,7 @@ This page explains what each level means, which models use which levels, and how
 
 | Setting | What it does |
 | :--- | :--- |
-| **Enable reasoning** | Turns on thinking / chain-of-thought for models that support it. Off by default. |
+| **Enable reasoning** | Requests thinking / chain-of-thought from models that support it. On by default. Turning it off only stops CharacterVault from asking; models that think by default still think. |
 | **Show reasoning** | When on, the model’s thinking is shown in a collapsible section before the answer. |
 | **Reasoning Effort** | How much thinking budget to request (only shown when reasoning is enabled). |
 
@@ -76,15 +76,15 @@ Newer flagship thinking models often do **not** support the full low/medium ladd
 
 ## Automatic remapping
 
-Character Vault always sends the effort you selected when reasoning is on. If the provider returns an error like “unsupported `reasoning_effort`” and lists allowed values, Character Vault:
+Character Vault sends the effort you selected when reasoning is on, unless the model catalog (Synthetic, OpenRouter) or an earlier error already showed that level isn't supported; then the closest allowed level is sent. If the provider returns an error like “unsupported `reasoning_effort`” and lists allowed values (“supported values are …”), Character Vault:
 
 1. Picks the **closest supported** level (never maps down to “no thinking” while reasoning is enabled).
 2. Treats **Max** and **Extra high** as **peers** when only one of them is allowed.
-3. **Remembers** rejections for that base URL + model for the rest of the session so the next request does not fail the same way.
+3. **Remembers** rejections for that base URL + model until you reload the page, so the next request does not fail the same way.
 
 You may see a console message such as `remapped parameters: reasoning_effort=high`. That means your setting was adjusted for compatibility, not that reasoning was turned off.
 
-If a parameter is completely unsupported (not just a bad value), Character Vault may **drop** it and retry. Non-standard sampler fields (`min_p`, `top_k`, `repetition_penalty`) can be dropped the same way on strict OpenAI-compatible hosts; that is separate from effort.
+If a parameter is completely unsupported (not just a bad value), Character Vault may **drop** it and retry (up to 3 retries). If the error doesn't say which parameter is wrong, it may drop reasoning entirely for that model until you reload. Non-standard sampler fields (`min_p`, `top_k`, `repetition_penalty`) can be dropped the same way on strict OpenAI-compatible hosts; that is separate from effort.
 
 ## Practical recommendations
 
@@ -109,7 +109,7 @@ Higher effort does **not** always improve creative prose. For roleplay flavor an
 
 ## Finding this in the app
 
-1. Open a character workspace.  
+1. Open **Settings** (gear in the library or workspace header).  
 2. **Settings** → **AI Config** → **Advanced Options**.  
 3. Turn on **Enable reasoning**.  
 4. Choose **Reasoning Effort**.  

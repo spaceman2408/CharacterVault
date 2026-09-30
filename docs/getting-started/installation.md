@@ -50,15 +50,15 @@ If you **self-host** that production build (not just open the official site, and
 
 ## SillyTavern Integration
 
-Export characters directly from SillyTavern to Character Vault using the **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)**. This companion browser extension adds an "Export to CharacterVault" option in the main export menu.
+Export characters directly from SillyTavern to Character Vault using the **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)**. This companion SillyTavern extension (not a browser extension) adds an "Export to CharacterVault" option in the main export menu. It copies the character to your clipboard for CharacterVault's import page.
 
 ### Clipboard Import
 
-Character Vault also supports clipboard-based import from SillyTavern:
+The extension uses the clipboard import page. You can also paste any card JSON there yourself:
 
-1. In SillyTavern, copy a character to the clipboard.
-2. Open Character Vault and navigate to the **Import** page (or use the `/import` route directly).
-3. Paste the character data to import it.
+1. Copy the character data (from the extension, or any card JSON).
+2. Open the import page at `https://vault.charactervault.app/#/import`.
+3. Click **Paste from Clipboard**, or paste into the paste box.
 
 ## What's Next?
 

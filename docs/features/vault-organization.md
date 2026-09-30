@@ -18,18 +18,16 @@ All characters are displayed as portrait-style cards in a responsive grid that a
 | Screen | Columns |
 | :--- | :--- |
 | Mobile | 2 |
-| Small tablet | 3 |
-| Tablet | 4 |
-| Desktop | 5 |
-| Wide desktop | 6 |
+| Tablet | 3 |
+| Desktop | 4 |
 
-Each card shows the character's portrait thumbnail, name, last-opened time, and compact **active / total** token estimates. Sort the grid by name or recent activity (see below).
+On desktop, each card shows the character's portrait thumbnail, name, tag chips, **Opened …** / **Edited …** lines, and a compact **active / total** token chip. On mobile, cards show only the image and name. Sort the grid by name or recent activity (see below).
 
 ## Search
 
 Use the search bar (in the header on desktop, below the header on mobile) to filter characters. The grid updates in real-time as you type.
 
-Search matches **character name** and **tags** (tags are not shown as chips in the library — they only participate in search).
+Search matches **character name** and **tags**.
 
 ## Sort
 
@@ -55,7 +53,7 @@ Uses the same byte-based estimator as the AI context panel. Click the **active /
 
 ## Continue
 
-When you have at least one character, a **Continue** pill appears in the library header. It jumps straight to the character you most recently opened (or most recently updated), so you can pick up right where you left off.
+When you have at least one character, a **Continue** pill appears in the library toolbar next to sort. It is hidden while you search. It jumps straight to the character you most recently opened (or most recently updated), so you can pick up right where you left off.
 
 ## Quick Actions
 
@@ -63,17 +61,20 @@ Card actions appear in the top-right of each portrait. On mobile they stay visib
 
 | Action | Description |
 | :--- | :--- |
+| **Card details** | Shows tags, token breakdown, and last opened / edited times |
 | **Export** | Download this card as PNG or JSON without opening the editor |
-| **Duplicate** | Creates a copy of the character with " (Copy)" appended to the name |
+| **Duplicate** | After confirmation, creates a copy of the character with " (Copy)" appended to the name |
 | **Delete** | Removes the character from your vault after a confirmation dialog |
 
-PNG export requires a character image; use JSON if the card has no avatar yet.
+PNG export requires a PNG character image; use JSON if the card has no avatar yet or its image is JPEG or WebP.
 
 Click anywhere else on the card to open it in the workspace.
 
 ## Creating a New Character
 
-Click **Create New** in the header to reveal an inline form. Type a name and press **Create** — the new character appears in the grid immediately.
+Click **Create** in the header to reveal an inline form. Type a name and press **Create**. The new character opens in the workspace.
+
+To build a character with AI help instead, click **AI Create** in the header. See [AI Creation Studio](/features/ai-creation-studio).
 
 ## Importing
 
@@ -91,7 +92,7 @@ The vault header includes **Settings** (also under **More** on a narrow screen).
 
 ## Pagination
 
-The character library paginates automatically (12 cards per page on mobile, 18 on desktop). Page numbers sit **above and below** the grid, with **Previous** / **Next**. Changing page scrolls back to the top of the grid.
+The character library paginates automatically (12 cards per page). Page numbers sit **above and below** the grid, with **Previous** / **Next**. Changing page scrolls back to the top of the grid.
 
 ## Lorebook library
 
@@ -103,7 +104,7 @@ When the library first loads, skeleton placeholders appear while character thumb
 
 ## Offline-First Storage
 
-All character data is stored locally in your browser. No server is required to use Character Vault.
+All character data is stored locally in your browser. No server is required to use CharacterVault.
 
 ::: warning
 AI features (Orion, Agent, AI toolbar) require an internet connection to reach your configured API endpoint.

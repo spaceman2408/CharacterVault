@@ -3,7 +3,7 @@
 ## General
 
 ::: details What is Character Vault?
-Character Vault is a browser-based tool for creating, editing, and organizing roleplay character cards. It supports the V2/V3 character card specification and runs entirely locally — no account, no cloud, no data leaves your machine. It is compatible with SillyTavern and similar tools.
+Character Vault is a browser-based tool for creating, editing, and organizing roleplay character cards. It supports the V2/V3 character card specification and runs in your browser with no account. Your library is stored only in your browser. Nothing is uploaded unless you use optional AI features, which talk to the provider you configure. It is compatible with SillyTavern and similar tools.
 :::
 
 ::: details Do I need to install anything?
@@ -15,7 +15,7 @@ If you prefer to run locally or develop on the codebase, see the [Installation g
 ::: details I used the old GitHub Pages URL. Where did my characters go?
 The current app is **[https://vault.charactervault.app](https://vault.charactervault.app)**. Browser storage is tied to the site origin, so a library on `spaceman2408.github.io` does not appear on `vault.charactervault.app`.
 
-To move cards and lorebooks: on the old site, use the vault header **Backup** (ZIP). On the new app, **Import** that ZIP — CharacterVault restores it in place. A 1.6.0 full backup can also bring settings (API keys only if you opted in). The GitHub Pages build may still load, but it is frozen and no longer updated.
+To move cards and lorebooks: on the old site, use the vault header **Backup** (ZIP). On the new app, **Import** that ZIP. Cards and lorebooks are added as copies; nothing already in the new library is changed or deleted. Settings in the backup replace this device's settings. API keys come along only if the backup included them. The GitHub Pages build may still load, but it is frozen and no longer updated.
 :::
 
 ::: details Does the editor have spellcheck?
@@ -65,13 +65,14 @@ In the lorebook editor, **Options → Map** (or book settings **Map**) shows whi
 ::: details How do I enable AI features?
 To use the AI toolbar, Orion, or the Agent, you must configure an AI provider:
 
-1. Open a character in the workspace
-2. Click **Settings** in the workspace header
-3. Go to the **AI Config** tab
-4. Enter your API Base URL, API Key, and select a model
-5. Click **Save Settings**
+1. Click the gear icon (**Settings**) in the library header or the workspace header
+2. Go to the **AI Config** tab
+3. Pick a preset. For NanoGPT you can use **Sign in with NanoGPT** instead of pasting a key
+4. Paste your API key
+5. Click **Fetch models** and pick a model
+6. Click **Save Settings**
 
-For step-by-step instructions, see [AI Setup](/configuration/ai-setup).
+For step-by-step instructions, see [AI Setup](/configuration/ai-setup). Local servers (LM Studio, KoboldCpp, Ollama) need CORS enabled; see [AI Setup → Local backends](/configuration/ai-setup#local-backends).
 :::
 
 ::: details Which AI providers can I use?
@@ -113,8 +114,8 @@ Orion is a built-in AI assistant that helps you brainstorm, write, and refine ch
 
 To use Orion:
 
-1. Open the **AI Context** panel and select which sections the AI can see (and optionally add [custom context](/features/ai-context#custom-context))
-2. Open the **Ask AI** panel and type your question
+1. Open the **AI Context** panel (its icon in the workspace header, tooltip "Show AI Context Panel") and select which sections the AI can see (and optionally add [custom context](/features/ai-context#custom-context))
+2. Open the **Ask AI** panel (tooltip "Show Ask AI Panel") and type your question
 3. Orion responds using the selected context
 
 Orion uses your configured AI provider and understands Character Vault's features and the V2/V3 specification. See [AI Assistant Orion](/features/ai-assistant).
@@ -123,7 +124,7 @@ Orion uses your configured AI provider and understands Character Vault's feature
 ::: details What is the Agent?
 The **Agent** is a chat that **writes** the character or lorebook you have open. You ask for a fill or a revision; when the run finishes, those fields and entries update. Orion does not do that.
 
-1. Open **Ask AI** and click **Agent** in the chat header
+1. Open **Ask AI** and click the robot icon (**Agent**) at the left of the chat header
 2. Optionally enable [custom context](/features/ai-context#custom-context) as source notes
 3. Send a request. Changes appear when the run finishes (or after you apply a review, if that setting is on)
 4. Use **Snapshots** if you need to roll back
@@ -150,7 +151,11 @@ See [AI Context → Custom Context](/features/ai-context#custom-context).
 :::
 
 ::: details Is my API key secure?
-Your API key is stored locally in your browser's storage. It is not sent to Character Vault's servers, but be aware that:
+Your API key is stored locally in your browser's storage. AI requests go straight from your browser to your provider.
+
+One exception: the NanoGPT subscription-usage check in **Settings → AI Config** (the NanoGPT Account card). NanoGPT does not allow that call from browsers, so on the official site it goes through a small proxy run by CharacterVault on its Cloudflare hosting. Your NanoGPT key is forwarded to NanoGPT for that one request. The proxy does not log or store it, and it only allows the usage lookup.
+
+Also be aware that:
 
 - Malicious browser extensions could potentially access it
 - Anyone with physical access to your unlocked computer could access it
@@ -158,7 +163,7 @@ Your API key is stored locally in your browser's storage. It is not sent to Char
 You can clear your AI settings at any time from the AI Config tab by clicking **Clear AI Settings**. See [AI Setup → Security Notice](/configuration/ai-setup#security-notice).
 :::
 
-::: details What is the NanoGPT sign-in button?
+:::: details What is the NanoGPT sign-in button?
 When the **Nano-GPT** preset is selected in Settings → AI Config, you'll see a **Sign in with NanoGPT** button next to the API Key field. It signs you in using OAuth with PKCE (Proof Key for Code Exchange):
 
 1. Click the button — a new window/tab opens to NanoGPT.
@@ -170,11 +175,14 @@ Your NanoGPT password is never seen by CharacterVault, and no client secret is s
 
 ::: warning Browser popups must be allowed
 The flow opens a new window or tab. If your browser blocks popups for this site, the button will appear to do nothing. Allow popups for your CharacterVault origin and try again.
+:::
 
 ::: warning Mobile browser support
 Works on **Chrome for Android**. Other mobile browsers may not relay the authorization code back to the app correctly. If sign-in doesn't complete on your phone, paste your NanoGPT API key into the API Key field manually.
-See [AI Setup → Sign in with NanoGPT](/configuration/ai-setup#sign-in-with-nanogpt-pkce) for the full walkthrough.
 :::
+
+See [AI Setup → Sign in with NanoGPT](/configuration/ai-setup#sign-in-with-nanogpt-pkce) for the full walkthrough.
+::::
 
 ## Import & Export
 
@@ -183,15 +191,18 @@ Character Vault accepts:
 
 - **PNG images** — character cards with embedded metadata (from SillyTavern, TavernAI, etc.)
 - **JSON files** — flat V2, wrapped V2/V3, or CharacterVault's own export format
+- **Vault backup ZIPs** — made with **Backup** in the library header
+
+Click **Import** in the library header, or drag files onto the library. You can import several files at once.
 
 For PNG files, the data is stored in a special metadata chunk inside the image. CharacterVault reads this chunk, parses the JSON, and creates a new character with the image as its avatar.
 :::
 
 ::: details How do I export a character?
-Open a character and click **Export** in the toolbar. You have two options:
+Open a character and click the export (download) icon in the character header, or open the card's menu in the library. You have two options:
 
-- **PNG** — embeds all data as V3 specification in the image file. Most versatile — works with SillyTavern, CharacterVault, and other compatible apps.
-- **JSON** — exports using V3 specification. Includes name, description, personality, scenario, greetings, lorebook, creator information, tags, and notes (but not the character image).
+- **Export PNG** — embeds the card in the image as a V2 `chara` chunk for the widest compatibility. Works with SillyTavern, CharacterVault, and other compatible apps. The character image must be a PNG; JPEG or WebP images can't be exported as PNG cards.
+- **Export JSON** — uses the V3 wrapper (`chara_card_v3`). Includes name, description, personality, scenario, greetings, lorebook, creator information, tags, and notes (but not the character image).
 
 See [Import & Export](/features/import-export) for details.
 :::
@@ -201,13 +212,15 @@ Yes, there are several ways:
 
 **Option 1: SillyTavern CharacterVault Export Extension**
 
-A browser extension that adds "Export to CharacterVault" to SillyTavern's export menu. When you use it, the extension copies the character to your clipboard in a format CharacterVault understands — no need to save files manually.
+A SillyTavern extension (not a browser extension) that adds "Export to CharacterVault" to SillyTavern's export menu. When you use it, the extension copies the character to your clipboard in a format CharacterVault understands — no need to save files manually.
 
 **Option 2: Clipboard Import**
 
-1. In SillyTavern, copy a character to the clipboard
-2. Open Character Vault and navigate to the **Import** page (or use the `/import` route directly)
-3. Paste the character data to import it
+The extension uses this path, and you can also paste any card JSON yourself:
+
+1. Copy the character data (from the extension, or any card JSON)
+2. Open the import page at `https://vault.charactervault.app/#/import`
+3. Click **Paste from Clipboard**, or paste into the paste box
 
 See [Installation → SillyTavern Integration](/getting-started/installation#sillytavern-integration).
 :::
@@ -233,12 +246,11 @@ You can restore the entire card or restore individual sections. Each restore aut
 | **Opened card** | Automatically the first time you open a character card. Only one baseline exists per character; it is protected from deletion. It stays last in the list. |
 | **Manual save point** | When you click **Save snapshot** in the Snapshots modal. |
 | **Post-restore save point** | Automatically after a restore (full card or section) completes. This records the state right after the rollback is applied. |
-
-You may occasionally see a **"Legacy auto save point"** badge on older snapshots. These were created automatically by an earlier version of the app. No new auto snapshots are created in the current version.
+| **Agentic auto save point** | Automatically before the Agent writes to the card, or when you apply an Agent review. |
 :::
 
 ::: details How many snapshots can I keep?
-Each character is limited to 10 saved snapshots (not including the baseline "Opened card" snapshot). When the limit is exceeded, the oldest ones are removed automatically.
+Each character keeps up to 10 snapshots in total, including the protected "Opened card" baseline. That means the baseline plus the 9 most recent. When the limit is exceeded, the oldest ones are removed automatically.
 
 Storage notes:
 
@@ -250,7 +262,7 @@ Storage notes:
 ## Storage & Data
 
 ::: details Where is my data stored?
-All character data is stored locally in your browser using IndexedDB. No data is sent to external servers. This includes character cards and images, standalone lorebooks, snapshot history, AI configuration and settings, and UI preferences.
+Your library is stored only in your browser, using IndexedDB. Nothing is uploaded unless you use optional AI features, which talk to the provider you configure. Local data includes character cards and images, standalone lorebooks, snapshot history, AI configuration and settings, and UI preferences.
 :::
 
 ::: details How do I back up my vault?
@@ -261,7 +273,7 @@ For settings only, use **Settings → Backup**. Chats, custom AI context, and sn
 See [Import & Export → Vault backup](/features/import-export#vault-backup).
 :::
 
-::: details What happens if I clear my browser data?
+:::: details What happens if I clear my browser data?
 ::: warning What happens when you clear your browser data:
 Your cache, local storage, IndexedDB will remove all your characters, lorebooks, settings, chats, and snapshot history.
 :::
@@ -269,10 +281,10 @@ Your cache, local storage, IndexedDB will remove all your characters, lorebooks,
 ::: danger BACKUP YOUR VAULT
 Use the library **Backup** ZIP before clearing browser data. See [Import & Export](/features/import-export#vault-backup).
 :::
-:::
+::::
 
 ::: details Can I use Character Vault offline?
-The app works offline. You can create, edit, organize, import, and export characters without an internet connection.
+Partly. The app has no offline install, so you need a connection to load it. Once it is open, it keeps working without a connection: you can create, edit, organize, import, and export characters. For full offline use, [run it locally](/getting-started/installation#option-2-run-locally).
 
 AI features (Orion, Agent, and AI toolbar) require an internet connection to reach your configured API endpoint.
 :::
@@ -282,16 +294,18 @@ AI features (Orion, Agent, and AI toolbar) require an internet connection to rea
 ::: details The Agent’s tool calls fail or it never writes the card
 The Agent needs a **current tool-calling / agentic** model. A small chat model, a roleplay finetune, or last year’s instruct weights will invent broken calls or dump prose instead of editing. That is the model, not a CharacterVault setting.
 
-Use something in the **Qwen3.8 / DeepSeek V4 / GLM-5.3 / Kimi K3** class (or current GPT / Claude via a gateway). **Qwen3.8-27B** is a compact hosted example that handles this Agent well. Local works too if the model was trained for tools. **Gemma 4** (including **E2B** / **E4B**) is a real option. Bigger parameters with tool-call training are still more reliable on large jobs. Map Agent on **Settings → Prompts → Agent** so Orion can stay on a cheaper chat model.
+As of August 2026, use something in the **Qwen3.8 / DeepSeek V4 / GLM-5.3 / Kimi K3** class (or current GPT / Claude via a gateway). **Qwen3.8-27B** is a compact hosted example that handles this Agent well. Local works too if the model was trained for tools. **Gemma 4** (including **E2B** / **E4B**) is a real option. Bigger parameters with tool-call training are still more reliable on large jobs. Map Agent on **Settings → Prompts → Agent** so Orion can stay on a cheaper chat model.
 
 [AI Agent → Troubleshooting](/features/ai-agent#troubleshooting)
 :::
 
 ::: details The AI toolbar buttons are disabled
-This typically means one of two things:
+Usually nothing is selected. Every button except **Custom** stays dimmed until you select text, and the toolbar shows "Select text to use AI".
 
-- **No AI provider configured** — See [AI Setup](/configuration/ai-setup) to configure a provider.
-- **Selection too long** — The selected text exceeds the AI's context window. Either select less text or increase the Context Length setting in Settings → Sampler tab.
+If they are still dimmed with text selected, the toolbar says why:
+
+- **Selection too long** — The selected text exceeds the AI's context window. Select less text or increase **Context Length** in **Settings → Sampler**.
+- **Max Tokens not below Context Length** — Lower **Max Tokens** or raise **Context Length** in **Settings → Sampler**.
 :::
 
 ::: details My API requests are failing
@@ -299,7 +313,7 @@ Common causes include:
 
 - **Missing /v1 in URL** — If your base URL doesn't end in `/v1`, the error message will suggest adding it. This is a common configuration mistake with OpenAI-compatible endpoints.
 - **Invalid API key** — Verify your key is correct and hasn't expired. Check your provider's dashboard for status.
-- **Wrong model** — Ensure the model ID matches what your provider offers. Use the **Fetch** button in Settings to see available models.
+- **Wrong model** — Ensure the model ID matches what your provider offers. Use the **Fetch models** button in Settings to see available models.
 - **Context length too small** — If you're sending too much content, increase the Context Length in Settings → Sampler tab.
 
 See [AI Setup → Troubleshooting](/configuration/ai-setup#troubleshooting-context-warnings) for more.
@@ -312,7 +326,7 @@ This appears when your content exceeds the configured context length. Solutions:
 - Increase **Context Length** in Settings → Sampler tab
 - Decrease **Max Tokens** to leave more room for input
 
-The system reserves a 100-token safety margin automatically.
+The system reserves a 256-token safety margin automatically.
 :::
 
 ::: details Can I customize the AI prompts?
@@ -350,7 +364,7 @@ Visit the [Character Vault GitHub repository](https://github.com/spaceman2408/Ch
 ::: details Is Character Vault private? Where is my data stored?
 Yes for core use: character cards and settings stay in **your browser** (IndexedDB and related local storage). There is no CharacterVault account and no CharacterVault cloud library.
 
-Optional AI features send the content you choose to the **AI provider you configure**. The public site is hosted on GitHub Pages, which may process normal website access logs under GitHub’s policies.
+Optional AI features send the content you choose to the **AI provider you configure**. The public site is hosted on Cloudflare Pages, which may process normal website access logs under Cloudflare’s policies.
 
 See the full [Privacy](/privacy) notice for details.
 :::

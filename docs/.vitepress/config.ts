@@ -8,7 +8,7 @@ export default defineConfig({
   outDir: '../dist/docs',
   cleanUrls: true,
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: 'CharacterVaultFavicon.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/docs/CharacterVaultFavicon.svg' }],
   ],
   themeConfig: {
     logo: '/CharacterVaultLogo.svg',
@@ -49,6 +49,7 @@ nav: [
           { text: 'AI Setup', link: '/configuration/ai-setup' },
           { text: 'Reasoning Effort', link: '/configuration/reasoning-effort' },
           { text: 'Sampler Settings', link: '/configuration/sampler-settings' },
+          { text: 'Section Layout', link: '/configuration/section-layout' },
           {
             text: 'NanoGPT Usage Proxy',
             link: '/configuration/nanogpt-usage-proxy',

@@ -17,12 +17,12 @@ The tab strip updates as soon as you save. On mobile, the dropdown also reflects
 
 ## Showing and Hiding Tabs
 
-Each section is listed with its label and a short description. Click the **👁 eye** icon on the right to hide a tab.
+Each section is listed with its label and a short description. Click the eye icon on the right (tooltip **Hide tab**) to hide a tab.
 
-Hidden sections move below a **"Hidden"** divider. To bring a tab back, click the **👁‍🗨 eye-off** icon next to it.
+Hidden sections move below a **"Hidden"** divider. To bring a tab back, click the eye-off icon next to it (tooltip **Show tab**).
 
 ::: tip
-You can hide every tab if you really want to — the editor still works because the last-active section stays in place. You can always re-enable tabs from Settings.
+If you hide the tab you're currently on, the editor switches to the first visible tab. You can always re-enable tabs from Settings.
 :::
 
 ## Reordering Tabs

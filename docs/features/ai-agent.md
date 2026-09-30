@@ -1,6 +1,6 @@
 # AI Agent
 
-The **Agent** is a chat that **writes** the open character or lorebook. You ask for a fill, a rewrite, or a cut, and it updates the card (or book) itself. Orion stays the assistant that talks back without changing fields unless you copy from it.
+The **Agent** is a chat that **writes** the open character or lorebook. You ask for a fill, a rewrite, or a cut, and it updates the card (or book) itself. Orion only chats: it never changes the card, so copy its text into a field yourself if you want it.
 
 ::: tip
 The Agent needs an AI provider, same as Orion. See [AI Setup](/configuration/ai-setup).
@@ -24,7 +24,15 @@ When a run finishes, changes land in this card or book — unless [review](#revi
 
 You can switch back to Orion at any time with the chat bubble icon next to it. The two chats do not share a thread. Each one is saved on that character or lorebook and comes back when you reopen Ask AI.
 
-To open Agent by default, set **Settings → Character Workspace → Chat panel** to **Agent**. That applies the next time you open a character or lorebook. The header switch still works for the current session.
+To open Agent by default, set **Settings → Character Workspace → Chat panel → Default chat** to **Agent**, then **Save Settings**. That applies the next time you open a character or lorebook. The header switch still works for the current session.
+
+## Quick start
+
+1. Open a card.
+2. Open **Ask AI** and click the robot icon.
+3. Type a request, for example *Write a description from my custom context*.
+
+Changes land when the run finishes. Open **Snapshots** to undo, or turn on [review](#review-edits) to approve edits first.
 
 ## Opening the Agent
 
@@ -52,8 +60,8 @@ That lorebook Agent does not edit character spec fields. For description, greeti
 
 | Area | What you can ask |
 | :--- | :--- |
-| **Card fields** | Name, description, personality, scenario, first message, examples, system prompt, post-history instructions, appearance, creator notes, creator, character version, tags, avatar URL |
-| **Alternate greetings** | Add, rewrite, snippet-edit, or delete. **Greeting 1** is the first alternate, same as the [Greetings](/features/greetings-editor) tab. First Message is its own field. |
+| **Card fields** | Write, append to, or snippet-edit: name, description, personality, scenario, first message, examples, system prompt, post-history instructions, appearance, creator notes, creator, character version, tags, avatar URL |
+| **Alternate greetings** | Add, rewrite, snippet-edit, reorder, or delete. **Greeting 1** is the first alternate, same as the [Greetings](/features/greetings-editor) tab. First Message is its own field. |
 | **Embedded lorebook** | Add, rename, rekey, rewrite, snippet-edit, or delete entries (name, keys, content, constant, enabled, position and depth, insertion order, secondary keys, probability, recursion flags) |
 | **Lorebook settings** | Scan depth, token budget, recursive scanning, book name, and description |
 
@@ -91,7 +99,7 @@ Details: [AI Context → Custom Context](/features/ai-context#custom-context).
 
 1. You send a request.
 2. The Agent sees **catalogs** (field ids and sizes; lorebook ids, names, and keys) plus custom context if enabled. It reads full bodies only for what it is about to change.
-3. It calls tools (list, read, update, replace, add, delete). The chat shows short colored tool lines, not the full field text.
+3. It calls tools (list, read, search, update, replace, find-and-replace across the whole card or book, add, delete). The chat shows short colored tool lines, not the full field text.
 4. When it is done (or you **Stop**), CharacterVault **writes once** and takes **one snapshot** first — or, if [review](#review-edits) is on, it stages those writes for you to approve.
 
 Until that write (or until you apply a review), the editor keeps the previous text. A pulsing **Agent writing** label in the workspace header is the cue.
@@ -168,6 +176,7 @@ If a job is huge, send a second ask for the rest.
 | Lorebook add / update / delete | 50 each |
 | Tool calls in one model reply | 12 |
 | Loop turns | 32 |
+| Find-and-replace across the card or book | 10 |
 
 A run that reaches the loop-turn cap stops with a note and a **Continue** button. Continue starts a new run that picks up where it left off.
 
@@ -189,18 +198,18 @@ When a run that changed something finishes, **Review agent edits** opens instead
 - Greeting changes are labeled: an added greeting shows as **New alternate greeting** with an empty **Original**, a deleted one as **Deleted alternate greeting**, and a **Greetings list** rewrite shows per-greeting blocks with `+N` / `−N` greeting counts and **New** / **Removed** badges. When editing a Greetings list change, separate greetings with a line containing only `---`.
 - Approve or deny per change. **Approve all** / **Deny all** set every row. Denied rows stay in the list but are not applied.
 - Expand an approved change to **edit** the proposed text (and lorebook keys) before it lands.
-- **Apply N edits** takes **one snapshot**, then writes only the approved rows. **Discard** throws the whole proposal away (with a confirm).
+- **Apply N** takes **one snapshot**, then writes only the approved rows (it is disabled when nothing is approved). **Discard all** throws the whole proposal away after a **Confirm discard** step.
 - Close the modal or click outside to **decide later**. The yellow **Review N** button in the chat header reopens it. Send is blocked until you apply or discard.
 
 **Apply** writes on top of the card as it is now. Edits you made in the editor meanwhile stay, unless the Agent changed the same field; then the approved Agent version wins and yours is in the snapshot Apply takes first. New lorebook entries get a free id if you added one yourself while the review was open.
 
-Turn the toggle off to restore 1.4.x auto-apply.
+Turn the toggle off to go back to applying writes automatically (the default).
 
 ## Snapshots
 
 Before the Agent writes (or when you **Apply** a review), CharacterVault stores one snapshot of the current card or book (if something actually changed). **Opened card** / **Opened** stays last in the list and cannot be deleted.
 
-Open **Snapshots** (character) or **History** (vault book) to compare and restore. Linked characters follow a restored library book, same as a manual restore.
+Open **Snapshots** in the workspace header (character or vault book) to compare and restore. Linked characters follow a restored library book, same as a manual restore.
 
 [Snapshots & Rollback](/features/snapshots-history)
 

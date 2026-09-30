@@ -126,7 +126,7 @@ The total token window for AI requests (input + output combined). Choose a prese
 Choose a context length that matches or is lower than the maximum supported by your selected model. Larger windows allow the AI to work with more text but cost more and take longer. Providers may reject requests if the window exceeds what the model supports.
 
 ::: warning
-Max Tokens is capped at 8,192 on save. Context Length is clamped to 2,048–1,000,000 on save (custom entries require at least 4,096 in the UI).
+The Max Tokens slider goes up to 8,100; imported values are capped at 8,192 on save. Context Length is clamped to 2,048–1,000,000 on save (custom entries require at least 4,096 in the UI).
 :::
 
 ## Tips
@@ -136,7 +136,7 @@ Max Tokens is capped at 8,192 on save. Context Length is clamped to 2,048–1,00
 - **High Temperature + Min P**: Pair creative temperatures (≈1.1+) with Min P ≈0.05 so coherence holds while variety stays high.
 - **Prefer Min P over Top K**: Top K is a fixed hard cutoff; Min P adapts to model confidence and is the modern primary truncation sampler.
 - **Repetition Penalty**: Keep it light (≈1.05). Values above 1.15 can start to produce awkward phrasing.
-- **Non-standard parameters**: Some models don't support `min_p`, `top_k`, `repetition_penalty`, or reasoning parameters. If a model rejects these, Character Vault automatically strips them and retries the request (up to 3 attempts). Synthetic keeps `top_k` and `repetition_penalty` because that host lists them as supported; `min_p` is still dropped when it is a no-op.
+- **Non-standard parameters**: Min P 0, Top K 0, and Repetition Penalty 1.0 are never sent (they do nothing). On `api.openai.com` those three are never sent at all. Other hosts get them, and if a host rejects one (or a reasoning parameter), Character Vault removes it and retries (up to 3 retries).
 
 ## Next Steps
 

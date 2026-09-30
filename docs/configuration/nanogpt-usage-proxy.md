@@ -9,7 +9,8 @@ This page is **only** for people who build and host **their own** CharacterVault
 | **Using the official hosted app** | **No.** The public site already provides the proxy. |
 | **Running locally with `npm run dev`** | **No.** Vite proxies NanoGPT usage for you automatically. Restart the dev server if something looks stale. |
 | **`vite preview` / localhost production build** | **No.** Localhost can use the same Vite preview proxy path. |
-| **Self-hosting a production build** (your own domain, static host, etc.) | **Yes, if** you want subscription status and weekly quotas. Balance and models still work without it. |
+| **Self-hosting on Cloudflare Pages from this repo** (with the `functions/` folder deployed) | **No.** The included Pages Function serves the same proxy at `/__nanogpt`. |
+| **Self-hosting a production build on another static host** | **Yes, if** you want subscription status and weekly quotas. Balance and models still work without it. |
 
 ::: danger Do not deploy this for localhost
 If you only run CharacterVault with `npm run dev` on your machine, **stop here**. You do not need Cloudflare, Wrangler, or `VITE_NANOGPT_PROXY`.
@@ -65,7 +66,7 @@ https://character-vault-nanogpt-usage.<your-subdomain>.workers.dev
 
 Copy the **full** URL (including `https://`). Do not use only the account subdomain root.
 
-The worker only allows `GET /api/subscription/v1/usage`. It does not store API keys; it forwards your request headers and adds CORS.
+The worker only allows `GET /api/subscription/v1/usage` (a request to `/` is treated as that path). It does not store API keys; it forwards your request headers and adds CORS.
 
 ### Step 3 — Point CharacterVault at the worker at build time
 
@@ -97,7 +98,7 @@ $env:VITE_NANOGPT_PROXY="https://character-vault-nanogpt-usage.<your-subdomain>.
 npm run build
 ```
 
-Use the exact URL Wrangler printed. No trailing slash required (CharacterVault normalizes it).
+Use the exact URL Wrangler printed: the worker's base URL only, with no path. CharacterVault adds the usage path itself. No trailing slash required.
 
 ### Step 4 — Deploy your `dist/` as usual
 
@@ -107,7 +108,7 @@ Upload or publish the new `dist/` output to **your** production host the way you
 
 1. Open **your** self-hosted CharacterVault (not only localhost).  
 2. **Settings → AI Config → Nano-GPT** with a valid key.  
-3. Open **NanoGPT Account**.  
+3. Look at the **NanoGPT Account** card.  
 4. You should see balance **and** subscription status / quotas when NanoGPT returns them.  
 5. Use **Refresh** if you just deployed (respect the short cooldown).
 
@@ -115,7 +116,7 @@ If balance works but subscription still errors, double-check:
 
 - You rebuilt **after** setting `VITE_NANOGPT_PROXY`  
 - The deployed site is that new build  
-- The worker URL opens and is the usage path (not a random workers.dev homepage)  
+- `VITE_NANOGPT_PROXY` is the worker's base URL with no path. Opening it in a browser should show a `Missing API key` JSON error; that means it is working.  
 - Wrangler deploy succeeded and the worker name matches the URL  
 
 ---
@@ -130,7 +131,7 @@ In `workers/nanogpt-usage-proxy/wrangler.toml`, `name` defaults to `character-va
 
 - The worker only proxies one NanoGPT path.  
 - It does not log or store your API key; keys pass through in request headers.  
-- Prefer keeping the worker URL only in your private build env / CI secrets.  
+- The worker URL is public once it is built into your site. It only forwards one read-only usage path and stores nothing.  
 
 ---
 

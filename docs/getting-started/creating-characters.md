@@ -1,6 +1,6 @@
 # Creating & Editing Characters
 
-Character Vault provides two ways to create characters: generate them with AI or build them manually in the tabbed editor.
+Character Vault provides three ways to add characters: generate them with AI, build them manually in the tabbed editor, or import an existing card.
 
 ## Creating a New Character
 
@@ -8,11 +8,11 @@ Character Vault provides two ways to create characters: generate them with AI or
 
 Generate a complete character card from scratch using AI:
 
-1. Click the **✨ AI Creation Studio** button in the vault header.
+1. Click the **AI Create** button (sparkles icon) in the vault header.
 2. Choose your input mode:
-   - **Write Mode** — Describe your character concept in free-form text
-   - **Tags Mode** — Select from curated tags (Identity, Personality, Role, Genre, Tone, Appearance, Dynamic, Kink & Fetish)
-3. Click **Generate Character** (or **🎲 Feeling Lucky** for random tags).
+   - **Write** — Describe your character concept in free-form text
+   - **Tags** — Select from curated tags (Generation, Identity, Personality, Role, Genre, Tone, Appearance, Dynamic, Kink & Fetish). To hide Kink & Fetish, turn on **Settings → Creation Studio → Hide NSFW tags**.
+3. Click **Generate Character** (or **I'm Feeling Lucky** for random tags).
 4. Review and edit the generated fields in the preview panel.
 5. Click **Save to Vault** when ready.
 
@@ -24,15 +24,21 @@ The AI always writes a name and description. First message and example dialogue 
 
 Build a character from scratch in the editor:
 
-1. Click the **New** button in the top right of the character library.
-2. Enter a name for your character.
+1. Click the **Create** button in the top right of the character library.
+2. Type a name in the **Character name...** box.
 3. Click **Create**.
 
-Your new character opens in the workspace immediately, ready for editing.
+Your new character opens in the workspace immediately, ready for editing. On the **Lorebooks** tab, the same button reads **New Lorebook**.
+
+### Option 3: Import an Existing Card
+
+Click **Import** in the library header, or drag a PNG or JSON card onto the library. See [Import & Export](/features/import-export).
 
 ## The Tabbed Editor
 
-The workspace organizes character fields into tabs. Click any tab to navigate to that section.
+The workspace organizes character fields into tabs. Click any tab to navigate to that section. On mobile, the tabs are a dropdown.
+
+To hide or reorder tabs, use **Settings → Sections**. See [Section Layout](/configuration/section-layout).
 
 | Section | Purpose |
 | :--- | :--- |
@@ -46,10 +52,14 @@ The workspace organizes character fields into tabs. Click any tab to navigate to
 | **Appearance** | Physical description details (V3 `physical_description`) |
 | **Personality** | Personality traits and quirks |
 | **System** | Instructions for the AI about how to play the character (`system_prompt`) |
+| **Post-History** | Instructions inserted after the chat history (`post_history_instructions`) |
 | **Lorebook** | Extra information that triggers on keywords (`character_book`) |
 | **Creator** | Your name (optional) |
 | **Creator Notes** | Notes for other users — supports HTML/CSS with live preview |
 | **Tags** | Keywords to categorize your character |
+| **Version** | Your version label for the card (`character_version`) |
+| **Extensions** | Extension data as JSON (`extensions`) |
+| **Avatar URL** | A link to a hosted avatar, such as on CharHub |
 
 ## Name, Creator, and Tags
 
@@ -71,8 +81,11 @@ All changes are saved automatically as you type. There's no need to click a save
 
 On the **Image** tab you can:
 
-- **Upload** a new portrait from your device.
-- **Replace** an existing portrait by uploading a new image.
+- **Upload** a portrait from your device, drag and drop one, or paste one.
+- Click **Change Image** to replace it, or **Remove Image** to clear it.
+- Dropping or pasting over an existing image asks before replacing it.
+
+Use a PNG image if you want to export the card as PNG. JPEG and WebP images can't be exported as PNG cards.
 
 Character Vault generates a 128×192 JPEG thumbnail for the library grid view automatically.
 

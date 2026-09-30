@@ -18,9 +18,9 @@ If your content has no HTML tags at all, the preview displays it as plain prefor
 
 ## Preview Modes
 
-Click **Preview CSS** to open a full-screen preview modal. The modal shows your Creator Notes content exactly as other users would see it. Press **Escape** or click **Close** to return to the editor.
+Click **Preview CSS** to open a large preview window (90% of the screen). It shows roughly how your Creator Notes will render. SillyTavern and other apps render notes their own way, so the result there may differ slightly. Press **Escape** or click **Close** to return to the editor.
 
-Click **Add to Editor** inside the modal to switch to a split view. The screen splits into two panels: your editor on the right, the live preview on the left. Changes you make in the editor update the preview in real time.
+Click **Add to Editor** inside the preview to switch to a split view. On large screens the editor is on the left and the live preview on the right; on narrower screens they stack, with the editor on top. Changes you make in the editor update the preview in real time. **Add to Editor** is not available on phones.
 
 To exit split view, click **Stop Previewing CSS**.
 
@@ -35,9 +35,9 @@ The preview renders inside an isolated frame with security restrictions:
 - Your HTML and CSS are isolated from the rest of the app, so styles won't leak out
 - Scripts and form submissions are blocked for security
 - Only https images, fonts, and stylesheets load, plus images embedded in the notes (`data:` URLs). Everything else is blocked
-- The preview environment uses a dark gradient background and a base sans-serif font stack
+- The preview environment uses a solid dark gray background and a base sans-serif font stack
 
-When the notes pull images, fonts, or styles from another site, the preview shows a warning: that site can see your IP address and that you opened the card. The warning is on by default; turn it off in **Settings → Character Workspace → Warn about remote content in Creator Notes preview**.
+When the notes pull images, fonts, or styles from another site, the preview shows a yellow warning bar: that site can see your IP address and that you opened the card. The warning is on by default; turn it off in **Settings → Character Workspace → Warn about remote content in Creator Notes preview**.
 
 ::: tip
 Always design your CSS for a dark background. The preview environment uses a dark color scheme by default, and most SillyTavern setups do too.

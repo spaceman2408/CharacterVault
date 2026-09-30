@@ -8,7 +8,7 @@ Snapshot diffs like the Agent review, one Orion / Agent chat header, a safer Cre
 
 Create, edit, and organize roleplay character cards in your browser. SillyTavern compatible, no server required.
 
-CharacterVault is a browser-based tool for building character cards with the V2/V3 specification. Everything runs locally. No account, no cloud, no data leaves your machine.
+CharacterVault is a browser-based tool for building character cards with the V2/V3 specification. No account, no cloud. Your library is stored only in your browser. Nothing is uploaded unless you use optional AI features, which talk to the provider you configure.
 
 ### What you can do
 
@@ -27,6 +27,7 @@ CharacterVault is a browser-based tool for building character cards with the V2/
 - [Installation](/getting-started/installation)
 - [Creating & Editing Characters](/getting-started/creating-characters)
 - [Lorebook Vault](/features/lorebook-vault)
+- [Import & Export](/features/import-export)
 - [Configure the AI assistant](/configuration/ai-setup)
 - [AI Agent](/features/ai-agent)
 - [FAQ](/faq)

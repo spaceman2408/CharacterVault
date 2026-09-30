@@ -6,9 +6,11 @@ CharacterVault plays well with the wider character card ecosystem. Whether you'r
 
 Click **Import** in the vault header, then select one or more files — or drag and drop PNG/JSON files onto the library. CharacterVault accepts PNG images with embedded data or JSON files, and can import many at once.
 
+What **Import** takes depends on the active tab. The **Characters** tab takes PNG/JSON cards. The **Lorebooks** tab takes lorebook JSON. Both accept a vault backup ZIP. Importing the same card twice creates a duplicate.
+
 ### PNG Files
 
-Character cards saved as PNG images store all their data in a special metadata chunk inside the file. When you import one, CharacterVault reads that chunk, parses the JSON inside, and creates a new character with the image as its avatar. This works with cards from SillyTavern, TavernAI, and similar tools.
+Character cards saved as PNG images store all their data in a special metadata chunk inside the file. When you import one, CharacterVault reads the `chara` or `ccv3` chunk (tEXt or iTXt), preferring `ccv3`. It parses the JSON inside and creates a new character with the image as its avatar. This works with cards from SillyTavern, TavernAI, and similar tools. Only real PNG files work; WebP or JPEG cards can't be imported.
 
 ### JSON Files
 
@@ -16,13 +18,13 @@ JSON imports are flexible. CharacterVault recognizes several formats:
 
 - **Flat V2** — a simple JSON object with fields like `name`, `description`, `personality` sitting at the top level
 - **Wrapped V2 or V3** — the same fields nested inside a structure that declares the specification version
-- **CharacterVault export** — CharacterVault's own format includes everything the app stores about a character
+- **Older CharacterVault full-data JSON files** — includes everything the app stored about a character
 
-All three load cleanly into your vault.
+All three load cleanly into your vault. V3-only fields (such as group-only greetings, nickname, and assets) are dropped on import. Card `extensions` (depth prompt, talkativeness, regex, and so on) are kept.
 
 ### From SillyTavern
 
-The **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)** adds an "Export to CharacterVault" button right inside SillyTavern's export menu. When you use it, the extension copies the character to your clipboard in a format CharacterVault understands — no need to save files manually.
+The **[SillyTavern CharacterVault Export Extension](https://github.com/spaceman2408/SillyTavern-CharacterVaultExport)** adds an "Export to CharacterVault" button right inside SillyTavern's export menu. When you use it, the extension copies the character to your clipboard and opens CharacterVault's **Import** page. That page reads the clipboard (your browser may ask for permission) and shows a preview before importing. You can also paste manually. No need to save files.
 
 ## Vault backup {#vault-backup}
 
@@ -34,7 +36,7 @@ From the library header, click **Backup** to download a ZIP of the whole vault:
 
 | Path | Contents |
 | :--- | :--- |
-| `characters/` | Cards **with** an image as PNG (embedded data); cards **without** as JSON (V3) |
+| `characters/` | Cards **with** a PNG image as PNG (embedded data); cards **without** one as JSON (V3). Cards with a JPEG or WebP image fall back to JSON without the image. |
 | `lorebooks/` | Standalone vault lorebooks as SillyTavern-oriented JSON |
 | `settings.json` | App settings (AI config, sampler, prompts, studio including favorite tags, workspace, layout) |
 | `manifest.json` | Backup kind, date, counts, and whether API keys were included |
@@ -57,11 +59,13 @@ Open a character and click **Export** in the toolbar. You have two choices:
 
 ### PNG
 
-Your character becomes a PNG image with all data embedded in the image file itself. This is the most versatile option — send it to anyone and they can drag it straight into SillyTavern, CharacterVault, or any compatible app. The data is embedded as a V3 specification.
+Your character becomes a PNG image with all data embedded in the image file itself. This is the most versatile option — send it to anyone and they can drag it straight into SillyTavern, CharacterVault, or any compatible app. The data is written as a single `chara` chunk in Character Card V2 format, the most widely supported version. Any existing `chara` or `ccv3` chunks are replaced.
+
+PNG export needs a PNG character image. Cards with a JPEG or WebP avatar can't be exported as PNG; use JSON instead.
 
 ### JSON
 
-Exports a JSON file using the V3 specification. Includes name, description, personality, scenario, greetings, lorebook, creator information, tags, and notes.
+Exports a JSON file in the V3 wrapper (`chara_card_v3`) with V2 fields. Includes name, description, personality, scenario, greetings, lorebook, creator information, tags, and notes. V3-only fields (group-only greetings, nickname, assets, and so on) aren't kept.
 
 ## What Each Format Includes
 
@@ -75,15 +79,17 @@ Exports a JSON file using the V3 specification. Includes name, description, pers
 | Character image | ✓ | — |
 | Custom AI context (AI Context panel) | — | — |
 
+**Appearance** (`physical_description`) is a CharacterVault-only field. It is exported inside `data`, but SillyTavern has no such field.
+
 ## Lorebook Import & Export
 
 There are two related paths:
 
 ### Inside the Lorebook Editor
 
-On a **character** Lorebook tab or while editing a **vault** book, **Import** / **Export** act on the **current** book (import may replace existing entries after confirmation). Export is SillyTavern-oriented JSON.
+On a **character** Lorebook tab or while editing a **vault** book, **Export** downloads the **current** book as SillyTavern-oriented JSON. The editor has no import button; import on the **Lorebooks** tab, then attach the book to a character.
 
-See [Lorebook Editor → Import & Export](/features/lorebook-editor#import--export).
+See [Lorebook Editor → Import & Export](/features/lorebook-editor#import-export).
 
 ### Lorebook Vault library
 
@@ -91,9 +97,7 @@ On the home vault **Lorebooks** tab you can import one or more JSON files as **n
 
 ### Linking vs card export
 
-A character can link **one** library book. The **link** stays in CharacterVault and is not written into PNG/JSON by itself. After you link (or later edit either side), the lorebook **on the character** is what export includes — so a synced book does go out with the card.
-
-Linking asks if you want to copy the library book onto the character first (this replaces the lorebook already on the card). See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
+Card export includes the lorebook on the character, not the link. See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
 
 ## Next Steps
 

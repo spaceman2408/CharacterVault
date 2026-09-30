@@ -391,7 +391,7 @@ You can now import and export lorebooks independently from the **Lorebook Editor
 - **Export** — Save your character's lorebook as a JSON file for sharing or backup
 - **Import** — Bring in lorebook data from JSON files exported by SillyTavern and other tools
 
-[Learn more →](/features/lorebook-editor#import--export)
+[Learn more →](/features/lorebook-vault)
 
 ---
 

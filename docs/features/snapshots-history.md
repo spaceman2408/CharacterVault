@@ -2,25 +2,29 @@
 
 Character Vault keeps a local snapshot history for every character card you open. Snapshots let you compare changes over time and roll back to previous versions — either the entire card or individual sections.
 
+Snapshots are not taken automatically as you type. One is created:
+
+- When you first open a card.
+- When you click **Save snapshot**.
+- Before the [Agent](/features/ai-agent) writes, and when you apply an Agent review.
+- After a restore.
+
 ## Snapshot Types
 
 Each snapshot is labelled with a colour-coded badge in the timeline:
 
 | Badge | When It's Created |
 | :--- | :--- |
-| **Opened card** | Automatically the first time you open a character card. Only one baseline exists per character; it is protected from deletion. It stays last in the list. |
+| **Opened card** | Automatically the first time you open a character card. Only one baseline exists per character; it can't be deleted, but you can replace it (see [Storage & Limits](#storage-limits)). It stays last in the list. |
 | **Manual save point** | When you click **Save snapshot** in the Snapshots modal. |
+| **Agentic auto save point** | Created by the Agent once before it writes the card (only if something changed). |
 | **Post-restore save point** | Automatically after a restore (full card or section) completes. This records the state right after the rollback is applied. |
-
-::: tip Legacy "Auto" snapshots
-You may occasionally see a **"Legacy auto save point"** badge on older snapshots. These were created automatically by an earlier version of the app. No new auto snapshots are created in the current version.
-:::
 
 ## Opening the Snapshots Panel
 
 1. Open a character in the workspace.
-2. Click the **Snapshots** button in the workspace header.
-3. A full-screen modal opens with a sidebar timeline and a detail panel.
+2. Click the **Snapshots** button in the workspace header (icon-only on phones).
+3. A full-screen modal opens with a sidebar timeline, headed **Revisions**, and a detail panel.
 
 On mobile, the timeline appears as a horizontal scrolling strip at the top instead of a sidebar.
 
@@ -28,12 +32,12 @@ On mobile, the timeline appears as a horizontal scrolling strip at the top inste
 
 The left sidebar lists every snapshot for the character, ordered newest-first, with the **Opened card** baseline pinned last:
 
-- **Badge** — Shows the snapshot type (Opened card, Manual save point, Post-restore save point).
-- **Timestamp** — The time the snapshot was created.
+- **Badge** — Shows the snapshot type (Opened card, Manual save point, Agentic auto save point, Post-restore save point).
+- **Timestamp** — The time of day the snapshot was created. The full date shows when you select it.
 - **Changed indicator** — An amber dot appears when the snapshot's content differs from your current draft. It uses the same check as the diff, so a dot always means there is something to see.
 - **Delete button** — Non-baseline snapshots can be deleted individually (the trash icon on the right). Baseline snapshots are protected and cannot be removed.
 
-Opening History reads a lightweight metadata index. Full snapshot payloads load only when you select a revision, so large cards do not pull every save into memory at once.
+Opening Snapshots reads a lightweight metadata index. Full snapshot payloads load only when you select a revision, so large cards do not pull every save into memory at once.
 
 New snapshots are briefly highlighted with a green ring when they first appear in the timeline.
 
@@ -77,22 +81,24 @@ If a snapshot's data could not be loaded (e.g., due to corruption or a failed sa
 
 You have two rollback options:
 
-- **Restore card** — Replaces the entire character with the selected snapshot's state. A rollback snapshot is automatically created afterwards, so you can undo the restore if needed.
+- **Restore card** — Replaces the entire character with the selected snapshot's state.
 - **Restore** on a card — Restores only that section (e.g., just the Description, or just the First Message) while leaving every other section untouched. Greetings and the lorebook restore as a whole, from the **Restore** button next to their heading. After a section restore, the diff refreshes automatically so you can see the updated state.
 
 Both actions require confirmation before they are applied. The dialog explains exactly what will happen:
 
-- **Full card restore**: Your current draft will be replaced with the selected snapshot. A rollback snapshot is still created automatically.
+- **Full card restore**: Your current draft will be replaced with the selected snapshot.
 - **Section restore**: Only the selected section is restored from the snapshot. Other sections remain unchanged.
+
+After either restore, a **Post-restore save point** is taken of the restored state. Your draft from before the restore is **not** saved. If you might want it back, click **Save snapshot** first.
 
 If nothing has changed between the snapshot and your current draft, the **Restore card** button is disabled with the tooltip "No changes to restore."
 
 ## Storage & Limits
 
 - **No duplicates** — If nothing has changed since the latest snapshot, a new one won't be created.
-- **Baseline protection** — The "Opened card" snapshot cannot be deleted.
-- **10 snapshot limit** — Each character is limited to 10 saved snapshots (excluding the baseline "Opened card" snapshot). When the limit is exceeded, the oldest ones are removed automatically.
-- **Memory-optimized images** — Snapshots only store image data when the image actually changed. If you edit text fields without changing the character image, the snapshot stores an empty image placeholder to save space. The current character image is used when restoring if the snapshot has no image data.
+- **Baseline protection** — The "Opened card" snapshot cannot be deleted. **Update base card** replaces it with your current draft after a confirmation. This can't be undone.
+- **10 snapshot limit** — Each character keeps up to 10 snapshots, including the "Opened card" baseline (the baseline plus the 9 most recent). When the limit is exceeded, the oldest non-baseline snapshot is removed first.
+- **Shared images** — Each unique image is stored once and shared between snapshots, so editing text doesn't store the image again.
 - **Snapshots are local** — Snapshot data is stored in your browser. Clearing browser data or switching devices removes all snapshot history.
 
 ## Best Practices
@@ -105,15 +111,14 @@ The [Agent](/features/ai-agent) takes **one snapshot** before it writes the card
 
 ## Standalone lorebook snapshots
 
-Books in the [Lorebook Vault](/features/lorebook-vault) have a separate history modal (workspace **History** button), not the character Snapshots panel.
+Books in the [Lorebook Vault](/features/lorebook-vault) have a separate modal, titled **Lorebook History**, opened from the workspace **Snapshots** button. It is not the character Snapshots panel.
 
 | Source | Meaning |
 | :--- | :--- |
-| **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. It stays last in the list. |
-| **Manual** | **Snapshot now** in the History modal (only if something changed) |
+| **Opened** | Baseline when the book is first opened. **Update baseline** replaces it with the current book; you cannot delete it. It stays last in the list. |
+| **Manual** | **Save snapshot** in the modal (only if something changed) |
+| **Auto** | Taken by the lorebook [Agent](/features/ai-agent) once before a run writes the book |
 | **Rollback** | Created after a restore |
-
-The lorebook [Agent](/features/ai-agent) also snapshots once before it writes the book.
 
 You can list snapshots, preview book metadata and a sample of entries, restore a snapshot over the current book, or delete individual snapshots. Restore asks for confirmation. Restoring a library book also updates every linked character. History is stored locally with the rest of the vault.
 

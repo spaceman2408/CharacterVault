@@ -21,7 +21,7 @@ The panel lives on the left side of the workspace. Click the **AI Context** butt
 
 From top to bottom the panel shows:
 
-1. **Usage** — estimated tokens for everything currently included (pinned sections + custom context when enabled), against your sampler context length.
+1. **Usage** — estimated tokens for pinned sections and custom context (when enabled), against your sampler context length. The real room for input is smaller: Context Length minus Max Tokens minus ~256.
 2. **Custom** — optional free-text block for this character (see [Custom Context](#custom-context)).
 3. **Selected** — chips for card sections currently pinned; **Clear all** removes section pins only.
 4. **Section list** — searchable checklist of eligible card sections. Toggle a row to pin or unpin it.
@@ -36,7 +36,9 @@ Not every character field appears in the context panel. These sections are exclu
 - Character version
 - Tags
 
-The lorebook appears in the list only if your character actually has lorebook entries.
+Sections you hide on the [Sections tab](/configuration/section-layout) are left out too. The **Lorebook** row appears once the character has a lorebook (even an empty one).
+
+Section pins apply to every character. Custom context is per character.
 
 ## Custom Context
 
@@ -68,7 +70,7 @@ The modal shows a live token estimate and soft warnings when the block is large 
 | Lorebook ✨ key generation | Yes (same context pipeline as the toolbar) |
 | AI Creation Studio | No (studio has its own flow) |
 
-Custom context is appended **after** pinned card sections when building a request, so core card fields take priority if the context window is tight.
+Pinned sections are sent in the order you pinned them, then custom context, then any linked library books. When space is tight, earlier items are kept first, so core card fields take priority over custom context.
 
 ### Storage and privacy
 
@@ -103,17 +105,17 @@ The token count shown here is an estimate. Different models tokenize text differ
 
 Using the lorebook with the AI Context panel works in two steps:
 
-1. **Add Lorebook to context** — In the Add Context section, click "Lorebook" to include it. Without this, no lorebook entries will be included regardless of their individual settings.
+1. **Add Lorebook to context** — In the section list, check **Lorebook**. Without this, no lorebook entries will be included regardless of their individual settings.
 
 ::: tip
-If you don't see "Lorebook" in the Add Context list, it means your character doesn't have any lorebook entries yet.
+If you don't see **Lorebook** in the section list, the character doesn't have a lorebook yet.
 :::
 
 2. **Choose which entries** — Once the lorebook is in context, open the lorebook editor. Each entry has an eye icon that controls whether it gets included:
    - Eye open — entry content is sent to Orion and the AI toolbar
    - Eye closed — entry is excluded from AI context
 
-This two-layer system means you can include the entire lorebook but hide specific entries by closing their eye icons. Or keep the lorebook out of AI context entirely while leaving all entries enabled for roleplay in SillyTavern.
+This two-layer system means you can include the entire lorebook but hide specific entries by closing their eye icons. Or keep the lorebook out of AI context entirely while leaving all entries enabled for roleplay in SillyTavern. Disabled entries are never sent, even with the eye open.
 
 The [Agent](/features/ai-agent) does not use this pin/eye pipeline. It lists and reads entries on its own. New entries it adds start with the eye closed, so they do not land in Orion or the toolbar until you open it.
 
@@ -121,14 +123,14 @@ The lorebook editor also shows an **AI context** usage bar (included entry count
 
 ### How the Toggles Work Together
 
-Each lorebook entry has two independent settings:
+Each lorebook entry has two settings:
 
 | Toggle | Used By |
 | :--- | :--- |
 | **Enabled** (main toggle) | SillyTavern and other chat interfaces during roleplay |
 | **Context** (eye icon) | Orion and AI toolbar operations |
 
-You might disable certain entries for Orion and the AI toolbar because they're too long, irrelevant to editing, or you'd rather the AI not see them. Meanwhile, those same entries stay enabled for actual roleplay. The settings don't affect each other.
+An entry is sent to Orion and the AI toolbar only if it is **Enabled** *and* its eye is open. Closing the eye hides an enabled entry from AI (because it is too long, irrelevant to editing, or you'd rather the AI not see it) without affecting roleplay in SillyTavern. A disabled entry is never sent.
 
 ### Linked library books
 

@@ -23,31 +23,25 @@ From the **Lorebooks** tab you can:
 
 | Action | Description |
 | :--- | :--- |
-| **Search** | Filter by name, description, or tags |
+| **Search** | Filter by name, description, or linked character name |
 | **Create** | New empty book; opens in the lorebook workspace |
 | **Import** | One or more SillyTavern / CharacterVault lorebook JSON files |
 | **Open** | Click a row to edit the book |
 | **Export** | Download that book as JSON |
-| **Duplicate** | Copy the book in the vault |
-| **Delete** | Remove the book after confirmation |
+| **Duplicate** | Copy the book in the vault (no confirmation) |
+| **Delete** | Remove the book after confirmation. Its snapshots, chats, and links go too. Linked characters keep their current entries. |
 
-Each row shows name, description (if any), entry count, and last opened / updated time.
+Each card shows the name, description (if any), entry count, total tokens, **Updated …** time, and avatars of linked characters. Click an avatar to open that character. The list is sorted by most recently updated.
 
 ## Workspace
 
 Opening a book shows a full workspace:
 
-- **Header** – Back to vault, editable title, entry/token summary, **History** (snapshots), export, optional chat panel
+- **Header** – Back to vault, editable title, entry/token summary, **Snapshots**, **Linked**, **Settings**, export, optional chat panel
 - **Main** – Shared [Lorebook Editor](/features/lorebook-editor) (entry list + detail)
 - **Chat** – Optional side panel: **Orion** to talk about the book, or **Agent** to add and revise entries in this book ([AI Agent](/features/ai-agent))
 
 Data stays in **IndexedDB** on this device. No account is required. Library header **Backup** includes standalone lorebooks in the vault ZIP. Restore by importing that ZIP; books are added as copies. See [Import & Export → Vault backup](/features/import-export#vault-backup).
-
-### Deep links
-
-You can open a book with a query parameter:
-
-`?lorebook=<lorebook-id>`
 
 ## Snapshots
 
@@ -56,10 +50,11 @@ Standalone books have their own snapshot history (similar to character snapshots
 | Source | When |
 | :--- | :--- |
 | **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. It stays last in the list. |
-| **Manual** | **Snapshot now** in the History modal (only if something changed) |
+| **Manual** | **Save snapshot** in the Snapshots modal (only if something changed) |
+| **Auto** | Taken before an Agent run |
 | **Rollback** | After restoring a previous snapshot |
 
-Open **History** in the workspace header to list, preview, restore, or delete snapshots. See also [Snapshots & Rollback](/features/snapshots-history#standalone-lorebook-snapshots).
+Open **Snapshots** in the workspace header to list, preview, restore, or delete snapshots. See also [Snapshots & Rollback](/features/snapshots-history#standalone-lorebook-snapshots).
 
 ## Linking a book to a character {#attach-to-a-character-vault-local}
 
@@ -87,6 +82,10 @@ Once linked, the library book and the lorebook on the character are kept togethe
 
 Leaving the lorebook workspace (back to the library, or opening a linked character) finishes any pending update first.
 
+::: warning Push character edits before editing the library book
+Manual edits on a linked character's **Lorebook** tab reach the library book only when you click **Open in vault**. That first saves this character's lorebook over the linked library book, and over every other linked character. If the library book changes first (an edit or a snapshot restore), it overwrites edits on linked characters that you haven't pushed yet. Agent edits on the character sync right away.
+:::
+
 ### Export, detach, and sharing
 
 - **Exporting a character** (PNG or JSON) includes the lorebook **on that character**, not the link itself. After a sync, those entries are on the card, so they go with the export.
@@ -100,9 +99,9 @@ In the lorebook workspace, **Linked** lists characters that use this book. Openi
 
 ## Import & export formats
 
-Import accepts SillyTavern world-info JSON and CharacterVault lorebook shapes (including `character_book` / `entries` layouts used by the shared converter). Export produces ST-oriented JSON suitable for SillyTavern and re-import into the vault or a character’s lorebook editor.
+Import accepts SillyTavern World Info JSON, or a bare V2 `character_book` object (an `entries` array). Full character cards, or wrappers with a top-level `character_book` key, are not accepted. Books with zero entries fail to import. Export produces ST-oriented JSON suitable for SillyTavern and re-import into the vault.
 
-See [Import & Export](/features/import-export#lorebook-import--export) and [Lorebook Editor → Import & Export](/features/lorebook-editor#import--export).
+See [Import & Export](/features/import-export#lorebook-import-export) and [Lorebook Editor → Import & Export](/features/lorebook-editor#import-export).
 
 ## Next steps
 

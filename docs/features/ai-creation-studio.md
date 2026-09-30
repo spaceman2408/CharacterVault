@@ -3,14 +3,14 @@
 The **AI Creation Studio** is a dedicated workspace for generating complete character cards from scratch. Describe a concept or pick tags, and the AI writes the fields you enabled — name and description always, first message and examples if you leave them on.
 
 ::: tip
-AI Creation Studio requires an AI provider. See [AI Setup](/configuration/ai-setup). It always uses the **global** model from **Settings → AI Config**.
+AI Creation Studio requires an AI provider. See [AI Setup](/configuration/ai-setup). It uses the model set on **Settings → AI Config**; the Agent and toolbar model mappings on the Prompts tab do not apply.
 :::
 
 ## Opening the Studio
 
 From the main vault:
 
-1. Click **✨ AI Creation Studio** in the vault header.
+1. Click **AI Create** (sparkles icon) in the vault header.
 2. The studio opens full-screen.
 
 ## Input Modes
@@ -48,13 +48,14 @@ Select tags across categories. **Generation** (perspective and tense) is always 
 **Tag selection:**
 - Click a tag to select or deselect it
 - Multiple tags per category (except one perspective and one tense)
-- Tags convert to a readable concept (`female_knight` → "Female, Knight")
+- Select at least one character tag (not just the generation style) before **Generate Character** turns on, or use **I'm Feeling Lucky**
+- Tags convert to a readable concept (`female` + `knight` → "Female, Knight")
 - Conflicting tags are excluded (for example, selecting "female" disables "male")
-- **Star** a tag to pin it in **Favorites**. Recently used tags appear under **Recents**.
+- **Star** a tag to pin it in **Favorites**. Recently used tags appear under **Recent**.
 - **Add your own tag** at the bottom of a category (not Generation). Custom tags save in settings. A slug that already exists in another category is rejected. Custom tags are drawn by Feeling Lucky and follow the same gender gray-out rules as built-ins.
 
 ::: tip Switching Modes
-Switching from Tags to Write copies the selected tags into the concept field so you can edit them as prose.
+Switching from Tags to Write replaces the concept text with your selected tags so you can edit them as prose.
 :::
 
 Hide categories or NSFW tags under [Creation Studio settings](#creation-studio-settings). Hidden categories leave the browser, search, and Feeling Lucky; tags you already selected still generate.
@@ -63,16 +64,16 @@ Hide categories or NSFW tags under [Creation Studio settings](#creation-studio-s
 
 Every character needs a generation style before the AI can start. Choose:
 
-- **Perspective** — first person, second person, third person, or first person with `{{user}}`
+- **Perspective** — first person, second person, third person, or **1st person (refer to {{user}} as 'you')**
 - **Tense** — present tense or past tense
 
 Only one perspective and one tense at a time.
 
-Descriptions are written like character-card reference material. If you choose **First Person with `{{user}}`**, descriptions use `{{user}}` instead of talking directly to "you." First messages and example dialogue still follow the style you selected.
+Descriptions are written as character-card reference material. First-person picks stay first person (the 'you' option writes `{{user}}` instead of "you"); second- and third-person picks both write the description in third person. First messages and example dialogue follow the style you selected.
 
 ## Feeling Lucky
 
-**🎲 Feeling Lucky** (Tags mode only) picks random character tags and starts generation. Choose a generation style first.
+**I'm Feeling Lucky** (Tags mode only) replaces your current character tags with a random set and starts generation. Choose a generation style first.
 
 **How it works:**
 - Core categories (Identity, Role, Personality): 1–2 tags each
@@ -111,7 +112,7 @@ Toggle First Message and Examples in **Settings → Creation Studio → Generati
 - Edit any field in place
 - Retry a failed field, or regenerate one you do not like
 - Continue if you stopped early
-- **Go Back** is still available to start over without leaving the studio
+- **Go Back** starts over without leaving the studio. It discards the unsaved card with no confirmation, so save first if you want to keep it.
 
 ## Preview & Editing
 
@@ -120,15 +121,16 @@ The right panel shows a live preview as fields generate.
 - Real-time updates
 - Click a field to edit it
 - Changes are kept in the studio until you save or go back
-- Character count on each field
+- Approximate token count (**~N tokens**) on each field, plus a **Thinking** fold when the model reasons
 - Disabled fields are omitted from the preview
 
-**Field actions:**
+**Field actions** (in the progress list on the left):
 
-| Button | Action | What it does |
+| Button | When it shows | What it does |
 | :--- | :--- | :--- |
-| 🔄 **Retry** | Retry | Re-generate the field if generation failed |
-| ✨ **Regenerate** | Regenerate | Generate completely new content for this field |
+| **Retry** | The field failed | Re-generate the field |
+| **Regenerate** | The field is done | Generate completely new content for this field |
+| **Generate** | The field was not written yet (for example after **Stop**) | Write that field now |
 
 ::: tip
 **Retry** is for fixing errors. **Regenerate** is for a fresh take on a field you do not like.
@@ -171,7 +173,7 @@ Each field has an editable template. Variables:
 | `${concept}` | Name, Description, First Message, Examples | Your write-mode text or the tag-built concept |
 | `${name}` | Description, First Message, Examples | The generated name |
 | `${description}` | First Message, Examples | The generated description |
-| `${styleBlock}` | optional | Perspective + tense instructions |
+| `${styleBlock}` | optional (Description, First Message, Examples) | Perspective + tense instructions |
 | `${narrationRule}` | optional (First Message, Examples) | Narration format for the chosen style |
 
 The **system** prompt has no variables; it is sent on every field. Omitting `${styleBlock}` or `${narrationRule}` drops that guidance. Save is blocked if a required `${…}` is missing. **Reset to defaults** restores the stock templates.
@@ -227,7 +229,7 @@ Generation can consume significant tokens depending on your model and sampler. M
 - Try a different model or sampler settings
 
 **Generation is too slow**
-- Reduce `max_tokens` in sampler settings
+- Lower **Max Tokens** in Sampler settings
 - Use a faster model
 - Turn off First Message or Examples if you do not need them yet
 

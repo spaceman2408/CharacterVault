@@ -1,11 +1,30 @@
 # AI Setup
 
-Character Vault's AI features (Orion, the Agent, and the AI toolbar) require an AI provider endpoint. This guide covers every option in the settings panel.
+Character Vault's AI features (Orion, the Agent, the AI toolbar, and AI Creation Studio) require an AI provider endpoint. This guide covers every option in the settings panel.
+
+## Quick start
+
+1. Click the gear (**Settings**) in the library header or the character workspace header.
+2. On **AI Config**, pick a preset or **Custom URL**. Nano-GPT is selected by default.
+3. Paste your API key (leave it blank for a local server).
+4. Click **Fetch models** and pick a model. The model can't be typed in on this tab; if Fetch models fails, fix the URL, key, or [CORS](#local-backends) first.
+5. Click **Save Settings**.
+
+Orion and the Agent won't run until a model is set.
+
+## Local backends (LM Studio, KoboldCpp, Ollama) {#local-backends}
+
+CharacterVault calls your AI server directly from the browser, so a local server must allow browser requests (CORS).
+
+- Use the server's OpenAI-compatible base URL ending in `/v1`, for example LM Studio `http://127.0.0.1:1234/v1`, KoboldCpp `http://localhost:5001/v1`, or Ollama `http://localhost:11434/v1`.
+- Enable CORS on the server: the **Enable CORS** server setting in LM Studio, or the `OLLAMA_ORIGINS` environment variable for Ollama.
+- Leave **API Key** blank, then click **Fetch models** yourself (models are only fetched automatically for presets with a saved key).
+- **Failed to fetch** or **Network error** usually means the server isn't running or CORS is blocking the browser.
+- The hosted app is served over https. `localhost` / `127.0.0.1` work, but a plain-http LAN address (another machine on your network) is usually blocked by the browser.
 
 ## Opening Settings
 
-1. Open a character in the workspace.
-2. Click **Settings** in the workspace header.
+1. Click the gear (**Settings**) in the library header, or **Settings** in the character workspace header (icon only on small screens; on phones in the library it is under **More**).
 3. The settings modal opens with seven tabs: **AI Config**, **Sampler**, **Prompts**, **Character Workspace**, **Creation Studio**, **Sections**, and **Backup**.
 4. Click **Save Settings** at the bottom when you're done. Changes don't take effect until you save.
 
@@ -15,7 +34,7 @@ You can close the panel with **Cancel** or `Escape` to discard changes.
 
 ### Security Notice
 
-At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to remove all AI configuration (key, URL, model) — your characters are not affected. A confirmation step prevents accidental clears. Prompt templates, **per-prompt model mappings**, and the **Agent** model mapping on the Prompts tab are kept (they do not store secrets).
+At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to reset all AI configuration to defaults — your characters are not affected. A confirmation step prevents accidental clears. The clear happens immediately (no Save needed) and removes saved keys for **every** provider, not just the current one, along with remembered models, the NanoGPT options, and the streaming/reasoning toggles. Prompt templates, **per-prompt model mappings**, and the **Agent** model mapping on the Prompts tab are kept (they do not store secrets).
 
 ### API Base URL
 
@@ -30,7 +49,7 @@ Choose a provider preset from the dropdown, or select **Custom URL** to type in 
 | **LM Studio / localhost** | `http://127.0.0.1:1234/v1` | Local inference with LM Studio. |
 | **Custom URL** | Any URL | Any OpenAI-compatible endpoint (e.g., a self-hosted API). |
 
-When you switch presets, the text field below updates. Your API key and model selection are **remembered per base URL** — switching back to a previous provider restores your saved key and model.
+Nano-GPT is selected by default. When you switch presets, the text field below updates. Each base URL keeps its own saved key and model, so you can switch between providers without re-entering them.
 
 The helper text below the URL field changes based on the selected preset. For custom URLs, it reads: "Pick a preset above or enter a custom OpenAI-compatible endpoint."
 
@@ -46,7 +65,7 @@ Your API key is stored locally in your browser's storage. It could be accessed b
 
 ### Sign in with NanoGPT (PKCE)
 
-When the **Nano-GPT** preset is selected, a **Sign in with NanoGPT** button appears next to the API Key field. Instead of pasting an API key, you can sign in with your NanoGPT account — CharacterVault walks you through a secure OAuth flow using PKCE (Proof Key for Code Exchange), no client secret stored anywhere, no password ever seen by this app.
+When the **Nano-GPT** preset is selected, a **Sign in with NanoGPT** button appears below the API Key field (after an "or" divider). Instead of pasting an API key, you can sign in with your NanoGPT account — CharacterVault walks you through a secure OAuth flow using PKCE (Proof Key for Code Exchange), no client secret stored anywhere, no password ever seen by this app.
 
 **How it works**
 
@@ -71,6 +90,8 @@ If you're on mobile and the button doesn't progress past "Signing in...", open t
 :::
 
 You can still paste an API key manually at any time — the two flows are interchangeable.
+
+The key sign-in creates is a normal NanoGPT API key: the app can spend from your NanoGPT balance until you revoke or limit that key on NanoGPT.
 
 ### Model
 
@@ -142,9 +163,11 @@ Three toggle switches control streaming and reasoning:
 
 | Option | Default | What It Does |
 | :--- | :--- | :--- |
-| **Enable streaming** | Off | AI responses appear in real-time as they're generated. When off, the full response appears at once after completion. |
-| **Enable reasoning** | Off | Enables thinking/reasoning mode for models that support it (DeepSeek, Qwen/QwQ, OpenAI o1/o3/o4-mini, OpenRouter reasoning models). |
+| **Enable streaming** | On | AI responses appear in real-time as they're generated. When off, the full response appears at once after completion. |
+| **Enable reasoning** | On | Requests thinking/reasoning from models that support it (DeepSeek, Qwen/QwQ, OpenAI o-series, OpenRouter reasoning models). Turning it off only stops CharacterVault from asking; models that think by default still think. |
 | **Show reasoning** | On | When reasoning is enabled, the AI's thinking process is shown in a collapsible section before the response. |
+
+Some proprietary models (such as the OpenAI o-series) reason but never return their thinking text. Settings shows a note under the model when you pick one.
 
 When reasoning is enabled, a **Reasoning Effort** dropdown appears (Minimal through Max / Extra high). Which levels a model accepts depends on the provider: GPT-style models often use Minimal–High (and Extra high), while many SOTA thinking models (DeepSeek V4, GLM-5.x, Kimi, etc.) mainly use High and Max.
 
@@ -262,17 +285,17 @@ Choosing a backup file loads it into the settings **draft**. Nothing is overwrit
 
 ## Missing /v1 Detection
 
-If your API requests fail and the base URL doesn't end in `/v1`, the error message suggests adding `/v1` to the URL. This catches a common configuration mistake with OpenAI-compatible endpoints.
+If a request fails with a network or server error and the base URL doesn't end in `/v1`, the error message suggests adding `/v1` to the URL. This catches a common configuration mistake with OpenAI-compatible endpoints.
 
 ## Context Length & Max Tokens
 
 These are set on the **Sampler** tab:
 
 - **Context Length** — Dropdown from 2K to 1M tokens, plus a Custom option (4,096–1,000,000). This is the total window (input + output).
-- **Max Tokens** — Slider from 100 to 8,192. The maximum tokens the AI will generate per response.
+- **Max Tokens** — Slider from 100 to 8,100 (step 100). The maximum tokens the AI will generate per response.
 
 ::: warning
-If Max Tokens is too close to Context Length, you'll see a warning. The AI needs room for both input and output. A 100-token safety margin is reserved automatically.
+The AI needs room for both input and output. About 256 tokens are reserved as a safety margin, so the room left for input is Context Length − Max Tokens − 256. The AI toolbar shows a warning if that leaves no room.
 :::
 
 ## Troubleshooting Context Warnings
@@ -280,8 +303,8 @@ If Max Tokens is too close to Context Length, you'll see a warning. The AI needs
 | Warning | Cause | Fix |
 | :--- | :--- | :--- |
 | **"Selection is too long"** | Selected text exceeds the available context window | Select less text or increase Context Length |
-| **"Please adjust Max Tokens..."** | Max Tokens is too close to Context Length | Increase Context Length on the Sampler tab |
-| **"AI needs a larger context..."** | System instructions consume the entire context window | Increase Context Length or decrease Max Tokens |
+| **"Please adjust Max Tokens..."** | Max Tokens is equal to or larger than Context Length | Lower Max Tokens or raise Context Length on the Sampler tab |
+| **"AI needs a larger context..."** | Max Tokens is within ~256 tokens of Context Length | Raise Context Length or lower Max Tokens |
 
 ### How Truncation Works
 

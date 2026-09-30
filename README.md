@@ -57,7 +57,7 @@
 
 - **Snapshots**: save points you can compare side by side and restore as a whole card or one section at a time
 - **Vault backup**: one ZIP with your cards, lorebooks, and settings. Import the ZIP to restore
-- **Local storage**: everything lives in your browser's IndexedDB. Nothing is uploaded
+- **Local storage**: your library is stored only in your browser's IndexedDB. Nothing is uploaded unless you use optional AI features, which talk to the provider you configure
 
 <table>
   <tr>
@@ -78,7 +78,7 @@
 
 Every AI feature is optional. The editor, lorebooks, import, export, and snapshots all work without it.
 
-To turn AI on, add any OpenAI-compatible endpoint in **Settings → AI Config**. Presets are included for NanoGPT (with sign-in), OpenRouter, Synthetic, and local servers like LM Studio. Requests go straight from your browser to your provider. CharacterVault has no AI server of its own. See [AI Setup](https://vault.charactervault.app/docs/configuration/ai-setup).
+To turn AI on, add any OpenAI-compatible endpoint in **Settings → AI Config**. Presets are included for NanoGPT (with sign-in), OpenRouter, Synthetic, and local servers like LM Studio. Requests go straight from your browser to your provider. CharacterVault has no AI server of its own. The one exception is the NanoGPT subscription-usage check: NanoGPT blocks it in browsers, so the official site sends it through a small proxy on CharacterVault's Cloudflare hosting that forwards your key to NanoGPT and does not log or store it. See [Privacy](https://vault.charactervault.app/docs/privacy). See [AI Setup](https://vault.charactervault.app/docs/configuration/ai-setup).
 
 ---
 
@@ -116,9 +116,9 @@ The full docs are at **[vault.charactervault.app/docs](https://vault.characterva
 
 ## Troubleshooting
 
-**AI buttons are disabled?** Add a provider in **Settings → AI Config**.
+**AI buttons are disabled?** Select some text first. Every button except **Custom** stays dimmed until you do.
 
-**Selection too long?** Select less text, or raise **Context Length** in **Settings → Sampler**.
+**Still dimmed?** The toolbar says why. If the selection is too long, select less text or raise **Context Length** in **Settings → Sampler**. If Max Tokens is not below Context Length, fix that in **Settings → Sampler**.
 
 **Something else?** Check the [FAQ](https://vault.charactervault.app/docs/faq), ask on [Discord](https://discord.gg/T9jbbArPrF), or [open an issue](https://github.com/spaceman2408/CharacterVault/issues).
 

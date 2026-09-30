@@ -5,15 +5,24 @@ Character Vault includes a built-in AI assistant called **Orion** that helps you
 ::: tip
 Orion requires an AI provider to be configured. See [AI Setup](/configuration/ai-setup) to get connected first.
 
-Orion always uses the **global** model from **Settings → AI Config**. Per-prompt model mappings on the Prompts tab apply to the AI toolbar (and lorebook key generation for Custom). The [Agent](/features/ai-agent) has its own mapping and is a separate chat that **writes** the card or book.
+Orion always uses the model set on **Settings → AI Config**. The inline AI toolbar and the [Agent](/features/ai-agent) can each be pointed at a different model on **Settings → Prompts**.
 :::
+
+## Which AI feature do I want?
+
+| Feature | Where | What it does |
+| :--- | :--- | :--- |
+| **Orion** | **Ask AI** panel (chat bubble icon) | Chats about your card. Never edits it; copy its text into a field yourself. |
+| **AI toolbar** | Select text in the editor | Rewrites, expands, or fixes the selection in place. See [Editor → AI Toolbar](/features/editor#ai-toolbar). |
+| **[Agent](/features/ai-agent)** | **Ask AI** panel (robot icon) | Edits the open card or lorebook for you, with a snapshot first (or a review step). |
+| **[AI Creation Studio](/features/ai-creation-studio)** | **AI Create** in the vault header | Generates a new card (name, description, first message, examples) from a concept or tags. |
 
 ## Opening the AI Panels
 
 The workspace has two docked panels:
 
 - **Context Panel** (left) — Choose which character sections (and optional custom notes) the AI can see.
-- **Ask AI Panel** (right) — Chat with the AI assistant.
+- **Ask AI Panel** (right) — Chat with the AI assistant. Its header reads **Ask Orion**, or **Character agent** when the Agent is selected.
 
 Both panels can be toggled from the workspace header. At the left of the chat header, a two-icon switch picks the chat: the chat bubble is Orion and the robot is the writing Agent. The highlighted icon is the one in use. The two threads stay separate, and each is saved on the open character or lorebook.
 
@@ -53,9 +62,16 @@ The Orion thread for this character or standalone lorebook is stored in the brow
 
 The pencil on your last message puts its text back in the box. Nothing is removed until you send; then that message and the replies after it are replaced. The **×** cancels and keeps the chat as it was. You can't edit while Orion is replying.
 
+### Message actions
+
+- **Copy** a reply, or a single code block with its own copy button.
+- **Regenerate response** asks for a new version of the last reply.
+- **Retry** resends your last message; **Send** with an empty box does the same.
+- **Delete** removes that message and everything after it. Click twice to confirm.
+
 ### Cancelling a Request
 
-You can abort an in-progress request at any time. The current generation stops immediately.
+Click **Stop** (the square that replaces Send while Orion is replying) to abort. Text that already streamed stays.
 
 ## How Orion Handles Context
 
@@ -75,7 +91,7 @@ Orion works with models that output reasoning/thinking content (DeepSeek R1, Qwe
 - While a reply is streaming, **Thinking** starts **expanded**
 - After the reply, it is collapsed; expand it if you want to read the committed thinking
 
-To enable and configure reasoning, see [AI Setup → Advanced Options](/configuration/ai-setup#advanced-options). Completed replies also show **TTFT** (time to first token) and **T/S** (tokens per second) on the message info tooltip.
+To enable and configure reasoning, see [AI Setup → Advanced Options](/configuration/ai-setup#advanced-options). The (i) **Response stats** button on a finished reply shows **TTFT** (time to first token), speed in t/s, the model, and the provider.
 
 ## Next Steps
 
