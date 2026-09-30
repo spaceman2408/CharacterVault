@@ -834,6 +834,130 @@ textarea:focus:not(:focus-visible) {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
+/* Recent Custom instructions: drops under the controls row */
+.ai-toolbar-panel .ai-toolbar-recent-menu {
+  position: absolute;
+  top: 100%;
+  left: 12px;
+  right: 12px;
+  z-index: 30;
+  max-width: 520px;
+  max-height: 260px;
+  overflow-y: auto;
+  margin-top: -4px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--ai-toolbar-border);
+  border-radius: 6px;
+  background: var(--ai-toolbar-bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 2px 8px;
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-clear {
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ai-toolbar-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-clear:hover {
+  color: var(--ai-toolbar-text);
+  background: var(--ai-toolbar-btn-hover);
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-clear.is-armed {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ai-toolbar-text-muted);
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-item {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-item:hover,
+.ai-toolbar-panel .ai-toolbar-recent-item:focus-within {
+  background: var(--ai-toolbar-btn-hover);
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-use {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ai-toolbar-text);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-remove {
+  flex-shrink: 0;
+  margin-right: 2px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--ai-toolbar-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-item:hover .ai-toolbar-recent-remove,
+.ai-toolbar-panel .ai-toolbar-recent-remove:focus-visible {
+  opacity: 1;
+}
+
+.ai-toolbar-panel .ai-toolbar-recent-remove:hover {
+  color: var(--ai-toolbar-text);
+}
+
+/* Touch: always-visible ✕ and finger-sized targets */
+@media (hover: none) {
+  .ai-toolbar-panel .ai-toolbar-recent-remove {
+    opacity: 1;
+    padding: 8px 12px;
+  }
+
+  .ai-toolbar-panel .ai-toolbar-recent-use {
+    padding: 10px 8px;
+  }
+
+  .ai-toolbar-panel .ai-toolbar-recent-clear {
+    padding: 6px 10px;
+  }
+}
+
 /* Long custom labels truncate instead of blowing out the row or menu */
 .ai-toolbar-panel .ai-toolbar-btn-label {
   overflow: hidden;

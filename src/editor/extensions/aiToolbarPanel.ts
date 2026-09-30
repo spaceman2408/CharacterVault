@@ -94,6 +94,58 @@ const MODEL_ICON_PATHS = [
 ];
 const TIMER_ICON_PATHS = ['M10 2h4', 'M12 14l3-3', 'M4 14a8 8 0 1 0 16 0a8 8 0 1 0-16 0'];
 const GAUGE_ICON_PATHS = ['m12 14 4-4', 'M3.34 19a10 10 0 1 1 17.32 0'];
+const HISTORY_ICON_PATHS = ['M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5', 'M12 7v5l4 2'];
+
+function createIcon(paths: string[], size: number): SVGSVGElement {
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('fill', 'none');
+  icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('stroke-width', '2');
+  icon.setAttribute('stroke-linecap', 'round');
+  icon.setAttribute('stroke-linejoin', 'round');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.style.cssText = `width: ${size}px; height: ${size}px; flex-shrink: 0;`;
+  for (const d of paths) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    icon.appendChild(path);
+  }
+  return icon;
+}
+
+const RECENT_INSTRUCTIONS_KEY = 'cv-ai-toolbar-recent-instructions';
+const MAX_RECENT_INSTRUCTIONS = 10;
+
+/** Newest first; shared by every editor's Custom box. */
+function getRecentInstructions(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(RECENT_INSTRUCTIONS_KEY) ?? '[]');
+    return Array.isArray(parsed)
+      ? parsed.filter((p): p is string => typeof p === 'string' && p.trim() !== '').slice(0, MAX_RECENT_INSTRUCTIONS)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentInstructions(list: string[]): void {
+  try {
+    localStorage.setItem(RECENT_INSTRUCTIONS_KEY, JSON.stringify(list));
+  } catch {
+    // Storage may be unavailable; recent instructions are best-effort.
+  }
+}
+
+function rememberInstruction(prompt: string): void {
+  saveRecentInstructions(
+    [prompt, ...getRecentInstructions().filter((p) => p !== prompt)].slice(0, MAX_RECENT_INSTRUCTIONS),
+  );
+}
+
+function forgetInstruction(prompt: string): void {
+  saveRecentInstructions(getRecentInstructions().filter((p) => p !== prompt));
+}
 
 /** Rounded icon + label pill for the result header (model, timing). */
 function createStatPill(iconPaths: string[], color: string): { pill: HTMLSpanElement; label: HTMLSpanElement } {
@@ -116,20 +168,8 @@ function createStatPill(iconPaths: string[], color: string): { pill: HTMLSpanEle
     white-space: nowrap;
     cursor: default;
   `;
-  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  icon.setAttribute('viewBox', '0 0 24 24');
-  icon.setAttribute('fill', 'none');
-  icon.setAttribute('stroke', 'currentColor');
-  icon.setAttribute('stroke-width', '2');
-  icon.setAttribute('stroke-linecap', 'round');
-  icon.setAttribute('stroke-linejoin', 'round');
-  icon.setAttribute('aria-hidden', 'true');
-  icon.style.cssText = 'width: 12px; height: 12px; flex-shrink: 0; opacity: 0.8;';
-  for (const d of iconPaths) {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    icon.appendChild(path);
-  }
+  const icon = createIcon(iconPaths, 12);
+  icon.style.opacity = '0.8';
   const label = document.createElement('span');
   label.style.cssText = 'overflow: hidden; text-overflow: ellipsis;';
   pill.append(icon, label);
@@ -209,6 +249,7 @@ function createToolbarPanel(
   const toolbarContainer = document.createElement('div');
   toolbarContainer.className = 'ai-toolbar-controls';
   toolbarContainer.style.cssText = `
+    position: relative;
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
@@ -390,11 +431,42 @@ function createToolbarPanel(
     cursor: pointer;
   `;
 
+  const recentBtn = document.createElement('button');
+  recentBtn.type = 'button';
+  recentBtn.className = 'ai-toolbar-instruct-recent';
+  recentBtn.title = 'Recent instructions (↑ in an empty box)';
+  recentBtn.setAttribute('aria-label', 'Recent instructions');
+  recentBtn.setAttribute('aria-haspopup', 'menu');
+  recentBtn.setAttribute('aria-expanded', 'false');
+  recentBtn.style.cssText = `
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    color: var(--ai-toolbar-text-secondary);
+    background: transparent;
+    border: 1px solid var(--ai-toolbar-input-border);
+    border-radius: 6px;
+    cursor: pointer;
+  `;
+  recentBtn.appendChild(createIcon(HISTORY_ICON_PATHS, 14));
+
+  // Recent instructions menu, dropped under the controls row
+  const recentMenu = document.createElement('div');
+  recentMenu.className = 'ai-toolbar-recent-menu';
+  recentMenu.setAttribute('role', 'menu');
+  recentMenu.setAttribute('aria-label', 'Recent instructions');
+
   // Append input elements to instruct container
   instructContainer.appendChild(instructInput);
+  instructContainer.appendChild(recentBtn);
   instructContainer.appendChild(instructSendBtn);
   instructContainer.appendChild(instructCancelBtn);
   toolbarContainer.appendChild(instructContainer);
+  toolbarContainer.appendChild(recentMenu);
 
   // Visible op-button row (single user-ordered list; overflow moves to the dropdown)
   const primaryContainer = document.createElement('div');
@@ -461,6 +533,7 @@ function createToolbarPanel(
   const sendInstruct = () => {
     const prompt = instructInput.value.trim();
     if (!prompt || hasSamplerError) return;
+    rememberInstruction(prompt);
 
     // Store the prompt in state for error recovery
     state.instructPrompt = prompt;
@@ -491,6 +564,7 @@ function createToolbarPanel(
     let editedPrompt: string | undefined;
     if (isInstructMode && state.currentOperation === 'instruct') {
       editedPrompt = instructInput.value.trim() || undefined;
+      if (editedPrompt) rememberInstruction(editedPrompt);
       if (document.activeElement === instructInput) view.focus();
       isInstructMode = false;
       instructInput.value = '';
@@ -508,8 +582,147 @@ function createToolbarPanel(
     }
     if (e.key === 'Escape') {
       e.preventDefault();
-      closeInstruct();
+      if (recentMenu.style.display === 'flex') closeRecentMenu();
+      else closeInstruct();
     }
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      if (stepRecent(e.key === 'ArrowUp' ? 1 : -1)) e.preventDefault();
+    }
+  });
+
+  let recentIndex = -1;
+
+  function setInstructValue(value: string) {
+    instructInput.value = value;
+    resizeInstructInput();
+    instructInput.setSelectionRange(value.length, value.length);
+  }
+
+  // Shell-style recall: ↑ in an empty box steps back through recent instructions, ↓ comes forward
+  function stepRecent(direction: 1 | -1): boolean {
+    const recent = getRecentInstructions();
+    const browsing = recentIndex >= 0 && instructInput.value === recent[recentIndex];
+    if (!browsing) {
+      recentIndex = -1;
+      if (direction < 0 || instructInput.value !== '' || recent.length === 0) return false;
+    }
+    const next = Math.min(recentIndex + direction, recent.length - 1);
+    recentIndex = next;
+    setInstructValue(next < 0 ? '' : recent[next]);
+    return true;
+  }
+
+  function syncRecentButton() {
+    recentBtn.style.display = getRecentInstructions().length > 0 ? 'flex' : 'none';
+  }
+
+  let clearAllTimer = 0;
+  let clearAllBtn: HTMLButtonElement | null = null;
+
+  function disarmClearAll() {
+    window.clearTimeout(clearAllTimer);
+    clearAllTimer = 0;
+    if (!clearAllBtn) return;
+    clearAllBtn.classList.remove('is-armed');
+    clearAllBtn.textContent = 'Clear all';
+    clearAllBtn.title = 'Clear all recent instructions';
+  }
+
+  function closeRecentMenu() {
+    disarmClearAll();
+    recentMenu.style.display = 'none';
+    recentBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  // Two-step like message delete: the first click arms, a second click within 4s clears
+  function createClearAllButton(): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ai-toolbar-recent-clear';
+    btn.textContent = 'Clear all';
+    btn.title = 'Clear all recent instructions';
+    btn.addEventListener('mousedown', (e) => e.preventDefault());
+    btn.addEventListener('click', () => {
+      if (!btn.classList.contains('is-armed')) {
+        btn.classList.add('is-armed');
+        btn.textContent = 'Confirm clear';
+        btn.title = 'Click again to clear all recent instructions';
+        clearAllTimer = window.setTimeout(disarmClearAll, 4000);
+        return;
+      }
+      saveRecentInstructions([]);
+      closeRecentMenu();
+      syncRecentButton();
+      instructInput.focus();
+    });
+    return btn;
+  }
+
+  function openRecentMenu() {
+    const recent = getRecentInstructions();
+    if (recent.length === 0) return;
+    const header = document.createElement('div');
+    header.className = 'ai-toolbar-recent-header';
+    const title = document.createElement('span');
+    title.className = 'ai-toolbar-recent-title';
+    title.textContent = 'Recent instructions';
+    disarmClearAll();
+    clearAllBtn = createClearAllButton();
+    header.append(title, clearAllBtn);
+    recentMenu.replaceChildren(header);
+    for (const prompt of recent) {
+      const row = document.createElement('div');
+      row.className = 'ai-toolbar-recent-item';
+      const use = document.createElement('button');
+      use.type = 'button';
+      use.className = 'ai-toolbar-recent-use';
+      use.setAttribute('role', 'menuitem');
+      use.textContent = prompt;
+      use.title = prompt;
+      use.addEventListener('mousedown', (e) => e.preventDefault());
+      use.addEventListener('click', () => {
+        recentIndex = -1;
+        closeRecentMenu();
+        setInstructValue(prompt);
+        instructInput.focus();
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'ai-toolbar-recent-remove';
+      remove.textContent = '✕';
+      remove.title = 'Remove from recent';
+      remove.setAttribute('aria-label', `Remove "${prompt}" from recent instructions`);
+      remove.addEventListener('mousedown', (e) => e.preventDefault());
+      remove.addEventListener('click', () => {
+        forgetInstruction(prompt);
+        row.remove();
+        if (getRecentInstructions().length === 0) {
+          closeRecentMenu();
+          syncRecentButton();
+          instructInput.focus();
+        }
+      });
+      row.append(use, remove);
+      recentMenu.appendChild(row);
+    }
+    recentMenu.style.display = 'flex';
+    recentBtn.setAttribute('aria-expanded', 'true');
+  }
+
+  recentBtn.addEventListener('mousedown', (e) => e.preventDefault());
+  recentBtn.addEventListener('click', () => {
+    if (recentMenu.style.display === 'flex') closeRecentMenu();
+    else openRecentMenu();
+  });
+  recentMenu.addEventListener('pointerdown', (e) => {
+    if (clearAllBtn && !e.composedPath().includes(clearAllBtn)) disarmClearAll();
+  });
+  recentMenu.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeRecentMenu();
+    instructInput.focus();
   });
 
   function resizeInstructInput() {
@@ -518,7 +731,10 @@ function createToolbarPanel(
     instructInput.style.height = `${newHeight}px`;
   }
 
-  instructInput.addEventListener('input', resizeInstructInput);
+  instructInput.addEventListener('input', () => {
+    recentIndex = -1;
+    resizeInstructInput();
+  });
 
   instructCancelBtn.addEventListener('click', closeInstruct);
 
@@ -790,6 +1006,8 @@ function createToolbarPanel(
     if (!moreContainer.contains(e.target as Node)) {
       dropdown.style.display = 'none';
     }
+    const path = e.composedPath();
+    if (!path.includes(recentMenu) && !path.includes(recentBtn)) closeRecentMenu();
   };
   document.addEventListener('click', closeDropdownOnOutsideClick);
 
@@ -1413,6 +1631,8 @@ function createToolbarPanel(
 
     const isCompactCustomLayout = !state.isProcessing && isInstructMode;
     toolbarContainer.classList.toggle('ai-toolbar-instruct-mode', isCompactCustomLayout);
+    if (isCompactCustomLayout) syncRecentButton();
+    else closeRecentMenu();
     if (onPreviewPayload) {
       // Keep available during instruct mode (useful for Custom preflight); hide while processing
       payloadBtn.style.display = state.isProcessing ? 'none' : 'flex';
