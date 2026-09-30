@@ -804,6 +804,16 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       // Drop late completions after unmount, section switch, or a newer request
       if (!isCurrentRequest()) return;
 
+      // An empty result has no Accept/Reject strip, so route it through the error path
+      if (!response.content.trim()) {
+        const message = response.finishReason === 'length'
+          ? 'The model used up Max Tokens before writing any text. Raise Max Tokens and try again.'
+          : response.reasoning?.trim()
+            ? 'The model returned only thinking and no text. Try again.'
+            : 'The model returned no text. Try again.';
+        throw new AIError(message, 'unknown');
+      }
+
       // Compute stats
       const contentTokens = estimateTokens(response.content);
       const reasoningTokens = estimateTokens(response.reasoning ?? '');
