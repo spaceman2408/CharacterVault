@@ -81,6 +81,61 @@ export interface ToolbarActionConfig {
   onClick: (view: EditorView) => void;
 }
 
+/** `org/Model-Name:variant` → `Model-Name:variant` for the compact model chip. */
+function shortModelName(modelId: string): string {
+  const slash = modelId.lastIndexOf('/');
+  return slash >= 0 && slash < modelId.length - 1 ? modelId.slice(slash + 1) : modelId;
+}
+
+const MODEL_ICON_PATHS = [
+  'M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+  'M10 9h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z',
+  'M9 2v2', 'M15 2v2', 'M9 20v2', 'M15 20v2', 'M2 9h2', 'M2 15h2', 'M20 9h2', 'M20 15h2',
+];
+const TIMER_ICON_PATHS = ['M10 2h4', 'M12 14l3-3', 'M4 14a8 8 0 1 0 16 0a8 8 0 1 0-16 0'];
+const GAUGE_ICON_PATHS = ['m12 14 4-4', 'M3.34 19a10 10 0 1 1 17.32 0'];
+
+/** Rounded icon + label pill for the result header (model, timing). */
+function createStatPill(iconPaths: string[], color: string): { pill: HTMLSpanElement; label: HTMLSpanElement } {
+  const pill = document.createElement('span');
+  pill.className = 'ai-toolbar-stat-pill';
+  pill.style.cssText = `
+    display: none;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 1px 8px 1px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 16px;
+    font-variant-numeric: tabular-nums;
+    color: ${color};
+    background: var(--ai-toolbar-btn-hover);
+    border: 1px solid var(--ai-toolbar-input-border);
+    border-radius: 999px;
+    white-space: nowrap;
+    cursor: default;
+  `;
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('fill', 'none');
+  icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('stroke-width', '2');
+  icon.setAttribute('stroke-linecap', 'round');
+  icon.setAttribute('stroke-linejoin', 'round');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.style.cssText = 'width: 12px; height: 12px; flex-shrink: 0; opacity: 0.8;';
+  for (const d of iconPaths) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    icon.appendChild(path);
+  }
+  const label = document.createElement('span');
+  label.style.cssText = 'overflow: hidden; text-overflow: ellipsis;';
+  pill.append(icon, label);
+  return { pill, label };
+}
+
 // Registry to store panel update functions by editor view
 const panelRegistry = new WeakMap<EditorView, AIStreamingCallback>();
 
@@ -788,17 +843,27 @@ function createToolbarPanel(
   `;
   resultHeader.appendChild(cutOffNote);
 
-  // Stats display (shown when result is complete)
-  const resultStats = document.createElement('span');
-  resultStats.style.cssText = `
+  // Model + timing pills stay on one right-aligned row; on narrow screens the model name shortens
+  const resultMeta = document.createElement('div');
+  resultMeta.style.cssText = `
     display: none;
-    font-size: 11px;
-    color: var(--ai-toolbar-text-muted);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
     margin-left: auto;
-    white-space: nowrap;
   `;
-  resultHeader.appendChild(resultStats);
+  resultHeader.appendChild(resultMeta);
+
+  const modelPill = createStatPill(MODEL_ICON_PATHS, 'var(--ai-toolbar-text-secondary)');
+  modelPill.pill.style.maxWidth = '200px';
+  modelPill.pill.style.minWidth = '72px';
+  const ttftPill = createStatPill(TIMER_ICON_PATHS, 'var(--ai-toolbar-text-muted)');
+  ttftPill.pill.title = 'Time to first token';
+  ttftPill.pill.style.flexShrink = '0';
+  const speedPill = createStatPill(GAUGE_ICON_PATHS, 'var(--ai-toolbar-text-muted)');
+  speedPill.pill.title = 'Speed, in estimated tokens per second';
+  speedPill.pill.style.flexShrink = '0';
+  resultMeta.append(modelPill.pill, ttftPill.pill, speedPill.pill);
 
   const errorRetryBtn = document.createElement('button');
   errorRetryBtn.textContent = '↻ Retry';
@@ -1188,6 +1253,8 @@ function createToolbarPanel(
       processingIndicator.style.display = 'none';
       reasoningFold.style.display = 'none';
       reasoningText.textContent = '';
+      resultMeta.style.display = 'none';
+      cutOffNote.style.display = 'none';
       errorRetryBtn.style.display = 'inline';
       resultCloseBtn.style.display = 'inline';
       actionButtons.style.display = 'none';
@@ -1219,16 +1286,24 @@ function createToolbarPanel(
 
     // Stats display (only when complete and has result)
     const hasStats = state.stats && !state.isProcessing && !state.isStreaming && state.aiResult && !state.error;
-    if (hasStats) {
-      const s = state.stats!;
-      const parts: string[] = [];
-      if (typeof s.ttft === 'number') parts.push(`TTFT: ${s.ttft}ms`);
-      if (typeof s.tokensPerSecond === 'number') parts.push(`T/S: ${s.tokensPerSecond.toFixed(2)}`);
-      resultStats.textContent = parts.join(' ');
-      resultStats.style.display = 'inline';
-    } else {
-      resultStats.style.display = 'none';
+    const s = hasStats ? state.stats! : null;
+    const modelId = s?.modelId?.trim();
+    if (modelId) {
+      modelPill.label.textContent = shortModelName(modelId);
+      modelPill.pill.title = s!.providerId ? `Model: ${modelId}\nProvider: ${s!.providerId}` : `Model: ${modelId}`;
     }
+    modelPill.pill.style.display = modelId ? 'inline-flex' : 'none';
+    const ttft = s?.ttft;
+    if (typeof ttft === 'number') {
+      ttftPill.label.textContent = ttft < 1000 ? `${Math.round(ttft)}ms` : `${(ttft / 1000).toFixed(1)}s`;
+    }
+    ttftPill.pill.style.display = typeof ttft === 'number' ? 'inline-flex' : 'none';
+    const tokensPerSecond = s?.tokensPerSecond;
+    if (typeof tokensPerSecond === 'number') {
+      speedPill.label.textContent = `${tokensPerSecond.toFixed(1)} t/s`;
+    }
+    speedPill.pill.style.display = typeof tokensPerSecond === 'number' ? 'inline-flex' : 'none';
+    resultMeta.style.display = hasStats ? 'flex' : 'none';
     cutOffNote.style.display = hasStats && state.stats!.truncated ? 'inline' : 'none';
 
     // Action buttons (only when complete and has result)
