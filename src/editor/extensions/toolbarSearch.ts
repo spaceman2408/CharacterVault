@@ -120,67 +120,9 @@ export function toggleToolbarSearch(view: EditorView): boolean {
   return isOpen ? closeToolbarSearch(view) : openToolbarSearch(view);
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+const MATCH_COUNT_CAP = 1000;
 
-function buildSearchRegex(query: SearchQuery): RegExp | null {
-  if (!query.search) return null;
-
-  let source = query.regexp ? query.search : escapeRegExp(query.search);
-  if (query.wholeWord) {
-    source = `\\b(?:${source})\\b`;
-  }
-
-  try {
-    return new RegExp(source, query.caseSensitive ? 'g' : 'gi');
-  } catch {
-    return null;
-  }
-}
-
-// Count matches in entire document
-function countMatches(view: EditorView, query: SearchQuery): number {
-  if (!query.search) return 0;
-
-  const text = view.state.doc.toString();
-  const regex = buildSearchRegex(query);
-  if (!regex) return 0;
-
-  let count = 0;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    count++;
-    if (match[0].length === 0) regex.lastIndex++;
-  }
-
-  return count;
-}
-
-// Get current match index (1-based)
-function getCurrentMatchIndex(view: EditorView, query: SearchQuery): number {
-  if (!query.search) return 0;
-
-  const selection = view.state.selection.main;
-  const text = view.state.doc.toString();
-  const cursorPos = selection.from;
-
-  const regex = buildSearchRegex(query);
-  if (!regex) return 0;
-
-  let count = 0;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    count++;
-    if (match.index <= cursorPos && cursorPos < match.index + match[0].length) {
-      return count;
-    }
-    if (match[0].length === 0) regex.lastIndex++;
-  }
-
-  return 0;
-}
-
+// Counts with CodeMirror's own cursor so the number always agrees with the highlights
 function renderMatchCount(view: EditorView, countEl: HTMLSpanElement): void {
   const query = getSearchQuery(view.state);
   if (!query.search) {
@@ -189,16 +131,30 @@ function renderMatchCount(view: EditorView, countEl: HTMLSpanElement): void {
     return;
   }
 
-  const total = countMatches(view, query);
-  if (total <= 0) {
-    countEl.textContent = '0/0';
-    countEl.style.display = 'inline';
+  countEl.style.display = 'inline';
+  if (!query.valid) {
+    countEl.textContent = 'Invalid regex';
     return;
   }
 
-  const current = getCurrentMatchIndex(view, query);
-  countEl.textContent = `${current || 1}/${total}`;
-  countEl.style.display = 'inline';
+  const caret = view.state.selection.main.from;
+  const cursor = query.getCursor(view.state);
+  let total = 0;
+  let current = 0;
+  for (let next = cursor.next(); !next.done; next = cursor.next()) {
+    total++;
+    if (!current && next.value.from <= caret && caret < next.value.to) current = total;
+    if (total >= MATCH_COUNT_CAP) break;
+  }
+
+  const totalLabel = total >= MATCH_COUNT_CAP ? `${MATCH_COUNT_CAP}+` : `${total}`;
+  if (total === 0) {
+    countEl.textContent = 'No matches';
+  } else if (current) {
+    countEl.textContent = `${current}/${totalLabel}`;
+  } else {
+    countEl.textContent = total === 1 ? '1 match' : `${totalLabel} matches`;
+  }
 }
 
 function queryEquals(a: SearchQuery, b: SearchQuery): boolean {
@@ -567,7 +523,6 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
       replace: replaceInput.value,
     });
     view.dispatch({ effects: setSearchQuery.of(newQuery) });
-    refreshCount();
   };
 
   [searchInput, replaceInput].forEach(el => el.addEventListener('input', updateQuery));
