@@ -36,7 +36,7 @@ From the library header, click **Backup** to download a ZIP of the whole vault:
 
 | Path | Contents |
 | :--- | :--- |
-| `characters/` | Cards **with** a PNG image as PNG (embedded data); cards **without** one as JSON (V3). Cards with a JPEG or WebP image fall back to JSON without the image. |
+| `characters/` | Cards **with** an image as PNG (embedded data); cards **without** one as JSON (V3). |
 | `lorebooks/` | Standalone vault lorebooks as SillyTavern-oriented JSON |
 | `settings.json` | App settings (AI config, sampler, prompts, studio including favorite tags, workspace, layout) |
 | `manifest.json` | Backup kind, date, counts, and whether API keys were included |
@@ -61,7 +61,7 @@ Open a character and click **Export** in the toolbar. You have two choices:
 
 Your character becomes a PNG image with all data embedded in the image file itself. This is the most versatile option — send it to anyone and they can drag it straight into SillyTavern, CharacterVault, or any compatible app. The data is written as a single `chara` chunk in Character Card V2 format, the most widely supported version. Any existing `chara` or `ccv3` chunks are replaced.
 
-PNG export needs a PNG character image. Cards with a JPEG or WebP avatar can't be exported as PNG; use JSON instead.
+PNG export needs a character image. JPEG, WebP, and other formats are converted to PNG. A card with no image can only be exported as JSON.
 
 ### JSON
 

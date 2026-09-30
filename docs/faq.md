@@ -201,7 +201,7 @@ For PNG files, the data is stored in a special metadata chunk inside the image. 
 ::: details How do I export a character?
 Open a character and click the export (download) icon in the character header, or open the card's menu in the library. You have two options:
 
-- **Export PNG** — embeds the card in the image as a V2 `chara` chunk for the widest compatibility. Works with SillyTavern, CharacterVault, and other compatible apps. The character image must be a PNG; JPEG or WebP images can't be exported as PNG cards.
+- **Export PNG** — embeds the card in the image as a V2 `chara` chunk for the widest compatibility. Works with SillyTavern, CharacterVault, and other compatible apps. The card needs a character image; JPEG, WebP, and other formats are converted to PNG on export.
 - **Export JSON** — uses the V3 wrapper (`chara_card_v3`). Includes name, description, personality, scenario, greetings, lorebook, creator information, tags, and notes (but not the character image).
 
 See [Import & Export](/features/import-export) for details.

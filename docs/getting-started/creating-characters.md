@@ -85,7 +85,7 @@ On the **Image** tab you can:
 - Click **Change Image** to replace it, or **Remove Image** to clear it.
 - Dropping or pasting over an existing image asks before replacing it.
 
-Use a PNG image if you want to export the card as PNG. JPEG and WebP images can't be exported as PNG cards.
+Any image format works. PNG export converts JPEG or WebP images to PNG.
 
 Character Vault generates a 128×192 JPEG thumbnail for the library grid view automatically.
 

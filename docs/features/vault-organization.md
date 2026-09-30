@@ -66,7 +66,7 @@ Card actions appear in the top-right of each portrait. On mobile they stay visib
 | **Duplicate** | After confirmation, creates a copy of the character with " (Copy)" appended to the name |
 | **Delete** | Removes the character from your vault after a confirmation dialog |
 
-PNG export requires a PNG character image; use JSON if the card has no avatar yet or its image is JPEG or WebP.
+PNG export needs a character image (JPEG or WebP is converted to PNG); use JSON if the card has no image yet.
 
 Click anywhere else on the card to open it in the workspace.
 

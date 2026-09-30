@@ -14,6 +14,7 @@ import type {
 } from '../db/characterTypes';
 import { lorebookService } from './LorebookService';
 import { entryToCardBookEntry } from './LorebookConverter';
+import { convertImageToPng, hasPngSignature } from '../utils/pngImage';
 import type { SettingsBackupFile } from './SettingsBackupService';
 
 export const FULL_BACKUP_KIND = 'charactervault-full-backup';
@@ -101,7 +102,10 @@ export class CharacterExportService {
 
       // Load the image
       const imageBlob = await this.dataURLToBlob(character.imageData);
-      const arrayBuffer = await imageBlob.arrayBuffer();
+      const sourceBuffer = await imageBlob.arrayBuffer();
+      const arrayBuffer = hasPngSignature(sourceBuffer)
+        ? sourceBuffer
+        : await convertImageToPng(character.imageData);
 
       // Embed character data into PNG
       const pngWithMetadata = await this.embedCharaInPNG(arrayBuffer, charaData);
