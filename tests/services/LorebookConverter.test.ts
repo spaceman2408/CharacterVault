@@ -5,6 +5,8 @@ import {
   convertSTLorebook,
   convertToSTLorebook,
   importLorebook,
+  cardBookEntryToEntry,
+  entryToCardBookEntry,
 } from '../../src/services/LorebookConverter';
 import type { LorebookEntry } from '../../src/db/characterTypes';
 
@@ -298,5 +300,117 @@ describe('LorebookConverter', () => {
     expect(back?.recursive_scanning).toBe(true);
     expect(back?.scan_depth).toBe(3);
     expect(back?.token_budget).toBe(400);
+  });
+
+  it('reads SillyTavern card entry options from extensions', () => {
+    const entry = cardBookEntryToEntry({
+      id: 3,
+      keys: ['harbor'],
+      content: 'Docks.',
+      enabled: true,
+      insertion_order: 250,
+      position: 'after_char',
+      extensions: {
+        position: 4,
+        depth: 2,
+        role: 1,
+        exclude_recursion: true,
+        prevent_recursion: true,
+        delay_until_recursion: false,
+        probability: 40,
+        useProbability: true,
+        selectiveLogic: 3,
+        match_whole_words: true,
+        sticky: 2,
+      },
+    });
+
+    expect(entry.position).toBe('at_depth');
+    expect(entry.depth).toBe(2);
+    expect(entry.role).toBe(1);
+    expect(entry.excludeRecursion).toBe(true);
+    expect(entry.preventRecursion).toBe(true);
+    expect(entry.delayUntilRecursion).toBe(false);
+    expect(entry.probability).toBe(40);
+    expect(entry.useProbability).toBe(true);
+    expect(entry.selectiveLogic).toBe(3);
+    expect(entry.matchWholeWords).toBe(true);
+    expect(entry.insertion_order).toBe(250);
+    expect(entry.extensions.sticky).toBe(2);
+  });
+
+  it('keeps top-level values over stale extension values on card import', () => {
+    const entry = cardBookEntryToEntry({
+      id: 0,
+      keys: ['a'],
+      content: '',
+      enabled: true,
+      excludeRecursion: false,
+      extensions: { exclude_recursion: true },
+    });
+    expect(entry.excludeRecursion).toBe(false);
+  });
+
+  it('writes card entry options where SillyTavern reads them', () => {
+    const card = entryToCardBookEntry({
+      id: 1,
+      keys: ['castle'],
+      content: 'Fortress.',
+      enabled: true,
+      priority: 7,
+      position: 'at_depth',
+      depth: 3,
+      role: 2,
+      excludeRecursion: true,
+      preventRecursion: false,
+      probability: 60,
+      useProbability: true,
+      selectiveLogic: 1,
+      matchWholeWords: false,
+      case_sensitive: true,
+      extensions: { _st_position: 1, sticky: 5 },
+    });
+    const raw = card as unknown as Record<string, unknown>;
+
+    expect(card.position).toBe('after_char');
+    expect(card.insertion_order).toBe(7);
+    expect(card.case_sensitive).toBe(true);
+    expect(card.extensions).toEqual({
+      position: 4,
+      depth: 3,
+      role: 2,
+      exclude_recursion: true,
+      prevent_recursion: false,
+      probability: 60,
+      useProbability: true,
+      selectiveLogic: 1,
+      match_whole_words: false,
+      case_sensitive: true,
+      sticky: 5,
+    });
+    expect(raw.excludeRecursion).toBeUndefined();
+    expect(raw.depth).toBeUndefined();
+  });
+
+  it("keeps an Author's Note position on card round-trip until Position changes", () => {
+    const imported = cardBookEntryToEntry({
+      id: 0,
+      keys: ['a'],
+      content: '',
+      enabled: true,
+      extensions: { position: 2 },
+    });
+    expect(imported.position).toBe('before_char');
+    expect(entryToCardBookEntry(imported).extensions.position).toBe(2);
+    expect(entryToCardBookEntry({ ...imported, position: 'after_char' }).extensions.position).toBe(1);
+  });
+
+  it('maps options on a bare character_book lorebook import', () => {
+    const book = importLorebook({
+      entries: [
+        { id: 0, keys: ['a'], content: 'A', enabled: true, extensions: { exclude_recursion: true } },
+      ],
+    });
+    expect(book?.entries[0].excludeRecursion).toBe(true);
   });
 });

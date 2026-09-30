@@ -13,6 +13,7 @@ import type {
   VaultLorebook,
 } from '../db/characterTypes';
 import { lorebookService } from './LorebookService';
+import { entryToCardBookEntry } from './LorebookConverter';
 import type { SettingsBackupFile } from './SettingsBackupService';
 
 export const FULL_BACKUP_KIND = 'charactervault-full-backup';
@@ -624,7 +625,8 @@ export class CharacterExportService {
    * Sanitize lorebook for export by removing fields that shouldn't be
    * set externally and mapping fields for broad importer compatibility.
    *
-   * - Strips `insertion_order` (managed by the importing app, not the exporter)
+   * - Writes per-entry options where SillyTavern reads them (`extensions`,
+   *   `insertion_order`, spec `position`) via `entryToCardBookEntry`
    * - Maps `name` → `comment` when `comment` is absent so SillyTavern
    *   (which reads `comment`, not `name`) can display the entry label
    * - Coerces `case_sensitive` to a boolean for spec compliance
@@ -643,13 +645,12 @@ export class CharacterExportService {
     }
 
     const entries = book.entries.map((entry: LorebookEntry) => {
-      const { ...rest } = entry;
-      const extCaseSensitive = rest.extensions?.case_sensitive as boolean | null | undefined;
-      return {
-        ...rest,
-        comment: rest.comment || rest.name || '',
-        case_sensitive: rest.case_sensitive ?? extCaseSensitive ?? false,
-      };
+      const extCaseSensitive = entry.extensions?.case_sensitive as boolean | null | undefined;
+      return entryToCardBookEntry({
+        ...entry,
+        comment: entry.comment || entry.name || '',
+        case_sensitive: entry.case_sensitive ?? extCaseSensitive ?? false,
+      });
     });
 
     return {

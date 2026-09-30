@@ -14,6 +14,7 @@ import type {
 } from '../db/characterTypes';
 import { characterDb } from '../db/CharacterDatabase';
 import { generateThumbnail } from '../utils/thumbnail';
+import { cardBookEntryToEntry } from './LorebookConverter';
 
 const IMPORTED_CHARACTER_FLAG = 'character_vault_imported';
 
@@ -870,7 +871,8 @@ export class CharacterImportService {
 
     return {
       ...book,
-      entries: book.entries.map((entry: LorebookEntry) => {
+      entries: book.entries.map((rawEntry: LorebookEntry) => {
+        const entry = cardBookEntryToEntry(rawEntry);
         const extCaseSensitive = entry.extensions?.case_sensitive as boolean | null | undefined;
 
         // Resolve a unique numeric id, preferring the entry's existing value,

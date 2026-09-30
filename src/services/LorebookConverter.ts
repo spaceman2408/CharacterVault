@@ -143,6 +143,97 @@ function asDepthRole(value: unknown): LorebookDepthRole | null | undefined {
   return undefined;
 }
 
+const LOREBOOK_POSITIONS = new Set<string>(Object.keys(REVERSE_POSITION_MAP));
+
+/** Insertion order as the editor shows it; older entries kept it in `priority`. */
+export function getEntryOrder(entry: LorebookEntry): number {
+  return entry.insertion_order ?? entry.priority ?? 0;
+}
+
+/**
+ * Card `character_book` entries keep SillyTavern's per-entry options in
+ * snake_case `extensions` keys. Pairs are [our top-level field, ST extension key].
+ */
+const CARD_EXTENSION_FIELDS = [
+  ['excludeRecursion', 'exclude_recursion'],
+  ['preventRecursion', 'prevent_recursion'],
+  ['delayUntilRecursion', 'delay_until_recursion'],
+  ['probability', 'probability'],
+  ['useProbability', 'useProbability'],
+  ['depth', 'depth'],
+  ['selectiveLogic', 'selectiveLogic'],
+  ['matchWholeWords', 'match_whole_words'],
+  ['role', 'role'],
+  ['case_sensitive', 'case_sensitive'],
+] as const satisfies ReadonlyArray<readonly [keyof LorebookEntry, string]>;
+
+function storedSTPosition(ext: Record<string, unknown>): number | undefined {
+  const stored = ext._st_position ?? ext.position;
+  return typeof stored === 'number' && Number.isInteger(stored) ? stored : undefined;
+}
+
+/**
+ * Read a card `character_book` entry (SillyTavern keeps options in `extensions`)
+ * into the top-level fields the editor uses. Top-level values win so edits made
+ * in older CharacterVault exports are kept.
+ */
+export function cardBookEntryToEntry(entry: LorebookEntry): LorebookEntry {
+  const ext = entry.extensions ?? {};
+  const next: LorebookEntry = { ...entry, extensions: ext };
+
+  const stPosition = storedSTPosition(ext);
+  if (stPosition !== undefined && POSITION_MAP[stPosition]) {
+    next.position = POSITION_MAP[stPosition];
+  } else if (entry.position !== undefined && !LOREBOOK_POSITIONS.has(entry.position)) {
+    next.position = 'before_char';
+  }
+
+  const target = next as unknown as Record<string, unknown>;
+  for (const [field, extKey] of CARD_EXTENSION_FIELDS) {
+    if (target[field] === undefined && ext[extKey] !== undefined) {
+      target[field] = ext[extKey];
+    }
+  }
+  next.selectiveLogic = asSelectiveLogic(next.selectiveLogic);
+  if (next.role !== undefined) next.role = asDepthRole(next.role) ?? null;
+
+  return next;
+}
+
+/**
+ * Write an entry as a V2 card `character_book` entry that SillyTavern reads:
+ * options go to snake_case `extensions`, order to `insertion_order`, and
+ * `position` is limited to the spec's before_char / after_char.
+ */
+export function entryToCardBookEntry(entry: LorebookEntry): LorebookEntry {
+  const source = entry as unknown as Record<string, unknown>;
+  const ext: Record<string, unknown> = { ...(entry.extensions ?? {}) };
+
+  const currentPosition = entry.position ?? 'before_char';
+  const stored = storedSTPosition(ext);
+  const stPosition =
+    stored !== undefined && POSITION_MAP[stored] === currentPosition
+      ? stored
+      : REVERSE_POSITION_MAP[currentPosition] ?? 0;
+  delete ext._st_position;
+  ext.position = stPosition;
+
+  for (const [field, extKey] of CARD_EXTENSION_FIELDS) {
+    if (source[field] !== undefined) ext[extKey] = source[field];
+  }
+
+  const card: Record<string, unknown> = {
+    ...entry,
+    extensions: ext,
+    insertion_order: getEntryOrder(entry),
+    position: stPosition === 0 ? 'before_char' : 'after_char',
+  };
+  for (const [field] of CARD_EXTENSION_FIELDS) {
+    if (field !== 'case_sensitive') delete card[field];
+  }
+  return card as unknown as LorebookEntry;
+}
+
 /**
  * Detect the format of a lorebook export/import data
  * @param data - The data to detect format for
@@ -232,7 +323,7 @@ export function convertSTEntry(entry: STLorebookEntry): LorebookEntry {
     content: entry.content || '',
     constant: entry.constant ?? false,
     selective: entry.selective ?? false,
-    priority: entry.order ?? 0,
+    insertion_order: entry.order ?? 0,
     position: POSITION_MAP[entry.position] ?? 'before_char',
     enabled: !entry.disable,
     case_sensitive: entry.caseSensitive ?? false,
@@ -434,7 +525,7 @@ export function convertToSTEntry(entry: LorebookEntry, displayIndex: number): ST
     content: entry.content || '',
     constant: entry.constant ?? false,
     selective: entry.selective ?? false,
-    order: entry.priority ?? 0,
+    order: getEntryOrder(entry),
     position,
     disable: !entry.enabled,
     caseSensitive: entry.case_sensitive ?? false,
@@ -532,9 +623,11 @@ export function importLorebook(data: unknown): CharacterBook | null {
   switch (format) {
     case 'sillytavern':
       return convertSTLorebook(data as STLorebookExport);
-    case 'charactervault':
-      // Already in our format, just validate and return
-      return data as CharacterBook;
+    case 'charactervault': {
+      // Bare `character_book` shape, possibly from a SillyTavern card.
+      const book = data as CharacterBook;
+      return { ...book, entries: book.entries.map(cardBookEntryToEntry) };
+    }
     default:
       return null;
   }

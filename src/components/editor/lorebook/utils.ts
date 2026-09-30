@@ -1,5 +1,6 @@
 import type { CharacterBook, LorebookEntry } from '../../../db/characterTypes';
 import { estimateTokens } from '../../../services/AIService';
+import { getEntryOrder } from '../../../services/LorebookConverter';
 import type { ContextUsageSummary } from './types';
 
 export function isEntryContextEnabled(entry: LorebookEntry): boolean {
@@ -22,7 +23,7 @@ export function hasNonDefaultOptions(entry: LorebookEntry): boolean {
     entry.selective === true ||
     (entry.secondary_keys?.length ?? 0) > 0 ||
     (entry.position !== undefined && entry.position !== 'before_char') ||
-    (entry.priority !== undefined && entry.priority !== 0) ||
+    getEntryOrder(entry) !== 0 ||
     entry.case_sensitive === true ||
     entry.matchWholeWords === true ||
     Boolean(entry.name?.trim())

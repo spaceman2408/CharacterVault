@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GitFork, Sparkles, Square, X } from 'lucide-react';
 import { AIService } from '../../../services/AIService';
 import { resolveConfigForOperation } from '../../../services/resolveOperationConfig';
+import { getEntryOrder } from '../../../services/LorebookConverter';
 import { useAIEditor } from '../../../hooks';
 import type {
   LorebookDepthRole,
@@ -462,9 +463,9 @@ export function LorebookEntryDetail({
             <div>
               <FieldLabel help={FIELD_HELP.insertionOrder}>Insertion Order</FieldLabel>
               <NumberField
-                value={draftEntry.priority ?? 0}
+                value={getEntryOrder(draftEntry)}
                 fallback={0}
-                onCommit={(priority) => persistPatch({ priority })}
+                onCommit={(insertion_order) => persistPatch({ insertion_order })}
                 className={FIELD_CLASS}
               />
             </div>

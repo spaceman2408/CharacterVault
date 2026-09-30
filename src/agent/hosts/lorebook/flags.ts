@@ -1,5 +1,6 @@
 import type { CharacterBook, LorebookEntry, LorebookPosition } from '../../../db/characterTypes';
 import { estimateTokens } from '../../../services/AIService';
+import { getEntryOrder } from '../../../services/LorebookConverter';
 import { parseCommaList } from '../commaList';
 
 export const ENTRY_FLAG_KEYS = [
@@ -187,8 +188,9 @@ export function formatEntryFlagLines(entry: LorebookEntry): string[] {
   if (entry.position === 'at_depth') {
     lines.push(`depth: ${entry.depth ?? 4}`);
   }
-  if (entry.insertion_order != null) {
-    lines.push(`insertion_order: ${entry.insertion_order}`);
+  const order = getEntryOrder(entry);
+  if (order !== 0) {
+    lines.push(`insertion_order: ${order}`);
   }
   if (entry.probability != null && (entry.useProbability === true || entry.probability < 100)) {
     lines.push(`probability: ${entry.probability}`);
@@ -203,8 +205,9 @@ export function formatEntryFlagSuffix(entry: LorebookEntry): string {
   const parts: string[] = [`${estimateTokens(entry.content ?? '')} tokens`];
   if (entry.enabled === false) parts.push('disabled');
   if (entry.constant) parts.push('constant');
-  if (entry.insertion_order != null && entry.insertion_order !== 0) {
-    parts.push(`order ${entry.insertion_order}`);
+  const order = getEntryOrder(entry);
+  if (order !== 0) {
+    parts.push(`order ${order}`);
   }
   if (entry.position && entry.position !== 'before_char') {
     parts.push(

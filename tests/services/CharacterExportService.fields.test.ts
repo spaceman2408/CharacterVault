@@ -54,4 +54,32 @@ describe('CharacterExportService card field coverage', () => {
     expect(card.spec).toBe('chara_card_v2');
     expect(card.data.physical_description).toBe(PHYSICAL_DESCRIPTION);
   });
+
+  it('writes lorebook entry options where SillyTavern reads them', async () => {
+    const character = makeCharacter();
+    character.data.characterBook = {
+      entries: [
+        {
+          id: 0,
+          keys: ['office'],
+          content: 'The office.',
+          enabled: true,
+          insertion_order: 120,
+          position: 'at_depth',
+          depth: 2,
+          excludeRecursion: true,
+          extensions: {},
+        },
+      ],
+      extensions: {},
+    };
+
+    const result = await service.exportAsJSON(character);
+    const card = JSON.parse(await result.blob!.text());
+    const entry = card.data.character_book.entries[0];
+    expect(entry.insertion_order).toBe(120);
+    expect(entry.position).toBe('after_char');
+    expect(entry.extensions).toMatchObject({ position: 4, depth: 2, exclude_recursion: true });
+    expect(entry.excludeRecursion).toBeUndefined();
+  });
 });
