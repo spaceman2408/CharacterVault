@@ -7,8 +7,8 @@
  *
  * Tokens that fall inside a code fence, an inline code span, a `{{macro}}`
  * placeholder, or a Markdown image construct (`![alt](url)`) are flagged with
- * a `skipped` reason and the spellchecker should ignore them. Pure numeric and
- * ALL-CAPS tokens are also flagged.
+ * a `skipped` reason and the spellchecker should ignore them. Tokens with no
+ * letters (numbers, measurements like `6'2`) and ALL-CAPS tokens are also flagged.
  *
  * Note: URL/email skipping is implicit — these rarely appear in tokenized form
  * without punctuation, and we don't try to detect URL-shaped ranges here. The
@@ -72,7 +72,8 @@ export const DEFAULT_TOKENIZER_OPTIONS: TokenizerOptions = {
 };
 
 const WORD_RE = /[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu;
-const STRICT_NUMBER_RE = /^\d[\d.,_]*$/;
+/** Tokens with no letters: numbers and measurements like `6'2` or `1-2`. */
+const HAS_LETTER_RE = /\p{L}/u;
 
 /**
  * Find code-fence ranges in `text`. A code fence is a run of ` ``` ` (3+)
@@ -244,7 +245,7 @@ function shouldSkip(
   if (ctx.macroRanges?.contains(mid)) return 'macroPlaceholder';
   if (ctx.imageRanges?.contains(mid)) return 'markdownImage';
 
-  if (ctx.options.ignoreNumbers && STRICT_NUMBER_RE.test(word)) return 'number';
+  if (ctx.options.ignoreNumbers && !HAS_LETTER_RE.test(word)) return 'number';
   if (
     ctx.options.ignoreAllCaps &&
     /^\p{L}+$/u.test(word) &&

@@ -107,6 +107,14 @@ describe('tokenizer — ignore rules', () => {
     expect(tokens.find((t) => t.wordLower === '14')?.skipped).toBe('number');
   });
 
+  it('skips measurements and ranges made of digits', () => {
+    const tokens = tokenize(`She is 4'1" and he is 6’2, a 1-2 split, 3rd place`);
+    expect(tokens.find((t) => t.wordLower === "4'1")?.skipped).toBe('number');
+    expect(tokens.find((t) => t.wordLower === '6’2')?.skipped).toBe('number');
+    expect(tokens.find((t) => t.wordLower === '1-2')?.skipped).toBe('number');
+    expect(tokens.find((t) => t.wordLower === '3rd')?.skipped).toBeUndefined();
+  });
+
   it('skips ALL-CAPS tokens', () => {
     const tokens = tokenize('NASA and ABC while lowercase stays');
     expect(tokens.find((t) => t.wordLower === 'nasa')?.skipped).toBe('allCaps');
