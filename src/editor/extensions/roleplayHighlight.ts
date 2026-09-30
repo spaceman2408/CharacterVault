@@ -49,13 +49,24 @@ function subtractSpan(span: Span, cuts: Span[]): Span[] {
   return pieces;
 }
 
-/** Closed `"..."` / `"..."` pairs on one line. Unclosed quotes stay narration. */
+const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
+
+/**
+ * Closed `"..."` / `“...”` pairs on one line. Unclosed quotes stay narration.
+ * A straight `"` right after a letter or digit (an inch mark like `6'2"`)
+ * never opens dialogue.
+ */
 function findQuotedSpans(text: string): Span[] {
   const spans: Span[] = [];
   const re = /"[^"\n]+"|“[^”\n]+”/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text)) !== null) {
-    spans.push({ from: match.index, to: match.index + match[0].length });
+    const from = match.index;
+    if (text[from] === '"' && from > 0 && LETTER_OR_DIGIT.test(text[from - 1])) {
+      re.lastIndex = from + 1;
+      continue;
+    }
+    spans.push({ from, to: from + match[0].length });
   }
   return spans;
 }
@@ -71,8 +82,13 @@ function findActionSpans(text: string): Span[] {
   while ((match = re.exec(text)) !== null) {
     const from = match.index;
     const to = from + match[0].length;
-    if (from > 0 && text[from - 1] === '*') continue;
-    if (to < text.length && text[to] === '*') continue;
+    const touchesAsterisk =
+      (from > 0 && text[from - 1] === '*') || (to < text.length && text[to] === '*');
+    if (touchesAsterisk) {
+      // The rejected match ate the next action's opening `*`; resume right after ours
+      re.lastIndex = from + 1;
+      continue;
+    }
     spans.push({ from, to });
   }
   return spans;

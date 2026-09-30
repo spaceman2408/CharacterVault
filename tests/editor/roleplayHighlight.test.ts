@@ -30,6 +30,18 @@ describe('findRoleplayRanges', () => {
     expect(kinds('He said "stay.')).toEqual([{ kind: 'narration', slice: 'He said "stay.' }]);
   });
 
+  it('does not open dialogue on an inch mark', () => {
+    expect(kinds(`4'1" "lol"`)).toEqual([
+      { kind: 'narration', slice: `4'1" ` },
+      { kind: 'dialogue', slice: '"lol"' },
+    ]);
+    expect(kinds(`He is 6'2" tall. "Hello" she said`)).toEqual([
+      { kind: 'narration', slice: `He is 6'2" tall. ` },
+      { kind: 'dialogue', slice: '"Hello"' },
+      { kind: 'narration', slice: ' she said' },
+    ]);
+  });
+
   it('ignores single quotes and apostrophes', () => {
     expect(kinds("It's 'fine,' she said")).toEqual([
       { kind: 'narration', slice: "It's 'fine,' she said" },
@@ -45,6 +57,21 @@ describe('findRoleplayRanges', () => {
   it('ignores **bold** markers', () => {
     expect(kinds('This is **bold** text')).toEqual([
       { kind: 'narration', slice: 'This is **bold** text' },
+    ]);
+  });
+
+  it('still finds actions after **bold** on the same line', () => {
+    expect(kinds('**bold** and *act*')).toEqual([
+      { kind: 'narration', slice: '**bold** and ' },
+      { kind: 'action', slice: '*act*' },
+    ]);
+    expect(kinds('*a* **b** *c*')).toEqual([
+      { kind: 'action', slice: '*a*' },
+      { kind: 'narration', slice: ' **b** ' },
+      { kind: 'action', slice: '*c*' },
+    ]);
+    expect(kinds('**a** and **b**')).toEqual([
+      { kind: 'narration', slice: '**a** and **b**' },
     ]);
   });
 
