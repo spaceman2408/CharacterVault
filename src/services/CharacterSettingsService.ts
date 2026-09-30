@@ -97,6 +97,17 @@ export class CharacterSettingsService {
     });
   }
 
+  async saveEditorFontSize(size: number): Promise<void> {
+    const settings = await this.getSettings();
+    await characterDb.settings.put({
+      ...settings,
+      ui: {
+        ...settings.ui,
+        editorFontSize: size,
+      },
+    });
+  }
+
   /** Roleplay prose colors, merged with defaults so all fields exist. */
   async getRoleplayHighlight(): Promise<RoleplayHighlightSettings> {
     const settings = await this.getSettings();

@@ -41,7 +41,10 @@ import {
   normalizeRoleplayHighlight,
 } from '../../db/characterTypes';
 import { applyMacroHighlightColors } from '../../editor/extensions/macroHighlight';
+import { DEFAULT_FONT_SIZE } from '../../editor/extensions/fontSizeControl';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
+import { useSaveEditorFontSize } from '../../hooks/useSaveEditorFontSize';
+import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { applyModelBinding } from '../../services/resolveOperationConfig';
 import {
   customContextService,
@@ -74,7 +77,8 @@ export function LorebookWorkspace(): React.ReactElement {
   const { settings, refreshSettings, openCharacter } = useCharacterContext();
 
   const [selectedText, setSelectedText] = useState('');
-  const [fontSize, setFontSize] = useState(settings?.ui?.editorFontSize ?? 14);
+  const [fontSize, setFontSize] = useState(settings?.ui?.editorFontSize ?? DEFAULT_FONT_SIZE);
+  const saveFontSize = useSaveEditorFontSize();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -155,6 +159,28 @@ export function LorebookWorkspace(): React.ReactElement {
       }
     });
   }, [currentLorebook?.id]);
+
+  // Read from the database: the character editor saves the size without refreshing `settings`
+  useEffect(() => {
+    let cancelled = false;
+    characterSettingsService
+      .getSettings()
+      .then((stored) => {
+        if (!cancelled) setFontSize(stored.ui.editorFontSize ?? DEFAULT_FONT_SIZE);
+      })
+      .catch((error: unknown) => console.error('Failed to load font size:', error));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleFontSizeChange = useCallback(
+    (size: number) => {
+      setFontSize(size);
+      saveFontSize(size);
+    },
+    [saveFontSize],
+  );
 
   const aiConfig = settings?.ai ?? DEFAULT_SETTINGS.ai;
   const samplerSettings = settings?.sampler ?? DEFAULT_SETTINGS.sampler;
@@ -625,7 +651,7 @@ export function LorebookWorkspace(): React.ReactElement {
             getContextContent={getContextContent}
             activeSection="lorebook"
             fontSize={fontSize}
-            onFontSizeChange={setFontSize}
+            onFontSizeChange={handleFontSizeChange}
             characterName={currentLorebook.name}
             spellcheck={spellcheck}
             markdownImageOpenLinks={markdownImageOpenLinks}

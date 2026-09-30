@@ -45,6 +45,7 @@ import { lorebookAttachmentService } from '../services/LorebookAttachmentService
 import { loadSnapshotDiff, openHistoryAfterFlush } from '../services/historyLifecycle';
 import { generateThumbnail } from '../utils/thumbnail';
 import { registerPendingSaveDiscard } from '../utils/characterPendingSaveDiscard';
+import { useSaveEditorFontSize } from '../hooks/useSaveEditorFontSize';
 
 const CENTRAL_SAVE_DEBOUNCE_MS = 500;
 
@@ -582,29 +583,19 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     });
   }, [commitQueuedSpecFieldUpdate]);
 
+  const saveFontSize = useSaveEditorFontSize();
+
   /**
    * Set font size
    */
-  const setFontSize = useCallback(async (size: number) => {
+  const setFontSize = useCallback((size: number) => {
     setFontSizeState(size);
 
     // Update CSS variable
     document.documentElement.style.setProperty('--editor-font-size', `${size}px`);
 
-    // Persist to database
-    try {
-      const settings = await characterSettingsService.getSettings();
-      await characterSettingsService.saveSettings({
-        ...settings,
-        ui: {
-          ...settings.ui,
-          editorFontSize: size,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to save font size:', error);
-    }
-  }, []);
+    saveFontSize(size);
+  }, [saveFontSize]);
 
   /**
    * Update spellcheck settings (merged with current values).

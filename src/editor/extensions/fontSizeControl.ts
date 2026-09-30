@@ -20,18 +20,10 @@ export const setEditorFontSize = StateEffect.define<number>({
 });
 
 /**
- * StateField that stores the current font size
+ * StateField that stores the current font size; `fontSizeExtension` seeds it with the editor's initial size
  */
 export const editorFontSizeField = StateField.define<number>({
   create() {
-    // Try to read from CSS variable first
-    if (typeof document !== 'undefined') {
-      const computed = getComputedStyle(document.documentElement).getPropertyValue('--editor-font-size');
-      const parsed = parseInt(computed, 10);
-      if (!isNaN(parsed) && parsed >= MIN_FONT_SIZE && parsed <= MAX_FONT_SIZE) {
-        return parsed;
-      }
-    }
     return DEFAULT_FONT_SIZE;
   },
   update(value, transaction) {
@@ -195,13 +187,13 @@ function createFontSizePopup(
   slider.value = `${currentSize}`;
   valueDisplay.textContent = `${currentSize}px`;
 
-  // Update display value while dragging, but don't update editor until release
+  // Preview in this editor while dragging; other editors and the saved size follow on release
   slider.addEventListener('input', () => {
     const size = parseInt(slider.value, 10);
     valueDisplay.textContent = `${size}px`;
+    setFontSize(view, size);
   });
 
-  // Update editor and persist on change (release)
   slider.addEventListener('change', () => {
     const size = parseInt(slider.value, 10);
     setFontSize(view, size);
@@ -210,12 +202,18 @@ function createFontSizePopup(
 
   // Explicit keyboard control so arrows/Home/End/PageUp/PageDown work even
   // though the slider lives inside the editor panel. Handled here with
-  // preventDefault so the native step does not apply a second time.
+  // preventDefault so the native step does not apply a second time, and so
+  // Ctrl+= / Ctrl+- / Ctrl+0 resize the editor instead of zooming the page.
   slider.addEventListener('keydown', (e) => {
     const current = parseInt(slider.value, 10);
     if (Number.isNaN(current)) return;
     let next: number | null = null;
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = current - 1;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && (e.key === '=' || e.key === '+')) next = current + 1;
+    else if (mod && e.key === '-') next = current - 1;
+    else if (mod && e.key === '0') next = DEFAULT_FONT_SIZE;
+    else if (mod) return;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = current - 1;
     else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = current + 1;
     else if (e.key === 'PageDown') next = current - 5;
     else if (e.key === 'PageUp') next = current + 5;
@@ -321,7 +319,9 @@ export function createFontSizeControl(
     if (popup) {
       const cleanup = (popup as unknown as Record<string, () => void>).__cleanup;
       if (cleanup) cleanup();
+      const hadFocus = popup.contains(document.activeElement);
       popup.remove();
+      if (hadFocus) view.focus();
       popup = null;
       button.style.background = 'transparent';
       button.style.borderColor = 'var(--ai-toolbar-input-border)';
@@ -341,6 +341,7 @@ export function createFontSizeControl(
     // Create and show popup
     popup = createFontSizePopup(view, onFontSizeChange, closePopup);
     container.appendChild(popup);
+    popup.querySelector('input')?.focus();
 
     button.style.background = 'var(--ai-toolbar-active-bg)';
     button.style.borderColor = 'var(--ai-toolbar-active)';
@@ -398,7 +399,7 @@ export function fontSizeExtension(
   };
 
   return [
-    editorFontSizeField,
+    editorFontSizeField.init(() => size),
     fontSizeThemeCompartment.of(createFontSizeTheme(size)),
     keymap.of([
       { key: 'Mod-=', run: (view) => stepFontSize(view, 1) },

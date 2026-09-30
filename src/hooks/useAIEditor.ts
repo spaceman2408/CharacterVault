@@ -1159,7 +1159,6 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
         spellcheckExtension({ settings: spellcheck, mode: spellcheckMode }),
         EditorView.theme({
           '&': {
-            fontSize: 'var(--editor-font-size, 16px)',
             height: '100%',
             overflow: 'hidden',
             ...editorStyles,
