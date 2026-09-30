@@ -460,7 +460,7 @@ function createToolbarPanel(
   // Handle instruct send
   const sendInstruct = () => {
     const prompt = instructInput.value.trim();
-    if (!prompt) return;
+    if (!prompt || hasSamplerError) return;
 
     // Store the prompt in state for error recovery
     state.instructPrompt = prompt;
@@ -1315,6 +1315,22 @@ function createToolbarPanel(
     }
   }
 
+  // The Send label names what Custom will do: rewrite the selection or insert at the cursor
+  function syncInstructTarget(warning: string | null) {
+    const label = currentSelection ? 'Rewrite' : 'Insert';
+    if (instructSendBtn.textContent !== label) instructSendBtn.textContent = label;
+    instructSendBtn.title = warning
+      ? warning.replace(/^⚠️\s*/, '')
+      : currentSelection
+        ? `Rewrite the ${selectedText.length} selected characters with this instruction (Enter)`
+        : 'Nothing is selected, so the AI writes new text at the cursor (Enter)';
+    instructInput.placeholder = currentSelection
+      ? 'How should the selected text change?'
+      : 'What should I write at the cursor?';
+    instructSendBtn.style.opacity = warning ? '0.5' : '';
+    instructSendBtn.style.pointerEvents = warning ? 'none' : '';
+  }
+
   // Update function - called when selection changes
   function updateState() {
     const selection = view.state.selection.main;
@@ -1355,6 +1371,7 @@ function createToolbarPanel(
       infoText.style.color = 'var(--ai-toolbar-text-muted)';
       infoText.classList.remove('warning');
     }
+    syncInstructTarget(warning);
 
     // Show/hide abort button based on processing state
     if (state.isProcessing) {

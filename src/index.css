@@ -944,6 +944,20 @@ textarea:focus:not(:focus-visible) {
     max-height: min(35vh, 180px) !important;
     padding: 6px 10px !important;
   }
+
+  /* Custom: the instruction gets a full-width line; Send / Cancel / payload sit below it */
+  .ai-toolbar-panel .ai-toolbar-controls.ai-toolbar-instruct-mode {
+    flex-wrap: wrap !important;
+    justify-content: flex-end;
+  }
+
+  .ai-toolbar-panel .ai-toolbar-controls.ai-toolbar-instruct-mode .ai-toolbar-instruct {
+    display: contents !important;
+  }
+
+  .ai-toolbar-panel .ai-toolbar-controls.ai-toolbar-instruct-mode .ai-toolbar-instruct-input {
+    flex: 1 1 100% !important;
+  }
 }
 
 /* ============================================================================
