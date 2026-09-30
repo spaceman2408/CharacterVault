@@ -180,12 +180,45 @@
             </ul>
           </div>
         </div>
-        <figure class="shot reveal">
+        <figure class="shot showcase reveal">
           <div class="window-bar" aria-hidden="true">
             <span class="wb-dot"></span><span class="wb-dot"></span><span class="wb-dot"></span>
             <span class="wb-url">vault.charactervault.app / editor</span>
           </div>
-          <img src="assets/screenshots/editor.png" alt="The card editor showing a character's description, the section tabs, and the Orion chat panel" class="zoomable" loading="lazy" width="1909" height="949" style="--focus: 0% 0%">
+          <div class="showcase-stage">
+            <img src="assets/screenshots/showcase-image.png" alt="The card editor with a character's first message open, the AI Context panel on the left, and the Orion chat on the right" class="zoomable" loading="lazy" width="1920" height="1080">
+            <button type="button" class="hs" data-side="down-right" style="--x: 23.7%; --y: 4.17%; --i: 0">
+              <span class="hs-tip"><strong>Autosave and token count</strong> Changes save as you type. Active tokens go out with every message; total adds greetings and lorebook entries.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-left" style="--x: 82.14%; --y: 2.96%; --i: 1">
+              <span class="hs-tip"><strong>Snapshots</strong> Go back to an earlier version of the card, or restore a single change from the diff.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-left" style="--x: 94.06%; --y: 2.96%; --i: 2">
+              <span class="hs-tip"><strong>Export</strong> Download the card as PNG or JSON, in V2 or V3, ready to load in SillyTavern.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-right" style="--x: 48.96%; --y: 8.15%; --i: 3">
+              <span class="hs-tip"><strong>A tab for every field</strong> Name, greetings, examples, system prompt, lorebook, creator notes, and the rest of the V2 and V3 spec.</span>
+            </button>
+            <button type="button" class="hs" data-side="left" style="--x: 86.2%; --y: 13.7%; --i: 4">
+              <span class="hs-tip"><strong>Orion, Chat or Agent</strong> Talk ideas through in Chat, or switch to Agent and describe the edit you want made to the card.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-right" style="--x: 30.1%; --y: 24.35%; --i: 5">
+              <span class="hs-tip"><strong>Rewrite a selection</strong> Highlight text and pick a rewrite, or type your own instruction with Custom. Nuke Card is a custom button with a saved prompt.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-left" style="--x: 72.5%; --y: 24.35%; --i: 6">
+              <span class="hs-tip"><strong>Editor tools</strong> Search and replace, a preview of exactly what gets sent to the AI, HTML entity cleanup, and font size.</span>
+            </button>
+            <button type="button" class="hs" data-side="right" style="--x: 1.61%; --y: 52.5%; --i: 7">
+              <span class="hs-tip"><strong>AI Context</strong> Tick the sections the AI can read and add your own notes. The usage bar shows how much of the model's context they fill.</span>
+            </button>
+            <button type="button" class="hs" data-side="left" style="--x: 79.69%; --y: 59.81%; --i: 8">
+              <span class="hs-tip"><strong>Color-coded writing</strong> "Dialogue", *actions*, and {{char}} macros each get their own color, and spellcheck underlines typos.</span>
+            </button>
+          </div>
+          <figcaption class="showcase-caption">
+            <span class="cap-hint">Hover or tap a dot to see what it does.</span>
+            <span class="cap-detail"></span>
+          </figcaption>
         </figure>
       </div>
     </section>

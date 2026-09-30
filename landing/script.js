@@ -460,3 +460,34 @@ if (lightbox) {
     }
   });
 }
+
+const showcase = document.querySelector('.showcase');
+
+if (showcase) {
+  const spots = showcase.querySelectorAll('.hs');
+  const caption = showcase.querySelector('.showcase-caption');
+  const captionDetail = caption.querySelector('.cap-detail');
+
+  const setOpen = (spot) => {
+    spots.forEach((s) => s.classList.toggle('open', s === spot));
+    captionDetail.innerHTML = spot ? spot.querySelector('.hs-tip').innerHTML : '';
+    caption.classList.toggle('has-detail', Boolean(spot));
+  };
+
+  spots.forEach((spot) => {
+    spot.addEventListener('click', () => {
+      setOpen(spot.classList.contains('open') ? null : spot);
+    });
+    spot.addEventListener('pointerenter', (event) => {
+      if (event.pointerType === 'mouse' && !spot.classList.contains('open')) setOpen(null);
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.hs')) setOpen(null);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setOpen(null);
+  });
+}

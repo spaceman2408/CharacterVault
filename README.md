@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <img src="landing/assets/screenshots/editor.png" alt="The CharacterVault card editor with the Orion chat panel" width="900">
+  <img src="landing/assets/screenshots/showcase-image.png" alt="The CharacterVault card editor with a first message open, the AI Context panel, and the Orion chat" width="900">
 </p>
 
 ---
