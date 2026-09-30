@@ -1181,32 +1181,6 @@ function createToolbarPanel(
     if (hasSelection) {
       currentSelection = selection;
       selectedText = view.state.doc.sliceString(selection.from, selection.to);
-      const charCount = selectedText.length;
-      const estimatedTokens = AIService.estimateTokens(selectedText);
-      const limit = Math.max(0, currentSampler.contextLength - currentSampler.maxTokens - SAFETY_MARGIN);
-      
-      if (currentSampler.maxTokens >= currentSampler.contextLength) {
-        infoText.textContent = `⚠️ Please adjust Max Tokens to be less than Context Length`;
-        infoText.style.color = 'var(--ai-toolbar-error-text)';
-        infoText.classList.add('warning');
-        hasSelection = false;
-        hasSamplerError = true;
-      } else if (estimatedTokens > limit) {
-        if (limit <= 0) {
-          infoText.textContent = `⚠️ AI needs a larger context window`;
-        } else {
-          infoText.textContent = `⚠️ Selection is too long (${estimatedTokens}/${limit} tokens)`;
-        }
-        infoText.style.color = 'var(--ai-toolbar-error-text)';
-        infoText.classList.add('warning');
-        hasSelection = false; // Disable buttons
-        hasSamplerError = true;
-      } else {
-        infoText.textContent = `${charCount} chars selected`;
-        infoText.style.color = 'var(--ai-toolbar-text-muted)';
-        infoText.classList.remove('warning');
-        hasSamplerError = false;
-      }
     } else {
       currentSelection = null;
       selectedText = '';
@@ -1214,13 +1188,33 @@ function createToolbarPanel(
         // Don't clear instruct mode if we're in it - user can still type their prompt
         instructInput.value = '';
       }
-      // Keep sampler error state - it applies regardless of selection
-      if (!hasSamplerError) {
-        infoText.textContent = 'Select text to use AI';
-        infoText.style.color = 'var(--ai-toolbar-text-muted)';
-        infoText.classList.remove('warning');
-      }
       dropdown.style.display = 'none';
+    }
+
+    // Sampler problems block every op; a too-long selection only while it is selected
+    const limit = Math.max(0, currentSampler.contextLength - currentSampler.maxTokens - SAFETY_MARGIN);
+    let warning: string | null = null;
+    if (currentSampler.maxTokens >= currentSampler.contextLength) {
+      warning = '⚠️ Please adjust Max Tokens to be less than Context Length';
+    } else if (limit <= 0) {
+      warning = '⚠️ AI needs a larger context window';
+    } else if (hasSelection) {
+      const estimatedTokens = AIService.estimateTokens(selectedText);
+      if (estimatedTokens > limit) {
+        warning = `⚠️ Selection is too long (${estimatedTokens}/${limit} tokens)`;
+      }
+    }
+
+    hasSamplerError = warning !== null;
+    if (warning) {
+      infoText.textContent = warning;
+      infoText.style.color = 'var(--ai-toolbar-error-text)';
+      infoText.classList.add('warning');
+      hasSelection = false;
+    } else {
+      infoText.textContent = hasSelection ? `${selectedText.length} chars selected` : 'Select text to use AI';
+      infoText.style.color = 'var(--ai-toolbar-text-muted)';
+      infoText.classList.remove('warning');
     }
 
     // Show/hide abort button based on processing state
