@@ -54,6 +54,21 @@ describe('findMarkdownImages', () => {
     expect(findMarkdownImages('https://plain.url/no-md')).toEqual([]);
   });
 
+  it('keeps one level of balanced parentheses in a bare URL', () => {
+    const text = 'x ![](https://en.wikipedia.org/wiki/Foo_(bar).png) y';
+    const [match] = findMarkdownImages(text);
+    expect(match.url).toBe('https://en.wikipedia.org/wiki/Foo_(bar).png');
+    expect(text.slice(match.urlFrom, match.urlTo)).toBe(match.url);
+    expect(text.slice(match.to)).toBe(' y');
+
+    const titled = findMarkdownImages('![a](https://ex.com/a_(1).png (title))');
+    expect(titled[0]?.url).toBe('https://ex.com/a_(1).png');
+    expect(titled[0]?.title).toBe('title');
+
+    const trailing = findMarkdownImages('![](https://ex.com/a.png)(not part)');
+    expect(trailing[0]?.url).toBe('https://ex.com/a.png');
+  });
+
   it('reports urlFrom/urlTo covering the URL segment', () => {
     const text = '![alt](https://example.com/x.webp)';
     const [match] = findMarkdownImages(text);

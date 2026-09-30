@@ -26,10 +26,11 @@ export interface MarkdownImageMatch {
 /**
  * `![alt](url)`, `![alt](<url>)`, optional title:
  * `![alt](url "title")` / `'title'` / `(title)`.
+ * A bare URL may hold one level of balanced parentheses, like `Foo_(bar).png`.
  * Single-line only (no newlines inside the construct).
  */
 const MD_IMAGE_RE =
-  /!\[([^\]]*)]\(\s*(?:<([^>\n]+)>|([^)\s\n]+))(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\s*\)/g;
+  /!\[([^\]]*)]\(\s*(?:<([^>\n]+)>|((?:[^()\s]|\([^()\s]*\))+))(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\s*\)/g;
 
 /**
  * Find all Markdown image constructs in `text`.

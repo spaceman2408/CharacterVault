@@ -34,8 +34,9 @@ const CLICK_DRAG_PX = 5;
 
 let activeModal: HTMLElement | null = null;
 let activeModalKeydown: ((event: KeyboardEvent) => void) | null = null;
+let activeModalView: EditorView | null = null;
 
-function dismissExternalLinkModal(): void {
+function dismissExternalLinkModal(restoreFocus = false): void {
   if (activeModalKeydown) {
     document.removeEventListener('keydown', activeModalKeydown, true);
     activeModalKeydown = null;
@@ -44,6 +45,9 @@ function dismissExternalLinkModal(): void {
     activeModal.remove();
     activeModal = null;
   }
+  const view = activeModalView;
+  activeModalView = null;
+  if (restoreFocus && view) view.focus();
 }
 
 function openExternalUrl(url: string): void {
@@ -51,7 +55,7 @@ function openExternalUrl(url: string): void {
   if (win) win.opener = null;
 }
 
-function showLeaveConfirmModal(url: string): void {
+function showLeaveConfirmModal(view: EditorView, url: string): void {
   if (!isOpenableHttpUrl(url)) return;
   dismissExternalLinkModal();
 
@@ -112,25 +116,33 @@ function showLeaveConfirmModal(url: string): void {
   openBtn.className = 'cv-external-link-confirm';
   openBtn.textContent = 'Open link';
 
+  const focusable = [cancelBtn, openBtn];
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      dismissExternalLinkModal();
+      dismissExternalLinkModal(true);
+    } else if (event.key === 'Tab') {
+      event.preventDefault();
+      const index = focusable.indexOf(document.activeElement as HTMLButtonElement);
+      const next = event.shiftKey
+        ? (index <= 0 ? focusable.length : index) - 1
+        : (index + 1) % focusable.length;
+      focusable[next].focus();
     }
   };
 
   cancelBtn.addEventListener('click', (event) => {
     event.preventDefault();
-    dismissExternalLinkModal();
+    dismissExternalLinkModal(true);
   });
   openBtn.addEventListener('click', (event) => {
     event.preventDefault();
     openExternalUrl(url);
-    dismissExternalLinkModal();
+    dismissExternalLinkModal(true);
   });
   overlay.addEventListener('click', (event) => {
-    if (event.target === overlay) dismissExternalLinkModal();
+    if (event.target === overlay) dismissExternalLinkModal(true);
   });
 
   header.appendChild(eyebrow);
@@ -145,8 +157,10 @@ function showLeaveConfirmModal(url: string): void {
   document.body.appendChild(overlay);
   activeModal = overlay;
   activeModalKeydown = onKeyDown;
+  activeModalView = view;
   document.addEventListener('keydown', onKeyDown, true);
-  openBtn.focus();
+  // Cancel, not Open link, so a stray Enter never leaves the app
+  cancelBtn.focus();
 }
 
 function findOpenableImageAt(
@@ -267,7 +281,7 @@ function imageLinksPlugin(openLinksEnabled: boolean) {
           if (!match) return false;
 
           event.preventDefault();
-          showLeaveConfirmModal(match.url);
+          showLeaveConfirmModal(view, match.url);
           return true;
         },
       },
