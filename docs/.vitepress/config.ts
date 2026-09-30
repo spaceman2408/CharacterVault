@@ -65,6 +65,7 @@ nav: [
           { text: 'FAQ', link: '/faq' },
           { text: 'Privacy', link: '/privacy' },
           { text: 'Changelog', link: '/changelog' },
+          { text: 'Release 1.8.2', link: '/releases/v1.8.2' },
           { text: 'Release 1.8.1', link: '/releases/v1.8.1' },
           { text: 'Release 1.8.0', link: '/releases/v1.8.0' },
           { text: 'Release 1.7.5', link: '/releases/v1.7.5' },

@@ -6,6 +6,16 @@ Quick overview of recent updates to CharacterVault.
 
 ## September 2026
 
+### 1.8.2
+
+CharacterVault 1.8.2 makes inline AI results easy to retry, time, and reuse, speeds up search, font size, image links, and name macros in the editor, and carries card lorebook options and JPEG or WebP images cleanly to SillyTavern, plus a bigger spellcheck dictionary and a round of editor fixes.
+
+- **Inline AI results**: **↻ Retry**, **Reject** reopens Custom with your instruction, model and timing pills, a cut-off warning, **Rewrite** / **Insert** on Custom, and recent instructions with **↑**
+- **Faster editing**: `Ctrl+H` replace and `F3` / `Ctrl+G` in search, a live **aA** font slider with shortcuts, `Ctrl+click` image links, and **Backspace** to keep a plain `char` / `user` (**Settings → Character Workspace → Name macros**)
+- **Clean round-trips to SillyTavern**: card lorebook options go where SillyTavern reads them, older cards catch up when opened, and **Export → PNG** converts JPEG or WebP images
+
+[Release 1.8.2 →](/releases/v1.8.2) · [Text Editor →](/features/editor) · [Import & Export →](/features/import-export)
+
 ### 1.8.1
 
 CharacterVault 1.8.1 brings snapshot diffs laid out like the Agent review, a one-click Orion / Agent switch with edit-and-resend in Orion, and a Creator Notes preview that can't quietly phone home, plus a large round of fixes to saving, import, export, and the lorebook editor.

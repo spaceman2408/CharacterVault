@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.8.1
-Snapshot diffs like the Agent review, one Orion / Agent chat header, a safer Creator Notes preview, and a large round of fixes.
+::: tip CharacterVault 1.8.2
+Retry and reuse inline AI results, faster search and editing, and clean lorebook and PNG round-trips to SillyTavern.
 
-[Try it](https://vault.charactervault.app) · [Snapshot diffs](/features/snapshots-history#diff-viewer) · [Creator Notes](/features/creator-notes#sandboxed-rendering)
+[Try it](https://vault.charactervault.app) · [Inline AI results](/features/editor#ai-operation-results-ghost-preview) · [Import & Export](/features/import-export)
 :::
 
 # CharacterVault
