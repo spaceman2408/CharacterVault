@@ -5,6 +5,20 @@ import { ConfirmDialog } from '../../../src/components/ui/ConfirmDialog';
 
 afterEach(cleanup);
 
+describe('ConfirmDialog placement', () => {
+  it('renders on the document body so a blurred parent cannot clip the overlay', () => {
+    const { container } = render(
+      <div style={{ backdropFilter: 'blur(24px)' }}>
+        <ConfirmDialog open title="Reset?" message="Sure?" onConfirm={() => undefined} onCancel={() => undefined} />
+      </div>,
+    );
+    const dialog = document.querySelector('[role="alertdialog"]');
+
+    expect(dialog).not.toBeNull();
+    expect(container.contains(dialog)).toBe(false);
+  });
+});
+
 describe('ConfirmDialog Escape', () => {
   it('cancels the dialog without reaching an Escape listener underneath', () => {
     const parentClose = vi.fn();

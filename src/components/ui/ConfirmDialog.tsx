@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -48,7 +49,8 @@ export function ConfirmDialog({
       ? 'border-danger/40 bg-danger text-white hover:opacity-90'
       : 'bg-accent text-accent-fg hover:opacity-90';
 
-  return (
+  // Portal out of the editor panels: their backdrop-filter would clip a fixed overlay to the panel.
+  return createPortal(
     <div
       className="fixed inset-0 z-100 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
       onMouseDown={(event) => {
@@ -81,7 +83,8 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
