@@ -7,12 +7,14 @@ const {
   getLorebookSnapshotById,
   deleteLorebookSnapshot,
   overwriteLorebookSnapshot,
+  getLorebook,
 } = vi.hoisted(() => ({
   createLorebookSnapshot: vi.fn(),
   getLorebookSnapshotMetadata: vi.fn(),
   getLorebookSnapshotById: vi.fn(),
   deleteLorebookSnapshot: vi.fn(),
   overwriteLorebookSnapshot: vi.fn(),
+  getLorebook: vi.fn(),
 }));
 
 vi.mock('../../src/db/CharacterDatabase', () => ({
@@ -22,6 +24,7 @@ vi.mock('../../src/db/CharacterDatabase', () => ({
     getLorebookSnapshotById,
     deleteLorebookSnapshot,
     overwriteLorebookSnapshot,
+    getLorebook,
   },
 }));
 
@@ -201,5 +204,59 @@ describe('LorebookSnapshotService.createFromLorebook', () => {
       computeLorebookPayloadHash(payload),
     ]);
     expect(left).toBe(right);
+  });
+});
+
+describe('LorebookSnapshotService.snapshotBeforePush', () => {
+  beforeEach(() => {
+    createLorebookSnapshot.mockReset();
+    getLorebookSnapshotMetadata.mockReset();
+    getLorebook.mockReset();
+    createLorebookSnapshot.mockImplementation(async (input) => ({
+      id: 'snap-push',
+      createdAt: '2020-01-02T00:00:00.000Z',
+      ...input,
+    }));
+  });
+
+  it('snapshots the vault book before a push that changes it', async () => {
+    const vault = makeLorebook();
+    getLorebook.mockResolvedValue(vault);
+
+    const snapshot = await lorebookSnapshotService.snapshotBeforePush(
+      vault.id,
+      { ...vault.book, entries: [] },
+      'Fallback',
+    );
+
+    expect(snapshot?.source).toBe('auto');
+    expect(snapshot?.payload.book.entries).toHaveLength(1);
+  });
+
+  it('skips the snapshot when the push leaves the vault book unchanged', async () => {
+    const vault = makeLorebook();
+    getLorebook.mockResolvedValue(vault);
+
+    const snapshot = await lorebookSnapshotService.snapshotBeforePush(
+      vault.id,
+      structuredClone(vault.book),
+      'Fallback',
+    );
+
+    expect(snapshot).toBeNull();
+    expect(createLorebookSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('skips the snapshot when the vault book is gone', async () => {
+    getLorebook.mockResolvedValue(undefined);
+
+    const snapshot = await lorebookSnapshotService.snapshotBeforePush(
+      'missing',
+      makeLorebook().book,
+      'Fallback',
+    );
+
+    expect(snapshot).toBeNull();
+    expect(createLorebookSnapshot).not.toHaveBeenCalled();
   });
 });

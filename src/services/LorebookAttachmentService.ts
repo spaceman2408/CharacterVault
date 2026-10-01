@@ -130,14 +130,6 @@ export class LorebookAttachmentService {
     return resolved;
   }
 
-  /** Load full books for AI context (skips missing). */
-  async loadAttachedBooks(characterId: string): Promise<VaultLorebook[]> {
-    const resolved = await this.resolve(characterId);
-    return resolved
-      .filter((item): item is ResolvedLorebookAttachment & { lorebook: VaultLorebook } => !!item.lorebook)
-      .map((item) => item.lorebook);
-  }
-
   /**
    * Characters that have this vault lorebook attached.
    * Lightweight list items only (name/thumbnail); attach is edited from the character side.

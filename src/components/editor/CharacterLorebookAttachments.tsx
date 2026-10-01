@@ -15,6 +15,8 @@ import {
   lorebookAttachmentService,
   type ResolvedLorebookAttachment,
 } from '../../services/LorebookAttachmentService';
+import { lorebookService } from '../../services/LorebookService';
+import { lorebookSnapshotService } from '../../services/LorebookSnapshotService';
 import { useCharacterEditorContext, useLorebookContext } from '../../context';
 import { flushChatSessions } from '../../utils/chatSessionFlush';
 import { flushLorebookDraft } from './lorebook/draftFlush';
@@ -25,6 +27,10 @@ import type { LorebookAttachmentControls } from './lorebook/types';
 
 const ATTACH_HELP =
   'One library book per character. Open in vault writes this lorebook to the linked book (or creates one), then opens it. Edits in the library update every linked character. Linking asks to copy entries onto the character (replaces what\'s already there).';
+
+function formatEntryCount(count: number): string {
+  return `${count} entr${count === 1 ? 'y' : 'ies'}`;
+}
 
 interface PendingConfirm {
   title: string;
@@ -49,7 +55,7 @@ interface AttachmentApi {
   removeVaultLink: () => Promise<void>;
   handleOpenInVault: () => void;
   canOpenInVault: boolean;
-  handleCopy: (lorebook: VaultLorebook) => void;
+  handleCopy: (lorebookId: string) => void;
   handleOpen: (lorebookId: string) => void;
 }
 
@@ -93,13 +99,20 @@ export function LorebookAttachmentProvider({
     };
   }, []);
 
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+    setMenuPos(null);
+    setPickerOpen(false);
+  }, []);
+
   const requestConfirm = useCallback((confirm: PendingConfirm): Promise<boolean> => {
     if (confirmResolverRef.current) return Promise.resolve(false);
+    closeMenu();
     setPendingConfirm(confirm);
     return new Promise<boolean>((resolve) => {
       confirmResolverRef.current = resolve;
     });
-  }, []);
+  }, [closeMenu]);
 
   const resolvePendingConfirm = useCallback((value: boolean) => {
     setPendingConfirm(null);
@@ -112,11 +125,11 @@ export function LorebookAttachmentProvider({
       const entryCount = lorebook.book.entries?.length ?? 0;
       const existing = embedded?.entries?.length ?? 0;
       return requestConfirm({
-        title: `Copy ${entryCount} entries?`,
+        title: `Copy ${formatEntryCount(entryCount)}?`,
         message:
           existing > 0
-            ? `Copy ${entryCount} entries from "${lorebook.name}" into this character's embedded lorebook? This replaces the current ${existing} embedded entries.`
-            : `Copy ${entryCount} entries from "${lorebook.name}" into this character's embedded lorebook?`,
+            ? `Copy ${formatEntryCount(entryCount)} from "${lorebook.name}" into this character's embedded lorebook? This replaces the ${formatEntryCount(existing)} already on this character.`
+            : `Copy ${formatEntryCount(entryCount)} from "${lorebook.name}" into this character's embedded lorebook?`,
         confirmLabel: 'Copy',
         variant: 'default',
       });
@@ -143,12 +156,6 @@ export function LorebookAttachmentProvider({
     [lorebookListItems, attachedId],
   );
 
-  const closeMenu = useCallback(() => {
-    setMenuOpen(false);
-    setMenuPos(null);
-    setPickerOpen(false);
-  }, []);
-
   const openMenu = useCallback((anchor: HTMLElement) => {
     const rect = anchor.getBoundingClientRect();
     const width = Math.min(320, window.innerWidth - 16);
@@ -157,7 +164,8 @@ export function LorebookAttachmentProvider({
     setPickerOpen(false);
     onMenuOpenRef.current?.();
     setMenuOpen(true);
-  }, []);
+    void reload();
+  }, [reload]);
 
   useEffect(() => {
     if (closeSignal) closeMenu();
@@ -255,10 +263,12 @@ export function LorebookAttachmentProvider({
       const latest = await flushPendingSaves();
       const book = latest?.data.characterBook ?? embeddedBook;
       if (book) {
+        const fallbackName = fallbackVaultName(book);
+        await lorebookSnapshotService.snapshotBeforePush(lorebookId, book, fallbackName);
         await lorebookAttachmentService.writeEmbeddedToVault(
           lorebookId,
           book,
-          fallbackVaultName(book),
+          fallbackName,
           characterId,
         );
       }
@@ -313,7 +323,7 @@ export function LorebookAttachmentProvider({
     const fallbackName = fallbackVaultName(embeddedBook);
     const createOk = await requestConfirm({
       title: 'Open in the lorebook vault editor?',
-      message: `A vault copy will be created from this character's embedded lorebook (${entryCount} entries), attached to the character, and opened.`,
+      message: `A vault copy will be created from this character's embedded lorebook (${formatEntryCount(entryCount)}), attached to the character, and opened.`,
       confirmLabel: 'Create and open',
       variant: 'default',
     });
@@ -355,8 +365,11 @@ export function LorebookAttachmentProvider({
   ]);
 
   const handleCopy = useCallback(
-    (lorebook: VaultLorebook) => {
+    (lorebookId: string) => {
       void (async () => {
+        // Agent runs sync the card into the vault book while this panel is mounted.
+        const lorebook = await lorebookService.get(lorebookId);
+        if (!lorebook || !mountedRef.current) return;
         if (!(await promptCopyIntoEmbedded(lorebook, embeddedBook))) return;
         onCopyIntoEmbedded(cloneBookForEmbed(lorebook));
       })();
@@ -549,7 +562,7 @@ function AttachmentPanel(): React.ReactElement | null {
                 >
                   <Book className="h-3.5 w-3.5 shrink-0 text-accent" />
                   <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
-                  <span className="shrink-0 text-fg-subtle">{item.entryCount} entries</span>
+                  <span className="shrink-0 text-fg-subtle">{formatEntryCount(item.entryCount)}</span>
                 </button>
               ))
             )}
@@ -570,14 +583,14 @@ function AttachmentPanel(): React.ReactElement | null {
               <p className="text-[11px] text-fg-muted">
                 {attached.missing
                   ? 'Book was deleted from the vault'
-                  : `${attached.lorebook?.book.entries?.length ?? 0} entries · vault link`}
+                  : `${formatEntryCount(attached.lorebook?.book.entries?.length ?? 0)} · vault link`}
               </p>
             </div>
             {!attached.missing && attached.lorebook && (
               <>
                 <button
                   type="button"
-                  onClick={() => handleCopy(attached.lorebook!)}
+                  onClick={() => handleCopy(attached.lorebookId)}
                   disabled={busy}
                   className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-50"
                   title="Copy into embedded character lorebook (replaces entries)"
@@ -589,7 +602,7 @@ function AttachmentPanel(): React.ReactElement | null {
                   onClick={() => handleOpen(attached.lorebookId)}
                   disabled={busy}
                   className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-50"
-                  title="Open in lorebook vault"
+                  title="Write current lorebook to the attached vault book and open it"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                 </button>
@@ -640,7 +653,7 @@ export function DeleteEmbeddedLorebookButton({
   const linked = Boolean(api?.attached);
   const entryClause =
     entryCount > 0
-      ? `Delete this lorebook and all ${entryCount} entries?`
+      ? `Delete this lorebook and all ${formatEntryCount(entryCount)}?`
       : 'Delete this lorebook?';
   const linkClause = linked
     ? ' This also removes the link to the lorebook vault.'

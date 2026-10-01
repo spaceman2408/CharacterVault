@@ -3,8 +3,10 @@
  */
 
 import { characterDb } from '../db/CharacterDatabase';
-import { lorebookAttachmentService } from './LorebookAttachmentService';
+import { cloneEmbeddedBook, lorebookAttachmentService } from './LorebookAttachmentService';
+import { normalizeCardBook } from './LorebookConverter';
 import type {
+  CharacterBook,
   LorebookSnapshot,
   LorebookSnapshotMetadata,
   LorebookSnapshotPayload,
@@ -91,6 +93,22 @@ export class LorebookSnapshotService {
       payload,
       payloadHash,
     });
+  }
+
+  /**
+   * Save the vault book before a character's lorebook is pushed over it, so the
+   * push can be rolled back. Skips when the push would not change the book.
+   */
+  async snapshotBeforePush(
+    lorebookId: string,
+    embedded: CharacterBook,
+    fallbackName: string,
+  ): Promise<LorebookSnapshot | null> {
+    const current = await characterDb.getLorebook(lorebookId);
+    if (!current) return null;
+    const incoming = normalizeCardBook(cloneEmbeddedBook(embedded, fallbackName));
+    if (stableSerialize(incoming) === stableSerialize(normalizeCardBook(current.book))) return null;
+    return this.createFromLorebook(current, 'auto');
   }
 
   async listMetadata(lorebookId: string): Promise<LorebookSnapshotMetadata[]> {

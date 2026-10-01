@@ -250,6 +250,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
     currentCharacter,
     updateCharacter,
     updateSpecField,
+    flushPendingSaves,
     setSelectedText,
     contextSectionIds,
     aiConfig,
@@ -570,12 +571,16 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
                     embeddedBook: currentCharacter.data?.characterBook,
                     characterName: currentCharacter.name,
                     onCopyIntoEmbedded: (lorebook) => {
-                      void updateCharacter({
-                        data: {
-                          ...currentCharacter.data,
-                          characterBook: lorebook,
-                        },
-                      });
+                      // Runs after a confirm; build on the latest card, not this render's copy.
+                      void (async () => {
+                        const latest = (await flushPendingSaves()) ?? currentCharacter;
+                        await updateCharacter({
+                          data: {
+                            ...latest.data,
+                            characterBook: lorebook,
+                          },
+                        });
+                      })();
                     },
                   }
                 : undefined
