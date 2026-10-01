@@ -6,6 +6,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, Loader2, Save, Settings2, X } from 'lucide-react';
 import { CharacterEditorContext } from '../../context';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ToastContainer } from './components/ToastContainer';
 import { useModelCatalog } from './hooks/useModelCatalog';
 import { useNanoGPTSignIn } from './hooks/useNanoGPTSignIn';
@@ -33,6 +34,7 @@ export function CharacterSettingsPanel({
   const [activeTab, setActiveTab] = useState<SettingsTabId>('ai');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const toastTimeoutsRef = useRef<Map<string, number>>(new Map());
 
@@ -61,6 +63,7 @@ export function CharacterSettingsPanel({
     isLoading,
     loadFailed,
     retryLoad,
+    isDirty,
     isSaving,
     lastSavedAt,
     save,
@@ -88,9 +91,15 @@ export function CharacterSettingsPanel({
     addToast,
   });
 
+  const requestClose = useCallback(() => {
+    if (isDirty) setConfirmDiscard(true);
+    else onClose();
+  }, [isDirty, onClose]);
+
   // Reset toasts when panel closes
   useEffect(() => {
     if (isOpen) return;
+    setConfirmDiscard(false);
     setToasts([]);
     toastTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
     toastTimeoutsRef.current.clear();
@@ -110,7 +119,7 @@ export function CharacterSettingsPanel({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        requestClose();
       }
 
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -141,7 +150,7 @@ export function CharacterSettingsPanel({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, activeTab, onClose]);
+  }, [isOpen, activeTab, requestClose]);
 
   // Focus trap
   useEffect(() => {
@@ -275,7 +284,7 @@ export function CharacterSettingsPanel({
             </div>
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
               aria-label="Close settings panel"
             >
@@ -358,7 +367,7 @@ export function CharacterSettingsPanel({
           <div className="flex shrink-0 items-center justify-stretch gap-2 border-t border-border bg-surface px-4 py-3 sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               className="min-h-11 flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong sm:flex-none"
             >
               Cancel
@@ -375,6 +384,19 @@ export function CharacterSettingsPanel({
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmDiscard}
+        title="Discard unsaved changes?"
+        message="Your changes to settings have not been saved. Closing now will lose them."
+        confirmLabel="Discard"
+        cancelLabel="Keep editing"
+        variant="danger"
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          onClose();
+        }}
+        onCancel={() => setConfirmDiscard(false)}
+      />
     </>
   );
 }

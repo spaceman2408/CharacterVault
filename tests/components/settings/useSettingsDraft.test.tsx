@@ -41,4 +41,63 @@ describe('useSettingsDraft', () => {
     await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
     expect(hook.result.current.loadFailed).toBe(false);
   });
+
+  describe('isDirty', () => {
+    function mockStorage() {
+      vi.spyOn(characterSettingsService, 'getSettings').mockResolvedValue({
+        ...DEFAULT_CHARACTER_VAULT_SETTINGS,
+        id: 'app-settings',
+      });
+      vi.spyOn(characterSettingsService, 'saveAllAISettings').mockResolvedValue();
+      vi.spyOn(characterSettingsService, 'saveRoleplayHighlight').mockResolvedValue();
+      vi.spyOn(characterSettingsService, 'saveMacroHighlight').mockResolvedValue();
+      vi.spyOn(characterSettingsService, 'saveSettings').mockResolvedValue();
+      vi.spyOn(characterSettingsService, 'saveSpellcheckSettings').mockResolvedValue();
+    }
+
+    async function loaded() {
+      mockStorage();
+      const { hook } = setup();
+      await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+      return hook;
+    }
+
+    it('is clean after load and dirty after an edit', async () => {
+      const hook = await loaded();
+      expect(hook.result.current.isDirty).toBe(false);
+      act(() =>
+        hook.result.current.setDraft((prev) => ({ ...prev, showLuckyVortex: !prev.showLuckyVortex }))
+      );
+      expect(hook.result.current.isDirty).toBe(true);
+    });
+
+    it('is clean again when an edit is reverted', async () => {
+      const hook = await loaded();
+      act(() => hook.result.current.setDraft((prev) => ({ ...prev, macroAutoConvert: !prev.macroAutoConvert })));
+      act(() => hook.result.current.setDraft((prev) => ({ ...prev, macroAutoConvert: !prev.macroAutoConvert })));
+      expect(hook.result.current.isDirty).toBe(false);
+    });
+
+    it('ignores fetched model lists', async () => {
+      const hook = await loaded();
+      act(() =>
+        hook.result.current.setDraft((prev) => ({
+          ...prev,
+          ai: { ...prev.ai, availableModels: [{ id: 'm', name: 'M' }] },
+        }))
+      );
+      expect(hook.result.current.isDirty).toBe(false);
+    });
+
+    it('is clean after a successful save', async () => {
+      const hook = await loaded();
+      act(() =>
+        hook.result.current.setDraft((prev) => ({ ...prev, requireAgentReview: !prev.requireAgentReview }))
+      );
+      await act(async () => {
+        await hook.result.current.save();
+      });
+      expect(hook.result.current.isDirty).toBe(false);
+    });
+  });
 });

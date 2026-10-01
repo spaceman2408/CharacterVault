@@ -3,7 +3,7 @@
  * @module components/settings/hooks/useSettingsDraft
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AIConfig,
   PromptModelBinding,
@@ -82,6 +82,18 @@ export function createDefaultDraft(): SettingsDraft {
       },
     },
   };
+}
+
+function sortObjectKeys(_key: string, value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+  );
+}
+
+/** Comparable form of a draft; the model list is a fetched cache, not a setting. */
+function draftFingerprint(draft: SettingsDraft): string {
+  return JSON.stringify({ ...draft, ai: { ...draft.ai, availableModels: [] } }, sortObjectKeys);
 }
 
 function mergeLoadedAIConfig(config: AIConfig): AIConfig {
@@ -189,6 +201,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
   const [isLoading, setIsLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [savedDraft, setSavedDraft] = useState<SettingsDraft | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const mountedRef = useRef(true);
@@ -234,7 +247,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         loadedContextRef.current = [...contextIds];
         loadedFavoritesRef.current = getFavoriteTags();
 
-        setDraft({
+        const loaded: SettingsDraft = {
           ai: mergeLoadedAIConfig(config),
           sampler: mergeLoadedSampler(sampler),
           prompts,
@@ -261,7 +274,9 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           contextSectionIds: [...contextIds],
           studioFavorites: loadedFavoritesRef.current,
           studio: normalizeStudioSettings(studio),
-        });
+        };
+        setDraft(loaded);
+        setSavedDraft(loaded);
       } catch (err) {
         if (cancelled || !mountedRef.current) return;
         console.error('Failed to load settings:', err);
@@ -401,6 +416,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       });
 
       if (!mountedRef.current) return;
+      setSavedDraft(draft);
       await reloadSettings();
       if (!mountedRef.current) return;
       setLastSavedAt(Date.now());
@@ -415,14 +431,22 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
 
   const clearAISettings = useCallback(async () => {
     await characterSettingsService.clearAISettings();
-    setDraft((prev) => ({
-      ...prev,
-      ai: {
-        ...DEFAULT_SETTINGS.ai,
-        lastCustomBaseUrl: '',
-      },
-    }));
+    const clearedAi: AIConfig = {
+      ...DEFAULT_SETTINGS.ai,
+      lastCustomBaseUrl: '',
+    };
+    setDraft((prev) => ({ ...prev, ai: clearedAi }));
+    setSavedDraft((prev) => (prev ? { ...prev, ai: clearedAi } : prev));
   }, []);
+
+  const isDirty = useMemo(
+    () =>
+      !isLoading &&
+      !loadFailed &&
+      savedDraft !== null &&
+      draftFingerprint(draft) !== draftFingerprint(savedDraft),
+    [draft, savedDraft, isLoading, loadFailed]
+  );
 
   return {
     draft,
@@ -430,6 +454,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     isLoading,
     loadFailed,
     retryLoad,
+    isDirty,
     isSaving,
     lastSavedAt,
     save,
