@@ -166,15 +166,15 @@ Name and Description always run. Turn **First Message** and **Examples** off to 
 
 ### Generation Prompts
 
-Each field has an editable template. Variables:
+Each field has an editable template. The chips under a prompt list the variables it can use. Click a chip to insert its variable at the cursor (or at the end if you haven't clicked into the prompt). If the prompt already uses it, the chip selects it instead; click again to step through each use. Hover a chip to see what it holds. Chips are green when used, red when a required one is missing, and show **+** when optional.
 
-| Variable | Where it is required | What it expands to |
-| :--- | :--- | :--- |
-| `${concept}` | Name, Description, First Message, Examples | Your write-mode text or the tag-built concept |
-| `${name}` | Description, First Message, Examples | The generated name |
-| `${description}` | First Message, Examples | The generated description |
-| `${styleBlock}` | optional (Description, First Message, Examples) | Perspective + tense instructions |
-| `${narrationRule}` | optional (First Message, Examples) | Narration format for the chosen style |
+| Chip | Variable | Where it is required | What it expands to |
+| :--- | :--- | :--- | :--- |
+| **Concept** | `${concept}` | Name, Description, First Message, Examples | Your write-mode text or the tag-built concept |
+| **Name** | `${name}` | Description, First Message, Examples | The generated name |
+| **Description** | `${description}` | First Message, Examples | The generated description |
+| **Style rules** | `${styleBlock}` | optional (Description, First Message, Examples) | Perspective + tense instructions |
+| **Narration format** | `${narrationRule}` | optional (First Message, Examples) | Narration format for the chosen style |
 
 The **system** prompt has no variables; it is sent on every field. Omitting `${styleBlock}` or `${narrationRule}` drops that guidance. Save is blocked if a required `${…}` is missing. **Reset to defaults** restores the stock templates.
 

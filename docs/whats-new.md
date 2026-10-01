@@ -4,6 +4,18 @@ Quick overview of recent updates to CharacterVault.
 
 ---
 
+## October 2026
+
+### 1.8.3
+
+CharacterVault 1.8.3 adds clickable variable chips to every prompt template, keeps linked lorebooks in sync both ways, and makes Settings ask before throwing away unsaved changes, plus Paste from Clipboard on import and a round of Settings and lorebook fixes.
+
+- **Prompt variable chips** in **Settings → Prompts** and **Settings → Creation Studio → Generation Prompts**: click a chip to insert its variable at the cursor or find it if already used, with a hover explanation and red for a missing required one
+- **Two-way lorebook sync** (**character → Lorebook → Attach**): saved edits on a linked character update the library book and every other linked character, and **Open in vault** takes an **Auto** snapshot first
+- **Settings that keep your changes**: closing with unsaved edits asks **Keep editing** or **Discard**, and saving waits until settings load
+
+[Release 1.8.3 →](/releases/v1.8.3) · [AI Creation Studio →](/features/ai-creation-studio#generation-prompts) · [Lorebook Vault →](/features/lorebook-vault#how-they-stay-in-sync)
+
 ## September 2026
 
 ### 1.8.2

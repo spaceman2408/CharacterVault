@@ -54,7 +54,7 @@ Removing a button asks for confirmation: deleting a custom button is permanent, 
 Under **Add buttons** you can also create your own buttons via **New custom button**:
 
 1. Pick a **label** (up to 40 characters), an **icon**, and a **color**.
-2. Write the **prompt template** — it must contain `${text}`, which is replaced with your selection when the button runs.
+2. Write the **prompt template** — it must contain `${text}`, which is replaced with your selection when the button runs. Click the **Selected text** chip under the box to insert it.
 3. Click **Add**. The button lands at the end of the toolbar and its editor opens automatically.
 
 Each custom button can use its own AI endpoint and model: expand its editor (**Edit** or click its label) and set **Model for this prompt**, the same picker the built-in prompts use. Edit the label, icon, color, or template any time the same way; delete it with the trash can (with confirmation).
@@ -289,7 +289,7 @@ All built-in toolbar operation prompts are customizable, and each one can option
 
 ### Required Placeholders
 
-Prompts must include certain placeholders to work. The system validates these before saving.
+Prompts must include certain placeholders to work. The system validates these before saving. Chips under each prompt (**Selected text**, **Your instruction**) insert a placeholder at the cursor, or select it if the prompt already has it, and turn red when a required one is missing.
 
 | Placeholder | Used In | Purpose |
 | :--- | :--- | :--- |

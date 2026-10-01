@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.8.2
-Retry and reuse inline AI results, faster search and editing, and clean lorebook and PNG round-trips to SillyTavern.
+::: tip CharacterVault 1.8.3
+Click-to-insert prompt variables, two-way sync for linked lorebooks, and Settings that ask before discarding changes.
 
-[Try it](https://vault.charactervault.app) · [Inline AI results](/features/editor#ai-operation-results-ghost-preview) · [Import & Export](/features/import-export)
+[Try it](https://vault.charactervault.app) · [Prompt variables](/features/ai-creation-studio#generation-prompts) · [Lorebook sync](/features/lorebook-vault#how-they-stay-in-sync)
 :::
 
 # CharacterVault

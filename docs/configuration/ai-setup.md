@@ -28,7 +28,7 @@ CharacterVault calls your AI server directly from the browser, so a local server
 3. The settings modal opens with seven tabs: **AI Config**, **Sampler**, **Prompts**, **Character Workspace**, **Creation Studio**, **Sections**, and **Backup**.
 4. Click **Save Settings** at the bottom when you're done. Changes don't take effect until you save.
 
-You can close the panel with **Cancel** or `Escape` to discard changes.
+Close the panel with **Cancel** or `Escape`. If you have unsaved changes, it asks first: **Keep editing** or **Discard**. If settings fail to load, **Save Settings** stays off and **Try again** reloads them, so nothing is overwritten.
 
 ## AI Config Tab
 
@@ -206,7 +206,7 @@ Prompts below that are divided into three groups:
 
 ### Prompt text
 
-Every prompt must contain `${text}` — this is where your selected text gets inserted. The Custom (Instruct) prompt also requires `${instruction}` for your typed instruction. Custom buttons you create need `${text}` in their template as well. Validation errors appear inline if required placeholders are missing.
+Every prompt must contain `${text}` — this is where your selected text gets inserted. The Custom (Instruct) prompt also requires `${instruction}` for your typed instruction. Custom buttons you create need `${text}` in their template as well. You don't have to type these: the chips under each prompt (**Selected text**, **Your instruction**) insert the placeholder at the cursor, or select it if the prompt already has it. A chip turns red when a required placeholder is missing.
 
 ### Per-prompt model routing
 
@@ -260,7 +260,7 @@ Preferences for [AI Creation Studio](/features/ai-creation-studio):
 
 - **Generation Fields:** Name and Description always run. Toggle **First Message** and **Examples** independently.
 - **Tag Browser:** hide NSFW (Kink & Fetish) and hide individual tag categories.
-- **Generation Prompts:** editable templates per field, with `${concept}` / `${name}` / `${description}` required where listed. **Reset to defaults** restores stock prompts.
+- **Generation Prompts:** editable templates per field, with `${concept}` / `${name}` / `${description}` required where listed. Click a chip under a prompt to insert its variable at the cursor. **Reset to defaults** restores stock prompts.
 - **Lucky vortex:** the **I'm Feeling Lucky** animation. Toggle it off if the visual effect gets distracting or slows down your device.
 
 ## Sections Tab

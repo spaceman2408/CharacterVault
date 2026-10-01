@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.8.3 (2026-10-01)
+
+CharacterVault 1.8.3 adds clickable variable chips to every prompt template, keeps linked lorebooks in sync both ways, and makes Settings ask before throwing away unsaved changes, plus Paste from Clipboard on import and a round of Settings and lorebook fixes. Full notes: [v1.8.3 release notes](/releases/v1.8.3).
+
+### Highlights
+
+- **Prompt variable chips** — **Settings → Prompts** and **Settings → Creation Studio → Generation Prompts** list each prompt's variables as named chips: click to insert at the cursor or find one already used, green when used, red when a required one is missing
+- **Two-way lorebook sync** — saved lorebook edits on a linked character (**character → Lorebook → Attach**) update the library book and every other linked character; **Open in vault** takes an **Auto** snapshot first
+- **Settings that keep your changes** — closing with unsaved edits asks **Keep editing** or **Discard**, saving waits for settings to load with **Try again** on failure, and backups restore the stored key and font size
+- **Paste from Clipboard** on the import page, NanoGPT and Synthetic referral sign-up links next to **API Key**, Ko-fi links
+- Fixes to confirm dialogs, prompt model routing, NanoGPT sign-in, custom button labels, the context length field, and attached lorebooks
+
+Details: [AI Creation Studio](/features/ai-creation-studio#generation-prompts) · [Lorebook Vault](/features/lorebook-vault#how-they-stay-in-sync) · [What's New](/whats-new)
+
+---
+
 ## 1.8.2 (2026-09-30)
 
 CharacterVault 1.8.2 makes inline AI results easy to retry, time, and reuse, speeds up search, font size, image links, and name macros in the editor, and carries card lorebook options and JPEG or WebP images cleanly to SillyTavern, plus a bigger spellcheck dictionary and a round of editor fixes. Full notes: [v1.8.2 release notes](/releases/v1.8.2).
