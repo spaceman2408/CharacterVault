@@ -1,0 +1,7 @@
+services:
+  charactervault:
+    build: .
+    image: charactervault:local
+    ports:
+      - "127.0.0.1:${CHARACTERVAULT_PORT:-8484}:80"
+    restart: unless-stopped

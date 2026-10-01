@@ -99,6 +99,24 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
+### Run it with Docker
+
+No Node needed, only [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine with Compose).
+
+```bash
+git clone https://github.com/spaceman2408/CharacterVault
+cd CharacterVault
+docker compose up -d
+```
+
+Then open `http://localhost:8484`. The first start builds the image, which takes a minute or two. It restarts with Docker after that. Docs are at `http://localhost:8484/docs/`.
+
+- **Different port:** set `CHARACTERVAULT_PORT`, e.g. `CHARACTERVAULT_PORT=9000 docker compose up -d`, or put `CHARACTERVAULT_PORT=9000` in a `.env` file next to `docker-compose.yml`.
+- **Update:** `git pull`, then `docker compose up -d --build`.
+- **Stop:** `docker compose down`. Your cards are not in the container, so stopping or rebuilding it loses nothing.
+
+It only listens on this computer. Your data lives in your browser for that exact address, so cards from the hosted site or another port won't show up there. To move them, click **Backup** in the library header on the old address, then **Import** the ZIP on the new one (chats and snapshots stay behind).
+
 ---
 
 ## Documentation
