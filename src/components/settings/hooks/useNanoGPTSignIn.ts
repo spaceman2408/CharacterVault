@@ -10,13 +10,13 @@ import {
   isOAuthCallbackMessage,
   cancelPendingSignIn,
 } from '../../../services/providers/NanoGPTAuth';
+import { normalizeBaseUrl } from '../config/aiBaseUrlPresets';
 import type { AddToast, SettingsDraft } from '../types';
 
 interface UseNanoGPTSignInOptions {
   isOpen: boolean;
   baseUrl: string;
   setDraft: React.Dispatch<React.SetStateAction<SettingsDraft>>;
-  handleApiKeyChange: (apiKey: string) => void;
   fetchModelsForUrl: React.MutableRefObject<
     (baseUrl: string, apiKey: string) => Promise<import('../../../db/characterTypes').AIModelInfo[]>
   >;
@@ -27,16 +27,14 @@ export function useNanoGPTSignIn({
   isOpen,
   baseUrl,
   setDraft,
-  handleApiKeyChange,
   fetchModelsForUrl,
   addToast,
 }: UseNanoGPTSignInOptions) {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const draftBaseUrlRef = useRef(baseUrl);
   draftBaseUrlRef.current = baseUrl;
-
-  const handleApiKeyChangeRef = useRef(handleApiKeyChange);
-  handleApiKeyChangeRef.current = handleApiKeyChange;
+  // The key belongs to the endpoint sign-in started from, even if the user switches away meanwhile.
+  const signInBaseUrlRef = useRef(normalizeBaseUrl(baseUrl));
   const addToastRef = useRef(addToast);
   addToastRef.current = addToast;
   const setDraftRef = useRef(setDraft);
@@ -82,15 +80,24 @@ export function useNanoGPTSignIn({
         try {
           const key = await exchangeCode(payload.code, payload.state);
           if (!mountedRef.current) return;
-          handleApiKeyChangeRef.current(key);
-          const currentBaseUrl = draftBaseUrlRef.current;
-          const models = await fetchModelsForUrl.current(currentBaseUrl, key);
+          const signInUrl = signInBaseUrlRef.current;
+          const isCurrentUrl = (url: string) => normalizeBaseUrl(url) === signInUrl;
+          setDraftRef.current((prev) => ({
+            ...prev,
+            ai: {
+              ...prev.ai,
+              apiKeysByBaseUrl: { ...(prev.ai.apiKeysByBaseUrl ?? {}), [signInUrl]: key },
+              ...(isCurrentUrl(prev.ai.baseUrl) ? { apiKey: key } : {}),
+            },
+          }));
+          const models = await fetchModelsForUrl.current(signInUrl, key);
           if (!mountedRef.current) return;
           if (models.length > 0) {
-            setDraftRef.current((prev) => ({
-              ...prev,
-              ai: { ...prev.ai, availableModels: models },
-            }));
+            setDraftRef.current((prev) =>
+              isCurrentUrl(prev.ai.baseUrl)
+                ? { ...prev, ai: { ...prev.ai, availableModels: models } }
+                : prev
+            );
             addToastRef.current('success', `Signed in. Fetched ${models.length} models.`);
           } else {
             addToastRef.current('success', 'Signed in. Choose a model!');
@@ -128,6 +135,7 @@ export function useNanoGPTSignIn({
     isSigningIn,
     startSignIn: () => {
       callbackReceivedRef.current = false;
+      signInBaseUrlRef.current = normalizeBaseUrl(draftBaseUrlRef.current);
       setIsSigningIn(true);
       void startSignIn()
         .then((popup) => {

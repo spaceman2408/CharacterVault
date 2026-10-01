@@ -86,7 +86,6 @@ export function CharacterSettingsPanel({
     isOpen,
     baseUrl: draft.ai.baseUrl,
     setDraft,
-    handleApiKeyChange: modelCatalog.handleApiKeyChange,
     fetchModelsForUrl: modelCatalog.fetchModelsForUrlRef,
     addToast,
   });
