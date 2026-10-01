@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Save, Settings2, X } from 'lucide-react';
+import { AlertCircle, Loader2, Save, Settings2, X } from 'lucide-react';
 import { CharacterEditorContext } from '../../context';
 import { ToastContainer } from './components/ToastContainer';
 import { useModelCatalog } from './hooks/useModelCatalog';
@@ -55,8 +55,17 @@ export function CharacterSettingsPanel({
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const { draft, setDraft, isLoading, isSaving, lastSavedAt, save, clearAISettings } =
-    useSettingsDraft({
+  const {
+    draft,
+    setDraft,
+    isLoading,
+    loadFailed,
+    retryLoad,
+    isSaving,
+    lastSavedAt,
+    save,
+    clearAISettings,
+  } = useSettingsDraft({
       isOpen,
       reloadSettings,
       addToast,
@@ -310,7 +319,7 @@ export function CharacterSettingsPanel({
           </div>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-bg p-4 sm:space-y-6 sm:p-6">
-            {isLoading && activeTab !== 'sampler' && (
+            {isLoading && (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="w-8 h-8 animate-spin text-fg-muted" />
@@ -319,7 +328,23 @@ export function CharacterSettingsPanel({
               </div>
             )}
 
-            {(!isLoading || activeTab === 'sampler') && ActiveTabComponent && (
+            {!isLoading && loadFailed && (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <AlertCircle className="h-8 w-8 text-danger" />
+                <p className="text-sm text-fg-muted">
+                  Settings could not be loaded. Saving is off so nothing gets overwritten.
+                </p>
+                <button
+                  type="button"
+                  onClick={retryLoad}
+                  className="min-h-11 rounded-lg border border-border-strong bg-surface px-4 py-2.5 text-sm font-medium text-fg transition-colors hover:bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {!isLoading && !loadFailed && ActiveTabComponent && (
               <ActiveTabComponent
                 draft={draft}
                 setDraft={setDraft}
@@ -341,7 +366,7 @@ export function CharacterSettingsPanel({
             <button
               type="button"
               onClick={() => void save()}
-              disabled={isSaving}
+              disabled={isSaving || isLoading || loadFailed}
               className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
             >
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

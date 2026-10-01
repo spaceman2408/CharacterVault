@@ -187,6 +187,8 @@ interface UseSettingsDraftOptions {
 export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettingsDraftOptions) {
   const [draft, setDraft] = useState<SettingsDraft>(createDefaultDraft);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const mountedRef = useRef(true);
@@ -207,6 +209,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
 
     const loadSettings = async () => {
       setIsLoading(true);
+      setLoadFailed(false);
       try {
         const [config, sampler, prompts, promptModels, toolbar, agentModel, fullSettings, secOrder, secHidden, spell, studio, contextIds, roleplayHighlight, macroHighlight] =
           await Promise.all([
@@ -262,6 +265,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       } catch (err) {
         if (cancelled || !mountedRef.current) return;
         console.error('Failed to load settings:', err);
+        setLoadFailed(true);
         addToast('error', 'Failed to load settings');
       } finally {
         if (!cancelled && mountedRef.current) {
@@ -274,9 +278,13 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     return () => {
       cancelled = true;
     };
-  }, [isOpen, addToast]);
+  }, [isOpen, addToast, loadAttempt]);
+
+  const retryLoad = useCallback(() => setLoadAttempt((n) => n + 1), []);
 
   const save = useCallback(async () => {
+    // The draft is defaults or stale until a load succeeds; saving it would overwrite real settings.
+    if (isLoading || loadFailed) return;
     setIsSaving(true);
 
     const validationError = validatePrompts(draft.prompts);
@@ -403,7 +411,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     } finally {
       if (mountedRef.current) setIsSaving(false);
     }
-  }, [draft, reloadSettings, addToast]);
+  }, [draft, isLoading, loadFailed, reloadSettings, addToast]);
 
   const clearAISettings = useCallback(async () => {
     await characterSettingsService.clearAISettings();
@@ -420,6 +428,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     draft,
     setDraft,
     isLoading,
+    loadFailed,
+    retryLoad,
     isSaving,
     lastSavedAt,
     save,
