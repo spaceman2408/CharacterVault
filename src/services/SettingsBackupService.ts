@@ -28,6 +28,7 @@ import {
   normalizeToolbarConfig,
 } from '../db/characterTypes';
 import { getStoredApiKey, normalizeBaseUrl } from '../utils/aiBaseUrl';
+import { MAX_FONT_SIZE, MIN_FONT_SIZE } from '../editor/extensions/fontSizeControl';
 import { persistableAIConfig } from './CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from './resolveOperationConfig';
 import { prunePromptModelsForToolbar } from './toolbarConfig';
@@ -206,7 +207,10 @@ function normalizeBackupUi(value: unknown): CharacterVaultSettings['ui'] {
   const theme = raw.theme === 'light' || raw.theme === 'dark' || raw.theme === 'system' ? raw.theme : defaults.theme;
   return {
     theme,
-    editorFontSize: asNumber(raw.editorFontSize, defaults.editorFontSize),
+    editorFontSize: Math.min(
+      MAX_FONT_SIZE,
+      Math.max(MIN_FONT_SIZE, asNumber(raw.editorFontSize, defaults.editorFontSize))
+    ),
     sidebarWidth: asNumber(raw.sidebarWidth, defaults.sidebarWidth),
     showLuckyVortex: asBoolean(raw.showLuckyVortex, true),
     markdownImageOpenLinks: asBoolean(raw.markdownImageOpenLinks, true),
@@ -336,6 +340,7 @@ export interface BackupDraftTarget {
   toolbar: ToolbarConfig;
   agentModel: PromptModelBinding | undefined;
   showLuckyVortex: boolean;
+  editorFontSize: number;
   markdownImageOpenLinks: boolean;
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
@@ -380,6 +385,7 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
     toolbar: normalizeToolbarConfig(settings.toolbar),
     agentModel: settings.agentModel ?? undefined,
     showLuckyVortex: settings.ui.showLuckyVortex ?? true,
+    editorFontSize: settings.ui.editorFontSize,
     markdownImageOpenLinks: settings.ui.markdownImageOpenLinks ?? true,
     defaultChatPanel: normalizeDefaultChatPanel(settings.ui.defaultChatPanel),
     requireAgentReview: settings.ui.requireAgentReview ?? false,

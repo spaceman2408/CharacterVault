@@ -13,6 +13,7 @@ import type {
   ToolbarConfig,
 } from '../../../db/characterTypes';
 import {
+  DEFAULT_CHARACTER_VAULT_SETTINGS,
   DEFAULT_SETTINGS,
   DEFAULT_SECTION_ORDER,
   DEFAULT_SPELLCHECK_SETTINGS,
@@ -62,6 +63,7 @@ export function createDefaultDraft(): SettingsDraft {
     toolbar: normalizeToolbarConfig(DEFAULT_SETTINGS.toolbar),
     agentModel: undefined,
     showLuckyVortex: true,
+    editorFontSize: DEFAULT_CHARACTER_VAULT_SETTINGS.ui.editorFontSize,
     markdownImageOpenLinks: DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
     defaultChatPanel: DEFAULT_CHAT_PANEL,
     requireAgentReview: DEFAULT_REQUIRE_AGENT_REVIEW,
@@ -264,6 +266,8 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           toolbar,
           agentModel,
           showLuckyVortex: fullSettings.ui?.showLuckyVortex ?? true,
+          editorFontSize:
+            fullSettings.ui?.editorFontSize ?? DEFAULT_CHARACTER_VAULT_SETTINGS.ui.editorFontSize,
           markdownImageOpenLinks:
             fullSettings.ui?.markdownImageOpenLinks ?? DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
           defaultChatPanel: normalizeDefaultChatPanel(fullSettings.ui?.defaultChatPanel),
@@ -394,6 +398,10 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         ui: {
           ...currentSettings.ui,
           showLuckyVortex: draft.showLuckyVortex,
+          // The editor changes font size directly; only overwrite it when this draft changed it (backup import).
+          ...(draft.editorFontSize !== savedDraft?.editorFontSize
+            ? { editorFontSize: draft.editorFontSize }
+            : {}),
           markdownImageOpenLinks: draft.markdownImageOpenLinks,
           defaultChatPanel: draft.defaultChatPanel,
           requireAgentReview: draft.requireAgentReview,
@@ -436,7 +444,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     } finally {
       if (mountedRef.current) setIsSaving(false);
     }
-  }, [draft, isLoading, loadFailed, reloadSettings, addToast]);
+  }, [draft, savedDraft, isLoading, loadFailed, reloadSettings, addToast]);
 
   const clearAISettings = useCallback(async () => {
     await characterSettingsService.clearAISettings();

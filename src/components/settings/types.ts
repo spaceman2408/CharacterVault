@@ -38,6 +38,7 @@ export interface SettingsDraft {
   toolbar: ToolbarConfig;
   agentModel: PromptModelBinding | undefined;
   showLuckyVortex: boolean;
+  editorFontSize: number;
   markdownImageOpenLinks: boolean;
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;

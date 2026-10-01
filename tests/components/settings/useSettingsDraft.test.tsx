@@ -6,7 +6,10 @@ import {
   validateAgentModel,
   validatePromptModels,
 } from '../../../src/components/settings/hooks/useSettingsDraft';
-import { DEFAULT_CHARACTER_VAULT_SETTINGS } from '../../../src/db/characterTypes';
+import {
+  DEFAULT_CHARACTER_VAULT_SETTINGS,
+  type CharacterVaultSettings,
+} from '../../../src/db/characterTypes';
 import { characterSettingsService } from '../../../src/services/CharacterSettingsService';
 
 afterEach(() => {
@@ -137,5 +140,43 @@ describe('model routing validation', () => {
     expect(validateAgentModel({ baseUrl: endpoint, modelId: ' ' })).toBe(
       'Agent: choose a model, or set the endpoint back to Default'
     );
+  });
+});
+
+describe('editor font size on save', () => {
+  async function loadedAt(size: number) {
+    const stored = (editorFontSize: number): CharacterVaultSettings => ({
+      ...DEFAULT_CHARACTER_VAULT_SETTINGS,
+      id: 'app-settings',
+      ui: { ...DEFAULT_CHARACTER_VAULT_SETTINGS.ui, editorFontSize },
+    });
+    const getSettings = vi.spyOn(characterSettingsService, 'getSettings').mockResolvedValue(stored(size));
+    vi.spyOn(characterSettingsService, 'saveAllAISettings').mockResolvedValue();
+    vi.spyOn(characterSettingsService, 'saveRoleplayHighlight').mockResolvedValue();
+    vi.spyOn(characterSettingsService, 'saveMacroHighlight').mockResolvedValue();
+    vi.spyOn(characterSettingsService, 'saveSpellcheckSettings').mockResolvedValue();
+    const saveSettings = vi.spyOn(characterSettingsService, 'saveSettings').mockResolvedValue();
+    const { hook } = setup();
+    await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+    return { hook, saveSettings, changeStored: (n: number) => getSettings.mockResolvedValue(stored(n)) };
+  }
+
+  it('keeps a size the editor changed while the panel was open', async () => {
+    const { hook, saveSettings, changeStored } = await loadedAt(16);
+    changeStored(18);
+    await act(async () => {
+      await hook.result.current.save();
+    });
+    expect(saveSettings.mock.calls[0][0].ui.editorFontSize).toBe(18);
+  });
+
+  it('writes a size changed in the draft, such as from a backup', async () => {
+    const { hook, saveSettings, changeStored } = await loadedAt(16);
+    changeStored(18);
+    act(() => hook.result.current.setDraft((prev) => ({ ...prev, editorFontSize: 20 })));
+    await act(async () => {
+      await hook.result.current.save();
+    });
+    expect(saveSettings.mock.calls[0][0].ui.editorFontSize).toBe(20);
   });
 });

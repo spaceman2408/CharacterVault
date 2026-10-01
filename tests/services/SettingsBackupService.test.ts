@@ -53,6 +53,7 @@ function makeDraft(): BackupDraftTarget {
     toolbar: normalizeToolbarConfig(undefined),
     agentModel: undefined,
     showLuckyVortex: true,
+    editorFontSize: 16,
     markdownImageOpenLinks: true,
     defaultChatPanel: 'orion',
     requireAgentReview: false,
@@ -207,6 +208,14 @@ describe('applyBackupToDraft', () => {
     const backup = buildSettingsBackup(makeSaved(), true);
     const next = applyBackupToDraft(makeDraft(), backup);
     expect(next.ai.apiKey).toBe('sk-live');
+  });
+
+  it('restores the editor font size, clamped to the editor range', () => {
+    const saved = makeSaved();
+    saved.ui.editorFontSize = 20;
+    expect(applyBackupToDraft(makeDraft(), buildSettingsBackup(saved, false)).editorFontSize).toBe(20);
+    saved.ui.editorFontSize = 400;
+    expect(applyBackupToDraft(makeDraft(), buildSettingsBackup(saved, false)).editorFontSize).toBe(32);
   });
 
   it('maps backup sections onto the draft', () => {
