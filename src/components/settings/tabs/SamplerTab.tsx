@@ -59,6 +59,8 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   );
   const isCustomContext =
     customMode || !PRESET_CONTEXT_VALUES.has(settings.contextLength);
+  // Raw text while typing so the field can be emptied and retyped; null shows the saved value.
+  const [contextText, setContextText] = useState<string | null>(null);
 
   const onChange = (next: SamplerSettings) => {
     setDraft((prev) => ({ ...prev, sampler: next }));
@@ -88,6 +90,7 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   };
 
   const handleCustomContextChange = (raw: string) => {
+    setContextText(raw);
     const parsed = parseInt(raw, 10);
     if (!Number.isFinite(parsed)) return;
     setCustomMode(true);
@@ -95,6 +98,7 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   };
 
   const handleCustomContextBlur = () => {
+    setContextText(null);
     const clamped = clampContextLength(
       Math.max(CONTEXT_LENGTH_CUSTOM_MIN, settings.contextLength)
     );
@@ -235,7 +239,7 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
                 min={CONTEXT_LENGTH_CUSTOM_MIN}
                 max={CONTEXT_LENGTH_MAX}
                 step={1}
-                value={settings.contextLength}
+                value={contextText ?? settings.contextLength}
                 onChange={(e) => handleCustomContextChange(e.target.value)}
                 onBlur={handleCustomContextBlur}
                 className="mt-2 w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
