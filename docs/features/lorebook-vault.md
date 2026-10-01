@@ -51,7 +51,7 @@ Standalone books have their own snapshot history (similar to character snapshots
 | :--- | :--- |
 | **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. It stays last in the list. |
 | **Manual** | **Save snapshot** in the Snapshots modal (only if something changed) |
-| **Auto** | Taken before an Agent run |
+| **Auto** | Taken before an Agent run, and before **Open in vault** on a character replaces the book's contents |
 | **Rollback** | After restoring a previous snapshot |
 
 Open **Snapshots** in the workspace header to list, preview, restore, or delete snapshots. See also [Snapshots & Rollback](/features/snapshots-history#standalone-lorebook-snapshots).
@@ -65,7 +65,7 @@ Manage the link from a **character** → **Lorebook** tab → **Attach** in the 
 ### First link
 
 1. Click **Attach** and pick a book (or **Replace** if one is already linked).
-2. CharacterVault asks if you want to copy that book’s entries onto the character. Confirming **replaces** the lorebook already on the character.
+2. CharacterVault asks if you want to copy that book’s entries onto the character. Confirming **replaces** the lorebook already on the character. If you skip the copy, the character keeps its own entries and does not sync its edits to the library book yet (see below).
 3. You can copy again later from the panel without changing the link.
 
 If nothing is linked yet, **Open in vault** can create a library book from the character’s current lorebook, link it, and open it.
@@ -76,14 +76,16 @@ Once linked, the library book and the lorebook on the character are kept togethe
 
 | You do this | What happens |
 | :--- | :--- |
-| Edit the lorebook on the character, then **Open in vault** | The library book updates to match, then opens |
+| Edit the lorebook on the character (by hand or with the Agent) | The library book and every other linked character update as the edit saves |
+| Restore a snapshot of the character | The restored lorebook goes to the library book and every other linked character |
+| Click **Open in vault** on the character | The library book updates to match the character, then opens |
 | Edit the book in the Lorebooks workspace | Every linked character’s lorebook updates |
 | Restore a snapshot of the library book | Linked characters get that restored version too |
 
-Leaving the lorebook workspace (back to the library, or opening a linked character) finishes any pending update first.
+Leaving a character or the lorebook workspace (back to the library, **Open in vault**, or opening a linked character) finishes any pending update first.
 
-::: warning Push character edits before editing the library book
-Manual edits on a linked character's **Lorebook** tab reach the library book only when you click **Open in vault**. That first saves this character's lorebook over the linked library book, and over every other linked character. If the library book changes first (an edit or a snapshot restore), it overwrites edits on linked characters that you haven't pushed yet. Agent edits on the character sync right away.
+::: warning A character that does not match the library book
+Edits on the character sync only while its lorebook matches the library book. If you linked a book but skipped the copy, edits stay on that character, and later library edits still replace them. To make this character's lorebook the shared one, click **Open in vault**: it puts the character's lorebook over the library book and every other linked character. An **Auto** snapshot of the library book is saved first, so you can restore it from **Snapshots**. Agent edits on the character always sync.
 :::
 
 ### Export, detach, and sharing

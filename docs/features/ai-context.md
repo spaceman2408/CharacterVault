@@ -70,7 +70,7 @@ The modal shows a live token estimate and soft warnings when the block is large 
 | Lorebook ✨ key generation | Yes (same context pipeline as the toolbar) |
 | AI Creation Studio | No (studio has its own flow) |
 
-Pinned sections are sent in the order you pinned them, then custom context, then any linked library books. When space is tight, earlier items are kept first, so core card fields take priority over custom context.
+Pinned sections are sent in the order you pinned them, then custom context. When space is tight, earlier items are kept first, so core card fields take priority over custom context.
 
 ### Storage and privacy
 

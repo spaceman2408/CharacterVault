@@ -49,7 +49,7 @@ You can:
 ::: details What is the Lorebook Vault?
 The home screen has a **Lorebooks** tab for standalone SillyTavern-compatible world-info books. You can create, import, export, duplicate, snapshot, and edit them without opening a character.
 
-A character can **link** one library book. Several characters can share the same book. After you link, you’ll be asked whether to copy that book onto the character. From then on they stay in sync: **Open in vault** updates the library book from the character; edits in the Lorebooks workspace update every linked character. Exporting a card includes the lorebook on that character, not the link itself. **Detach** if you want a character to stop following the library book.
+A character can **link** one library book. Several characters can share the same book. After you link, you’ll be asked whether to copy that book onto the character. From then on they stay in sync: edits on the character update the library book and every other linked character as they save, and edits in the Lorebooks workspace update every linked character. Exporting a card includes the lorebook on that character, not the link itself. **Detach** if you want a character to stop following the library book.
 
 [Lorebook Vault →](/features/lorebook-vault) · [Lorebook Editor →](/features/lorebook-editor)
 :::

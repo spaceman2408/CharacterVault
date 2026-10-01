@@ -117,7 +117,7 @@ Books in the [Lorebook Vault](/features/lorebook-vault) have a separate modal, t
 | :--- | :--- |
 | **Opened** | Baseline when the book is first opened. **Update baseline** replaces it with the current book; you cannot delete it. It stays last in the list. |
 | **Manual** | **Save snapshot** in the modal (only if something changed) |
-| **Auto** | Taken by the lorebook [Agent](/features/ai-agent) once before a run writes the book |
+| **Auto** | Taken by the lorebook [Agent](/features/ai-agent) once before a run writes the book, and before **Open in vault** on a character replaces the book's contents |
 | **Rollback** | Created after a restore |
 
 You can list snapshots, preview book metadata and a sample of entries, restore a snapshot over the current book, or delete individual snapshots. Restore asks for confirmation. Restoring a library book also updates every linked character. History is stored locally with the rest of the vault.

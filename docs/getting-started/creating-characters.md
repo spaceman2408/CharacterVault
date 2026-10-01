@@ -112,7 +112,7 @@ For the full two-panel editor, see [Lorebook Editor](/features/lorebook-editor).
 
 ### Library books and linking
 
-The home screen **Lorebooks** tab holds books you can edit without opening a character. Link one book to a character (several characters can share it). After that, **Open in vault** and edits in the library workspace keep the two sides together. Exporting the card includes the lorebook on the character. See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
+The home screen **Lorebooks** tab holds books you can edit without opening a character. Link one book to a character (several characters can share it). After that, edits on either side keep the two together. Exporting the card includes the lorebook on the character. See [Lorebook Vault → Linking](/features/lorebook-vault#attach-to-a-character-vault-local).
 
 ## Creator Notes
 
