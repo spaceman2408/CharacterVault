@@ -166,9 +166,41 @@ describe('applyBackupToDraft', () => {
   it('preserves existing keys when the backup has none', () => {
     const backup = buildSettingsBackup(makeSaved(), false);
     const next = applyBackupToDraft(makeDraft(), backup);
-    expect(next.ai.apiKey).toBe('sk-draft');
     expect(next.ai.apiKeysByBaseUrl).toEqual({ 'https://x/v1': 'sk-draft' });
     expect(next.ai.modelId).toBe('model-a');
+  });
+
+  it('does not carry the current key over to a different backup URL', () => {
+    const backup = buildSettingsBackup(makeSaved(), false);
+    const draft = makeDraft();
+    draft.ai.baseUrl = 'https://x/v1';
+    draft.ai.availableModels = [{ id: 'x-model', name: 'X' }];
+    const next = applyBackupToDraft(draft, backup);
+    expect(next.ai.baseUrl).toBe('https://example.com/v1');
+    expect(next.ai.apiKey).toBe('');
+    expect(next.ai.availableModels).toEqual([]);
+  });
+
+  it('uses the stored key for the backup URL when the backup has none', () => {
+    const backup = buildSettingsBackup(makeSaved(), false);
+    const draft = makeDraft();
+    draft.ai.baseUrl = 'https://x/v1';
+    draft.ai.apiKeysByBaseUrl = {
+      'https://x/v1': 'sk-draft',
+      'https://example.com/v1': 'sk-example',
+    };
+    const next = applyBackupToDraft(draft, backup);
+    expect(next.ai.apiKey).toBe('sk-example');
+    expect(next.ai.apiKeysByBaseUrl).toEqual(draft.ai.apiKeysByBaseUrl);
+  });
+
+  it('keeps the model list when the backup URL matches', () => {
+    const backup = buildSettingsBackup(makeSaved(), false);
+    const draft = makeDraft();
+    draft.ai.baseUrl = 'https://example.com/v1/';
+    draft.ai.availableModels = [{ id: 'model-a', name: 'A' }];
+    const next = applyBackupToDraft(draft, backup);
+    expect(next.ai.availableModels).toEqual([{ id: 'model-a', name: 'A' }]);
   });
 
   it('overwrites keys when the backup includes them', () => {

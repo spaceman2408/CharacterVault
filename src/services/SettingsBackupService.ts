@@ -27,6 +27,7 @@ import {
   normalizeStudioSettings,
   normalizeToolbarConfig,
 } from '../db/characterTypes';
+import { getStoredApiKey, normalizeBaseUrl } from '../utils/aiBaseUrl';
 import { persistableAIConfig } from './CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from './resolveOperationConfig';
 import { prunePromptModelsForToolbar } from './toolbarConfig';
@@ -359,13 +360,18 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
 ): T {
   const { settings, includeKeys } = backup;
   const spellcheck = settings.ui.spellcheck ?? { ...DEFAULT_SPELLCHECK_SETTINGS };
+  const sameBaseUrl = normalizeBaseUrl(prev.ai.baseUrl) === normalizeBaseUrl(settings.ai.baseUrl);
   return {
     ...prev,
     ai: {
       ...settings.ai,
-      availableModels: prev.ai.availableModels,
+      availableModels: sameBaseUrl ? prev.ai.availableModels : [],
       ...(!includeKeys
-        ? { apiKey: prev.ai.apiKey, apiKeysByBaseUrl: prev.ai.apiKeysByBaseUrl }
+        ? {
+            // The current key belongs to the current URL; use the one stored for the backup's URL.
+            apiKey: getStoredApiKey(prev.ai.apiKeysByBaseUrl, settings.ai.baseUrl),
+            apiKeysByBaseUrl: prev.ai.apiKeysByBaseUrl,
+          }
         : {}),
     },
     sampler: { ...settings.sampler },
