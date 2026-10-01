@@ -538,6 +538,11 @@ export function useModelCatalog({
     [fetchingModelsByBaseUrl]
   );
 
+  const modelFetchErrorForUrl = useCallback(
+    (baseUrl: string) => modelFetchErrorByBaseUrl[normalizeBaseUrl(baseUrl)] ?? null,
+    [modelFetchErrorByBaseUrl]
+  );
+
   const fetchModelsForUrlPublic = useCallback(
     async (baseUrl: string) => {
       const normalizedUrl = normalizeBaseUrl(baseUrl);
@@ -558,6 +563,7 @@ export function useModelCatalog({
     modelFetchErrorForCurrentUrl,
     modelsByBaseUrl: modelsByBaseUrlList,
     isFetchingModelsForUrl,
+    modelFetchErrorForUrl,
     modelProviders,
     isFetchingProviders,
     supportsProviderSelection,

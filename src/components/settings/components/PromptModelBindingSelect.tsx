@@ -34,6 +34,7 @@ interface PromptModelBindingSelectProps {
   onChange: (binding: PromptModelBinding | undefined) => void;
   onFetch: (baseUrl: string) => Promise<void>;
   isFetching: boolean;
+  fetchError?: string | null;
   heading?: string;
   bare?: boolean;
 }
@@ -67,6 +68,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
   onChange,
   onFetch,
   isFetching,
+  fetchError = null,
   heading = 'Model for this prompt',
   bare = false,
 }) => {
@@ -415,6 +417,12 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
               className={fieldClass}
             />
           </div>
+
+          {fetchError && !isFetching && (
+            <p role="alert" className="text-xs text-danger">
+              Couldn't load models: {fetchError}
+            </p>
+          )}
 
           {!hasKeyForEndpoint && (
             <p className="text-xs text-warning">

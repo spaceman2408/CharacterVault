@@ -37,3 +37,29 @@ describe('PromptModelBindingSelect endpoint change', () => {
     expect(onChange).toHaveBeenCalledWith({ baseUrl: NANO, modelId: 'nano-model' });
   });
 });
+
+describe('PromptModelBindingSelect fetch errors', () => {
+  function renderWithError(fetchError: string | null, isFetching = false) {
+    render(
+      <PromptModelBindingSelect
+        binding={{ baseUrl: OPENROUTER, modelId: 'openai/gpt-4o' }}
+        globalAi={{ ...DEFAULT_SETTINGS.ai, apiKeysByBaseUrl: { [OPENROUTER]: 'sk-or' } }}
+        modelsByBaseUrl={{}}
+        onChange={vi.fn()}
+        onFetch={async () => {}}
+        isFetching={isFetching}
+        fetchError={fetchError}
+      />
+    );
+  }
+
+  it('shows the error for the selected endpoint', () => {
+    renderWithError('Invalid API key');
+    expect(screen.getByRole('alert').textContent).toBe("Couldn't load models: Invalid API key");
+  });
+
+  it('hides the error while a retry is in flight', () => {
+    renderWithError('Invalid API key', true);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});

@@ -240,6 +240,7 @@ export function CharacterSettingsPanel({
     fetchModels: modelCatalog.fetchModels,
     modelsByBaseUrl: modelCatalog.modelsByBaseUrl,
     isFetchingModelsForUrl: modelCatalog.isFetchingModelsForUrl,
+    modelFetchErrorForUrl: modelCatalog.modelFetchErrorForUrl,
     fetchModelsForUrl: modelCatalog.fetchModelsForUrl,
     handleBaseUrlChange: modelCatalog.handleBaseUrlChange,
     handleCustomUrlChange: modelCatalog.handleCustomUrlChange,

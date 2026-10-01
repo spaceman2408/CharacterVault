@@ -80,6 +80,7 @@ export interface SettingsPanelHelpers {
   /** Cached model lists keyed by normalized base URL (Prompts tab routing). */
   modelsByBaseUrl: Record<string, AIModelInfo[]>;
   isFetchingModelsForUrl: (baseUrl: string) => boolean;
+  modelFetchErrorForUrl: (baseUrl: string) => string | null;
   fetchModelsForUrl: (baseUrl: string) => Promise<void>;
   handleBaseUrlChange: (baseUrl: string, loadStoredProfile: boolean) => void;
   handleCustomUrlChange: (baseUrl: string) => void;

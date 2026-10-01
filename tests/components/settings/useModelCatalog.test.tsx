@@ -4,13 +4,13 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AIModelInfo } from '../../../src/db/characterTypes';
 
-const pending: Array<(models: AIModelInfo[]) => void> = [];
+const pending: Array<{ resolve: (models: AIModelInfo[]) => void; reject: (err: Error) => void }> = [];
 
 vi.mock('../../../src/services/AIService', () => ({
   AIError: class AIError extends Error {},
   AIService: class {
     fetchModels() {
-      return new Promise<AIModelInfo[]>((resolve) => pending.push(resolve));
+      return new Promise<AIModelInfo[]>((resolve, reject) => pending.push({ resolve, reject }));
     }
     fetchModelProviders() {
       return Promise.resolve({ supportsProviderSelection: false, providers: [] });
@@ -18,6 +18,7 @@ vi.mock('../../../src/services/AIService', () => ({
   },
 }));
 
+const { AIError } = await import('../../../src/services/AIService');
 const { useModelCatalog } = await import('../../../src/components/settings/hooks/useModelCatalog');
 const { createDefaultDraft } = await import('../../../src/components/settings/hooks/useSettingsDraft');
 
@@ -56,7 +57,7 @@ describe('useModelCatalog', () => {
     act(() => hook.result.current.catalog.handleBaseUrlChange(OPENROUTER, true));
 
     await act(async () => {
-      pending[0]([{ id: 'nano-model', name: 'Nano Model' }]);
+      pending[0].resolve([{ id: 'nano-model', name: 'Nano Model' }]);
       await fetching;
     });
 
@@ -69,6 +70,21 @@ describe('useModelCatalog', () => {
     ]);
   });
 
+  it('reports a failed fetch for that endpoint only', async () => {
+    const hook = setup();
+    let fetching!: Promise<void>;
+    act(() => {
+      fetching = hook.result.current.catalog.fetchModelsForUrl(OPENROUTER);
+    });
+    await act(async () => {
+      pending[0].reject(new AIError('Invalid API key', 'auth'));
+      await fetching;
+    });
+    expect(hook.result.current.catalog.modelFetchErrorForUrl(OPENROUTER)).toBe('Invalid API key');
+    expect(hook.result.current.catalog.modelFetchErrorForUrl(NANO)).toBeNull();
+    expect(hook.result.current.catalog.isFetchingModelsForUrl(OPENROUTER)).toBe(false);
+  });
+
   it('shows the list when the base URL is unchanged', async () => {
     const hook = setup();
     let fetching!: Promise<void>;
@@ -76,7 +92,7 @@ describe('useModelCatalog', () => {
       fetching = hook.result.current.catalog.fetchModels();
     });
     await act(async () => {
-      pending[0]([{ id: 'nano-model', name: 'Nano Model' }]);
+      pending[0].resolve([{ id: 'nano-model', name: 'Nano Model' }]);
       await fetching;
     });
     expect(hook.result.current.draft.ai.availableModels).toEqual([

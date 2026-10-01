@@ -136,6 +136,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
               onChange={onBindingChange}
               onFetch={helpers.fetchModelsForUrl}
               isFetching={isFetching}
+              fetchError={endpoint ? helpers.modelFetchErrorForUrl(endpoint) : null}
             />
           )}
         </div>
@@ -533,6 +534,10 @@ const ToolbarButtonsSection: React.FC<{
                       const endpoint = draft.promptModels[custom.id]?.baseUrl ?? '';
                       return !!endpoint && helpers.isFetchingModelsForUrl(endpoint);
                     })()}
+                    fetchError={(() => {
+                      const endpoint = draft.promptModels[custom.id]?.baseUrl ?? '';
+                      return endpoint ? helpers.modelFetchErrorForUrl(endpoint) : null;
+                    })()}
                   />
                 )}
               </div>
@@ -786,6 +791,11 @@ export const PromptsTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helper
               draft.agentModel?.baseUrl
                 ? helpers.isFetchingModelsForUrl(draft.agentModel.baseUrl)
                 : false
+            }
+            fetchError={
+              draft.agentModel?.baseUrl
+                ? helpers.modelFetchErrorForUrl(draft.agentModel.baseUrl)
+                : null
             }
           />
         )}
