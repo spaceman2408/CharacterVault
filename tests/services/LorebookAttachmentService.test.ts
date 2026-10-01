@@ -9,6 +9,7 @@ const {
   setCharacterLorebookAttachments,
   createLorebook,
   hasLorebook,
+  getLorebook,
 } = vi.hoisted(() => ({
   updateLorebook: vi.fn(),
   getCharacterIdsLinkedToLorebook: vi.fn(),
@@ -17,6 +18,7 @@ const {
   setCharacterLorebookAttachments: vi.fn(),
   createLorebook: vi.fn(),
   hasLorebook: vi.fn(),
+  getLorebook: vi.fn(),
 }));
 
 vi.mock('../../src/db/CharacterDatabase', () => ({
@@ -28,6 +30,7 @@ vi.mock('../../src/db/CharacterDatabase', () => ({
     setCharacterLorebookAttachments,
     createLorebook,
     hasLorebook,
+    getLorebook,
   },
 }));
 
@@ -328,6 +331,80 @@ describe('LorebookAttachmentService.syncEmbeddedIfAttached', () => {
 
     expect(synced).toBe(false);
     expect(updateLorebook).not.toHaveBeenCalled();
+  });
+});
+
+describe('LorebookAttachmentService.syncSavedEmbedded', () => {
+  const vault = makeVaultBook();
+  const inSync = cloneBookForEmbed(vault);
+  const edited: CharacterBook = {
+    ...inSync,
+    entries: [makeEntry(0, 'edited on the card')],
+  };
+
+  beforeEach(() => {
+    updateLorebook.mockReset();
+    getCharacterIdsLinkedToLorebook.mockReset();
+    updateCharacterEmbeddedBook.mockReset();
+    getCharacterLorebookAttachments.mockReset();
+    getLorebook.mockReset();
+    getCharacterLorebookAttachments.mockResolvedValue({
+      characterId: 'char-1',
+      lorebookIds: ['vault-1'],
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    });
+    getLorebook.mockResolvedValue(vault);
+    getCharacterIdsLinkedToLorebook.mockResolvedValue(['char-1', 'char-2']);
+    updateCharacterEmbeddedBook.mockResolvedValue(true);
+    updateLorebook.mockImplementation(async (id: string, input: { book: CharacterBook; name?: string }) => ({
+      ...makeVaultBook({ id }),
+      name: input.name ?? 'Vault Bible',
+      book: input.book,
+    }));
+  });
+
+  it('pushes a card edit when the card matched the vault book before the save', async () => {
+    const synced = await lorebookAttachmentService.syncSavedEmbedded('char-1', inSync, edited);
+
+    expect(synced).toBe(true);
+    const written = (updateLorebook.mock.calls[0] as [string, { book: CharacterBook }])[1].book;
+    expect(written.entries[0].content).toBe('edited on the card');
+    expect(updateCharacterEmbeddedBook).toHaveBeenCalledTimes(1);
+    expect(updateCharacterEmbeddedBook.mock.calls[0][0]).toBe('char-2');
+  });
+
+  it('leaves the vault book alone when the card was not in sync before the save', async () => {
+    const ownBook: CharacterBook = { ...inSync, entries: [makeEntry(0, 'card kept its own entries')] };
+
+    const synced = await lorebookAttachmentService.syncSavedEmbedded('char-1', ownBook, edited);
+
+    expect(synced).toBe(false);
+    expect(updateLorebook).not.toHaveBeenCalled();
+  });
+
+  it('skips saves that did not change the lorebook', async () => {
+    const synced = await lorebookAttachmentService.syncSavedEmbedded(
+      'char-1',
+      inSync,
+      structuredClone(inSync),
+    );
+
+    expect(synced).toBe(false);
+    expect(getCharacterLorebookAttachments).not.toHaveBeenCalled();
+    expect(updateLorebook).not.toHaveBeenCalled();
+  });
+
+  it('treats an unnamed card book as matching and keeps the vault name', async () => {
+    const unnamed: CharacterBook = { ...inSync, name: '' };
+
+    const synced = await lorebookAttachmentService.syncSavedEmbedded('char-1', unnamed, {
+      ...edited,
+      name: '',
+    });
+
+    expect(synced).toBe(true);
+    const input = (updateLorebook.mock.calls[0] as [string, { book: CharacterBook; name?: string }])[1];
+    expect(input.name).toBe('Book name');
   });
 });
 

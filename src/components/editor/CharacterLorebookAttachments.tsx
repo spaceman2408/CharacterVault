@@ -26,7 +26,7 @@ import { showEphemeralToast } from '../../utils/ephemeralToast';
 import type { LorebookAttachmentControls } from './lorebook/types';
 
 const ATTACH_HELP =
-  'One library book per character. Open in vault writes this lorebook to the linked book (or creates one), then opens it. Edits in the library update every linked character. Linking asks to copy entries onto the character (replaces what\'s already there).';
+  'One library book per character. Once this lorebook matches the linked book, saved edits here update the linked book and every linked character. Open in vault writes this lorebook to the linked book (or creates one), then opens it. Edits in the library update every linked character. Linking asks to copy entries onto the character (replaces what\'s already there).';
 
 function formatEntryCount(count: number): string {
   return `${count} entr${count === 1 ? 'y' : 'ies'}`;

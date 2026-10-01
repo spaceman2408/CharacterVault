@@ -3,8 +3,11 @@
  */
 
 import { characterDb } from '../db/CharacterDatabase';
-import { cloneEmbeddedBook, lorebookAttachmentService } from './LorebookAttachmentService';
-import { normalizeCardBook } from './LorebookConverter';
+import {
+  cloneEmbeddedBook,
+  lorebookAttachmentService,
+  sameLorebookContent,
+} from './LorebookAttachmentService';
 import type {
   CharacterBook,
   LorebookSnapshot,
@@ -106,8 +109,7 @@ export class LorebookSnapshotService {
   ): Promise<LorebookSnapshot | null> {
     const current = await characterDb.getLorebook(lorebookId);
     if (!current) return null;
-    const incoming = normalizeCardBook(cloneEmbeddedBook(embedded, fallbackName));
-    if (stableSerialize(incoming) === stableSerialize(normalizeCardBook(current.book))) return null;
+    if (sameLorebookContent(cloneEmbeddedBook(embedded, fallbackName), current.book)) return null;
     return this.createFromLorebook(current, 'auto');
   }
 

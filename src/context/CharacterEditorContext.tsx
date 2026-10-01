@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import type { Character, CharacterSection, SnapshotMetadata, SnapshotDiffEntry, CustomContextMeta } from '../db/characterTypes';
+import type { Character, CharacterBook, CharacterSection, SnapshotMetadata, SnapshotDiffEntry, CustomContextMeta, UpdateCharacterInput } from '../db/characterTypes';
 import type {
   SamplerSettings,
   AIConfig,
@@ -44,6 +44,7 @@ import {
   formatCustomContextChunk,
 } from '../services/CustomContextService';
 import { loadSnapshotDiff, openHistoryAfterFlush } from '../services/historyLifecycle';
+import { lorebookAttachmentService } from '../services/LorebookAttachmentService';
 import { generateThumbnail } from '../utils/thumbnail';
 import { registerPendingSaveDiscard } from '../utils/characterPendingSaveDiscard';
 import { useSaveEditorFontSize } from '../hooks/useSaveEditorFontSize';
@@ -144,10 +145,20 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   const currentCharacterRef = useRef<Character | null>(currentCharacter);
   const selectedTextRef = useRef(selectedText);
   const isHistoryOpenRef = useRef(isHistoryOpen);
+  // The lorebook as of the last queued sync, so each save is compared with the one before it in save order.
+  const linkedBookSyncRef = useRef<{
+    characterId: string;
+    book: CharacterBook | undefined;
+    queue: Promise<void>;
+  } | null>(null);
 
   useEffect(() => {
     currentCharacterRef.current = currentCharacter;
   }, [currentCharacter]);
+
+  useEffect(() => {
+    linkedBookSyncRef.current = null;
+  }, [currentCharacterId]);
 
   useEffect(() => {
     selectedTextRef.current = selectedText;
@@ -210,6 +221,36 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     setSaveStatus('saved');
   }, []);
 
+  const saveCharacter = useCallback(async (
+    characterId: string,
+    input: UpdateCharacterInput,
+  ): Promise<Character> => {
+    const before = currentCharacterRef.current;
+    const saved = await updateCharacterBase(characterId, input);
+
+    let sync = linkedBookSyncRef.current;
+    if (!sync || sync.characterId !== characterId) {
+      sync = {
+        characterId,
+        book: before?.id === characterId ? before.data.characterBook : undefined,
+        queue: Promise.resolve(),
+      };
+      linkedBookSyncRef.current = sync;
+    }
+    const state = sync;
+    const next = saved.data.characterBook;
+    state.queue = state.queue.then(async () => {
+      const previous = state.book;
+      state.book = next;
+      try {
+        await lorebookAttachmentService.syncSavedEmbedded(characterId, previous, next);
+      } catch (error) {
+        console.error('Failed to sync the lorebook to the linked vault book:', error);
+      }
+    });
+    return saved;
+  }, [updateCharacterBase]);
+
   const commitQueuedCharacterUpdate = useCallback(async (requestKey: string, characterId: string): Promise<Character | null> => {
     const queuedInput = updateCharacterPendingInputRef.current.get(requestKey);
     if (!queuedInput) {
@@ -228,7 +269,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     };
 
     try {
-      const updated = await updateCharacterBase(characterId, queuedInput);
+      const updated = await saveCharacter(characterId, queuedInput);
       clearCommittedInput();
 
       if (updateCharacterRequestVersionRef.current.get(requestKey) === nextVersion) {
@@ -249,7 +290,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       currentResolvers?.reject.forEach(fn => fn(error));
       throw error;
     }
-  }, [settleSaveStatus, updateCharacterBase]);
+  }, [saveCharacter, settleSaveStatus]);
 
   const commitQueuedSpecFieldUpdate = useCallback(async (
     requestKey: string,
@@ -324,10 +365,12 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
 
     if (updates.length === 0) {
+      await linkedBookSyncRef.current?.queue;
       return character;
     }
 
     const results = await Promise.all(updates);
+    await linkedBookSyncRef.current?.queue;
     return results.filter((result): result is Character => result !== null).at(-1) ?? character;
   }, [commitQueuedCharacterUpdate, commitQueuedSpecFieldUpdate]);
 
@@ -827,7 +870,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
       if (scope === 'whole') {
         const input = await characterSnapshotService.restoreWholeCharacter(character, snapshot);
-        restoredCharacter = await updateCharacterBase(character.id, input);
+        restoredCharacter = await saveCharacter(character.id, input);
       } else {
         const sectionToRestore = targetSection;
         if (!sectionToRestore) {
@@ -843,11 +886,11 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
 
         if (action.kind === 'image') {
           const thumbnailData = action.value ? await generateThumbnail(action.value) : '';
-          restoredCharacter = await updateCharacterBase(character.id, { imageData: action.value, thumbnailData });
+          restoredCharacter = await saveCharacter(character.id, { imageData: action.value, thumbnailData });
         } else if (action.kind === 'spec') {
           restoredCharacter = await updateSpecFieldBase(character.id, action.field, action.value);
         } else {
-          restoredCharacter = await updateCharacterBase(character.id, action.input);
+          restoredCharacter = await saveCharacter(character.id, action.input);
         }
       }
 
@@ -861,7 +904,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     }
   }, [
     createSnapshotFromCharacter,
-    updateCharacterBase,
+    saveCharacter,
     updateSpecFieldBase,
   ]);
 

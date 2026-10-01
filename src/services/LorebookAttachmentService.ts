@@ -10,6 +10,8 @@ import type {
   VaultLorebook,
 } from '../db/characterTypes';
 import { createEmptyCharacterBook } from '../db/characterTypes';
+import { stableSerialize } from '../utils/snapshotCompare';
+import { normalizeCardBook } from './LorebookConverter';
 
 export interface ResolvedLorebookAttachment {
   lorebookId: string;
@@ -51,6 +53,10 @@ export function cloneEmbeddedBook(
     entries: cloneLorebookEntries(embeddedBook),
     extensions: { ...(embeddedBook.extensions || {}) },
   };
+}
+
+export function sameLorebookContent(left: CharacterBook, right: CharacterBook): boolean {
+  return stableSerialize(normalizeCardBook(left)) === stableSerialize(normalizeCardBook(right));
 }
 
 export class LorebookAttachmentService {
@@ -162,6 +168,29 @@ export class LorebookAttachmentService {
     if (!lorebookId) return false;
     if (!(await characterDb.hasLorebook(lorebookId))) return false;
     await this.writeEmbeddedToVault(lorebookId, embedded, fallbackName, characterId);
+    return true;
+  }
+
+  /**
+   * After a card save, push its lorebook to the attached vault book and the
+   * other linked characters. Only pushes when the card matched the vault book
+   * before this save, so a card linked without copying keeps its own entries
+   * until Open in vault.
+   */
+  async syncSavedEmbedded(
+    characterId: string,
+    previous: CharacterBook | undefined,
+    next: CharacterBook | undefined,
+  ): Promise<boolean> {
+    if (!previous || !next || sameLorebookContent(previous, next)) return false;
+    const { lorebookIds } = await this.getAttachments(characterId);
+    const lorebookId = lorebookIds.length > 0 ? lorebookIds[lorebookIds.length - 1] : undefined;
+    if (!lorebookId) return false;
+    const vault = await characterDb.getLorebook(lorebookId);
+    if (!vault) return false;
+    const vaultName = vault.book.name || vault.name;
+    if (!sameLorebookContent(cloneEmbeddedBook(previous, vaultName), vault.book)) return false;
+    await this.writeEmbeddedToVault(lorebookId, next, vaultName, characterId);
     return true;
   }
 
