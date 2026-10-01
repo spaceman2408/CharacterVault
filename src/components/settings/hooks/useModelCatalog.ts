@@ -175,6 +175,17 @@ export function useModelCatalog({
   const fetchModelsForUrlRef = useRef(fetchModelsForUrl);
   fetchModelsForUrlRef.current = fetchModelsForUrl;
 
+  const showModelsIfCurrent = useCallback(
+    (normalizedUrl: string, models: AIModelInfo[]) => {
+      setDraft((prev) =>
+        normalizeBaseUrl(prev.ai.baseUrl) === normalizedUrl
+          ? { ...prev, ai: { ...prev.ai, availableModels: models } }
+          : prev
+      );
+    },
+    [setDraft]
+  );
+
   // Auto-fetch models for presets with stored keys when panel opens
   useEffect(() => {
     if (!isOpen || isLoading) return;
@@ -206,17 +217,8 @@ export function useModelCatalog({
 
         fetches.push(
           fetchModelsForUrl(preset.baseUrl, apiKey, { subscriptionOnly }).then((models) => {
-            if (
-              !mountedRef.current ||
-              !isOpenRef.current ||
-              normalizeBaseUrl(draftRef.current.ai.baseUrl) !== normalizedUrl
-            ) {
-              return;
-            }
-            setDraft((prev) => ({
-              ...prev,
-              ai: { ...prev.ai, availableModels: models },
-            }));
+            if (!mountedRef.current || !isOpenRef.current) return;
+            showModelsIfCurrent(normalizedUrl, models);
           })
         );
       }
@@ -225,7 +227,7 @@ export function useModelCatalog({
     };
 
     void autoFetch();
-  }, [isOpen, isLoading, fetchModelsForUrl, setDraft]);
+  }, [isOpen, isLoading, fetchModelsForUrl, setDraft, showModelsIfCurrent]);
 
   const fetchModels = useCallback(
     async (options?: FetchModelsCallOptions) => {
@@ -256,16 +258,12 @@ export function useModelCatalog({
           signal,
         });
         if (!mountedRef.current || !isOpenRef.current || signal?.aborted) return;
-        const normalizedUrl = normalizeBaseUrl(ai.baseUrl);
-        setDraft((prev) => ({
-          ...prev,
-          ai: { ...prev.ai, availableModels: models },
-        }));
+        showModelsIfCurrent(fetchedUrl, models);
         setModelsByBaseUrl((prev) => ({
           ...prev,
-          [normalizedUrl]: { models, fetchedAt: Date.now(), subscriptionOnly },
+          [fetchedUrl]: { models, fetchedAt: Date.now(), subscriptionOnly },
         }));
-        setModelFetchErrorByBaseUrl((prev) => withoutKey(prev, normalizedUrl));
+        setModelFetchErrorByBaseUrl((prev) => withoutKey(prev, fetchedUrl));
         addToast('success', `Fetched ${models.length} models`);
       } catch (err) {
         if (!mountedRef.current || !isOpenRef.current || isAbortError(err)) return;
@@ -276,7 +274,7 @@ export function useModelCatalog({
         if (mountedRef.current && isOpenRef.current) setIsFetchingModels(false);
       }
     },
-    [addToast, setDraft]
+    [addToast, showModelsIfCurrent]
   );
 
   const fetchModelProviders = useCallback(
@@ -375,15 +373,12 @@ export function useModelCatalog({
         if (apiKey) {
           void fetchModelsForUrl(baseUrl, apiKey, { subscriptionOnly }).then((models) => {
             if (!mountedRef.current || !isOpenRef.current) return;
-            setDraft((prev) => ({
-              ...prev,
-              ai: { ...prev.ai, availableModels: models },
-            }));
+            showModelsIfCurrent(normalizedUrl, models);
           });
         }
       }
     },
-    [modelsByBaseUrl, setDraft, fetchModelsForUrl]
+    [modelsByBaseUrl, setDraft, fetchModelsForUrl, showModelsIfCurrent]
   );
 
   const handleCustomUrlChange = useCallback(
@@ -415,15 +410,12 @@ export function useModelCatalog({
         if (apiKey) {
           void fetchModelsForUrl(baseUrl, apiKey, { subscriptionOnly }).then((models) => {
             if (!mountedRef.current || !isOpenRef.current) return;
-            setDraft((prev) => ({
-              ...prev,
-              ai: { ...prev.ai, availableModels: models },
-            }));
+            showModelsIfCurrent(normalizedUrl, models);
           });
         }
       }
     },
-    [modelsByBaseUrl, setDraft, fetchModelsForUrl]
+    [modelsByBaseUrl, setDraft, fetchModelsForUrl, showModelsIfCurrent]
   );
 
   const handleApiKeyChange = useCallback(
