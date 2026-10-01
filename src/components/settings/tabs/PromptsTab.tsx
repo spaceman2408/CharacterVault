@@ -302,7 +302,10 @@ const ToolbarButtonsSection: React.FC<{
   const addCustom = () => {
     const err = validateCustomOp(
       { label: newLabel, prompt: newPrompt },
-      buttons.map((b) => b.label),
+      [
+        ...Object.values(BUILTIN_TOOLBAR_BUTTONS).map((b) => b.label),
+        ...toolbar.customOps.map((op) => op.label),
+      ],
     );
     if (err) {
       setNewError(err);
