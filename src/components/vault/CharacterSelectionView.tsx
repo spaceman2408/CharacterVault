@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Book, Upload, User, X } from 'lucide-react';
+import { Book, Coffee, Upload, User, X } from 'lucide-react';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { PromoBanner } from '../PromoBanner';
 import { showEphemeralToast } from '../../utils/ephemeralToast';
@@ -387,6 +387,18 @@ export function CharacterSelectionView({
             className="hover:text-accent transition-colors"
           >
             GPL-3.0
+          </a>
+          <span className="text-border" aria-hidden="true">
+            ·
+          </span>
+          <a
+            href="https://ko-fi.com/spaceman2408"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 hover:text-accent transition-colors"
+          >
+            <Coffee className="w-3.5 h-3.5 text-[#FF5E5B]" aria-hidden="true" />
+            Support on Ko-fi
           </a>
         </nav>
       </footer>

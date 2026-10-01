@@ -2350,6 +2350,16 @@ h2 em {
   color: var(--fg);
 }
 
+.footer-col a.kofi-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.kofi-link svg {
+  color: #ff5e5b;
+}
+
 .footer-legal {
   display: flex;
   flex-direction: column;

@@ -17,6 +17,8 @@ export interface AIBaseUrlPreset {
   baseUrl: string;
   helper: string;
   keyUrl?: string;
+  referralUrl?: string;
+  referralPerk?: string;
 }
 
 export const AI_BASE_URL_PRESETS: AIBaseUrlPreset[] = [
@@ -26,6 +28,8 @@ export const AI_BASE_URL_PRESETS: AIBaseUrlPreset[] = [
     baseUrl: 'https://nano-gpt.com/api/v1',
     helper: 'Hosted OpenAI-compatible endpoint.',
     keyUrl: 'https://nano-gpt.com/api',
+    referralUrl: 'https://nano-gpt.com/r/6YU364c4',
+    referralPerk: 'You get 5% off usage.',
   },
   {
     id: 'synthetic',
@@ -34,6 +38,8 @@ export const AI_BASE_URL_PRESETS: AIBaseUrlPreset[] = [
     helper:
       'OpenAI-compatible endpoint. Prefer syn: aliases so you always get the latest recommended model.',
     keyUrl: 'https://dev.synthetic.new/docs/api/getting-started',
+    referralUrl: 'https://synthetic.new/?referral=eZOSi642hhtJQM7',
+    referralPerk: 'You get $10 in subscription credit when you subscribe (does not stack with other offers).',
   },
   {
     id: 'openrouter',

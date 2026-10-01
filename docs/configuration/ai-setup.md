@@ -51,6 +51,8 @@ Choose a provider preset from the dropdown, or select **Custom URL** to type in 
 
 Nano-GPT is selected by default. When you switch presets, the text field below updates. Each base URL keeps its own saved key and model, so you can switch between providers without re-entering them.
 
+Next to **Get your key**, the Nano-GPT and Synthetic presets also show **New? Sign up (referral)**. That's a referral link: signing up through it supports CharacterVault, and you get a perk too. On NanoGPT you get 5% off usage. On Synthetic you get $10 in subscription credit when you subscribe (it doesn't stack with other offers). Use the provider's plain site if you prefer.
+
 The helper text below the URL field changes based on the selected preset. For custom URLs, it reads: "Pick a preset above or enter a custom OpenAI-compatible endpoint."
 
 ### API Key

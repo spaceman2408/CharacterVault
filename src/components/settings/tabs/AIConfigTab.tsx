@@ -208,16 +208,31 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
               )}
               {(() => {
                 const preset = AI_BASE_URL_PRESETS.find((p) => p.id === selectedBaseUrlPreset);
-                return preset?.keyUrl ? (
-                  <a
-                    href={preset.keyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-normal text-info hover:text-blue-400 hover:underline ml-1"
-                  >
-                    Get your key ↗
-                  </a>
-                ) : null;
+                return (
+                  <>
+                    {preset?.keyUrl && (
+                      <a
+                        href={preset.keyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-normal text-info hover:text-blue-400 hover:underline ml-1"
+                      >
+                        Get your key ↗
+                      </a>
+                    )}
+                    {preset?.referralUrl && (
+                      <a
+                        href={preset.referralUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Referral link: signing up through it supports CharacterVault. ${preset.referralPerk ?? ''}`.trim()}
+                        className="text-xs font-normal text-fg-muted hover:text-info hover:underline"
+                      >
+                        New? Sign up (referral) ↗
+                      </a>
+                    )}
+                  </>
+                );
               })()}
             </label>
             <SecretInput

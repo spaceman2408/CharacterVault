@@ -134,6 +134,17 @@ Bug reports and ideas are welcome on [GitHub Issues](https://github.com/spaceman
 
 Your cards and lorebooks stay in your browser. See the [Privacy](https://vault.charactervault.app/docs/privacy) notice for hosting and optional AI details.
 
+## Support
+
+CharacterVault is free and always will be. If it saves you time, you can support development on [Ko-fi](https://ko-fi.com/spaceman2408).
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/P8U227ZLA4)
+
+New to NanoGPT or Synthetic? Signing up with a referral link also helps the project, and you get a perk too:
+
+- [NanoGPT](https://nano-gpt.com/r/6YU364c4): 5% off your usage.
+- [Synthetic](https://synthetic.new/?referral=eZOSi642hhtJQM7): $10 in subscription credit when you subscribe (doesn't stack with other offers).
+
 ## License
 
 GNU General Public License v3.0. See [LICENSE](LICENSE).
