@@ -46,6 +46,16 @@ function withoutKey(record: Record<string, string>, key: string): Record<string,
   return next;
 }
 
+function moveEntry(
+  record: Record<string, string>,
+  from: string,
+  to: string,
+  value: string
+): Record<string, string> {
+  const next = withoutKey(record, from);
+  return to && value ? { ...next, [to]: value } : next;
+}
+
 export function useModelCatalog({
   isOpen,
   isLoading,
@@ -389,21 +399,42 @@ export function useModelCatalog({
       const cachedModels =
         !cached || isCacheStale(normalizedUrl, subscriptionOnly) ? [] : cached.models;
 
-      setDraft((prev) => ({
-        ...prev,
-        ai: {
-          ...prev.ai,
-          baseUrl,
-          lastCustomBaseUrl: normalizedUrl,
-          modelId: normalizedUrl
-            ? getStoredModelId(prev.ai.modelIdsByBaseUrl, normalizedUrl)
-            : prev.ai.modelId,
-          apiKey: normalizedUrl
-            ? getStoredApiKey(prev.ai.apiKeysByBaseUrl, normalizedUrl)
-            : prev.ai.apiKey,
-          availableModels: cachedModels,
-        },
-      }));
+      setDraft((prev) => {
+        const prevUrl = normalizeBaseUrl(prev.ai.baseUrl);
+        const storedKey = getStoredApiKey(prev.ai.apiKeysByBaseUrl, normalizedUrl);
+        const storedModel = getStoredModelId(prev.ai.modelIdsByBaseUrl, normalizedUrl);
+        // Editing a custom URL carries its key and model to the new text. A preset's key never
+        // follows (nor one left in the field after picking "Custom URL"), so it can't be sent
+        // to another server. Clearing the field moves nothing.
+        const editingCustom =
+          !!prevUrl && !!normalizedUrl && !isPresetUrl(prevUrl) && prevUrl !== normalizedUrl;
+        const moveKey = editingCustom && !storedKey;
+        const moveModel = editingCustom && !storedModel;
+        const keepKey = moveKey || !normalizedUrl;
+        const keepModel = moveModel || !normalizedUrl;
+        const apiKey = keepKey ? prev.ai.apiKey : storedKey;
+        const modelId = keepModel ? prev.ai.modelId : storedModel;
+        const apiKeysByBaseUrl = prev.ai.apiKeysByBaseUrl ?? {};
+        const modelIdsByBaseUrl = prev.ai.modelIdsByBaseUrl ?? {};
+
+        return {
+          ...prev,
+          ai: {
+            ...prev.ai,
+            baseUrl,
+            lastCustomBaseUrl: normalizedUrl,
+            modelId,
+            apiKey,
+            apiKeysByBaseUrl: moveKey
+              ? moveEntry(apiKeysByBaseUrl, prevUrl, normalizedUrl, apiKey)
+              : apiKeysByBaseUrl,
+            modelIdsByBaseUrl: moveModel
+              ? moveEntry(modelIdsByBaseUrl, prevUrl, normalizedUrl, modelId)
+              : modelIdsByBaseUrl,
+            availableModels: cachedModels,
+          },
+        };
+      });
 
       if (cachedModels.length === 0 && normalizedUrl) {
         const apiKey = draftRef.current.ai.apiKeysByBaseUrl?.[normalizedUrl];

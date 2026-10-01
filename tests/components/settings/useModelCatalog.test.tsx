@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AIModelInfo } from '../../../src/db/characterTypes';
+import type { AIConfig, AIModelInfo } from '../../../src/db/characterTypes';
+import type { SettingsDraft } from '../../../src/components/settings/types';
 
 const pending: Array<{ resolve: (models: AIModelInfo[]) => void; reject: (err: Error) => void }> = [];
 
@@ -30,11 +31,14 @@ afterEach(() => {
   pending.length = 0;
 });
 
-function setup() {
+function setup(ai: Partial<AIConfig> = {}) {
   return renderHook(() => {
-    const [draft, setDraft] = useState(() => {
+    const [draft, setDraft] = useState<SettingsDraft>(() => {
       const initial = createDefaultDraft();
-      return { ...initial, ai: { ...initial.ai, baseUrl: NANO, apiKey: 'sk-nano', modelId: '' } };
+      return {
+        ...initial,
+        ai: { ...initial.ai, baseUrl: NANO, apiKey: 'sk-nano', modelId: '', ...ai },
+      };
     });
     const catalog = useModelCatalog({
       isOpen: true,
@@ -98,5 +102,68 @@ describe('useModelCatalog', () => {
     expect(hook.result.current.draft.ai.availableModels).toEqual([
       { id: 'nano-model', name: 'Nano Model' },
     ]);
+  });
+
+  describe('editing the custom URL', () => {
+    const OLD = 'https://my.host/v1';
+    const NEW = 'https://my.host/v2';
+
+    it('moves the key and model to the edited URL without fetching', () => {
+      const hook = setup({
+        baseUrl: OLD,
+        apiKey: 'sk-custom',
+        modelId: 'my-model',
+        apiKeysByBaseUrl: { [OLD]: 'sk-custom' },
+        modelIdsByBaseUrl: { [OLD]: 'my-model' },
+      });
+      act(() => hook.result.current.catalog.handleCustomUrlChange(`${NEW}/`));
+
+      const { ai } = hook.result.current.draft;
+      expect(ai.apiKey).toBe('sk-custom');
+      expect(ai.modelId).toBe('my-model');
+      expect(ai.apiKeysByBaseUrl).toEqual({ [NEW]: 'sk-custom' });
+      expect(ai.modelIdsByBaseUrl).toEqual({ [NEW]: 'my-model' });
+      expect(pending).toHaveLength(0);
+    });
+
+    it('never carries a preset key to a typed URL', () => {
+      const hook = setup({ apiKeysByBaseUrl: { [NANO]: 'sk-nano' } });
+      act(() => hook.result.current.catalog.handleCustomUrlChange('https://elsewhere.example/v1'));
+
+      const { ai } = hook.result.current.draft;
+      expect(ai.apiKey).toBe('');
+      expect(ai.apiKeysByBaseUrl).toEqual({ [NANO]: 'sk-nano' });
+    });
+
+    it('does not carry a key left in the field when starting from an empty URL', () => {
+      const hook = setup({ baseUrl: '', apiKey: 'sk-nano', apiKeysByBaseUrl: { [NANO]: 'sk-nano' } });
+      act(() => hook.result.current.catalog.handleCustomUrlChange(NEW));
+
+      const { ai } = hook.result.current.draft;
+      expect(ai.apiKey).toBe('');
+      expect(ai.apiKeysByBaseUrl).toEqual({ [NANO]: 'sk-nano' });
+    });
+
+    it('switches to the key already stored for the new URL and keeps the old one', () => {
+      const hook = setup({
+        baseUrl: OLD,
+        apiKey: 'sk-old',
+        apiKeysByBaseUrl: { [OLD]: 'sk-old', [NEW]: 'sk-new' },
+      });
+      act(() => hook.result.current.catalog.handleCustomUrlChange(NEW));
+
+      const { ai } = hook.result.current.draft;
+      expect(ai.apiKey).toBe('sk-new');
+      expect(ai.apiKeysByBaseUrl).toEqual({ [OLD]: 'sk-old', [NEW]: 'sk-new' });
+    });
+
+    it('keeps the stored key when the field is cleared and retyped', () => {
+      const hook = setup({ baseUrl: OLD, apiKey: 'sk-custom', apiKeysByBaseUrl: { [OLD]: 'sk-custom' } });
+      act(() => hook.result.current.catalog.handleCustomUrlChange(''));
+      expect(hook.result.current.draft.ai.apiKeysByBaseUrl).toEqual({ [OLD]: 'sk-custom' });
+
+      act(() => hook.result.current.catalog.handleCustomUrlChange(OLD));
+      expect(hook.result.current.draft.ai.apiKey).toBe('sk-custom');
+    });
   });
 });
