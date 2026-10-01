@@ -10,6 +10,7 @@ import type {
   PromptModelMap,
   PromptSettings,
   SamplerSettings,
+  ToolbarConfig,
 } from '../../../db/characterTypes';
 import {
   DEFAULT_SETTINGS,
@@ -35,7 +36,11 @@ import {
   persistableAIConfig,
 } from '../../../services/CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from '../../../services/resolveOperationConfig';
-import { prunePromptModelsForToolbar, validateToolbarConfig } from '../../../services/toolbarConfig';
+import {
+  prunePromptModelsForToolbar,
+  toolbarButtonLabel,
+  validateToolbarConfig,
+} from '../../../services/toolbarConfig';
 import { validateStudioPrompts } from '../../../pages/ai-creation-studio/generationPrompts';
 import {
   getFavoriteTags,
@@ -165,29 +170,33 @@ export function validatePrompts(prompts: PromptSettings): string | null {
   return errors.length > 0 ? errors.join('\n') : null;
 }
 
-export function validatePromptModels(promptModels: PromptModelMap): string | null {
+function bindingError(name: string, binding: PromptModelBinding): string | null {
+  if (!binding.baseUrl?.trim()) {
+    return `${name}: model routing is missing an endpoint`;
+  }
+  if (!binding.modelId?.trim()) {
+    return `${name}: choose a model, or set the endpoint back to Default`;
+  }
+  return null;
+}
+
+/** Only bindings that survive save-time pruning are checked, so a deleted button can't block Save. */
+export function validatePromptModels(
+  promptModels: PromptModelMap,
+  toolbar: ToolbarConfig
+): string | null {
+  const normalized = normalizeToolbarConfig(toolbar);
   const errors: string[] = [];
-  for (const [key, binding] of Object.entries(promptModels)) {
+  for (const [key, binding] of Object.entries(prunePromptModelsForToolbar(promptModels, normalized))) {
     if (!binding) continue;
-    if (!binding.baseUrl?.trim()) {
-      errors.push(`${key}: model binding is missing an endpoint`);
-    }
-    if (!binding.modelId?.trim()) {
-      errors.push(`${key}: model binding is missing a model ID`);
-    }
+    const error = bindingError(`${toolbarButtonLabel(key, normalized.customOps)} prompt`, binding);
+    if (error) errors.push(error);
   }
   return errors.length > 0 ? errors.join('\n') : null;
 }
 
 export function validateAgentModel(agentModel: PromptModelBinding | undefined): string | null {
-  if (!agentModel) return null;
-  if (!agentModel.baseUrl?.trim()) {
-    return 'Agent: model binding is missing an endpoint';
-  }
-  if (!agentModel.modelId?.trim()) {
-    return 'Agent: model binding is missing a model ID';
-  }
-  return null;
+  return agentModel ? bindingError('Agent', agentModel) : null;
 }
 
 interface UseSettingsDraftOptions {
@@ -309,7 +318,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       return;
     }
 
-    const promptModelsError = validatePromptModels(draft.promptModels);
+    const promptModelsError = validatePromptModels(draft.promptModels, draft.toolbar);
     if (promptModelsError) {
       addToast('error', promptModelsError);
       setIsSaving(false);

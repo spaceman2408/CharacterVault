@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { useSettingsDraft } from '../../../src/components/settings/hooks/useSettingsDraft';
+import {
+  useSettingsDraft,
+  validateAgentModel,
+  validatePromptModels,
+} from '../../../src/components/settings/hooks/useSettingsDraft';
 import { DEFAULT_CHARACTER_VAULT_SETTINGS } from '../../../src/db/characterTypes';
 import { characterSettingsService } from '../../../src/services/CharacterSettingsService';
 
@@ -99,5 +103,39 @@ describe('useSettingsDraft', () => {
       });
       expect(hook.result.current.isDirty).toBe(false);
     });
+  });
+});
+
+describe('model routing validation', () => {
+  const toolbar = {
+    order: ['instruct', 'custom:pirate'],
+    customOps: [{ id: 'custom:pirate', label: 'Pirate', icon: '✨', color: '#0891b2', prompt: 'Yarr ${text}' }],
+  };
+  const endpoint = 'https://openrouter.ai/api/v1';
+
+  it('names built-in and custom buttons instead of their ids', () => {
+    const error = validatePromptModels(
+      {
+        expand: { baseUrl: endpoint, modelId: '' },
+        'custom:pirate': { baseUrl: endpoint, modelId: '' },
+      },
+      toolbar
+    );
+    expect(error).toBe(
+      'Enhance prompt: choose a model, or set the endpoint back to Default\n' +
+        'Pirate prompt: choose a model, or set the endpoint back to Default'
+    );
+  });
+
+  it('ignores bindings left behind by deleted custom buttons', () => {
+    expect(
+      validatePromptModels({ 'custom:gone': { baseUrl: endpoint, modelId: '' } }, toolbar)
+    ).toBeNull();
+  });
+
+  it('names the agent', () => {
+    expect(validateAgentModel({ baseUrl: endpoint, modelId: ' ' })).toBe(
+      'Agent: choose a model, or set the endpoint back to Default'
+    );
   });
 });
