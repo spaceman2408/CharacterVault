@@ -161,10 +161,9 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
       return;
     }
     const baseUrl = normalizeBaseUrl(value);
-    const remembered = globalAi.modelIdsByBaseUrl?.[baseUrl] ?? '';
     onChange({
       baseUrl,
-      modelId: remembered || binding?.modelId || '',
+      modelId: globalAi.modelIdsByBaseUrl?.[baseUrl] ?? '',
     });
   };
 
