@@ -33,7 +33,7 @@ function Harness() {
 
 function addButton(label: string) {
   fireEvent.change(screen.getByLabelText('Button label'), { target: { value: label } });
-  fireEvent.change(screen.getByPlaceholderText('Prompt template: must contain ${text}'), {
+  fireEvent.change(screen.getByPlaceholderText('Prompt template'), {
     target: { value: 'Do it: ${text}' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Add' }));

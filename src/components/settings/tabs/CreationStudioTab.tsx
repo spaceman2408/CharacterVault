@@ -3,16 +3,18 @@
  * @module components/settings/tabs/CreationStudioTab
  */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AlertCircle, ChevronDown, ChevronUp, MessageSquare, RotateCcw, SlidersHorizontal, Tag, Wand2 } from 'lucide-react';
 import type { StudioGenerationField, StudioPrompts } from '../../../db/characterTypes';
 import { DEFAULT_STUDIO_PROMPTS } from '../../../db/characterTypes';
 import { TAG_CATEGORIES } from '../../../pages/ai-creation-studio/tags/tagData';
-import { STUDIO_PROMPT_REQUIRED_VARS } from '../../../pages/ai-creation-studio/generationPrompts';
-import type { StudioPromptKey } from '../../../pages/ai-creation-studio/generationPrompts';
+import { STUDIO_PROMPT_OPTIONAL_VARS, STUDIO_PROMPT_REQUIRED_VARS } from '../../../pages/ai-creation-studio/generationPrompts';
+import type { StudioPromptKey, StudioTemplateVars } from '../../../pages/ai-creation-studio/generationPrompts';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
 import { EditedBadge, ResetPromptButton } from '../components/ResetPromptButton';
+import { PromptVariableChips } from '../components/PromptVariableChips';
+import type { PromptVariable } from '../components/PromptVariableChips';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import type { SettingsTabProps } from '../types';
 
@@ -21,25 +23,48 @@ const STUDIO_OPTIONAL_FIELDS: Array<{ key: StudioGenerationField; label: string;
   { key: 'mes_example', label: 'Examples', hint: 'Toggle off to skip dialogue examples and save an API call.' },
 ];
 
-const STUDIO_PROMPT_META: Array<{ key: StudioPromptKey; label: string; hint: string }> = [
+const STUDIO_PROMPT_META: Array<{ key: StudioPromptKey; label: string; hint?: string }> = [
   { key: 'system', label: 'System Prompt', hint: 'Sent as the system message for every field. No variables.' },
-  { key: 'name', label: 'Name Prompt', hint: 'Required: ${concept}' },
-  { key: 'description', label: 'Description Prompt', hint: 'Required: ${concept} ${name} · Optional: ${styleBlock}' },
-  { key: 'first_mes', label: 'First Message Prompt', hint: 'Required: ${concept} ${name} ${description} · Optional: ${styleBlock} ${narrationRule}' },
-  { key: 'mes_example', label: 'Examples Prompt', hint: 'Required: ${concept} ${name} ${description} · Optional: ${styleBlock} ${narrationRule}' },
+  { key: 'name', label: 'Name Prompt' },
+  { key: 'description', label: 'Description Prompt' },
+  { key: 'first_mes', label: 'First Message Prompt' },
+  { key: 'mes_example', label: 'Examples Prompt' },
 ];
+
+const STUDIO_VARIABLE_INFO: Record<keyof StudioTemplateVars, { label: string; description: string }> = {
+  concept: { label: 'Concept', description: 'The character idea you typed in the Studio, or one built from your selected tags.' },
+  name: { label: 'Name', description: 'The name generated in the first step.' },
+  description: { label: 'Description', description: 'The description generated in the previous step.' },
+  styleBlock: {
+    label: 'Style rules',
+    description: 'Perspective and tense instructions from your selected tags. Leave it out and those tags are ignored.',
+  },
+  narrationRule: {
+    label: 'Narration format',
+    description: 'How narration and dialogue should be written, based on your perspective tag.',
+  },
+};
+
+function studioPromptVariables(key: StudioPromptKey): PromptVariable[] {
+  const required = STUDIO_PROMPT_REQUIRED_VARS[key] as Array<keyof StudioTemplateVars>;
+  return [
+    ...required.map((v) => ({ key: v, ...STUDIO_VARIABLE_INFO[v], required: true })),
+    ...STUDIO_PROMPT_OPTIONAL_VARS[key].map((v) => ({ key: v, ...STUDIO_VARIABLE_INFO[v], required: false })),
+  ];
+}
 
 const StudioPromptEditor: React.FC<{
   promptKey: StudioPromptKey;
   label: string;
-  hint: string;
+  hint?: string;
   value: string;
   expanded: boolean;
   onToggle: () => void;
   onChange: (value: string) => void;
 }> = ({ promptKey, label, hint, value, expanded, onToggle, onChange }) => {
-  const required = STUDIO_PROMPT_REQUIRED_VARS[promptKey];
-  const missing = required.filter((v) => !value.includes(`\${${v}}`));
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const variables = studioPromptVariables(promptKey);
+  const missing = STUDIO_PROMPT_REQUIRED_VARS[promptKey].filter((v) => !value.includes(`\${${v}}`));
   const defaultValue = DEFAULT_STUDIO_PROMPTS[promptKey];
   const edited = value !== defaultValue;
   return (
@@ -64,21 +89,19 @@ const StudioPromptEditor: React.FC<{
       {expanded && (
         <div className="p-3 sm:p-4">
           <textarea
+            ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             className="w-full min-h-28 h-40 px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-base sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent/50 resize-y transition-all duration-200"
             placeholder={`Enter ${label.toLowerCase()}...`}
           />
-          <div className="mt-2 flex items-start justify-between gap-2">
-            <p className="text-xs text-fg-muted">{hint}</p>
-            {edited && <ResetPromptButton label={label} onReset={() => onChange(defaultValue)} />}
-          </div>
-          {missing.map((v) => (
-            <p key={v} className="mt-1 text-xs text-danger flex items-start gap-1">
-              <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-              Missing required {'${' + v + '}'}
-            </p>
-          ))}
+          <PromptVariableChips variables={variables} value={value} textareaRef={textareaRef} onChange={onChange} />
+          {(hint || edited) && (
+            <div className="mt-2 flex items-start justify-between gap-2">
+              {hint && <p className="text-xs text-fg-muted">{hint}</p>}
+              {edited && <ResetPromptButton label={label} onReset={() => onChange(defaultValue)} />}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -211,8 +234,7 @@ export const CreationStudioTab: React.FC<SettingsTabProps> = ({ draft, setDraft 
           </button>
         </div>
         <p className="text-xs text-fg-muted mb-3 leading-relaxed">
-          Fully customizable. {'${styleBlock}'} expands to the perspective + tense instructions,{' '}
-          {'${narrationRule}'} to the narration format rule. Omitting them drops that guidance.
+          Fully customizable. Use the variable chips under each prompt to insert the values the Studio fills in.
         </p>
         {STUDIO_PROMPT_META.map(({ key, label, hint }) => (
           <StudioPromptEditor

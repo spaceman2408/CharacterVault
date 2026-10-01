@@ -26,6 +26,14 @@ export const STUDIO_PROMPT_REQUIRED_VARS: Record<StudioPromptKey, string[]> = {
   mes_example: ['concept', 'name', 'description'],
 };
 
+export const STUDIO_PROMPT_OPTIONAL_VARS: Record<StudioPromptKey, Array<keyof StudioTemplateVars>> = {
+  system: [],
+  name: [],
+  description: ['styleBlock'],
+  first_mes: ['styleBlock', 'narrationRule'],
+  mes_example: ['styleBlock', 'narrationRule'],
+};
+
 export function renderStudioTemplate(
   template: string,
   vars: Partial<StudioTemplateVars>

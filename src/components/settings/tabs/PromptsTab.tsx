@@ -3,7 +3,7 @@
  * @module components/settings/tabs/PromptsTab
  */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AlertCircle, ArrowDown, ArrowUp, Bot, ChevronDown, ChevronUp, Lock, MessageSquare, Plus, RotateCcw, SlidersHorizontal, Sparkles, Target, Trash2 } from 'lucide-react';
 import type { CustomToolbarOp, PromptModelBinding, PromptSettings, ToolbarConfig } from '../../../db/characterTypes';
 import { DEFAULT_CUSTOM_BUTTON_COLOR, DEFAULT_SETTINGS, TOOLBAR_COLOR_PALETTE, normalizeToolbarConfig } from '../../../db/characterTypes';
@@ -21,10 +21,26 @@ import { SettingsCard } from '../components/SettingsCard';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { PromptModelBindingSelect } from '../components/PromptModelBindingSelect';
 import { EditedBadge, ResetPromptButton } from '../components/ResetPromptButton';
+import { PromptVariableChips } from '../components/PromptVariableChips';
+import type { PromptVariable } from '../components/PromptVariableChips';
 import type { SettingsTabProps } from '../types';
 
 const PRIMARY_PROMPTS = ['expand', 'rewrite', 'instruct'] as const;
 const POLISH_PROMPTS = ['shorten', 'lengthen', 'vivid', 'emotion', 'grammar'] as const;
+
+const TEXT_VARIABLE: PromptVariable = {
+  key: 'text',
+  label: 'Selected text',
+  description: 'The editor text this button works on.',
+  required: true,
+};
+
+const INSTRUCTION_VARIABLE: PromptVariable = {
+  key: 'instruction',
+  label: 'Your instruction',
+  description: "What you type into the Custom button's instruction box.",
+  required: true,
+};
 
 function promptLabel(promptType: keyof PromptSettings): string {
   if (promptType === 'expand') return 'Enhance Prompt';
@@ -33,6 +49,29 @@ function promptLabel(promptType: keyof PromptSettings): string {
   if (promptType === 'grammar') return 'Fix Prompt';
   return `${promptType.charAt(0).toUpperCase() + promptType.slice(1)} Prompt`;
 }
+
+const CustomPromptField: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  className: string;
+  rows?: number;
+}> = ({ value, onChange, placeholder, className, rows }) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  return (
+    <div>
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        placeholder={placeholder}
+        className={`w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg focus:outline-none focus:ring-2 focus:ring-accent/50 resize-y ${className}`}
+      />
+      <PromptVariableChips variables={[TEXT_VARIABLE]} value={value} textareaRef={textareaRef} onChange={onChange} />
+    </div>
+  );
+};
 
 interface PromptEditorProps {
   promptType: keyof PromptSettings;
@@ -62,6 +101,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
     !!helpers && endpoint
       ? helpers.isFetchingModelsForUrl(endpoint)
       : false;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const defaultValue = DEFAULT_SETTINGS.prompts[promptType];
   const edited = value !== defaultValue;
 
@@ -95,37 +135,22 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
       {expanded && (
         <div className="p-3 sm:p-4">
           <textarea
+            ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             className="w-full min-h-28 h-32 px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 resize-y transition-all duration-200"
             placeholder={`Enter ${promptType} prompt...`}
           />
-          <div className="mt-2 text-xs flex items-start justify-between gap-2">
-            {promptType === 'instruct' ? (
-              <span className="text-fg-muted">
-                <span className="font-semibold text-danger">Required:</span> Must contain ${'{text}'}{' '}
-                and ${'{instruction}'}
-              </span>
-            ) : (
-              <span className="text-fg-muted">
-                <span className="font-semibold text-danger">Required:</span> Must contain ${'{text}'}
-              </span>
-            )}
-            {edited && (
+          <PromptVariableChips
+            variables={promptType === 'instruct' ? [TEXT_VARIABLE, INSTRUCTION_VARIABLE] : [TEXT_VARIABLE]}
+            value={value}
+            textareaRef={textareaRef}
+            onChange={onChange}
+          />
+          {edited && (
+            <div className="mt-2 flex justify-end">
               <ResetPromptButton label={promptLabel(promptType)} onReset={() => onChange(defaultValue)} />
-            )}
-          </div>
-          {!value.includes('${text}') && (
-            <p className="mt-2 text-xs text-danger flex items-start gap-1">
-              <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-              Missing required ${'{text}'} placeholder!
-            </p>
-          )}
-          {promptType === 'instruct' && !value.includes('${instruction}') && (
-            <p className="mt-2 text-xs text-danger flex items-start gap-1">
-              <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-              Missing required ${'{instruction}'} placeholder!
-            </p>
+            </div>
           )}
 
           {helpers && (
@@ -506,26 +531,12 @@ const ToolbarButtonsSection: React.FC<{
                     label="Button color"
                   />
                 </div>
-                <div>
-                  <textarea
-                    value={custom.prompt}
-                    onChange={(e) => patchCustom(custom.id, { prompt: e.target.value })}
-                    className="w-full min-h-28 h-32 px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 resize-y transition-all duration-200"
-                    placeholder="Enter custom prompt..."
-                  />
-                  <div className="mt-2 text-xs space-y-1">
-                    <span className="text-fg-muted">
-                      <span className="font-semibold text-danger">Required:</span> Must contain
-                      {'${text}'}
-                    </span>
-                  </div>
-                  {!custom.prompt.includes('${text}') && (
-                    <p className="mt-2 text-xs text-danger flex items-start gap-1">
-                      <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-                      Missing required {'${text}'} placeholder!
-                    </p>
-                  )}
-                </div>
+                <CustomPromptField
+                  value={custom.prompt}
+                  onChange={(prompt) => patchCustom(custom.id, { prompt })}
+                  placeholder="Enter custom prompt..."
+                  className="min-h-28 h-32 text-base sm:text-sm transition-all duration-200"
+                />
                 {helpers && (
                   <PromptModelBindingSelect
                     binding={draft.promptModels[custom.id]}
@@ -638,12 +649,12 @@ const ToolbarButtonsSection: React.FC<{
             Add
           </button>
         </div>
-        <textarea
+        <CustomPromptField
           value={newPrompt}
-          onChange={(e) => setNewPrompt(e.target.value)}
+          onChange={setNewPrompt}
           rows={2}
-          placeholder="Prompt template: must contain ${text}"
-          className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 resize-y"
+          placeholder="Prompt template"
+          className="text-sm"
         />
         {newError && (
           <p className="mt-2 text-xs text-danger flex items-start gap-1">
