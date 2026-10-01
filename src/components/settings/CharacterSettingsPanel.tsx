@@ -153,36 +153,47 @@ export function CharacterSettingsPanel({
 
   // Focus trap
   useEffect(() => {
-    if (!isOpen || !panelRef.current) return;
+    if (!isOpen || !isRendered || !panelRef.current) return;
 
     const panel = panelRef.current;
-    const focusableElements = panel.querySelectorAll<HTMLElement>(
-      'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
+    // Re-query on each Tab: tab content and the Save button's disabled state change while open.
+    const getFocusable = () =>
+      Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.hasAttribute('disabled') && el.getClientRects().length > 0);
 
     const handleTabKey = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;
+      const focusable = getFocusable();
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
 
-      if (e.shiftKey) {
-        if (document.activeElement === firstElement) {
-          e.preventDefault();
-          lastElement?.focus();
-        }
-      } else {
-        if (document.activeElement === lastElement) {
-          e.preventDefault();
-          firstElement?.focus();
-        }
+      if (!panel.contains(active)) {
+        // Leave dialogs portaled above the panel (confirm, model picker) alone.
+        if (active && active !== document.body) return;
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+        return;
+      }
+
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
 
     document.addEventListener('keydown', handleTabKey);
-    firstElement?.focus();
+    getFocusable()[0]?.focus();
 
     return () => document.removeEventListener('keydown', handleTabKey);
-  }, [isOpen, activeTab]);
+  }, [isOpen, isRendered, activeTab]);
 
   // Open/close fade animation (timers/rAF always cleaned up on re-run/unmount)
   useEffect(() => {
