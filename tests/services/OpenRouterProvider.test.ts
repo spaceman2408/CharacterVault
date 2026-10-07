@@ -9,7 +9,9 @@ import {
   OpenRouterProvider,
   SyntheticProvider,
   buildOpenRouterProviderPrefs,
+  filterOpenRouterModels,
   getProviderSelectionId,
+  isFreeOpenRouterModel,
   isOpenRouterBaseUrl,
   mapOpenRouterCatalog,
   mapOpenRouterEndpoints,
@@ -222,6 +224,23 @@ describe('mapOpenRouterEndpoints', () => {
     expect(info.supportsProviderSelection).toBe(false);
     expect(info.canonicalId).toBe('x/y:free');
     expect(mapOpenRouterEndpoints(null, 'x/y').providers).toEqual([]);
+  });
+});
+
+describe('filterOpenRouterModels', () => {
+  const models = [
+    { id: 'paid/model', name: 'Paid', pricing: { prompt: 0.000001, completion: 0.000002 } },
+    { id: 'free/model:free', name: 'Free', pricing: { prompt: 0, completion: 0 } },
+    { id: 'openrouter/auto', name: 'Auto', pricing: { prompt: -1, completion: -1 } },
+    { id: 'no/pricing', name: 'Unknown' },
+  ];
+
+  it('keeps only $0 models when free models only is on', () => {
+    expect(filterOpenRouterModels(models, { freeModelsOnly: true }).map((m) => m.id)).toEqual([
+      'free/model:free',
+    ]);
+    expect(filterOpenRouterModels(models)).toBe(models);
+    expect(isFreeOpenRouterModel(models[0])).toBe(false);
   });
 });
 

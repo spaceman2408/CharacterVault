@@ -182,6 +182,7 @@ function normalizeBackupOpenRouter(value: unknown): OpenRouterOptions {
     sort: OPENROUTER_SORTS.find((sort) => sort === raw.sort),
     denyDataCollection: asBoolean(raw.denyDataCollection, false),
     zdrOnly: asBoolean(raw.zdrOnly, false),
+    freeModelsOnly: asBoolean(raw.freeModelsOnly, false),
   };
 }
 

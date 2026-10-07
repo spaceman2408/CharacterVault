@@ -6,7 +6,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AIConfig, AIModelInfo, SamplerSettings } from '../../../db/characterTypes';
 import { AIService, AIError } from '../../../services/AIService';
-import { isOpenRouterBaseUrl, type ModelProvider } from '../../../services/providers';
+import {
+  filterOpenRouterModels,
+  isOpenRouterBaseUrl,
+  type ModelProvider,
+} from '../../../services/providers';
 import {
   AI_BASE_URL_PRESETS,
   MODEL_CACHE_STALENESS_MS,
@@ -571,12 +575,22 @@ export function useModelCatalog({
     setSupportsProviderSelection(false);
   }, []);
 
+  const openRouterOptions = draft.ai.openRouter;
+  const filterModelsForUrl = useCallback(
+    (baseUrl: string, models: AIModelInfo[]) =>
+      isOpenRouterBaseUrl(baseUrl) ? filterOpenRouterModels(models, openRouterOptions) : models,
+    [openRouterOptions]
+  );
+
   const modelsByBaseUrlList = useMemo(
     () =>
       Object.fromEntries(
-        Object.entries(modelsByBaseUrl).map(([url, cache]) => [url, cache.models])
+        Object.entries(modelsByBaseUrl).map(([url, cache]) => [
+          url,
+          filterModelsForUrl(url, cache.models),
+        ])
       ),
-    [modelsByBaseUrl]
+    [modelsByBaseUrl, filterModelsForUrl]
   );
 
   const isFetchingModelsForUrl = useCallback(
@@ -608,6 +622,7 @@ export function useModelCatalog({
     isFetchingModelsForCurrentUrl,
     modelFetchErrorForCurrentUrl,
     modelsByBaseUrl: modelsByBaseUrlList,
+    filterModelsForUrl,
     isFetchingModelsForUrl,
     modelFetchErrorForUrl,
     modelProviders,

@@ -239,6 +239,7 @@ export function CharacterSettingsPanel({
     isClearing,
     fetchModels: modelCatalog.fetchModels,
     modelsByBaseUrl: modelCatalog.modelsByBaseUrl,
+    filterModelsForUrl: modelCatalog.filterModelsForUrl,
     isFetchingModelsForUrl: modelCatalog.isFetchingModelsForUrl,
     modelFetchErrorForUrl: modelCatalog.modelFetchErrorForUrl,
     fetchModelsForUrl: modelCatalog.fetchModelsForUrl,

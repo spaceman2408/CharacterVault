@@ -152,6 +152,7 @@ describe('parseSettingsBackup', () => {
       sort: 'latency',
       denyDataCollection: true,
       zdrOnly: 'yes',
+      freeModelsOnly: true,
     };
     const file = parseSettingsBackup({
       kind: 'charactervault-settings',
@@ -164,6 +165,7 @@ describe('parseSettingsBackup', () => {
       sort: 'latency',
       denyDataCollection: true,
       zdrOnly: false,
+      freeModelsOnly: true,
     });
 
     const unknownSort = parseSettingsBackup({

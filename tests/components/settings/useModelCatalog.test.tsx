@@ -104,6 +104,27 @@ describe('useModelCatalog', () => {
     ]);
   });
 
+  it('hides paid OpenRouter models when free models only is on', async () => {
+    const hook = setup({ baseUrl: OPENROUTER, openRouter: { freeModelsOnly: true } });
+    const models: AIModelInfo[] = [
+      { id: 'paid/model', name: 'Paid', pricing: { prompt: 0.000001, completion: 0.000002 } },
+      { id: 'free/model:free', name: 'Free', pricing: { prompt: 0, completion: 0 } },
+    ];
+    let fetching!: Promise<void>;
+    act(() => {
+      fetching = hook.result.current.catalog.fetchModelsForUrl(OPENROUTER);
+    });
+    await act(async () => {
+      pending[0].resolve(models);
+      await fetching;
+    });
+
+    const { catalog } = hook.result.current;
+    expect(catalog.modelsByBaseUrl[OPENROUTER].map((m) => m.id)).toEqual(['free/model:free']);
+    expect(catalog.filterModelsForUrl(OPENROUTER, models)).toHaveLength(1);
+    expect(catalog.filterModelsForUrl(NANO, models)).toHaveLength(2);
+  });
+
   describe('editing the custom URL', () => {
     const OLD = 'https://my.host/v1';
     const NEW = 'https://my.host/v2';

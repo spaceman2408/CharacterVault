@@ -80,6 +80,8 @@ export interface SettingsPanelHelpers {
   fetchModels: (options?: { subscriptionOnly?: boolean }) => Promise<void>;
   /** Cached model lists keyed by normalized base URL (Prompts tab routing). */
   modelsByBaseUrl: Record<string, AIModelInfo[]>;
+  /** Apply list-only filters (e.g. OpenRouter free models only) for display. */
+  filterModelsForUrl: (baseUrl: string, models: AIModelInfo[]) => AIModelInfo[];
   isFetchingModelsForUrl: (baseUrl: string) => boolean;
   modelFetchErrorForUrl: (baseUrl: string) => string | null;
   fetchModelsForUrl: (baseUrl: string) => Promise<void>;

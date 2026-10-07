@@ -8,7 +8,9 @@ export { OpenAICompatProvider } from './OpenAICompatProvider';
 export {
   OpenRouterProvider,
   buildOpenRouterProviderPrefs,
+  filterOpenRouterModels,
   getOpenRouterPinnedHost,
+  isFreeOpenRouterModel,
   isOpenRouterBaseUrl,
   mapOpenRouterCatalog,
   mapOpenRouterEndpoints,

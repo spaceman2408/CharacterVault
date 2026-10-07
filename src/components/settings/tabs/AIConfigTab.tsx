@@ -52,6 +52,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
     setShowClearConfirm,
     isClearing,
     fetchModels,
+    filterModelsForUrl,
     handleBaseUrlChange,
     handleCustomUrlChange,
     handleApiKeyChange,
@@ -279,7 +280,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
           </div>
 
           <ModelSelect
-            models={localAIConfig.availableModels || []}
+            models={filterModelsForUrl(localAIConfig.baseUrl, localAIConfig.availableModels || [])}
             selectedModelId={localAIConfig.modelId}
             onSelect={handleModelChange}
             onFetch={() => void fetchModels()}
@@ -444,6 +445,26 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                 <>
                   Only use hosts that never store your prompts. Fewer models and hosts qualify, and a
                   request fails when none do. Your OpenRouter privacy settings still apply on top.
+                </>
+              }
+            />
+            <SettingsToggle
+              stacked
+              checked={localAIConfig.openRouter?.freeModelsOnly ?? false}
+              onChange={(checked) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  ai: {
+                    ...prev.ai,
+                    openRouter: { ...prev.ai.openRouter, freeModelsOnly: checked },
+                  },
+                }))
+              }
+              label="Free models only"
+              description={
+                <>
+                  Show only $0 models in OpenRouter model lists. Free models have a daily request
+                  limit on your account.
                 </>
               }
             />

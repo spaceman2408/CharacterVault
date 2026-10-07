@@ -727,6 +727,8 @@ export interface OpenRouterOptions {
   denyDataCollection?: boolean;
   /** Only route to Zero Data Retention endpoints. */
   zdrOnly?: boolean;
+  /** Show only $0 models in OpenRouter model lists (requests are unchanged). */
+  freeModelsOnly?: boolean;
 }
 
 export interface SamplerPreset {

@@ -2,7 +2,12 @@ import {
   getCapabilityCache,
   recordSupportedEfforts,
 } from '../chatRequestRepair';
-import type { AIConfig, OpenRouterSort } from '../../db/characterTypes';
+import type {
+  AIConfig,
+  AIModelInfo,
+  OpenRouterOptions,
+  OpenRouterSort,
+} from '../../db/characterTypes';
 import type {
   IProviderAdapter,
   FetchModelsOptions,
@@ -264,6 +269,17 @@ export function mapOpenRouterEndpoints(data: unknown, modelId: string): ModelPro
     defaultPrice: { inputPer1kTokens: 0, outputPer1kTokens: 0 },
     providers,
   };
+}
+
+export function isFreeOpenRouterModel(model: AIModelInfo): boolean {
+  return model.pricing?.prompt === 0 && model.pricing.completion === 0;
+}
+
+export function filterOpenRouterModels<T extends AIModelInfo>(
+  models: T[],
+  options: OpenRouterOptions = {}
+): T[] {
+  return options.freeModelsOnly ? models.filter(isFreeOpenRouterModel) : models;
 }
 
 export function resolveOpenRouterNextUrl(next: unknown, requestUrl: string): string | null {
