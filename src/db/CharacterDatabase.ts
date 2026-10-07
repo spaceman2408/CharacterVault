@@ -1270,8 +1270,9 @@ export class CharacterDatabase extends Dexie {
       updatedAt: timestamp,
     };
 
-    // Keep book.name in sync with vault display name when name is updated
-    if (input.name !== undefined) {
+    // Keep book.name in sync with vault display name when name is updated.
+    // A book name that only differs by surrounding spaces is the editor mid-typing; keep it.
+    if (input.name !== undefined && input.book?.name?.trim() !== input.name) {
       updated.book = { ...updated.book, name: input.name };
     }
     if (input.description !== undefined) {

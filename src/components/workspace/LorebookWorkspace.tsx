@@ -394,11 +394,7 @@ export function LorebookWorkspace(): React.ReactElement {
       setIsSaving(true);
       const save = (async () => {
         try {
-          let updated = await updateLorebookBook(lorebook.id, book);
-          const nextName = book.name?.trim();
-          if (nextName && nextName !== lorebook.name) {
-            updated = await updateLorebook(lorebook.id, { name: nextName });
-          }
+          const updated = await updateLorebookBook(lorebook.id, book);
           if (updated) {
             scheduleLinkedSync(updated);
           }
@@ -413,7 +409,7 @@ export function LorebookWorkspace(): React.ReactElement {
       );
       await save;
     },
-    [updateLorebookBook, updateLorebook, scheduleLinkedSync],
+    [updateLorebookBook, scheduleLinkedSync],
   );
 
   const getAgentBook = useCallback((): CharacterBook => {
