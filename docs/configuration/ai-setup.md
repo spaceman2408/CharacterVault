@@ -34,7 +34,7 @@ Close the panel with **Cancel** or `Escape`. If you have unsaved changes, it ask
 
 ### Security Notice
 
-At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to reset all AI configuration to defaults — your characters are not affected. A confirmation step prevents accidental clears. The clear happens immediately (no Save needed) and removes saved keys for **every** provider, not just the current one, along with remembered models, the NanoGPT options, and the streaming/reasoning toggles. Prompt templates, **per-prompt model mappings**, and the **Agent** model mapping on the Prompts tab are kept (they do not store secrets).
+At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to reset all AI configuration to defaults — your characters are not affected. A confirmation step prevents accidental clears. The clear happens immediately (no Save needed) and removes saved keys for **every** provider, not just the current one, along with remembered models, the NanoGPT and OpenRouter options, and the streaming/reasoning toggles. Prompt templates, **per-prompt model mappings**, and the **Agent** model mapping on the Prompts tab are kept (they do not store secrets).
 
 ### API Base URL
 
@@ -44,7 +44,7 @@ Choose a provider preset from the dropdown, or select **Custom URL** to type in 
 | :--- | :--- | :--- |
 | **Nano-GPT** | `https://nano-gpt.com/api/v1` | NanoGPT hosted endpoint. Supports provider selection and subscription billing. |
 | **Synthetic** | `https://api.synthetic.new/v1` | OpenAI-compatible endpoint. Prefer `syn:` aliases so you always get the latest recommended model. |
-| **OpenRouter** | `https://openrouter.ai/api/v1` | OpenRouter multi-model gateway. Use `org/model` slugs such as `openai/gpt-4o`. |
+| **OpenRouter** | `https://openrouter.ai/api/v1` | OpenRouter multi-model gateway. Use `org/model` slugs such as `openai/gpt-4o`. Supports host selection plus routing and privacy options. |
 | **Minimax** | `https://api.minimax.io/v1` | OpenAI-compatible endpoint. API keys start with `sk-cp`. |
 | **LM Studio / localhost** | `http://127.0.0.1:1234/v1` | Local inference with LM Studio. |
 | **Custom URL** | Any URL | Any OpenAI-compatible endpoint (e.g., a self-hosted API). |
@@ -109,14 +109,25 @@ This is your **global default** model, used by Orion chat, AI Creation Studio, t
 
 On **Synthetic**, `syn:` aliases (Large text, Small text, and vision variants) are listed first; embedding-only models are omitted. On **OpenRouter**, the picker uses display names and drops non-text models. Both adapters seed reasoning-effort allowlists when the catalog reports them.
 
-### Provider (NanoGPT Only)
+With an OpenRouter API key, the list only shows models that key can use. Models blocked by your OpenRouter guardrails, ignored providers, or privacy settings are left out. Without a key you get the full public list. [OpenRouter Options](#openrouter-options) can narrow it further to free or zero-data-retention models.
 
-Some NanoGPT models support **provider selection** — choosing which backend serves the request. When available, a **Provider** control appears below the model selector. It uses the same sheet pattern as the model picker. Each provider shows its per-1k-token pricing for input and output.
+### Provider (NanoGPT and OpenRouter)
 
-- **Platform default** — Let NanoGPT auto-select the best provider.
-- **Specific provider** — Pick a named provider to control cost or latency.
+Some models support **provider selection** — choosing which backend (host) serves the request. When available, a **Provider** control appears below the model selector. It uses the same sheet pattern as the model picker. Each provider shows its per-1k-token pricing for input and output.
+
+- **Platform default** — Let NanoGPT or OpenRouter pick the host.
+- **Specific provider** — Pick a named provider to control cost, latency, or quality.
 
 Provider preferences are saved per model — switching models remembers your choice.
+
+#### On OpenRouter
+
+The list comes from the model's endpoints, so one host can appear more than once. The tag next to its name tells them apart: a quantization (`fp8`, `bf16`), a region (`us-central1`), or a tier (`turbo`). A pinned host is tried first.
+
+- **Only use this host** appears once a host is pinned. Off (default), OpenRouter falls back to another host when the pinned one is down or busy. On, the request fails instead.
+- The list shows every host, including ones your OpenRouter account, key, or the [privacy options](#openrouter-options) block. A blocked host is skipped, or the request fails when **Only use this host** is on.
+- Agent requests that call tools also skip hosts without tool support, whatever you pinned.
+- To see which host actually answered, open a reply's stats info. **Provider** shows the host OpenRouter reports.
 
 ### NanoGPT Account overview
 
@@ -150,6 +161,32 @@ When the **OpenRouter** preset is selected, an **OpenRouter Usage** card reads `
 - **Expiry** — shown when the key has an expiration date
 
 Refresh is rate-limited (about 30 seconds). Closing and reopening Settings within about a minute reuses the last result. Spend is this **API key’s** OpenRouter credit usage — a normal inference key does not return account balance. Manage credits at [openrouter.ai/settings/credits](https://openrouter.ai/settings/credits).
+
+### OpenRouter Options {#openrouter-options}
+
+When the base URL is OpenRouter, an **OpenRouter Options** card appears. Your account's privacy settings, ignored providers, and guardrails on openrouter.ai still apply on top of these.
+
+| Option | Default | What it does |
+| :--- | :--- | :--- |
+| **Host priority** | Balanced | Which hosts OpenRouter tries first: **Balanced** (spread by price and uptime), **Cheapest**, **Fastest** (most tokens per second), or **Quickest start** (lowest time to first token). A model with a pinned host uses the pin instead. |
+| **Always use Exacto for the Agent** | Off | Keeps quality-first host order for Agent tool calls even when a host priority is set. See [Exacto and the Agent](#exacto-and-the-agent). |
+| **No training on prompts** | Off | Skips hosts that may store and train on your prompts. Some allowed hosts still keep prompts for a short time, for example to check for abuse. |
+| **Zero data retention only** | Off | Only uses hosts that never store your prompts. Model lists hide models with no such host. |
+| **Free models only** | Off | Shows only $0 models in OpenRouter model lists. Requests are unchanged. Free models have a daily request limit on your account. |
+
+The privacy options apply to every request, including models with a pinned host. A pinned host that doesn't meet them is skipped, or the request fails when **Only use this host** is on. If no host qualifies, OpenRouter's error links to its own privacy settings, and CharacterVault adds which of these options is on.
+
+**Free models only** and **Zero data retention only** filter the model picker on AI Config and the model pickers on the [Prompts tab](#prompts-tab), including the Agent. A model you already picked stays selected even when a filter hides it.
+
+#### Exacto and the Agent {#exacto-and-the-agent}
+
+OpenRouter's **Auto Exacto** runs by default on every request that includes tools, which here means the [Agent](/features/ai-agent). It puts the hosts with the most reliable tool calls first. Any host priority other than **Balanced** turns it off.
+
+**Always use Exacto for the Agent** keeps it for the Agent anyway. Agent requests that call tools use the model's `:exacto` variant and leave out the host priority, while Orion and the AI toolbar still follow it. A pinned host still comes first, and model IDs that already have a variant (such as `:free`) are left as they are.
+
+::: tip Prompt caching
+Exacto can switch hosts partway through an Agent run, which loses prompt-cache hits. If cache hits matter more to you, leave this off and set **Host priority** to **Cheapest**, or pin a host, so the Agent stays on one host.
+:::
 
 ### NanoGPT Options
 

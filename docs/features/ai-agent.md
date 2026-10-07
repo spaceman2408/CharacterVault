@@ -163,6 +163,8 @@ The Agent is **not** Orion with extra buttons. It has to emit valid tool calls, 
 
 Point Agent at a **current tool-calling / agentic** model. Leave a cheap chat model on **AI Config** for Orion and Fix if you want; do not make the Agent use that same model.
 
+On **OpenRouter**, Agent tool calls already go to the hosts with the most reliable tool calls (Auto Exacto) unless you set a host priority. To keep that with a host priority set, and for the prompt-caching trade-off, see [AI Setup → Exacto and the Agent](/configuration/ai-setup#exacto-and-the-agent).
+
 See [AI Setup → Prompts Tab](/configuration/ai-setup#prompts-tab). If tool calls fail, see [Troubleshooting](#troubleshooting).
 
 ## Limits (per run)
