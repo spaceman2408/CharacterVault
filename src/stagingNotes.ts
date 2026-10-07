@@ -24,7 +24,14 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.8.4 staging 1';
+export const STAGING_VERSION = 'v1.8.4 staging 2';
 
 /** One short line per thing you want testers to try. */
-export const STAGING_TEST_NOTES: string[] = [];
+export const STAGING_TEST_NOTES: string[] = [
+  'OpenRouter → Provider: pick a host for a model. Hosts show variant tags like fp8, and the info on a reply shows the host that actually answered. Only use this host fails the request instead of falling back.',
+  'OpenRouter with an API key: the model list only shows models that key can use, so guardrails and ignored providers on openrouter.ai should hide models.',
+  'Settings → AI Config → OpenRouter Options → Host priority: Balanced, Cheapest, Fastest, or Quickest start. A pinned host still wins.',
+  'OpenRouter Options → No training on prompts / Zero data retention only: with ZDR on, model lists hide models with no ZDR host, and a request that no host can serve says which option blocked it.',
+  'OpenRouter Options → Free models only: model lists show only $0 models. Try it together with ZDR.',
+  'OpenRouter Options → Always use Exacto for the Agent: Agent tool calls use the :exacto variant even with a Host priority set. Without it, any Host priority but Balanced turns off Auto Exacto.',
+];
