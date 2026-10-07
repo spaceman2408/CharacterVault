@@ -22,6 +22,7 @@ import {
   NanoGPTProvider,
   OpenRouterProvider,
   buildOpenRouterProviderPrefs,
+  openRouterExactoModelId,
 } from './providers';
 import type { ModelProviderInfo, FetchModelsOptions } from './providers';
 import { EDITOR_PERSONA, buildSystemPrompt as buildSystemPromptParts, getStablePrefix as getStablePrefixParts } from './PromptBuilder';
@@ -849,16 +850,19 @@ Provide only the generated text without any additional commentary.`;
       reasoning_split: enableReasoning && this.isMinimaxBaseUrl() ? true : undefined,
     };
 
+    const sendsTools = !!options?.tools?.length && !cache.rejectedParams.has('tools');
     const providerAdapter = resolveProvider(baseUrl);
     if (this.config.enableCacheProviderRouting && providerAdapter instanceof NanoGPTProvider) {
       request.caching = true;
     }
     if (providerAdapter instanceof OpenRouterProvider) {
-      const providerPrefs = buildOpenRouterProviderPrefs(this.config);
+      const exactoModel = sendsTools ? openRouterExactoModelId(this.config) : undefined;
+      if (exactoModel) request.model = exactoModel;
+      const providerPrefs = buildOpenRouterProviderPrefs(this.config, { exacto: !!exactoModel });
       if (providerPrefs) request.provider = providerPrefs;
     }
 
-    if (options?.tools?.length && !cache.rejectedParams.has('tools')) {
+    if (sendsTools && options?.tools) {
       request.tools = options.tools.map((tool) => ({
         type: 'function',
         function: {

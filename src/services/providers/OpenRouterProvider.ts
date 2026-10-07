@@ -100,8 +100,19 @@ export function getOpenRouterPinnedHost(config: AIConfig): string | undefined {
   return config.openRouter?.providerByModelId?.[config.modelId] || undefined;
 }
 
+/**
+ * `:exacto` model id for a tool-calling request, or undefined when Exacto is off.
+ * Ids that already carry a variant (`:free`, `:nitro`, …) are left alone.
+ */
+export function openRouterExactoModelId(config: AIConfig): string | undefined {
+  if (!config.openRouter?.exactoForAgent) return undefined;
+  if (!config.modelId || config.modelId.includes(':')) return undefined;
+  return `${config.modelId}:exacto`;
+}
+
 export function buildOpenRouterProviderPrefs(
-  config: AIConfig
+  config: AIConfig,
+  { exacto = false }: { exacto?: boolean } = {}
 ): OpenRouterProviderPrefs | undefined {
   const options = config.openRouter ?? {};
   const prefs: OpenRouterProviderPrefs = {};
@@ -110,7 +121,8 @@ export function buildOpenRouterProviderPrefs(
   if (pinned) {
     prefs.order = [pinned];
     if (options.pinnedHostOnly) prefs.allow_fallbacks = false;
-  } else if (options.sort) {
+  } else if (options.sort && !exacto) {
+    // An explicit sort would override Exacto's ordering.
     prefs.sort = options.sort;
   }
   if (options.denyDataCollection) prefs.data_collection = 'deny';

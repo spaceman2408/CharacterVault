@@ -409,8 +409,35 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
               </select>
               <p className="mt-2 text-xs text-fg-muted">
                 Which hosts OpenRouter tries first. A model with a pinned host uses the pin instead.
+                Any choice but Balanced also turns off Auto Exacto for Agent tool calls.
               </p>
             </div>
+            <SettingsToggle
+              stacked
+              checked={localAIConfig.openRouter?.exactoForAgent ?? false}
+              onChange={(checked) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  ai: {
+                    ...prev.ai,
+                    openRouter: { ...prev.ai.openRouter, exactoForAgent: checked },
+                  },
+                }))
+              }
+              label="Always use Exacto for the Agent"
+              description={
+                <>
+                  OpenRouter&apos;s Auto Exacto already sends Agent tool calls to the hosts with
+                  the most reliable tool calls, unless a host priority is set. Turn this on to keep
+                  Exacto for the Agent anyway. A pinned host still comes first.
+                  <span className="mt-1.5 block">
+                    Cache trade-off: Exacto can switch hosts partway through a run, which loses
+                    prompt-cache hits. If cache hits matter more, leave this off and set Host
+                    priority to Cheapest, or pin a host, so the Agent stays on one host.
+                  </span>
+                </>
+              }
+            />
             <SettingsToggle
               stacked
               checked={localAIConfig.openRouter?.denyDataCollection ?? false}

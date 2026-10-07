@@ -153,6 +153,7 @@ describe('parseSettingsBackup', () => {
       denyDataCollection: true,
       zdrOnly: 'yes',
       freeModelsOnly: true,
+      exactoForAgent: true,
     };
     const file = parseSettingsBackup({
       kind: 'charactervault-settings',
@@ -166,6 +167,7 @@ describe('parseSettingsBackup', () => {
       denyDataCollection: true,
       zdrOnly: false,
       freeModelsOnly: true,
+      exactoForAgent: true,
     });
 
     const unknownSort = parseSettingsBackup({

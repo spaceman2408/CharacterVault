@@ -18,6 +18,7 @@ export {
   normalizeOpenRouterKey,
   openRouterAppHeaders,
   openRouterEndpointsUrl,
+  openRouterExactoModelId,
   openRouterKeyUrl,
   openRouterZdrUrl,
   resolveOpenRouterNextUrl,

@@ -19,6 +19,7 @@ import {
   normalizeOpenRouterKey,
   openRouterAppHeaders,
   openRouterEndpointsUrl,
+  openRouterExactoModelId,
   openRouterKeyUrl,
   openRouterZdrUrl,
   resolveOpenRouterNextUrl,
@@ -294,6 +295,31 @@ describe('OpenRouter provider routing', () => {
           providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'groq' },
         },
       })
+    ).toEqual({ order: ['groq'] });
+  });
+
+  it('uses the :exacto variant only when Exacto is on and the id has no variant', () => {
+    expect(openRouterExactoModelId(openRouterConfig())).toBeUndefined();
+    const exacto = openRouterConfig({ openRouter: { exactoForAgent: true } });
+    expect(openRouterExactoModelId(exacto)).toBe('deepseek/deepseek-chat-v3.1:exacto');
+    expect(openRouterExactoModelId({ ...exacto, modelId: 'x/y:free' })).toBeUndefined();
+    expect(openRouterExactoModelId({ ...exacto, modelId: '' })).toBeUndefined();
+  });
+
+  it('drops host priority for Exacto requests but keeps pins and privacy filters', () => {
+    const sorted = openRouterConfig({ openRouter: { sort: 'price', zdrOnly: true } });
+    expect(buildOpenRouterProviderPrefs(sorted, { exacto: true })).toEqual({ zdr: true });
+    expect(
+      buildOpenRouterProviderPrefs(
+        {
+          ...sorted,
+          openRouter: {
+            sort: 'price',
+            providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'groq' },
+          },
+        },
+        { exacto: true }
+      )
     ).toEqual({ order: ['groq'] });
   });
 

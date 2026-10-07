@@ -729,6 +729,11 @@ export interface OpenRouterOptions {
   zdrOnly?: boolean;
   /** Show only $0 models in OpenRouter model lists (requests are unchanged). */
   freeModelsOnly?: boolean;
+  /**
+   * Tool-calling requests (the Agent) use the `:exacto` model variant and skip `sort`.
+   * OpenRouter's Auto Exacto already covers tool calls unless an explicit sort turns it off.
+   */
+  exactoForAgent?: boolean;
 }
 
 export interface SamplerPreset {

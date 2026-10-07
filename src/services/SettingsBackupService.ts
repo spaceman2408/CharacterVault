@@ -183,6 +183,7 @@ function normalizeBackupOpenRouter(value: unknown): OpenRouterOptions {
     denyDataCollection: asBoolean(raw.denyDataCollection, false),
     zdrOnly: asBoolean(raw.zdrOnly, false),
     freeModelsOnly: asBoolean(raw.freeModelsOnly, false),
+    exactoForAgent: asBoolean(raw.exactoForAgent, false),
   };
 }
 
