@@ -4,6 +4,7 @@ import type {
   CharacterVaultSettings,
   DefaultChatPanel,
   MacroHighlightSettings,
+  OpenRouterOptions,
   PromptModelBinding,
   PromptModelMap,
   PromptSettings,
@@ -167,8 +168,17 @@ function normalizeBackupAI(value: unknown): AIConfig {
       raw.enableCacheProviderRouting,
       DEFAULT_SETTINGS.ai.enableCacheProviderRouting ?? false
     ),
+    openRouter: normalizeBackupOpenRouter(raw.openRouter),
   };
   return persistableAIConfig(base);
+}
+
+function normalizeBackupOpenRouter(value: unknown): OpenRouterOptions {
+  const raw = isRecord(value) ? value : {};
+  return {
+    providerByModelId: asStringMap(raw.providerByModelId),
+    pinnedHostOnly: asBoolean(raw.pinnedHostOnly, false),
+  };
 }
 
 function normalizeBackupSampler(value: unknown): SamplerSettings {

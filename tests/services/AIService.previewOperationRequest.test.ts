@@ -145,6 +145,32 @@ describe('AIService.previewOperationRequest', () => {
     ).toBeUndefined();
   });
 
+  it('adds the pinned OpenRouter host as provider routing', () => {
+    const service = new AIService(
+      baseConfig({
+        baseUrl: 'https://openrouter.ai/api/v1',
+        providerByModelId: { 'test-model': 'nano-host' },
+        openRouter: { providerByModelId: { 'test-model': 'deepinfra/fp8' }, pinnedHostOnly: true },
+      }),
+      baseSampler()
+    );
+    const preview = service.previewOperationRequest('expand', 'Hello world', []);
+
+    expect(preview.body.provider).toEqual({ order: ['deepinfra/fp8'], allow_fallbacks: false });
+  });
+
+  it('omits provider routing off OpenRouter or without a pin', () => {
+    const pins = { openRouter: { providerByModelId: { 'test-model': 'deepinfra/fp8' } } };
+    const otherHost = new AIService(baseConfig(pins), baseSampler());
+    expect(otherHost.previewOperationRequest('expand', 'Hi', []).body.provider).toBeUndefined();
+
+    const unpinned = new AIService(
+      baseConfig({ baseUrl: 'https://openrouter.ai/api/v1' }),
+      baseSampler()
+    );
+    expect(unpinned.previewOperationRequest('expand', 'Hi', []).body.provider).toBeUndefined();
+  });
+
   it('does not call fetch', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const service = new AIService(baseConfig(), baseSampler());

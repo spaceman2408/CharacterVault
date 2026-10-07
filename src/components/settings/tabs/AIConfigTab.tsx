@@ -30,6 +30,7 @@ import { SettingsCard } from '../components/SettingsCard';
 import { PASSWORD_MANAGER_IGNORE_PROPS, SecretInput } from '../components/SecretInput';
 import { SettingsToggle } from '../components/SettingsToggle';
 import type { ReasoningEffort } from '../../../db/characterTypes';
+import { getOpenRouterPinnedHost, isOpenRouterBaseUrl } from '../../../services/providers';
 import { getHiddenChainOfThoughtNote } from '../../../services/reasoning/hiddenChainOfThought';
 import type { SettingsTabProps } from '../types';
 
@@ -60,6 +61,8 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
 
   const localAIConfig = draft.ai;
   const hiddenCotNote = getHiddenChainOfThoughtNote(localAIConfig.modelId);
+  const isOpenRouter = isOpenRouterBaseUrl(localAIConfig.baseUrl);
+  const openRouterPin = isOpenRouter ? getOpenRouterPinnedHost(localAIConfig) : undefined;
 
   return (
     <div className="space-y-5">
@@ -303,11 +306,37 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
             <div className="relative">
               <ProviderSelect
                 providers={modelProviders}
-                selectedProvider={localAIConfig.selectedProvider ?? ''}
+                selectedProvider={
+                  isOpenRouter ? (openRouterPin ?? '') : (localAIConfig.selectedProvider ?? '')
+                }
                 onSelect={handleProviderChange}
                 isLoading={isFetchingProviders}
+                platformName={isOpenRouter ? 'OpenRouter' : 'NanoGPT'}
               />
             </div>
+          )}
+
+          {openRouterPin && (
+            <SettingsToggle
+              stacked
+              checked={localAIConfig.openRouter?.pinnedHostOnly ?? false}
+              onChange={(checked) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  ai: {
+                    ...prev.ai,
+                    openRouter: { ...prev.ai.openRouter, pinnedHostOnly: checked },
+                  },
+                }))
+              }
+              label="Only use this host"
+              description={
+                <>
+                  Fail the request instead of falling back to another host when this one is down
+                  or busy.
+                </>
+              }
+            />
           )}
         </div>
       </SettingsCard>

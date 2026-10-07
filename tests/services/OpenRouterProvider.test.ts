@@ -3,17 +3,61 @@ import {
   clearCapabilityCaches,
   getCapabilityCache,
 } from '../../src/services/chatRequestRepair';
+import { DEFAULT_SETTINGS } from '../../src/db/characterTypes';
+import type { AIConfig } from '../../src/db/characterTypes';
 import {
   OpenRouterProvider,
   SyntheticProvider,
+  buildOpenRouterProviderPrefs,
+  getProviderSelectionId,
   isOpenRouterBaseUrl,
   mapOpenRouterCatalog,
+  mapOpenRouterEndpoints,
   normalizeOpenRouterKey,
   openRouterAppHeaders,
+  openRouterEndpointsUrl,
   openRouterKeyUrl,
   resolveOpenRouterNextUrl,
   resolveProvider,
 } from '../../src/services/providers';
+
+const SAMPLE_ENDPOINTS = {
+  data: {
+    id: 'deepseek/deepseek-chat-v3.1',
+    name: 'DeepSeek: DeepSeek V3.1',
+    endpoints: [
+      {
+        provider_name: 'DeepInfra',
+        tag: 'deepinfra/fp4',
+        quantization: 'fp4',
+        pricing: { prompt: '0.0000002', completion: '0.0000008' },
+      },
+      {
+        provider_name: 'Groq',
+        tag: 'groq',
+        quantization: 'unknown',
+        pricing: { prompt: '0.000001', completion: '0.000003' },
+      },
+      {
+        provider_name: 'Google Vertex',
+        tag: 'google-vertex/us-central1',
+        quantization: 'fp8',
+        pricing: { prompt: '0.0000005', completion: '0.0000015' },
+      },
+      { provider_name: 'DeepInfra', tag: 'deepinfra/fp4' },
+      { provider_name: 'No tag' },
+    ],
+  },
+};
+
+function openRouterConfig(overrides: Partial<AIConfig> = {}): AIConfig {
+  return {
+    ...DEFAULT_SETTINGS.ai,
+    baseUrl: 'https://openrouter.ai/api/v1',
+    modelId: 'deepseek/deepseek-chat-v3.1',
+    ...overrides,
+  };
+}
 
 const SAMPLE_CATALOG = {
   data: [
@@ -157,6 +201,66 @@ describe('resolveOpenRouterNextUrl', () => {
   });
 });
 
+describe('mapOpenRouterEndpoints', () => {
+  it('maps endpoint tags to pinnable hosts with per-1k pricing', () => {
+    const info = mapOpenRouterEndpoints(SAMPLE_ENDPOINTS, 'deepseek/deepseek-chat-v3.1');
+
+    expect(info.supportsProviderSelection).toBe(true);
+    expect(info.displayName).toBe('DeepSeek: DeepSeek V3.1');
+    expect(info.providers.map((p) => [p.provider, p.name, p.variant])).toEqual([
+      ['deepinfra/fp4', 'DeepInfra', 'fp4'],
+      ['groq', 'Groq', undefined],
+      ['google-vertex/us-central1', 'Google Vertex', 'us-central1'],
+    ]);
+    expect(info.providers[0].pricing.inputPer1kTokens).toBeCloseTo(0.0002);
+    expect(info.providers[0].pricing.outputPer1kTokens).toBeCloseTo(0.0008);
+    expect(info.providers.every((p) => p.available)).toBe(true);
+  });
+
+  it('reports no provider selection when there are no endpoints', () => {
+    const info = mapOpenRouterEndpoints({ data: { endpoints: [] } }, 'x/y:free');
+    expect(info.supportsProviderSelection).toBe(false);
+    expect(info.canonicalId).toBe('x/y:free');
+    expect(mapOpenRouterEndpoints(null, 'x/y').providers).toEqual([]);
+  });
+});
+
+describe('OpenRouter provider routing', () => {
+  it('sends the pinned host for the current model as provider.order', () => {
+    expect(buildOpenRouterProviderPrefs(openRouterConfig())).toBeUndefined();
+
+    const pinned = openRouterConfig({
+      openRouter: { providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'deepinfra/fp4' } },
+    });
+    expect(buildOpenRouterProviderPrefs(pinned)).toEqual({ order: ['deepinfra/fp4'] });
+
+    expect(
+      buildOpenRouterProviderPrefs({
+        ...pinned,
+        openRouter: { ...pinned.openRouter, pinnedHostOnly: true },
+      })
+    ).toEqual({ order: ['deepinfra/fp4'], allow_fallbacks: false });
+
+    expect(buildOpenRouterProviderPrefs({ ...pinned, modelId: 'other/model' })).toBeUndefined();
+  });
+
+  it('reports the OpenRouter pin, not NanoGPT selections, as the provider id', () => {
+    const config = openRouterConfig({
+      selectedProvider: 'nano-host',
+      providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'nano-host' },
+    });
+    expect(getProviderSelectionId(config)).toBeUndefined();
+    expect(buildOpenRouterProviderPrefs(config)).toBeUndefined();
+
+    expect(
+      getProviderSelectionId({
+        ...config,
+        openRouter: { providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'groq' } },
+      })
+    ).toBe('groq');
+  });
+});
+
 describe('OpenRouterProvider network methods', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -264,6 +368,53 @@ describe('OpenRouterProvider network methods', () => {
     );
     expect(key.usage).toBe(1.25);
     expect(key.limit).toBeNull();
+  });
+
+  it('fetches model endpoints once and caches them', async () => {
+    expect(openRouterEndpointsUrl('https://openrouter.ai/api/v1/', 'x/y:free')).toBe(
+      'https://openrouter.ai/api/v1/models/x/y%3Afree/endpoints'
+    );
+
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe(
+        'https://openrouter.ai/api/v1/models/deepseek/deepseek-chat-v3.1/endpoints'
+      );
+      expect(init?.headers).toMatchObject({ Authorization: 'Bearer sk-or-test' });
+      return { ok: true, status: 200, json: async () => SAMPLE_ENDPOINTS };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const provider = new OpenRouterProvider();
+    expect(provider.maySupportProviderSelection('deepseek/deepseek-chat-v3.1')).toBe(true);
+    const info = await provider.fetchModelProviders(
+      'https://openrouter.ai/api/v1',
+      'sk-or-test',
+      'deepseek/deepseek-chat-v3.1'
+    );
+    await provider.fetchModelProviders(
+      'https://openrouter.ai/api/v1',
+      'sk-or-test',
+      'deepseek/deepseek-chat-v3.1'
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(info.providers).toHaveLength(3);
+  });
+
+  it('treats a 404 from the endpoints route as no provider selection', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found' }))
+    );
+
+    const provider = new OpenRouterProvider();
+    const info = await provider.fetchModelProviders(
+      'https://openrouter.ai/api/v1',
+      'sk-or-test',
+      'gone/model'
+    );
+    expect(info.supportsProviderSelection).toBe(false);
+    expect(provider.maySupportProviderSelection('gone/model')).toBe(false);
   });
 
   it('sends attribution headers on chat requests', () => {

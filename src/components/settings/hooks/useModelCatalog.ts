@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AIConfig, AIModelInfo, SamplerSettings } from '../../../db/characterTypes';
 import { AIService, AIError } from '../../../services/AIService';
-import type { ModelProvider } from '../../../services/providers';
+import { isOpenRouterBaseUrl, type ModelProvider } from '../../../services/providers';
 import {
   AI_BASE_URL_PRESETS,
   MODEL_CACHE_STALENESS_MS,
@@ -305,6 +305,7 @@ export function useModelCatalog({
           setModelProviders(providerInfo.providers);
           const currentProvider = draftRef.current.ai.selectedProvider;
           if (
+            !isOpenRouterBaseUrl(ai.baseUrl) &&
             currentProvider &&
             !providerInfo.providers.some((p) => p.provider === currentProvider)
           ) {
@@ -518,6 +519,20 @@ export function useModelCatalog({
   const handleProviderChange = useCallback(
     (providerId: string) => {
       setDraft((prev) => {
+        if (isOpenRouterBaseUrl(prev.ai.baseUrl)) {
+          if (!prev.ai.modelId) return prev;
+          const pins = { ...(prev.ai.openRouter?.providerByModelId ?? {}) };
+          if (providerId) {
+            pins[prev.ai.modelId] = providerId;
+          } else {
+            delete pins[prev.ai.modelId];
+          }
+          return {
+            ...prev,
+            ai: { ...prev.ai, openRouter: { ...prev.ai.openRouter, providerByModelId: pins } },
+          };
+        }
+
         const providerByModelId = { ...(prev.ai.providerByModelId ?? {}) };
 
         if (prev.ai.modelId) {

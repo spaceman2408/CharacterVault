@@ -1,5 +1,5 @@
 /**
- * @fileoverview Provider selector for models that support provider selection (NanoGPT).
+ * @fileoverview Provider selector for models that support provider selection (NanoGPT, OpenRouter).
  * Uses a bottom sheet / modal so the list is usable on mobile.
  * @module components/settings/components/ProviderSelect
  */
@@ -16,6 +16,7 @@ interface ProviderSelectProps {
   onSelect: (provider: string) => void;
   isLoading: boolean;
   disabled?: boolean;
+  platformName?: string;
 }
 
 const fieldClass =
@@ -27,6 +28,7 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
   onSelect,
   isLoading,
   disabled = false,
+  platformName = 'NanoGPT',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const titleId = useId();
@@ -99,7 +101,7 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
                 Choose provider
               </h3>
               <p className="text-xs text-fg-muted mt-0.5">
-                {providers.length} NanoGPT host
+                {providers.length} {platformName} host
                 {providers.length === 1 ? '' : 's'} for this model
               </p>
             </div>
@@ -144,7 +146,7 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
                       !selectedProvider ? 'text-accent/80' : 'text-fg-muted'
                     }`}
                   >
-                    Let NanoGPT pick the best available host
+                    Let {platformName} pick the best available host
                   </p>
                 </div>
               </div>
@@ -183,7 +185,7 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium text-base sm:text-sm break-words">
-                          {provider.provider}
+                          {provider.name ?? provider.provider}
                         </span>
                         <span className="flex items-center gap-1.5 shrink-0">
                           {isUnavailable ? (
@@ -200,6 +202,11 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
                           selected && !isUnavailable ? 'text-accent/80' : 'text-fg-muted'
                         }`}
                       >
+                        {provider.variant && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted/80 border border-border">
+                            {provider.variant}
+                          </span>
+                        )}
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted/80 border border-border">
                           In {formatPrice(provider.pricing.inputPer1kTokens)}/1k
                         </span>
@@ -245,11 +252,16 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
           ) : selectedProvider ? (
             <>
               <Server className="w-4 h-4 shrink-0 text-accent" />
-              <span className="font-medium truncate">{selectedProvider}</span>
-              <span className="text-fg-muted text-xs">
-                In {formatPrice(selectedProviderInfo?.pricing.inputPer1kTokens ?? 0)}/1k · Out{' '}
-                {formatPrice(selectedProviderInfo?.pricing.outputPer1kTokens ?? 0)}/1k
+              <span className="font-medium truncate">
+                {selectedProviderInfo?.name ?? selectedProvider}
+                {selectedProviderInfo?.variant && ` · ${selectedProviderInfo.variant}`}
               </span>
+              {selectedProviderInfo && (
+                <span className="text-fg-muted text-xs">
+                  In {formatPrice(selectedProviderInfo.pricing.inputPer1kTokens)}/1k · Out{' '}
+                  {formatPrice(selectedProviderInfo.pricing.outputPer1kTokens)}/1k
+                </span>
+              )}
             </>
           ) : (
             <>

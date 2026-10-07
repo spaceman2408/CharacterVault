@@ -17,7 +17,12 @@ import type {
 } from '../db/characterTypes';
 import { resolvePromptTemplate } from './toolbarConfig';
 import { ReasoningParser, extractMessageReasoning } from './ReasoningParser';
-import { resolveProvider, NanoGPTProvider } from './providers';
+import {
+  resolveProvider,
+  NanoGPTProvider,
+  OpenRouterProvider,
+  buildOpenRouterProviderPrefs,
+} from './providers';
 import type { ModelProviderInfo, FetchModelsOptions } from './providers';
 import { EDITOR_PERSONA, buildSystemPrompt as buildSystemPromptParts, getStablePrefix as getStablePrefixParts } from './PromptBuilder';
 import {
@@ -840,11 +845,13 @@ Provide only the generated text without any additional commentary.`;
       reasoning_split: enableReasoning && this.isMinimaxBaseUrl() ? true : undefined,
     };
 
-    if (
-      this.config.enableCacheProviderRouting &&
-      resolveProvider(baseUrl) instanceof NanoGPTProvider
-    ) {
+    const providerAdapter = resolveProvider(baseUrl);
+    if (this.config.enableCacheProviderRouting && providerAdapter instanceof NanoGPTProvider) {
       request.caching = true;
+    }
+    if (providerAdapter instanceof OpenRouterProvider) {
+      const providerPrefs = buildOpenRouterProviderPrefs(this.config);
+      if (providerPrefs) request.provider = providerPrefs;
     }
 
     if (options?.tools?.length && !cache.rejectedParams.has('tools')) {

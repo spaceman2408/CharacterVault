@@ -2,10 +2,12 @@ import {
   getCapabilityCache,
   recordSupportedEfforts,
 } from '../chatRequestRepair';
+import type { AIConfig } from '../../db/characterTypes';
 import type {
   IProviderAdapter,
   FetchModelsOptions,
   ExtendedAIModelInfo,
+  ModelProvider,
   ModelProviderInfo,
   OpenRouterKeyInfo,
 } from './types';
@@ -14,6 +16,7 @@ export const OPENROUTER_APP_TITLE = 'CharacterVault';
 export const OPENROUTER_APP_URL = 'https://vault.charactervault.app';
 
 const MAX_MODEL_PAGES = 20;
+const PROVIDER_CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface OpenRouterArchitecture {
   output_modalities?: unknown;
@@ -43,12 +46,56 @@ interface OpenRouterModelsResponse {
   links?: { next?: unknown };
 }
 
+interface OpenRouterEndpoint {
+  provider_name?: unknown;
+  tag?: unknown;
+  quantization?: unknown;
+  pricing?: {
+    prompt?: unknown;
+    completion?: unknown;
+  };
+}
+
+interface OpenRouterEndpointsResponse {
+  data?: {
+    id?: unknown;
+    name?: unknown;
+    endpoints?: unknown;
+  };
+}
+
+/** Request body `provider` object (provider routing preferences). */
+export interface OpenRouterProviderPrefs {
+  order?: string[];
+  allow_fallbacks?: boolean;
+}
+
 export function isOpenRouterBaseUrl(baseUrl: string): boolean {
   return baseUrl.toLowerCase().includes('openrouter.ai');
 }
 
 export function openRouterKeyUrl(baseUrl: string): string {
   return `${normalizeBaseUrl(baseUrl)}/key`;
+}
+
+export function openRouterEndpointsUrl(baseUrl: string, modelId: string): string {
+  const path = modelId.split('/').map(encodeURIComponent).join('/');
+  return `${normalizeBaseUrl(baseUrl)}/models/${path}/endpoints`;
+}
+
+export function getOpenRouterPinnedHost(config: AIConfig): string | undefined {
+  if (!config.modelId) return undefined;
+  return config.openRouter?.providerByModelId?.[config.modelId] || undefined;
+}
+
+export function buildOpenRouterProviderPrefs(
+  config: AIConfig
+): OpenRouterProviderPrefs | undefined {
+  const pinned = getOpenRouterPinnedHost(config);
+  if (!pinned) return undefined;
+  return config.openRouter?.pinnedHostOnly
+    ? { order: [pinned], allow_fallbacks: false }
+    : { order: [pinned] };
 }
 
 export function openRouterAppHeaders(): Record<string, string> {
@@ -168,6 +215,45 @@ export function mapOpenRouterCatalog(data: unknown, cacheBaseUrl?: string): Exte
   });
 }
 
+function endpointVariant(tag: string, quantization: string | null): string | undefined {
+  const slash = tag.indexOf('/');
+  if (slash !== -1) return tag.slice(slash + 1) || undefined;
+  return quantization && quantization !== 'unknown' ? quantization : undefined;
+}
+
+export function mapOpenRouterEndpoints(data: unknown, modelId: string): ModelProviderInfo {
+  const root = (data as OpenRouterEndpointsResponse | null)?.data;
+  const endpoints = Array.isArray(root?.endpoints) ? root.endpoints : [];
+
+  const seen = new Set<string>();
+  const providers: ModelProvider[] = [];
+  for (const raw of endpoints) {
+    const endpoint = (raw ?? {}) as OpenRouterEndpoint;
+    const tag = asString(endpoint.tag);
+    if (!tag || seen.has(tag)) continue;
+    seen.add(tag);
+
+    providers.push({
+      provider: tag,
+      name: asString(endpoint.provider_name) ?? tag,
+      variant: endpointVariant(tag, asString(endpoint.quantization)),
+      pricing: {
+        inputPer1kTokens: (asNumber(endpoint.pricing?.prompt) ?? 0) * 1000,
+        outputPer1kTokens: (asNumber(endpoint.pricing?.completion) ?? 0) * 1000,
+      },
+      available: true,
+    });
+  }
+
+  return {
+    canonicalId: asString(root?.id) ?? modelId,
+    displayName: asString(root?.name) ?? modelId,
+    supportsProviderSelection: providers.length > 0,
+    defaultPrice: { inputPer1kTokens: 0, outputPer1kTokens: 0 },
+    providers,
+  };
+}
+
 export function resolveOpenRouterNextUrl(next: unknown, requestUrl: string): string | null {
   if (typeof next !== 'string' || !next.trim()) return null;
   try {
@@ -208,6 +294,8 @@ export function normalizeOpenRouterKey(raw: unknown): OpenRouterKeyInfo {
 }
 
 export class OpenRouterProvider implements IProviderAdapter {
+  private providerCache = new Map<string, { info: ModelProviderInfo; timestamp: number }>();
+
   matches(baseUrl: string): boolean {
     return isOpenRouterBaseUrl(baseUrl);
   }
@@ -266,22 +354,51 @@ export class OpenRouterProvider implements IProviderAdapter {
     return mapOpenRouterCatalog({ data: collected }, normalizedUrl);
   }
 
-  async fetchModelProviders(
-    _baseUrl: string,
-    _apiKey: string,
-    modelId: string
-  ): Promise<ModelProviderInfo> {
-    return {
-      canonicalId: modelId,
-      displayName: modelId,
-      supportsProviderSelection: false,
-      defaultPrice: { inputPer1kTokens: 0, outputPer1kTokens: 0 },
-      providers: [],
-    };
+  getCachedProviderInfo(modelId: string): ModelProviderInfo | undefined {
+    const cached = this.providerCache.get(modelId);
+    if (!cached) return undefined;
+    if (Date.now() - cached.timestamp > PROVIDER_CACHE_TTL_MS) {
+      this.providerCache.delete(modelId);
+      return undefined;
+    }
+    return cached.info;
   }
 
-  maySupportProviderSelection(): boolean {
-    return false;
+  async fetchModelProviders(
+    baseUrl: string,
+    apiKey: string,
+    modelId: string,
+    signal?: AbortSignal
+  ): Promise<ModelProviderInfo> {
+    const cached = this.getCachedProviderInfo(modelId);
+    if (cached) return cached;
+
+    const response = await fetch(openRouterEndpointsUrl(baseUrl, modelId), {
+      method: 'GET',
+      headers: this.getHeaders(apiKey),
+      signal,
+    });
+
+    let info: ModelProviderInfo;
+    if (response.status === 404) {
+      info = mapOpenRouterEndpoints(null, modelId);
+    } else if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded');
+      }
+      throw new Error(
+        `Failed to fetch providers: ${response.statusText || `HTTP ${response.status}`}`
+      );
+    } else {
+      info = mapOpenRouterEndpoints(await response.json(), modelId);
+    }
+
+    this.providerCache.set(modelId, { info, timestamp: Date.now() });
+    return info;
+  }
+
+  maySupportProviderSelection(modelId: string): boolean {
+    return this.getCachedProviderInfo(modelId)?.supportsProviderSelection ?? true;
   }
 
   getChatHeaders(): Record<string, string> {

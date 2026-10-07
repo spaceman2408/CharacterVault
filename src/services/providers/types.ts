@@ -8,6 +8,10 @@ import type { AIConfig, AIModelInfo } from '../../db/characterTypes';
 /** A single provider option for a model */
 export interface ModelProvider {
   provider: string;
+  /** Display name when `provider` is a slug (OpenRouter endpoint tags) */
+  name?: string;
+  /** Endpoint variant shown next to the name: quantization, region, or tier */
+  variant?: string;
   pricing: {
     inputPer1kTokens: number;
     outputPer1kTokens: number;

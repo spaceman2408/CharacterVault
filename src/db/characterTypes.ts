@@ -706,6 +706,18 @@ export interface AIConfig {
   billingMode?: 'sub' | 'paygo';
   /** NanoGPT: route requests to a cache-capable provider via top-level `caching: true` */
   enableCacheProviderRouting?: boolean;
+  openRouter?: OpenRouterOptions;
+}
+
+/** OpenRouter routing preferences, sent as the request body's `provider` object. */
+export interface OpenRouterOptions {
+  /**
+   * Endpoint tag (e.g. `deepinfra/fp8`) pinned per model id.
+   * Kept apart from `providerByModelId` because NanoGPT and OpenRouter share model ids.
+   */
+  providerByModelId?: Record<string, string>;
+  /** Fail instead of falling back to another host when the pinned one is down. */
+  pinnedHostOnly?: boolean;
 }
 
 export interface SamplerPreset {

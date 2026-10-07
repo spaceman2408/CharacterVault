@@ -19,7 +19,7 @@ Settings UI: `components/settings/` (see that folder’s `AGENTS.md`). Types and
 | `providers/OpenAICompatProvider.ts` | Generic OpenAI-compatible fallback (last in the resolve list). |
 | `providers/NanoGPTProvider.ts` | NanoGPT models, provider selection, subscription and balance. |
 | `providers/SyntheticProvider.ts` | Synthetic models (syn: aliases first), embedding filter, subscription quotas. |
-| `providers/OpenRouterProvider.ts` | OpenRouter catalog (text models, display names), reasoning efforts, attribution headers, GET /key usage. |
+| `providers/OpenRouterProvider.ts` | OpenRouter catalog (text models, display names), reasoning efforts, attribution headers, GET /key usage, per-model host pins (`/endpoints` → body `provider` object). |
 | `providers/NanoGPTAuth.ts` | NanoGPT OAuth helpers. |
 | `index.ts` | Public barrel for services. |
 

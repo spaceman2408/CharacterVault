@@ -7,12 +7,17 @@ export { NanoGPTProvider } from './NanoGPTProvider';
 export { OpenAICompatProvider } from './OpenAICompatProvider';
 export {
   OpenRouterProvider,
+  buildOpenRouterProviderPrefs,
+  getOpenRouterPinnedHost,
   isOpenRouterBaseUrl,
   mapOpenRouterCatalog,
+  mapOpenRouterEndpoints,
   normalizeOpenRouterKey,
   openRouterAppHeaders,
+  openRouterEndpointsUrl,
   openRouterKeyUrl,
   resolveOpenRouterNextUrl,
+  type OpenRouterProviderPrefs,
 } from './OpenRouterProvider';
 export {
   SyntheticProvider,
@@ -41,7 +46,7 @@ export type {
 
 import { NanoGPTProvider } from './NanoGPTProvider';
 import { OpenAICompatProvider } from './OpenAICompatProvider';
-import { OpenRouterProvider } from './OpenRouterProvider';
+import { OpenRouterProvider, getOpenRouterPinnedHost } from './OpenRouterProvider';
 import { SyntheticProvider } from './SyntheticProvider';
 import type { IProviderAdapter } from './types';
 import type { AIConfig } from '../../db/characterTypes';
@@ -73,6 +78,9 @@ export function getProviderSelectionId(config: AIConfig): string | undefined {
   }
 
   const provider = resolveProvider(config.baseUrl);
+  if (provider instanceof OpenRouterProvider) {
+    return getOpenRouterPinnedHost(config);
+  }
   if (!provider.maySupportProviderSelection(config.modelId)) {
     return undefined;
   }
