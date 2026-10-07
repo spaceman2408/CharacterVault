@@ -55,6 +55,22 @@ export function cloneEmbeddedBook(
   };
 }
 
+/**
+ * Append the source book's entries after the target's, keeping the target's
+ * book settings. Incoming ids start past the highest existing id so the
+ * merged entries list after the originals.
+ */
+export function mergeLorebookEntries(target: CharacterBook, source: CharacterBook): CharacterBook {
+  const existing = cloneLorebookEntries(target);
+  let nextId = existing.reduce((max, entry) => Math.max(max, entry.id), -1) + 1;
+  const incoming = cloneLorebookEntries(source).map((entry) => ({ ...entry, id: nextId++ }));
+  return {
+    ...target,
+    entries: [...existing, ...incoming],
+    extensions: { ...(target.extensions || {}) },
+  };
+}
+
 export function sameLorebookContent(left: CharacterBook, right: CharacterBook): boolean {
   return stableSerialize(normalizeCardBook(left)) === stableSerialize(normalizeCardBook(right));
 }

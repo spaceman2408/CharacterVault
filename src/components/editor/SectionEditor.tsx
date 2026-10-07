@@ -15,6 +15,7 @@ import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { useAIEditor } from '../../hooks';
 import { creatorNotesExtensions } from '../../editor/extensions';
 import { estimateTokens } from '../../services/AIService';
+import { mergeLorebookEntries } from '../../services/LorebookAttachmentService';
 import { isImeComposing } from '../../utils/imeComposing';
 import { json } from '@codemirror/lang-json';
 import type { Extension } from '@codemirror/state';
@@ -570,14 +571,18 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
                     characterId: currentCharacter.id,
                     embeddedBook: currentCharacter.data?.characterBook,
                     characterName: currentCharacter.name,
-                    onCopyIntoEmbedded: (lorebook) => {
+                    onCopyIntoEmbedded: (lorebook, mode) => {
                       // Runs after a confirm; build on the latest card, not this render's copy.
                       void (async () => {
                         const latest = (await flushPendingSaves()) ?? currentCharacter;
+                        const current = latest.data.characterBook;
                         await updateCharacter({
                           data: {
                             ...latest.data,
-                            characterBook: lorebook,
+                            characterBook:
+                              mode === 'merge' && current
+                                ? mergeLorebookEntries(current, lorebook)
+                                : lorebook,
                           },
                         });
                       })();

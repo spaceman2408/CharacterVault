@@ -49,7 +49,7 @@ export interface LorebookAttachmentControls {
   characterId: string;
   embeddedBook: CharacterBook | undefined;
   characterName?: string;
-  onCopyIntoEmbedded: (book: CharacterBook) => void;
+  onCopyIntoEmbedded: (book: CharacterBook, mode: 'replace' | 'merge') => void;
 }
 
 export interface LorebookEntryListItemProps {

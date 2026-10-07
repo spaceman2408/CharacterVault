@@ -38,6 +38,7 @@ import {
   cloneBookForEmbed,
   cloneEmbeddedBook,
   lorebookAttachmentService,
+  mergeLorebookEntries,
 } from '../../src/services/LorebookAttachmentService';
 
 function makeEntry(id: number, content: string) {
@@ -110,6 +111,46 @@ describe('cloneEmbeddedBook / cloneBookForEmbed', () => {
     expect(cloned.name).toBe('Vault Bible');
     expect(cloned.description).toBe('Vault description');
     expect(cloned.entries[0].content).toBe('entry');
+  });
+});
+
+describe('mergeLorebookEntries', () => {
+  it('appends source entries after the target with ids past the highest existing id', () => {
+    const target: CharacterBook = {
+      name: 'Card book',
+      scan_depth: 4,
+      entries: [makeEntry(0, 'first'), makeEntry(5, 'second')],
+      extensions: { card: true },
+    };
+    const source: CharacterBook = {
+      name: 'Vault book',
+      scan_depth: 9,
+      entries: [makeEntry(0, 'vault a'), makeEntry(1, 'vault b')],
+      extensions: { vault: true },
+    };
+
+    const merged = mergeLorebookEntries(target, source);
+
+    expect(merged.name).toBe('Card book');
+    expect(merged.scan_depth).toBe(4);
+    expect(merged.extensions).toEqual({ card: true });
+    expect(merged.entries.map((entry) => [entry.id, entry.content])).toEqual([
+      [0, 'first'],
+      [5, 'second'],
+      [6, 'vault a'],
+      [7, 'vault b'],
+    ]);
+    expect(source.entries.map((entry) => entry.id)).toEqual([0, 1]);
+  });
+
+  it('does not share entry arrays with either book', () => {
+    const target: CharacterBook = { entries: [makeEntry(0, 'a')], extensions: {} };
+    const source: CharacterBook = { entries: [makeEntry(0, 'b')], extensions: {} };
+    const merged = mergeLorebookEntries(target, source);
+    merged.entries[0].keys.push('x');
+    merged.entries[1].keys.push('y');
+    expect(target.entries[0].keys).toEqual(['alpha']);
+    expect(source.entries[0].keys).toEqual(['alpha']);
   });
 });
 

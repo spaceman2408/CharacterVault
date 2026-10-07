@@ -26,7 +26,7 @@ import { showEphemeralToast } from '../../utils/ephemeralToast';
 import type { LorebookAttachmentControls } from './lorebook/types';
 
 const ATTACH_HELP =
-  'One library book per character. Once this lorebook matches the linked book, saved edits here update the linked book and every linked character. Open in vault writes this lorebook to the linked book (or creates one), then opens it. Edits in the library update every linked character. Linking asks to copy entries onto the character (replaces what\'s already there).';
+  'One library book per character. Once this lorebook matches the linked book, saved edits here update the linked book and every linked character. Open in vault writes this lorebook to the linked book (or creates one), then opens it. Edits in the library update every linked character. Linking asks to copy entries onto the character: Replace swaps out what\'s already there, Merge adds them after it and unlinks the book.';
 
 function formatEntryCount(count: number): string {
   return `${count} entr${count === 1 ? 'y' : 'ies'}`;
@@ -37,7 +37,11 @@ interface PendingConfirm {
   message: string;
   confirmLabel: string;
   variant: 'danger' | 'default';
+  secondaryLabel?: string;
 }
+
+type ConfirmChoice = 'confirm' | 'secondary' | 'cancel';
+type CopyMode = 'replace' | 'merge';
 
 interface AttachmentApi {
   attached: ResolvedLorebookAttachment | null;
@@ -82,7 +86,7 @@ export function LorebookAttachmentProvider({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
-  const confirmResolverRef = useRef<((value: boolean) => void) | null>(null);
+  const confirmResolverRef = useRef<((choice: ConfirmChoice) => void) | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const onMenuOpenRef = useRef(onMenuOpen);
   onMenuOpenRef.current = onMenuOpen;
@@ -94,7 +98,7 @@ export function LorebookAttachmentProvider({
     return () => {
       mountedRef.current = false;
       resolveGenRef.current += 1;
-      confirmResolverRef.current?.(false);
+      confirmResolverRef.current?.('cancel');
       confirmResolverRef.current = null;
     };
   }, []);
@@ -105,36 +109,51 @@ export function LorebookAttachmentProvider({
     setPickerOpen(false);
   }, []);
 
-  const requestConfirm = useCallback((confirm: PendingConfirm): Promise<boolean> => {
-    if (confirmResolverRef.current) return Promise.resolve(false);
+  const requestChoice = useCallback((confirm: PendingConfirm): Promise<ConfirmChoice> => {
+    if (confirmResolverRef.current) return Promise.resolve('cancel');
     closeMenu();
     setPendingConfirm(confirm);
-    return new Promise<boolean>((resolve) => {
+    return new Promise<ConfirmChoice>((resolve) => {
       confirmResolverRef.current = resolve;
     });
   }, [closeMenu]);
 
-  const resolvePendingConfirm = useCallback((value: boolean) => {
+  const requestConfirm = useCallback(
+    async (confirm: PendingConfirm): Promise<boolean> => (await requestChoice(confirm)) === 'confirm',
+    [requestChoice],
+  );
+
+  const resolvePendingConfirm = useCallback((choice: ConfirmChoice) => {
     setPendingConfirm(null);
-    confirmResolverRef.current?.(value);
+    confirmResolverRef.current?.(choice);
     confirmResolverRef.current = null;
   }, []);
 
   const promptCopyIntoEmbedded = useCallback(
-    (lorebook: VaultLorebook, embedded: CharacterBook | undefined): Promise<boolean> => {
+    async (lorebook: VaultLorebook, embedded: CharacterBook | undefined): Promise<CopyMode | null> => {
       const entryCount = lorebook.book.entries?.length ?? 0;
       const existing = embedded?.entries?.length ?? 0;
-      return requestConfirm({
+      if (existing === 0) {
+        const ok = await requestConfirm({
+          title: `Copy ${formatEntryCount(entryCount)}?`,
+          message: `Copy ${formatEntryCount(entryCount)} from "${lorebook.name}" into this character's embedded lorebook?`,
+          confirmLabel: 'Copy',
+          variant: 'default',
+        });
+        return ok ? 'replace' : null;
+      }
+      const choice = await requestChoice({
         title: `Copy ${formatEntryCount(entryCount)}?`,
-        message:
-          existing > 0
-            ? `Copy ${formatEntryCount(entryCount)} from "${lorebook.name}" into this character's embedded lorebook? This replaces the ${formatEntryCount(existing)} already on this character.`
-            : `Copy ${formatEntryCount(entryCount)} from "${lorebook.name}" into this character's embedded lorebook?`,
-        confirmLabel: 'Copy',
+        message: `Copy ${formatEntryCount(entryCount)} from "${lorebook.name}" into this character's embedded lorebook? Replace swaps out the ${formatEntryCount(existing)} already here. Merge adds them after the ${formatEntryCount(existing)} and unlinks the lorebook.`,
+        confirmLabel: 'Replace',
+        secondaryLabel: 'Merge',
         variant: 'default',
       });
+      if (choice === 'confirm') return 'replace';
+      if (choice === 'secondary') return 'merge';
+      return null;
     },
-    [requestConfirm],
+    [requestChoice, requestConfirm],
   );
 
   const reload = useCallback(async () => {
@@ -194,6 +213,21 @@ export function LorebookAttachmentProvider({
     };
   }, [menuOpen, closeMenu]);
 
+  const removeVaultLink = useCallback(async () => {
+    await lorebookAttachmentService.detach(characterId);
+    if (!mountedRef.current) return;
+    setResolved([]);
+  }, [characterId]);
+
+  const copyIntoEmbedded = useCallback(
+    async (lorebook: VaultLorebook, mode: CopyMode) => {
+      // Unlink before the merged save lands, or the save sync would push the merge into the vault book.
+      if (mode === 'merge') await removeVaultLink();
+      onCopyIntoEmbedded(cloneBookForEmbed(lorebook), mode);
+    },
+    [onCopyIntoEmbedded, removeVaultLink],
+  );
+
   const handleAttach = useCallback(
     async (lorebookId: string) => {
       if (busy) return;
@@ -221,14 +255,14 @@ export function LorebookAttachmentProvider({
         setPickerOpen(false);
 
         const linked = next.find((item) => item.lorebookId === lorebookId)?.lorebook;
-        if (linked && (await promptCopyIntoEmbedded(linked, embeddedBook))) {
-          onCopyIntoEmbedded(cloneBookForEmbed(linked));
-        }
+        if (!linked) return;
+        const mode = await promptCopyIntoEmbedded(linked, embeddedBook);
+        if (mode) await copyIntoEmbedded(linked, mode);
       } finally {
         if (mountedRef.current) setBusy(false);
       }
     },
-    [busy, attachedId, attached, characterId, embeddedBook, onCopyIntoEmbedded, promptCopyIntoEmbedded, requestConfirm],
+    [busy, attachedId, attached, characterId, embeddedBook, copyIntoEmbedded, promptCopyIntoEmbedded, requestConfirm],
   );
 
   const handleDetach = useCallback(async () => {
@@ -242,12 +276,6 @@ export function LorebookAttachmentProvider({
       if (mountedRef.current) setBusy(false);
     }
   }, [attachedId, busy, characterId, reload]);
-
-  const removeVaultLink = useCallback(async () => {
-    await lorebookAttachmentService.detach(characterId);
-    if (!mountedRef.current) return;
-    setResolved([]);
-  }, [characterId]);
 
   const fallbackVaultName = useCallback(
     (book?: CharacterBook) =>
@@ -370,11 +398,11 @@ export function LorebookAttachmentProvider({
         // Agent runs sync the card into the vault book while this panel is mounted.
         const lorebook = await lorebookService.get(lorebookId);
         if (!lorebook || !mountedRef.current) return;
-        if (!(await promptCopyIntoEmbedded(lorebook, embeddedBook))) return;
-        onCopyIntoEmbedded(cloneBookForEmbed(lorebook));
+        const mode = await promptCopyIntoEmbedded(lorebook, embeddedBook);
+        if (mode) await copyIntoEmbedded(lorebook, mode);
       })();
     },
-    [embeddedBook, onCopyIntoEmbedded, promptCopyIntoEmbedded],
+    [embeddedBook, copyIntoEmbedded, promptCopyIntoEmbedded],
   );
 
   const api = useMemo<AttachmentApi>(
@@ -439,8 +467,10 @@ export function LorebookAttachmentProvider({
         message={pendingConfirm?.message ?? ''}
         confirmLabel={pendingConfirm?.confirmLabel ?? 'Confirm'}
         variant={pendingConfirm?.variant ?? 'default'}
-        onConfirm={() => resolvePendingConfirm(true)}
-        onCancel={() => resolvePendingConfirm(false)}
+        secondaryLabel={pendingConfirm?.secondaryLabel}
+        onConfirm={() => resolvePendingConfirm('confirm')}
+        onCancel={() => resolvePendingConfirm('cancel')}
+        onSecondary={() => resolvePendingConfirm('secondary')}
       />
     </AttachmentContext.Provider>
   );
@@ -593,7 +623,7 @@ function AttachmentPanel(): React.ReactElement | null {
                   onClick={() => handleCopy(attached.lorebookId)}
                   disabled={busy}
                   className="rounded-lg p-1.5 text-fg-muted hover:bg-hover hover:text-fg disabled:opacity-50"
-                  title="Copy into embedded character lorebook (replaces entries)"
+                  title="Copy into embedded character lorebook (replace or merge)"
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </button>
