@@ -264,11 +264,12 @@ describe('OpenRouterProvider network methods', () => {
     clearCapabilityCaches();
   });
 
-  it('fetches /models without a page limit and maps the catalog', async () => {
+  it('fetches /models/user with a key and maps the catalog', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        expect(url).toBe('https://openrouter.ai/api/v1/models');
+      vi.fn(async (url: string, init?: RequestInit) => {
+        expect(url).toBe('https://openrouter.ai/api/v1/models/user');
+        expect(init?.headers).toMatchObject({ Authorization: 'Bearer sk-or-test' });
         return {
           ok: true,
           json: async () => SAMPLE_CATALOG,
@@ -286,9 +287,22 @@ describe('OpenRouterProvider network methods', () => {
     ]);
   });
 
+  it('fetches the public /models list without a key', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        expect(url).toBe('https://openrouter.ai/api/v1/models');
+        return { ok: true, json: async () => SAMPLE_CATALOG };
+      })
+    );
+
+    const models = await new OpenRouterProvider().fetchModels('https://openrouter.ai/api/v1', ' ');
+    expect(models).toHaveLength(2);
+  });
+
   it('follows links.next when the catalog is paginated', async () => {
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === 'https://openrouter.ai/api/v1/models') {
+      if (url === 'https://openrouter.ai/api/v1/models/user') {
         return {
           ok: true,
           json: async () => ({

@@ -319,7 +319,10 @@ export class OpenRouterProvider implements IProviderAdapter {
     const normalizedUrl = normalizeBaseUrl(baseUrl);
     const collected: unknown[] = [];
     const seenUrls = new Set<string>();
-    let requestUrl: string | null = `${normalizedUrl}/models`;
+    // /models/user drops models the key cannot reach (guardrails, ignored providers, privacy).
+    let requestUrl: string | null = apiKey.trim()
+      ? `${normalizedUrl}/models/user`
+      : `${normalizedUrl}/models`;
 
     for (let page = 0; requestUrl && page < MAX_MODEL_PAGES; page += 1) {
       if (seenUrls.has(requestUrl)) break;
