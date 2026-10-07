@@ -313,6 +313,12 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                 isLoading={isFetchingProviders}
                 platformName={isOpenRouter ? 'OpenRouter' : 'NanoGPT'}
               />
+              {isOpenRouter && (
+                <p className="mt-1.5 text-xs text-fg-muted">
+                  Lists every host, including ones your OpenRouter account or key blocks. A blocked
+                  host is skipped, and a reply&apos;s info shows which host answered.
+                </p>
+              )}
             </div>
           )}
 
