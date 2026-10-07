@@ -14,10 +14,12 @@ export {
   isOpenRouterBaseUrl,
   mapOpenRouterCatalog,
   mapOpenRouterEndpoints,
+  mapOpenRouterZdrModelIds,
   normalizeOpenRouterKey,
   openRouterAppHeaders,
   openRouterEndpointsUrl,
   openRouterKeyUrl,
+  openRouterZdrUrl,
   resolveOpenRouterNextUrl,
   type OpenRouterProviderPrefs,
 } from './OpenRouterProvider';

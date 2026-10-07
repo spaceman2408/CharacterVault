@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AIConfig, AIModelInfo, SamplerSettings } from '../../../db/characterTypes';
 import { AIService, AIError } from '../../../services/AIService';
 import {
+  OpenRouterProvider,
   filterOpenRouterModels,
   isOpenRouterBaseUrl,
   type ModelProvider,
@@ -20,6 +21,10 @@ import {
   normalizeBaseUrl,
 } from '../config/aiBaseUrlPresets';
 import type { AddToast, SettingsDraft } from '../types';
+
+const openRouterProvider = new OpenRouterProvider();
+const OPENROUTER_BASE_URL = AI_BASE_URL_PRESETS.find((preset) => preset.id === 'openrouter')
+  ?.baseUrl;
 
 function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === 'AbortError';
@@ -576,10 +581,29 @@ export function useModelCatalog({
   }, []);
 
   const openRouterOptions = draft.ai.openRouter;
+  const zdrOnly = !!openRouterOptions?.zdrOnly;
+  const [zdrModelIds, setZdrModelIds] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !zdrOnly || !OPENROUTER_BASE_URL) return;
+    const controller = new AbortController();
+    openRouterProvider
+      .fetchZdrModelIds(OPENROUTER_BASE_URL, controller.signal)
+      .then((ids) => {
+        if (!controller.signal.aborted) setZdrModelIds(ids);
+      })
+      .catch((err) => {
+        if (!isAbortError(err)) console.warn('Failed to fetch OpenRouter ZDR endpoints:', err);
+      });
+    return () => controller.abort();
+  }, [isOpen, zdrOnly]);
+
   const filterModelsForUrl = useCallback(
     (baseUrl: string, models: AIModelInfo[]) =>
-      isOpenRouterBaseUrl(baseUrl) ? filterOpenRouterModels(models, openRouterOptions) : models,
-    [openRouterOptions]
+      isOpenRouterBaseUrl(baseUrl)
+        ? filterOpenRouterModels(models, openRouterOptions, zdrModelIds)
+        : models,
+    [openRouterOptions, zdrModelIds]
   );
 
   const modelsByBaseUrlList = useMemo(

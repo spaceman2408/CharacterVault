@@ -15,10 +15,12 @@ import {
   isOpenRouterBaseUrl,
   mapOpenRouterCatalog,
   mapOpenRouterEndpoints,
+  mapOpenRouterZdrModelIds,
   normalizeOpenRouterKey,
   openRouterAppHeaders,
   openRouterEndpointsUrl,
   openRouterKeyUrl,
+  openRouterZdrUrl,
   resolveOpenRouterNextUrl,
   resolveProvider,
 } from '../../src/services/providers';
@@ -241,6 +243,23 @@ describe('filterOpenRouterModels', () => {
     ]);
     expect(filterOpenRouterModels(models)).toBe(models);
     expect(isFreeOpenRouterModel(models[0])).toBe(false);
+  });
+
+  it('keeps only models with a ZDR endpoint once the ZDR list has loaded', () => {
+    const zdr = mapOpenRouterZdrModelIds({
+      data: [{ model_id: 'paid/model' }, { model_id: 'paid/model' }, { tag: 'no-id' }],
+    });
+    expect([...zdr]).toEqual(['paid/model']);
+
+    expect(filterOpenRouterModels(models, { zdrOnly: true }, zdr).map((m) => m.id)).toEqual([
+      'paid/model',
+    ]);
+    expect(filterOpenRouterModels(models, { zdrOnly: true }, null)).toBe(models);
+    expect(filterOpenRouterModels(models, { zdrOnly: false }, zdr)).toBe(models);
+    expect(
+      filterOpenRouterModels(models, { zdrOnly: true, freeModelsOnly: true }, zdr)
+    ).toEqual([]);
+    expect(() => mapOpenRouterZdrModelIds({})).toThrow(/expected data array/);
   });
 });
 
@@ -468,6 +487,25 @@ describe('OpenRouterProvider network methods', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(info.providers).toHaveLength(3);
+  });
+
+  it('fetches the public ZDR list once and caches it', async () => {
+    expect(openRouterZdrUrl('https://openrouter.ai/api/v1/')).toBe(
+      'https://openrouter.ai/api/v1/endpoints/zdr'
+    );
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      expect(url).toBe('https://openrouter.ai/api/v1/endpoints/zdr');
+      expect(init?.headers).not.toHaveProperty('Authorization');
+      return { ok: true, status: 200, json: async () => ({ data: [{ model_id: 'a/b' }] }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const provider = new OpenRouterProvider();
+    expect([...(await provider.fetchZdrModelIds('https://openrouter.ai/api/v1'))]).toEqual([
+      'a/b',
+    ]);
+    await provider.fetchZdrModelIds('https://openrouter.ai/api/v1');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('treats a 404 from the endpoints route as no provider selection', async () => {

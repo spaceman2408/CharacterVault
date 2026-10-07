@@ -86,6 +86,10 @@ export function openRouterKeyUrl(baseUrl: string): string {
   return `${normalizeBaseUrl(baseUrl)}/key`;
 }
 
+export function openRouterZdrUrl(baseUrl: string): string {
+  return `${normalizeBaseUrl(baseUrl)}/endpoints/zdr`;
+}
+
 export function openRouterEndpointsUrl(baseUrl: string, modelId: string): string {
   const path = modelId.split('/').map(encodeURIComponent).join('/');
   return `${normalizeBaseUrl(baseUrl)}/models/${path}/endpoints`;
@@ -275,11 +279,35 @@ export function isFreeOpenRouterModel(model: AIModelInfo): boolean {
   return model.pricing?.prompt === 0 && model.pricing.completion === 0;
 }
 
+/** Model ids (variant suffix included) that have at least one ZDR endpoint. */
+export function mapOpenRouterZdrModelIds(data: unknown): Set<string> {
+  const rows = (data as { data?: unknown } | null)?.data;
+  if (!Array.isArray(rows)) {
+    throw new Error('Invalid response format: expected data array');
+  }
+  const ids = new Set<string>();
+  for (const row of rows) {
+    const id = asString((row as { model_id?: unknown } | null)?.model_id);
+    if (id) ids.add(id);
+  }
+  return ids;
+}
+
+/**
+ * List-only filters. `zdrModelIds` is null until the ZDR list loads (or if it fails);
+ * nothing is hidden then, since OpenRouter still enforces `zdr` on the request.
+ */
 export function filterOpenRouterModels<T extends AIModelInfo>(
   models: T[],
-  options: OpenRouterOptions = {}
+  options: OpenRouterOptions = {},
+  zdrModelIds: ReadonlySet<string> | null = null
 ): T[] {
-  return options.freeModelsOnly ? models.filter(isFreeOpenRouterModel) : models;
+  let visible = models;
+  if (options.freeModelsOnly) visible = visible.filter(isFreeOpenRouterModel);
+  if (options.zdrOnly && zdrModelIds) {
+    visible = visible.filter((model) => zdrModelIds.has(model.id));
+  }
+  return visible;
 }
 
 export function resolveOpenRouterNextUrl(next: unknown, requestUrl: string): string | null {
@@ -323,6 +351,7 @@ export function normalizeOpenRouterKey(raw: unknown): OpenRouterKeyInfo {
 
 export class OpenRouterProvider implements IProviderAdapter {
   private providerCache = new Map<string, { info: ModelProviderInfo; timestamp: number }>();
+  private zdrCache: { ids: Set<string>; timestamp: number } | null = null;
 
   matches(baseUrl: string): boolean {
     return isOpenRouterBaseUrl(baseUrl);
@@ -430,6 +459,27 @@ export class OpenRouterProvider implements IProviderAdapter {
 
   maySupportProviderSelection(modelId: string): boolean {
     return this.getCachedProviderInfo(modelId)?.supportsProviderSelection ?? true;
+  }
+
+  async fetchZdrModelIds(baseUrl: string, signal?: AbortSignal): Promise<Set<string>> {
+    if (this.zdrCache && Date.now() - this.zdrCache.timestamp <= PROVIDER_CACHE_TTL_MS) {
+      return this.zdrCache.ids;
+    }
+
+    const response = await fetch(openRouterZdrUrl(baseUrl), {
+      method: 'GET',
+      headers: openRouterAppHeaders(),
+      signal,
+    });
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch ZDR endpoints: ${response.statusText || `HTTP ${response.status}`}`
+      );
+    }
+
+    const ids = mapOpenRouterZdrModelIds(await response.json());
+    this.zdrCache = { ids, timestamp: Date.now() };
+    return ids;
   }
 
   getChatHeaders(): Record<string, string> {

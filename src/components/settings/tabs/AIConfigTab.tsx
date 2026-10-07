@@ -443,8 +443,8 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
               label="Zero data retention only"
               description={
                 <>
-                  Only use hosts that never store your prompts. Fewer models and hosts qualify, and a
-                  request fails when none do. Your OpenRouter privacy settings still apply on top.
+                  Only use hosts that never store your prompts. Model lists hide models with no such
+                  host. Your OpenRouter privacy settings still apply on top.
                 </>
               }
             />

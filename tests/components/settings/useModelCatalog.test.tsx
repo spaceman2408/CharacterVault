@@ -125,6 +125,32 @@ describe('useModelCatalog', () => {
     expect(catalog.filterModelsForUrl(NANO, models)).toHaveLength(2);
   });
 
+  it('hides OpenRouter models without a ZDR host once the ZDR list loads', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [{ model_id: 'zdr/model' }] }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const hook = setup({ baseUrl: OPENROUTER, openRouter: { zdrOnly: true } });
+      const models: AIModelInfo[] = [
+        { id: 'zdr/model', name: 'ZDR' },
+        { id: 'retains/model', name: 'Retains' },
+      ];
+
+      await vi.waitFor(() =>
+        expect(hook.result.current.catalog.filterModelsForUrl(OPENROUTER, models)).toHaveLength(1)
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://openrouter.ai/api/v1/endpoints/zdr',
+        expect.anything()
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   describe('editing the custom URL', () => {
     const OLD = 'https://my.host/v1';
     const NEW = 'https://my.host/v2';
