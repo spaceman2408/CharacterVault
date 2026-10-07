@@ -244,6 +244,21 @@ describe('OpenRouter provider routing', () => {
     expect(buildOpenRouterProviderPrefs({ ...pinned, modelId: 'other/model' })).toBeUndefined();
   });
 
+  it('sends the host priority only when the model has no pinned host', () => {
+    const sorted = openRouterConfig({ openRouter: { sort: 'throughput' } });
+    expect(buildOpenRouterProviderPrefs(sorted)).toEqual({ sort: 'throughput' });
+
+    expect(
+      buildOpenRouterProviderPrefs({
+        ...sorted,
+        openRouter: {
+          sort: 'throughput',
+          providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'groq' },
+        },
+      })
+    ).toEqual({ order: ['groq'] });
+  });
+
   it('reports the host that served the request, not the pin or NanoGPT selections', () => {
     const config = openRouterConfig({
       selectedProvider: 'nano-host',

@@ -21,6 +21,7 @@ import {
   DEFAULT_SECTION_ORDER,
   DEFAULT_SETTINGS,
   DEFAULT_SPELLCHECK_SETTINGS,
+  OPENROUTER_SORTS,
   clampContextLength,
   normalizeDefaultChatPanel,
   normalizeMacroHighlight,
@@ -178,6 +179,7 @@ function normalizeBackupOpenRouter(value: unknown): OpenRouterOptions {
   return {
     providerByModelId: asStringMap(raw.providerByModelId),
     pinnedHostOnly: asBoolean(raw.pinnedHostOnly, false),
+    sort: OPENROUTER_SORTS.find((sort) => sort === raw.sort),
   };
 }
 

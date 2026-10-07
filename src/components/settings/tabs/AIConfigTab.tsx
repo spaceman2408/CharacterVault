@@ -8,9 +8,11 @@ import {
   AlertCircle,
   Brain,
   CreditCard,
+  Gauge,
   Key,
   Loader2,
   LogIn,
+  Route,
   Server,
   Shield,
   Sparkles,
@@ -29,7 +31,7 @@ import { ProviderSelect } from '../components/ProviderSelect';
 import { SettingsCard } from '../components/SettingsCard';
 import { PASSWORD_MANAGER_IGNORE_PROPS, SecretInput } from '../components/SecretInput';
 import { SettingsToggle } from '../components/SettingsToggle';
-import type { ReasoningEffort } from '../../../db/characterTypes';
+import { OPENROUTER_SORTS, type ReasoningEffort } from '../../../db/characterTypes';
 import { getOpenRouterPinnedHost, isOpenRouterBaseUrl } from '../../../services/providers';
 import { getHiddenChainOfThoughtNote } from '../../../services/reasoning/hiddenChainOfThought';
 import type { SettingsTabProps } from '../types';
@@ -369,6 +371,45 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
           apiKey={localAIConfig.apiKey}
           enabled
         />
+      )}
+
+      {isOpenRouter && (
+        <SettingsCard
+          title="OpenRouter Options"
+          icon={<Route className="w-4 h-4 text-fg-muted" />}
+        >
+          <div>
+            <label
+              htmlFor="openrouter-host-priority"
+              className="flex items-center gap-2 text-sm font-medium text-fg-muted mb-2"
+            >
+              <span className="p-1.5 rounded-md bg-muted text-fg-muted">
+                <Gauge className="w-4 h-4" />
+              </span>
+              Host priority
+            </label>
+            <select
+              id="openrouter-host-priority"
+              value={localAIConfig.openRouter?.sort ?? ''}
+              onChange={(e) => {
+                const sort = OPENROUTER_SORTS.find((value) => value === e.target.value);
+                setDraft((prev) => ({
+                  ...prev,
+                  ai: { ...prev.ai, openRouter: { ...prev.ai.openRouter, sort } },
+                }));
+              }}
+              className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
+            >
+              <option value="">Balanced: spread by price and uptime (default)</option>
+              <option value="price">Cheapest: lowest price first</option>
+              <option value="throughput">Fastest: most tokens per second</option>
+              <option value="latency">Quickest start: lowest time to first token</option>
+            </select>
+            <p className="mt-2 text-xs text-fg-muted">
+              Which hosts OpenRouter tries first. A model with a pinned host uses the pin instead.
+            </p>
+          </div>
+        </SettingsCard>
       )}
 
       {selectedBaseUrlPreset === 'nano-gpt' && (

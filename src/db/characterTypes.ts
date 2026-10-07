@@ -709,6 +709,9 @@ export interface AIConfig {
   openRouter?: OpenRouterOptions;
 }
 
+export const OPENROUTER_SORTS = ['price', 'throughput', 'latency'] as const;
+export type OpenRouterSort = (typeof OPENROUTER_SORTS)[number];
+
 /** OpenRouter routing preferences, sent as the request body's `provider` object. */
 export interface OpenRouterOptions {
   /**
@@ -718,6 +721,8 @@ export interface OpenRouterOptions {
   providerByModelId?: Record<string, string>;
   /** Fail instead of falling back to another host when the pinned one is down. */
   pinnedHostOnly?: boolean;
+  /** Host order when no host is pinned; unset keeps OpenRouter's load balancing. */
+  sort?: OpenRouterSort;
 }
 
 export interface SamplerPreset {

@@ -2,7 +2,7 @@ import {
   getCapabilityCache,
   recordSupportedEfforts,
 } from '../chatRequestRepair';
-import type { AIConfig } from '../../db/characterTypes';
+import type { AIConfig, OpenRouterSort } from '../../db/characterTypes';
 import type {
   IProviderAdapter,
   FetchModelsOptions,
@@ -68,6 +68,7 @@ interface OpenRouterEndpointsResponse {
 export interface OpenRouterProviderPrefs {
   order?: string[];
   allow_fallbacks?: boolean;
+  sort?: OpenRouterSort;
 }
 
 export function isOpenRouterBaseUrl(baseUrl: string): boolean {
@@ -91,11 +92,18 @@ export function getOpenRouterPinnedHost(config: AIConfig): string | undefined {
 export function buildOpenRouterProviderPrefs(
   config: AIConfig
 ): OpenRouterProviderPrefs | undefined {
+  const options = config.openRouter ?? {};
+  const prefs: OpenRouterProviderPrefs = {};
+
   const pinned = getOpenRouterPinnedHost(config);
-  if (!pinned) return undefined;
-  return config.openRouter?.pinnedHostOnly
-    ? { order: [pinned], allow_fallbacks: false }
-    : { order: [pinned] };
+  if (pinned) {
+    prefs.order = [pinned];
+    if (options.pinnedHostOnly) prefs.allow_fallbacks = false;
+  } else if (options.sort) {
+    prefs.sort = options.sort;
+  }
+
+  return Object.keys(prefs).length > 0 ? prefs : undefined;
 }
 
 export function openRouterAppHeaders(): Record<string, string> {

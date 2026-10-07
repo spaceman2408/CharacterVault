@@ -145,6 +145,31 @@ describe('parseSettingsBackup', () => {
     expect(parsed.settings.studioFavorites).toEqual([{ category: 'mood', tag: 'brooding' }]);
   });
 
+  it('keeps OpenRouter routing options and drops an unknown host priority', () => {
+    const openRouter = {
+      providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'deepinfra/fp4', bad: 3 },
+      pinnedHostOnly: true,
+      sort: 'latency',
+    };
+    const file = parseSettingsBackup({
+      kind: 'charactervault-settings',
+      version: 1,
+      settings: { ai: { openRouter } },
+    });
+    expect(file.settings.ai.openRouter).toEqual({
+      providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'deepinfra/fp4' },
+      pinnedHostOnly: true,
+      sort: 'latency',
+    });
+
+    const unknownSort = parseSettingsBackup({
+      kind: 'charactervault-settings',
+      version: 1,
+      settings: { ai: { openRouter: { ...openRouter, sort: 'random' } } },
+    });
+    expect(unknownSort.settings.ai.openRouter?.sort).toBeUndefined();
+  });
+
   it('drops invalid and duplicate favorite refs', () => {
     const file = parseSettingsBackup({
       kind: 'charactervault-settings',
