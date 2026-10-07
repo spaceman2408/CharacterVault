@@ -22,6 +22,7 @@ import {
   NanoGPTProvider,
   OpenRouterProvider,
   buildOpenRouterProviderPrefs,
+  openRouterDataPolicyHint,
   openRouterExactoModelId,
 } from './providers';
 import type { ModelProviderInfo, FetchModelsOptions } from './providers';
@@ -1135,8 +1136,10 @@ Provide only the generated text without any additional commentary.`;
         );
       }
       let errorMessage = response.statusText || `HTTP ${response.status}`;
+      let errorBody: unknown = null;
       try {
         const errorData = await response.json().catch(() => null);
+        errorBody = errorData;
         if (errorData?.error?.message) {
           errorMessage = errorData.error.message;
         } else if (errorData?.message) {
@@ -1145,8 +1148,14 @@ Provide only the generated text without any additional commentary.`;
       } catch {
         // If we can't parse JSON, use the status text we already have
       }
+      const settingsHint =
+        resolveProvider(this.config.baseUrl) instanceof OpenRouterProvider
+          ? openRouterDataPolicyHint(this.config, errorBody)
+          : undefined;
       throw new AIError(
-        this.withBaseUrlHint(`API error: ${errorMessage}`),
+        this.withBaseUrlHint(
+          settingsHint ? `API error: ${errorMessage} ${settingsHint}` : `API error: ${errorMessage}`
+        ),
         'server',
         response.status,
         response.status >= 500

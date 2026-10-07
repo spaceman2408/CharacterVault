@@ -72,3 +72,54 @@ describe('OpenRouter Exacto for tool-calling requests', () => {
     expect(bodies[1].provider).toBeUndefined();
   });
 });
+
+describe('OpenRouter data-policy errors', () => {
+  const ZDR_ERROR = {
+    error: {
+      code: 404,
+      message:
+        'No endpoints found matching your data policy (Zero data retention). Configure: https://openrouter.ai/settings/privacy',
+      metadata: { failed_routing_step: 'Filter by Data Policy' },
+    },
+  };
+
+  function failWith(body: unknown) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify(body), { status: 404 }))
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('names the CharacterVault privacy filters that are on', async () => {
+    failWith(ZDR_ERROR);
+    const service = new AIService(
+      config({ openRouter: { zdrOnly: true, denyDataCollection: true } }),
+      DEFAULT_SETTINGS.sampler
+    );
+
+    await expect(service.chat([{ role: 'user', content: 'hi' }])).rejects.toMatchObject({
+      message:
+        'API error: No endpoints found matching your data policy (Zero data retention). Configure: https://openrouter.ai/settings/privacy Zero data retention only and No training on prompts are on in Settings → AI Config → OpenRouter Options.',
+    });
+  });
+
+  it('adds nothing when the filters are off or the error is not about data policy', async () => {
+    failWith(ZDR_ERROR);
+    await expect(
+      new AIService(config({ openRouter: {} }), DEFAULT_SETTINGS.sampler).chat([
+        { role: 'user', content: 'hi' },
+      ])
+    ).rejects.toMatchObject({ message: `API error: ${ZDR_ERROR.error.message}` });
+
+    failWith({ error: { code: 404, message: 'Model not found' } });
+    await expect(
+      new AIService(config({ openRouter: { zdrOnly: true } }), DEFAULT_SETTINGS.sampler).chat([
+        { role: 'user', content: 'hi' },
+      ])
+    ).rejects.toMatchObject({ message: 'API error: Model not found' });
+  });
+});

@@ -101,6 +101,30 @@ export function getOpenRouterPinnedHost(config: AIConfig): string | undefined {
 }
 
 /**
+ * OpenRouter's data-policy errors point at its own privacy settings. When CharacterVault's
+ * privacy filters are on, they may be the cause, so name them too.
+ */
+export function openRouterDataPolicyHint(config: AIConfig, errorBody: unknown): string | undefined {
+  const error = (
+    errorBody as {
+      error?: { message?: unknown; metadata?: { failed_routing_step?: unknown } };
+    } | null
+  )?.error;
+  const message = asString(error?.message) ?? '';
+  const failedStep = error?.metadata?.failed_routing_step;
+  if (failedStep !== 'Filter by Data Policy' && !/data policy/i.test(message)) return undefined;
+
+  const options = config.openRouter ?? {};
+  const enabled = [
+    options.zdrOnly ? 'Zero data retention only' : null,
+    options.denyDataCollection ? 'No training on prompts' : null,
+  ].filter((name): name is string => name !== null);
+  if (enabled.length === 0) return undefined;
+
+  return `${enabled.join(' and ')} ${enabled.length > 1 ? 'are' : 'is'} on in Settings → AI Config → OpenRouter Options.`;
+}
+
+/**
  * `:exacto` model id for a tool-calling request, or undefined when Exacto is off.
  * Ids that already carry a variant (`:free`, `:nitro`, …) are left alone.
  */

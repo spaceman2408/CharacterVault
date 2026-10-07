@@ -17,6 +17,7 @@ export {
   mapOpenRouterZdrModelIds,
   normalizeOpenRouterKey,
   openRouterAppHeaders,
+  openRouterDataPolicyHint,
   openRouterEndpointsUrl,
   openRouterExactoModelId,
   openRouterKeyUrl,

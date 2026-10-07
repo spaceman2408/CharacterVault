@@ -18,6 +18,7 @@ import {
   mapOpenRouterZdrModelIds,
   normalizeOpenRouterKey,
   openRouterAppHeaders,
+  openRouterDataPolicyHint,
   openRouterEndpointsUrl,
   openRouterExactoModelId,
   openRouterKeyUrl,
@@ -296,6 +297,29 @@ describe('OpenRouter provider routing', () => {
         },
       })
     ).toEqual({ order: ['groq'] });
+  });
+
+  it('hints at the app privacy filters on data-policy routing errors', () => {
+    const strictPin = {
+      error: {
+        message:
+          'No endpoints found for x. Every candidate endpoint was removed during routing: Filter by Data Policy removed cloudflare/fp8; Filter by Fallback removed akashml/fp8.',
+        metadata: { failed_routing_step: 'Filter by Fallback' },
+      },
+    };
+    expect(
+      openRouterDataPolicyHint(openRouterConfig({ openRouter: { zdrOnly: true } }), strictPin)
+    ).toBe('Zero data retention only is on in Settings → AI Config → OpenRouter Options.');
+    expect(
+      openRouterDataPolicyHint(
+        openRouterConfig({ openRouter: { denyDataCollection: true } }),
+        { error: { message: 'x', metadata: { failed_routing_step: 'Filter by Data Policy' } } }
+      )
+    ).toBe('No training on prompts is on in Settings → AI Config → OpenRouter Options.');
+    expect(openRouterDataPolicyHint(openRouterConfig(), strictPin)).toBeUndefined();
+    expect(
+      openRouterDataPolicyHint(openRouterConfig({ openRouter: { zdrOnly: true } }), null)
+    ).toBeUndefined();
   });
 
   it('uses the :exacto variant only when Exacto is on and the id has no variant', () => {
