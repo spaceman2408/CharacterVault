@@ -791,7 +791,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 content: completion.content ?? '',
                 reasoning: completion.reasoning,
                 modelId: config.modelId,
-                providerId: getProviderSelectionId(config),
+                providerId: getProviderSelectionId(config, completion.provider),
               });
               callTimingRef.current = null;
               return completion;

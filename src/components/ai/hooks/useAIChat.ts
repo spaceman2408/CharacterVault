@@ -687,7 +687,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
         const assistantMessage = buildAssistantMessage(content, reasoning, {
           enableStreaming: streaming,
           modelId: config.modelId,
-          providerId: getProviderSelectionId(config),
+          providerId: getProviderSelectionId(config, result.provider),
           requestStartTime,
           firstTokenTime,
         });

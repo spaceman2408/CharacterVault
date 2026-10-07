@@ -244,20 +244,17 @@ describe('OpenRouter provider routing', () => {
     expect(buildOpenRouterProviderPrefs({ ...pinned, modelId: 'other/model' })).toBeUndefined();
   });
 
-  it('reports the OpenRouter pin, not NanoGPT selections, as the provider id', () => {
+  it('reports the host that served the request, not the pin or NanoGPT selections', () => {
     const config = openRouterConfig({
       selectedProvider: 'nano-host',
       providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'nano-host' },
+      openRouter: { providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'groq' } },
     });
     expect(getProviderSelectionId(config)).toBeUndefined();
-    expect(buildOpenRouterProviderPrefs(config)).toBeUndefined();
-
+    expect(getProviderSelectionId(config, 'AkashML')).toBe('AkashML');
     expect(
-      getProviderSelectionId({
-        ...config,
-        openRouter: { providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'groq' } },
-      })
-    ).toBe('groq');
+      buildOpenRouterProviderPrefs({ ...config, openRouter: undefined })
+    ).toBeUndefined();
   });
 });
 

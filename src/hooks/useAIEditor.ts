@@ -868,7 +868,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
           ttft,
           tokensPerSecond,
           modelId: currentConfig.modelId,
-          providerId: getProviderSelectionId(currentConfig),
+          providerId: getProviderSelectionId(currentConfig, response.provider),
           truncated: response.finishReason === 'length',
         },
       });

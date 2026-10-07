@@ -23,12 +23,16 @@ function baseSampler(overrides: Partial<SamplerSettings> = {}): SamplerSettings 
   };
 }
 
-function sseChunk(delta: { content?: string; reasoning?: string }): string {
+function sseChunk(
+  delta: { content?: string; reasoning?: string },
+  extra: Record<string, unknown> = {}
+): string {
   const payload = {
     id: 'chunk',
     object: 'chat.completion.chunk',
     created: 0,
     model: 'test-model',
+    ...extra,
     choices: [
       {
         index: 0,
@@ -152,6 +156,45 @@ describe('AIService stream cleanup', () => {
     expect(result.content).toContain('Hi');
     expect(result.content).toContain('there');
     expect(chunks.join('')).toContain('Hi');
+  });
+
+  it('reports the serving host from streamed chunks', async () => {
+    const body = streamFromParts([
+      sseChunk({ content: 'Hi' }, { provider: 'AkashML' }),
+      sseChunk({ content: ' there' }, { provider: 'AkashML' }),
+      'data: [DONE]\n\n',
+    ]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }))
+    );
+
+    const service = new AIService(baseConfig(), baseSampler());
+    const result = await service.askAIWithConversation('hello', [], [], undefined, () => {});
+    expect(result.provider).toBe('AkashML');
+  });
+
+  it('reports the serving host from a non-streamed response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            id: 'gen',
+            object: 'chat.completion',
+            created: 0,
+            model: 'test-model',
+            provider: 'CoreWeave',
+            choices: [{ index: 0, message: { role: 'assistant', content: 'Hi' }, finish_reason: 'stop' }],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    );
+
+    const service = new AIService(baseConfig({ enableStreaming: false }), baseSampler());
+    const result = await service.askAIWithConversation('hello', [], []);
+    expect(result.provider).toBe('CoreWeave');
   });
 
   it('resolves on [DONE] even when the stream never closes', async () => {

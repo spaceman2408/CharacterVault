@@ -46,7 +46,7 @@ export type {
 
 import { NanoGPTProvider } from './NanoGPTProvider';
 import { OpenAICompatProvider } from './OpenAICompatProvider';
-import { OpenRouterProvider, getOpenRouterPinnedHost } from './OpenRouterProvider';
+import { OpenRouterProvider } from './OpenRouterProvider';
 import { SyntheticProvider } from './SyntheticProvider';
 import type { IProviderAdapter } from './types';
 import type { AIConfig } from '../../db/characterTypes';
@@ -71,15 +71,21 @@ export function resolveProvider(baseUrl: string): IProviderAdapter {
  * Return the configured provider-selection ID only for APIs that support it.
  * Generic OpenAI-compatible endpoints like LM Studio should not display stale
  * NanoGPT provider selections in response stats.
+ *
+ * OpenRouter reports the host that actually served the request (`servedProvider`).
+ * A pinned host is not proof: blocked or down hosts are skipped when fallbacks are on.
  */
-export function getProviderSelectionId(config: AIConfig): string | undefined {
+export function getProviderSelectionId(
+  config: AIConfig,
+  servedProvider?: string
+): string | undefined {
   if (!config.modelId) {
     return undefined;
   }
 
   const provider = resolveProvider(config.baseUrl);
   if (provider instanceof OpenRouterProvider) {
-    return getOpenRouterPinnedHost(config);
+    return servedProvider || undefined;
   }
   if (!provider.maySupportProviderSelection(config.modelId)) {
     return undefined;

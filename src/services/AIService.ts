@@ -394,6 +394,7 @@ interface ChatCompletionResponse {
   object: string;
   created: number;
   model: string;
+  provider?: unknown;
   choices: Array<{
     index: number;
     message: ChatMessage;
@@ -414,6 +415,8 @@ interface AIResponse {
   reasoning?: string;
   finishReason?: string | null;
   toolCalls?: NativeToolCall[];
+  /** Upstream host the gateway reports as having served the request (OpenRouter's `provider`). */
+  provider?: string;
 }
 
 /**
@@ -426,6 +429,7 @@ interface ChatCompletionChunk {
   object: string;
   created: number;
   model: string;
+  provider?: unknown;
   choices: Array<{
     index: number;
     delta: {
@@ -1172,6 +1176,7 @@ Provide only the generated text without any additional commentary.`;
       ),
       finishReason: choice.finish_reason ?? null,
       toolCalls: normalizeMessageToolCalls(message.tool_calls),
+      provider: typeof data.provider === 'string' ? data.provider : undefined,
     };
   }
 
@@ -1211,6 +1216,7 @@ Provide only the generated text without any additional commentary.`;
     const parser = new ReasoningParser();
     const toolCallAcc: AccumulatingToolCall[] = [];
     let finishReason: string | null = null;
+    let provider: string | undefined;
     let doneSentinel = false;
     let pendingLine = '';
     let bytesRead = 0;
@@ -1274,6 +1280,9 @@ Provide only the generated text without any additional commentary.`;
                 applyToolCallDeltas(toolCallAcc, choice.delta.tool_calls);
               }
               if (choice?.finish_reason) finishReason = choice.finish_reason;
+              if (!provider && typeof parsedChunk.provider === 'string') {
+                provider = parsedChunk.provider;
+              }
             } catch (e) {
               console.warn('[AIService] Failed to parse streaming chunk:', e);
               console.warn('[AIService] Problematic line:', line.slice(0, 200));
@@ -1294,6 +1303,7 @@ Provide only the generated text without any additional commentary.`;
         reasoning: flushed.reasoning || undefined,
         finishReason,
         toolCalls: finalizeToolCalls(toolCallAcc),
+        provider,
       };
     } catch (error) {
       if (this.isAborted() || (error instanceof Error && error.name === 'AbortError')) {
