@@ -259,6 +259,30 @@ describe('OpenRouter provider routing', () => {
     ).toEqual({ order: ['groq'] });
   });
 
+  it('sends privacy filters with or without a pinned host', () => {
+    const privacy = { denyDataCollection: true, zdrOnly: true };
+    expect(buildOpenRouterProviderPrefs(openRouterConfig({ openRouter: privacy }))).toEqual({
+      data_collection: 'deny',
+      zdr: true,
+    });
+    expect(
+      buildOpenRouterProviderPrefs(
+        openRouterConfig({
+          openRouter: {
+            ...privacy,
+            sort: 'price',
+            providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'groq' },
+          },
+        })
+      )
+    ).toEqual({ order: ['groq'], data_collection: 'deny', zdr: true });
+    expect(
+      buildOpenRouterProviderPrefs(
+        openRouterConfig({ openRouter: { denyDataCollection: false, zdrOnly: false } })
+      )
+    ).toBeUndefined();
+  });
+
   it('reports the host that served the request, not the pin or NanoGPT selections', () => {
     const config = openRouterConfig({
       selectedProvider: 'nano-host',

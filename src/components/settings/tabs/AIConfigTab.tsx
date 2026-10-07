@@ -317,8 +317,8 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
               />
               {isOpenRouter && (
                 <p className="mt-1.5 text-xs text-fg-muted">
-                  Lists every host, including ones your OpenRouter account or key blocks. A blocked
-                  host is skipped, and a reply&apos;s info shows which host answered.
+                  Lists every host, including ones your OpenRouter account, key, or privacy options
+                  block. A blocked host is skipped, and a reply&apos;s info shows which host answered.
                 </p>
               )}
             </div>
@@ -378,36 +378,75 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
           title="OpenRouter Options"
           icon={<Route className="w-4 h-4 text-fg-muted" />}
         >
-          <div>
-            <label
-              htmlFor="openrouter-host-priority"
-              className="flex items-center gap-2 text-sm font-medium text-fg-muted mb-2"
-            >
-              <span className="p-1.5 rounded-md bg-muted text-fg-muted">
-                <Gauge className="w-4 h-4" />
-              </span>
-              Host priority
-            </label>
-            <select
-              id="openrouter-host-priority"
-              value={localAIConfig.openRouter?.sort ?? ''}
-              onChange={(e) => {
-                const sort = OPENROUTER_SORTS.find((value) => value === e.target.value);
+          <div className="space-y-4">
+            <div>
+              <label
+                htmlFor="openrouter-host-priority"
+                className="flex items-center gap-2 text-sm font-medium text-fg-muted mb-2"
+              >
+                <span className="p-1.5 rounded-md bg-muted text-fg-muted">
+                  <Gauge className="w-4 h-4" />
+                </span>
+                Host priority
+              </label>
+              <select
+                id="openrouter-host-priority"
+                value={localAIConfig.openRouter?.sort ?? ''}
+                onChange={(e) => {
+                  const sort = OPENROUTER_SORTS.find((value) => value === e.target.value);
+                  setDraft((prev) => ({
+                    ...prev,
+                    ai: { ...prev.ai, openRouter: { ...prev.ai.openRouter, sort } },
+                  }));
+                }}
+                className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
+              >
+                <option value="">Balanced: spread by price and uptime (default)</option>
+                <option value="price">Cheapest: lowest price first</option>
+                <option value="throughput">Fastest: most tokens per second</option>
+                <option value="latency">Quickest start: lowest time to first token</option>
+              </select>
+              <p className="mt-2 text-xs text-fg-muted">
+                Which hosts OpenRouter tries first. A model with a pinned host uses the pin instead.
+              </p>
+            </div>
+            <SettingsToggle
+              stacked
+              checked={localAIConfig.openRouter?.denyDataCollection ?? false}
+              onChange={(checked) =>
                 setDraft((prev) => ({
                   ...prev,
-                  ai: { ...prev.ai, openRouter: { ...prev.ai.openRouter, sort } },
-                }));
-              }}
-              className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
-            >
-              <option value="">Balanced: spread by price and uptime (default)</option>
-              <option value="price">Cheapest: lowest price first</option>
-              <option value="throughput">Fastest: most tokens per second</option>
-              <option value="latency">Quickest start: lowest time to first token</option>
-            </select>
-            <p className="mt-2 text-xs text-fg-muted">
-              Which hosts OpenRouter tries first. A model with a pinned host uses the pin instead.
-            </p>
+                  ai: {
+                    ...prev.ai,
+                    openRouter: { ...prev.ai.openRouter, denyDataCollection: checked },
+                  },
+                }))
+              }
+              label="No training on prompts"
+              description={
+                <>
+                  Skip hosts that may store and train on your prompts. Some allowed hosts still keep
+                  prompts for a short time, for example to check for abuse.
+                </>
+              }
+            />
+            <SettingsToggle
+              stacked
+              checked={localAIConfig.openRouter?.zdrOnly ?? false}
+              onChange={(checked) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  ai: { ...prev.ai, openRouter: { ...prev.ai.openRouter, zdrOnly: checked } },
+                }))
+              }
+              label="Zero data retention only"
+              description={
+                <>
+                  Only use hosts that never store your prompts. Fewer models and hosts qualify, and a
+                  request fails when none do. Your OpenRouter privacy settings still apply on top.
+                </>
+              }
+            />
           </div>
         </SettingsCard>
       )}

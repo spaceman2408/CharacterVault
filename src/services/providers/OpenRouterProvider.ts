@@ -69,6 +69,8 @@ export interface OpenRouterProviderPrefs {
   order?: string[];
   allow_fallbacks?: boolean;
   sort?: OpenRouterSort;
+  data_collection?: 'allow' | 'deny';
+  zdr?: boolean;
 }
 
 export function isOpenRouterBaseUrl(baseUrl: string): boolean {
@@ -102,6 +104,8 @@ export function buildOpenRouterProviderPrefs(
   } else if (options.sort) {
     prefs.sort = options.sort;
   }
+  if (options.denyDataCollection) prefs.data_collection = 'deny';
+  if (options.zdrOnly) prefs.zdr = true;
 
   return Object.keys(prefs).length > 0 ? prefs : undefined;
 }

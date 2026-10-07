@@ -723,6 +723,10 @@ export interface OpenRouterOptions {
   pinnedHostOnly?: boolean;
   /** Host order when no host is pinned; unset keeps OpenRouter's load balancing. */
   sort?: OpenRouterSort;
+  /** Skip hosts that may store and train on prompts (`data_collection: 'deny'`). */
+  denyDataCollection?: boolean;
+  /** Only route to Zero Data Retention endpoints. */
+  zdrOnly?: boolean;
 }
 
 export interface SamplerPreset {

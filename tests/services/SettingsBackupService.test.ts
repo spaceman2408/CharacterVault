@@ -150,6 +150,8 @@ describe('parseSettingsBackup', () => {
       providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'deepinfra/fp4', bad: 3 },
       pinnedHostOnly: true,
       sort: 'latency',
+      denyDataCollection: true,
+      zdrOnly: 'yes',
     };
     const file = parseSettingsBackup({
       kind: 'charactervault-settings',
@@ -160,6 +162,8 @@ describe('parseSettingsBackup', () => {
       providerByModelId: { 'deepseek/deepseek-chat-v3.1': 'deepinfra/fp4' },
       pinnedHostOnly: true,
       sort: 'latency',
+      denyDataCollection: true,
+      zdrOnly: false,
     });
 
     const unknownSort = parseSettingsBackup({

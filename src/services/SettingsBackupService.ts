@@ -180,6 +180,8 @@ function normalizeBackupOpenRouter(value: unknown): OpenRouterOptions {
     providerByModelId: asStringMap(raw.providerByModelId),
     pinnedHostOnly: asBoolean(raw.pinnedHostOnly, false),
     sort: OPENROUTER_SORTS.find((sort) => sort === raw.sort),
+    denyDataCollection: asBoolean(raw.denyDataCollection, false),
+    zdrOnly: asBoolean(raw.zdrOnly, false),
   };
 }
 
