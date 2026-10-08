@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.8.3
-Click-to-insert prompt variables, two-way sync for linked lorebooks, and Settings that ask before discarding changes.
+::: tip CharacterVault 1.8.4
+Pin and rank OpenRouter hosts, filter for privacy or free models, and merge a library lorebook into a character.
 
-[Try it](https://vault.charactervault.app) · [Prompt variables](/features/ai-creation-studio#generation-prompts) · [Lorebook sync](/features/lorebook-vault#how-they-stay-in-sync)
+[Try it](https://vault.charactervault.app) · [OpenRouter Options](/configuration/ai-setup#openrouter-options) · [Lorebook merge](/features/lorebook-vault#merge-into-existing-entries)
 :::
 
 # CharacterVault

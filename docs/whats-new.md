@@ -6,6 +6,17 @@ Quick overview of recent updates to CharacterVault.
 
 ## October 2026
 
+### 1.8.4
+
+CharacterVault 1.8.4 lets you pin and rank OpenRouter hosts, keep prompts private or stick to free models with new OpenRouter Options, keep Exacto on for Agent tool calls, and merge a library lorebook into a character's own entries, plus a fix for typing spaces in book names.
+
+- **OpenRouter host control**: pin a host per model under **Provider**, set **Settings → AI Config → OpenRouter Options → Host priority**, and see which host answered in a reply's stats
+- **OpenRouter privacy and model filters**: **No training on prompts**, **Zero data retention only**, and **Free models only** in **OpenRouter Options**, all off by default
+- **Exacto for the Agent**: **OpenRouter Options → Always use Exacto for the Agent** keeps `:exacto` on Agent tool calls with any host priority
+- **Merge a library book** (**Character → Lorebook → Attach**): **Merge** adds the book's entries after the character's own and unlinks the book
+
+[Release 1.8.4 →](/releases/v1.8.4) · [AI Setup →](/configuration/ai-setup#openrouter-options) · [Lorebook Vault →](/features/lorebook-vault#merge-into-existing-entries)
+
 ### 1.8.3
 
 CharacterVault 1.8.3 adds clickable variable chips to every prompt template, keeps linked lorebooks in sync both ways, and makes Settings ask before throwing away unsaved changes, plus Paste from Clipboard on import and a round of Settings and lorebook fixes.

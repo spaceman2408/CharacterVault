@@ -65,10 +65,16 @@ Manage the link from a **character** → **Lorebook** tab → **Attach** in the 
 ### First link
 
 1. Click **Attach** and pick a book (or **Replace** if one is already linked).
-2. CharacterVault asks if you want to copy that book’s entries onto the character. Confirming **replaces** the lorebook already on the character. If you skip the copy, the character keeps its own entries and does not sync its edits to the library book yet (see below).
+2. CharacterVault asks if you want to copy that book’s entries onto the character. If the character has no entries yet, **Copy** fills them in. If it already has entries, pick **Replace** to swap them out, or **Merge** to keep them (see below). If you skip the copy, the character keeps its own entries and does not sync its edits to the library book yet (see below).
 3. You can copy again later from the panel without changing the link.
 
 If nothing is linked yet, **Open in vault** can create a library book from the character’s current lorebook, link it, and open it.
+
+### Merge into existing entries {#merge-into-existing-entries}
+
+**Merge** keeps the character's entries and lorebook settings and adds the book's entries after them.
+
+Merging also **unlinks** the book, so the merged lorebook never syncs back into the library book or its other characters. To share the merged result, click **Open in vault**: it makes a new library book from the merged entries and links it.
 
 ### How they stay in sync
 
