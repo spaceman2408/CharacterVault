@@ -35,6 +35,7 @@ import { characterMentions } from './mentions';
 import { characterSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
 import { useCharacterAgent, type PersistAgentCard } from './useCharacterAgent';
+import { useLeaveWarning } from './useLeaveWarning';
 
 export interface CharacterAgentChatProps {
   aiConfig: AIConfig;
@@ -107,6 +108,7 @@ export function CharacterAgentChat({
     chatOwnerId,
   });
   const { noteReviewOutcome } = session;
+  useLeaveWarning(session.isProcessing || review != null);
 
   const handleApplyReview = useCallback(
     async (decisions: ReviewDecisions) => {

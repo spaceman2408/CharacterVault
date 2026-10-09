@@ -31,6 +31,7 @@ import {
 import { lorebookMentions } from './mentions';
 import { lorebookSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
+import { useLeaveWarning } from './useLeaveWarning';
 import { useLorebookAgent, type SetAgentBook } from './useLorebookAgent';
 
 export interface LorebookAgentChatProps {
@@ -109,6 +110,7 @@ export function LorebookAgentChat({
     chatOwnerId,
   });
   const { noteReviewOutcome } = session;
+  useLeaveWarning(session.isProcessing || review != null);
 
   const handleApplyReview = useCallback(
     async (decisions: ReviewDecisions) => {
