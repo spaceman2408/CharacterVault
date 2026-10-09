@@ -24,7 +24,9 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.8.5 staging 1';
+export const STAGING_VERSION = 'v1.8.5 staging 2';
 
 /** One short line per thing you want testers to try. */
-export const STAGING_TEST_NOTES: string[] = [];
+export const STAGING_TEST_NOTES: string[] = [
+  'Agent → refresh or close the tab while a run is going, or while an agent review is waiting (even minimized): the browser asks before leaving. With the agent idle, it leaves without asking.',
+];
