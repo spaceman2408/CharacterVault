@@ -29,4 +29,5 @@ export const STAGING_VERSION = 'v1.8.5 staging 2';
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
   'Agent → refresh or close the tab while a run is going, or while an agent review is waiting (even minimized): the browser asks before leaving. With the agent idle, it leaves without asking.',
+  'Agent → leave anyway (refresh mid-run, refresh with a review waiting, or go back to the library with a review waiting), then reopen the chat: that run says "Interrupted… These edits were not saved." and its writes show struck through as Not saved. Ask "what did you change?" and the agent should know nothing landed. Finished, stopped, or applied runs show no notice.',
 ];
