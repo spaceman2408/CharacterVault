@@ -99,3 +99,44 @@ describe('AgentChatMessage edit', () => {
     expect(onCancelEdit).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('AgentChatMessage lost writes', () => {
+  const write = {
+    toolName: 'update_entry',
+    ok: true,
+    message: 'ok #0 Mira',
+    target: { type: 'entry' as const, id: 0 },
+  };
+
+  function renderWrite(writesLost: boolean, onOpenTarget = vi.fn()) {
+    render(
+      <AgentChatMessage
+        message={message}
+        messageIndex={0}
+        chatHistoryLength={1}
+        isProcessing={false}
+        showReasoning={false}
+        showRegenerate={false}
+        notices={[]}
+        toolEvents={[write]}
+        writesLost={writesLost}
+        onRegenerate={() => undefined}
+        onDelete={() => undefined}
+        onOpenTarget={onOpenTarget}
+      />,
+    );
+    return onOpenTarget;
+  }
+
+  it('opens the target of a saved write', () => {
+    const onOpenTarget = renderWrite(false);
+    fireEvent.click(screen.getByRole('button', { name: /Mira/ }));
+    expect(onOpenTarget).toHaveBeenCalledTimes(1);
+  });
+
+  it('strikes out a write that was never saved and does not open it', () => {
+    renderWrite(true);
+    expect(screen.queryByRole('button', { name: /Mira/ })).toBeNull();
+    expect(screen.getByTitle('Not saved').className).toContain('line-through');
+  });
+});

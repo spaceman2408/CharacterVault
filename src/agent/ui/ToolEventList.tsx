@@ -5,9 +5,12 @@ import type { AgentToolEvent, AgentToolTarget } from './types';
 
 export function ToolEventList({
   events,
+  lost = false,
   onOpenTarget,
 }: {
   events: AgentToolEvent[];
+  /** Writes that never landed: shown struck through and not clickable. */
+  lost?: boolean;
   onOpenTarget?: (target: AgentToolTarget) => void;
 }): React.ReactElement | null {
   if (events.length === 0) return null;
@@ -15,13 +18,18 @@ export function ToolEventList({
     <ul className="space-y-1">
       {events.map((event, index) => {
         const ok = event.ok;
-        const clickable = Boolean(ok && event.target && onOpenTarget);
+        const notSaved = ok && lost;
+        const clickable = Boolean(ok && !lost && event.target && onOpenTarget);
         const className = `flex w-full items-start gap-1.5 rounded-md px-2 py-1 text-left text-xs leading-5 ${
-          ok
-            ? 'bg-success-soft text-success-soft-fg'
-            : 'bg-danger-soft text-danger-soft-fg'
+          notSaved
+            ? 'border border-border bg-surface text-fg-muted'
+            : ok
+              ? 'bg-success-soft text-success-soft-fg'
+              : 'bg-danger-soft text-danger-soft-fg'
         } ${clickable ? 'hover:opacity-90 cursor-pointer' : ''}`;
-        const inner = (
+        const inner = notSaved ? (
+          <span className="line-through" title="Not saved">{formatToolEvent(event)}</span>
+        ) : (
           <>
             {ok ? (
               <Check className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />

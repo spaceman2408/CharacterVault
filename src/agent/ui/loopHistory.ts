@@ -2,7 +2,13 @@ import type { ChatMessage } from '../../components/ai/types';
 import { stripFences } from '../core/stripFences';
 import type { AgentMessage } from '../core/types';
 import { formatToolEvent } from './formatToolEvent';
-import { REVIEW_NOTE_TOOL, TURN_LIMIT_NOTICE, visibleToolEvents } from './notices';
+import {
+  REVIEW_NOTE_TOOL,
+  RUN_INTERRUPTED_NOTE,
+  RUN_INTERRUPTED_TOOL,
+  TURN_LIMIT_NOTICE,
+  visibleToolEvents,
+} from './notices';
 import type { AgentToolEvent } from './types';
 
 /**
@@ -21,10 +27,12 @@ export function toLoopHistory(
   let edits: string[] = [];
   let review: string[] = [];
   let hitTurnLimit = false;
+  let interrupted = false;
 
   const flushRun = () => {
     const parts = [...speech];
-    if (edits.length > 0) parts.push(`[App note: edits this run: ${edits.join('; ')}]`);
+    if (interrupted) parts.push(`[App note: ${RUN_INTERRUPTED_NOTE}]`);
+    else if (edits.length > 0) parts.push(`[App note: edits this run: ${edits.join('; ')}]`);
     if (review.length > 0) parts.push(`[App note: review: ${review.join(' ')}]`);
     if (hitTurnLimit) parts.push(`[App note: ${TURN_LIMIT_NOTICE}]`);
     if (parts.length > 0) messages.push({ role: 'assistant', content: parts.join('\n\n') });
@@ -32,6 +40,7 @@ export function toLoopHistory(
     edits = [];
     review = [];
     hitTurnLimit = false;
+    interrupted = false;
   };
 
   for (const message of history) {
@@ -46,6 +55,7 @@ export function toLoopHistory(
     const events = toolEventsByMessageId[message.id] ?? [];
     for (const event of events) {
       if (event.toolName === REVIEW_NOTE_TOOL) review.push(event.message);
+      if (event.toolName === RUN_INTERRUPTED_TOOL) interrupted = true;
     }
     for (const event of visibleToolEvents(events, lookupToolNames)) {
       if (event.ok) edits.push(formatToolEvent(event));

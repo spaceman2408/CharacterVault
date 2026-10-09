@@ -24,6 +24,18 @@ export const LOREBOOK_WRITE_TOOLS = new Set([
 /** Stored on a run's last message after review; sent to the model, never shown. */
 export const REVIEW_NOTE_TOOL = 'review_outcome';
 
+/** Stored on a run's last message when the page was left or refreshed before its writes were saved. */
+export const RUN_INTERRUPTED_TOOL = 'run_interrupted';
+export const RUN_INTERRUPTED_NOTE =
+  'this run was interrupted by leaving or refreshing the page; none of its edits were saved.';
+
+export function interruptedRunNotice(wrote: boolean, reviewWaiting: boolean): string {
+  if (!wrote) return 'Interrupted by leaving or refreshing the page. Nothing was changed.';
+  return reviewWaiting
+    ? 'Interrupted by leaving or refreshing the page before review. These edits were not saved.'
+    : 'Interrupted by leaving or refreshing the page. These edits were not saved.';
+}
+
 export const CHARACTER_LOOKUP_TOOLS = new Set([
   'list_fields',
   'read_field',
@@ -56,7 +68,7 @@ export function visibleToolEvents(
 
   for (const event of events) {
     if (event.ok && lookupTools.has(event.toolName)) continue;
-    if (event.toolName === REVIEW_NOTE_TOOL) continue;
+    if (event.toolName === REVIEW_NOTE_TOOL || event.toolName === RUN_INTERRUPTED_TOOL) continue;
 
     const id = writeEntryId(event, writeTools);
     if (id && addIndexById.has(id)) {
@@ -70,8 +82,38 @@ export function visibleToolEvents(
   return visible;
 }
 
-export function messageNotices(runError: string | undefined): string[] {
-  return runError ? [runError] : [];
+export function messageNotices(runError: string | undefined, events: AgentToolEvent[] = []): string[] {
+  const notices = runError ? [runError] : [];
+  for (const event of events) {
+    if (event.toolName === RUN_INTERRUPTED_TOOL) notices.push(event.message);
+  }
+  return notices;
+}
+
+/** Messages of runs whose writes never landed, so their write rows must not read as applied. */
+export function interruptedRunMessageIds(
+  history: { id: string; role: string }[],
+  toolEventsByMessageId: Record<string, AgentToolEvent[]>,
+): Set<string> {
+  const ids = new Set<string>();
+  let run: string[] = [];
+  let interrupted = false;
+  const endRun = () => {
+    if (interrupted) for (const id of run) ids.add(id);
+    run = [];
+    interrupted = false;
+  };
+  for (const message of history) {
+    if (message.role === 'user') {
+      endRun();
+      continue;
+    }
+    run.push(message.id);
+    const events = toolEventsByMessageId[message.id] ?? [];
+    if (events.some((event) => event.toolName === RUN_INTERRUPTED_TOOL)) interrupted = true;
+  }
+  endRun();
+  return ids;
 }
 
 export function shouldRenderAgentMessage(
@@ -107,8 +149,9 @@ export function isLookupOnlyTurn(
   return events.length > 0 && events.every((event) => event.ok && lookupTools.has(event.toolName));
 }
 
-export function writeRecapLine(events: AgentToolEvent[]): string | null {
+export function writeRecapLine(events: AgentToolEvent[], lost = false): string | null {
   const n = events.filter((event) => event.ok).length;
   if (n === 0) return null;
+  if (lost) return 'Not saved';
   return n === 1 ? 'Applied 1 write' : `Applied ${n} writes`;
 }

@@ -3,6 +3,8 @@ import { toLoopHistory } from '../../../src/agent/ui/loopHistory';
 import {
   CHARACTER_LOOKUP_TOOLS,
   REVIEW_NOTE_TOOL,
+  RUN_INTERRUPTED_NOTE,
+  RUN_INTERRUPTED_TOOL,
   TURN_LIMIT_NOTICE,
 } from '../../../src/agent/ui/notices';
 import type { AgentToolEvent } from '../../../src/agent/ui/types';
@@ -96,6 +98,31 @@ describe('toLoopHistory', () => {
       { role: 'user', content: 'Search everywhere' },
       { role: 'assistant', content: `[App note: ${TURN_LIMIT_NOTICE}]` },
       { role: 'user', content: 'Continue where you left off.' },
+    ]);
+  });
+
+  it('replaces the edits note when the run was interrupted before its writes were saved', () => {
+    const interrupted: AgentToolEvent = {
+      toolName: RUN_INTERRUPTED_TOOL,
+      ok: false,
+      message: 'Interrupted by leaving or refreshing the page. These edits were not saved.',
+    };
+    const history = [
+      message('u1', 'user', 'Tighten the description and add Harbor'),
+      message('a1', 'assistant'),
+      message('a2', 'assistant'),
+      message('u2', 'user', 'What did you change?'),
+    ];
+    expect(
+      toLoopHistory(
+        history,
+        { a1: [updateDescription], a2: [addHarbor, interrupted] },
+        CHARACTER_LOOKUP_TOOLS,
+      ),
+    ).toEqual([
+      { role: 'user', content: 'Tighten the description and add Harbor' },
+      { role: 'assistant', content: `[App note: ${RUN_INTERRUPTED_NOTE}]` },
+      { role: 'user', content: 'What did you change?' },
     ]);
   });
 

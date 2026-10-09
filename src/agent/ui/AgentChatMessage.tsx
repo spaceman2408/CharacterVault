@@ -23,6 +23,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   showRegenerate,
   notices,
   toolEvents,
+  writesLost = false,
   recapLine,
   onRegenerate,
   onDelete,
@@ -39,6 +40,8 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   showRegenerate: boolean;
   notices: string[];
   toolEvents: AgentToolEvent[];
+  /** The run was cut off before its writes were saved. */
+  writesLost?: boolean;
   recapLine?: string | null;
   onRegenerate: () => void;
   onDelete: (messageId: string) => void;
@@ -106,7 +109,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
         <p className="text-xs text-fg-muted">{recapLine}</p>
       ) : null}
 
-      <ToolEventList events={toolEvents} onOpenTarget={onOpenTarget} />
+      <ToolEventList events={toolEvents} lost={writesLost} onOpenTarget={onOpenTarget} />
 
       {notices.length > 0 ? (
         <ul className="space-y-1">

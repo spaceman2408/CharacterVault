@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   CHARACTER_LOOKUP_TOOLS,
   compactToolResultMessage,
+  interruptedRunMessageIds,
+  interruptedRunNotice,
   isLookupOnlyTurn,
   messageNotices,
   REVIEW_NOTE_TOOL,
+  RUN_INTERRUPTED_TOOL,
   shouldRenderAgentMessage,
   visibleToolEvents,
   writeRecapLine,
@@ -32,6 +35,11 @@ const failed: AgentToolEvent = {
   toolName: 'incomplete_action',
   ok: false,
   message: 'incomplete_action: a tool_call was not closed with </tool_call>',
+};
+const interrupted: AgentToolEvent = {
+  toolName: RUN_INTERRUPTED_TOOL,
+  ok: false,
+  message: interruptedRunNotice(true, false),
 };
 
 describe('visibleToolEvents', () => {
@@ -92,6 +100,10 @@ describe('visibleToolEvents', () => {
     };
     expect(visibleToolEvents([okAdd, failedReplace])).toEqual([okAdd, failedReplace]);
   });
+
+  it('hides the interrupted-run note', () => {
+    expect(visibleToolEvents([okAdd, interrupted])).toEqual([okAdd]);
+  });
 });
 
 describe('messageNotices', () => {
@@ -101,6 +113,40 @@ describe('messageNotices', () => {
 
   it('returns an empty list when there is nothing to report', () => {
     expect(messageNotices(undefined)).toEqual([]);
+  });
+
+  it('adds the interrupted-run notice from the message events', () => {
+    expect(messageNotices(undefined, [okAdd, interrupted])).toEqual([
+      'Interrupted by leaving or refreshing the page. These edits were not saved.',
+    ]);
+  });
+});
+
+describe('interruptedRunNotice', () => {
+  it('says nothing changed when the run had no writes', () => {
+    expect(interruptedRunNotice(false, false)).toBe(
+      'Interrupted by leaving or refreshing the page. Nothing was changed.',
+    );
+  });
+
+  it('names the waiting review', () => {
+    expect(interruptedRunNotice(true, true)).toBe(
+      'Interrupted by leaving or refreshing the page before review. These edits were not saved.',
+    );
+  });
+});
+
+describe('interruptedRunMessageIds', () => {
+  it('marks every message of the interrupted run and nothing else', () => {
+    const history = [
+      { id: 'u1', role: 'user' },
+      { id: 'a1', role: 'assistant' },
+      { id: 'u2', role: 'user' },
+      { id: 'a2', role: 'assistant' },
+      { id: 'a3', role: 'assistant' },
+    ];
+    const ids = interruptedRunMessageIds(history, { a1: [okAdd], a2: [okAdd], a3: [interrupted] });
+    expect([...ids]).toEqual(['a2', 'a3']);
   });
 });
 
@@ -174,6 +220,11 @@ describe('shouldRenderAgentMessage', () => {
 });
 
 describe('writeRecapLine', () => {
+  it('says the writes were not saved for an interrupted run', () => {
+    expect(writeRecapLine([okAdd], true)).toBe('Not saved');
+    expect(writeRecapLine([], true)).toBeNull();
+  });
+
   it('counts successful writes only', () => {
     expect(writeRecapLine([okAdd])).toBe('Applied 1 write');
     expect(writeRecapLine([okAdd, okUpdate])).toBe('Applied 2 writes');

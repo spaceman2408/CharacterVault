@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AIChatView } from '../../components/ai/AIChatView';
 import { useEditLastMessage } from '../../components/ai/hooks/useEditLastMessage';
@@ -26,6 +26,7 @@ import { LiveThinking } from './LiveThinking';
 import {
   CHARACTER_LOOKUP_TOOLS,
   CONTINUE_MESSAGE,
+  interruptedRunMessageIds,
   messageNotices,
   shouldRenderAgentMessage,
   visibleToolEvents,
@@ -84,9 +85,11 @@ export function CharacterAgentChat({
   const [reviewOpen, setReviewOpen] = useState(false);
   const [isApplyingReview, setIsApplyingReview] = useState(false);
   const shouldReview = useCallback(() => requireReview, [requireReview]);
+  const holdRunRef = useRef<() => void>(() => undefined);
 
   const handlePendingReview = useCallback((pending: CharacterReviewPayload) => {
     if (diffCharacterReview(pending).length === 0) return;
+    holdRunRef.current();
     setReview(pending);
     setReviewOpen(true);
   }, []);
@@ -107,7 +110,10 @@ export function CharacterAgentChat({
     chatOwnerType,
     chatOwnerId,
   });
-  const { noteReviewOutcome } = session;
+  const { noteReviewOutcome, holdRunForReview } = session;
+  useEffect(() => {
+    holdRunRef.current = holdRunForReview;
+  }, [holdRunForReview]);
   useLeaveWarning(session.isProcessing || review != null);
 
   const handleApplyReview = useCallback(
@@ -225,13 +231,19 @@ export function CharacterAgentChat({
     session.livePromptTokens,
   ]);
 
+  const lostMessageIds = useMemo(
+    () => interruptedRunMessageIds(session.chatHistory, session.toolEventsByMessageId),
+    [session.chatHistory, session.toolEventsByMessageId],
+  );
+
   const renderMessage = useCallback(
     (message: ChatMessage, index: number, setComposerText: (text: string) => void) => {
       const events = session.toolEventsByMessageId[message.id] ?? [];
-      const notices = messageNotices(session.errorByMessageId[message.id]);
+      const notices = messageNotices(session.errorByMessageId[message.id], events);
       const toolEvents = visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS);
+      const writesLost = lostMessageIds.has(message.id);
       const speech = message.role === 'assistant' ? stripFences(message.content) : message.content;
-      const recapLine = speech ? null : writeRecapLine(toolEvents);
+      const recapLine = speech ? null : writeRecapLine(toolEvents, writesLost);
       const showReasoning = aiConfig.showReasoning ?? true;
       if (
         !shouldRenderAgentMessage(
@@ -254,6 +266,7 @@ export function CharacterAgentChat({
           showRegenerate
           notices={notices}
           toolEvents={toolEvents}
+          writesLost={writesLost}
           recapLine={recapLine}
           onRegenerate={handleRegenerateGuarded}
           onDelete={session.handleDeleteMessage}
@@ -282,6 +295,7 @@ export function CharacterAgentChat({
       handleEditGuarded,
       handleRegenerateGuarded,
       lastUserIndex,
+      lostMessageIds,
       onOpenTarget,
       session.chatHistory.length,
       session.errorByMessageId,

@@ -47,11 +47,15 @@ import { noteRunFinished } from './finishNotice';
 import { toLoopHistory } from './loopHistory';
 import {
   compactToolResultMessage,
+  interruptedRunNotice,
   isLookupOnlyTurn,
   REVIEW_NOTE_TOOL,
+  RUN_INTERRUPTED_TOOL,
   TURN_LIMIT_NOTICE,
+  visibleToolEvents,
 } from './notices';
 import { estimatePromptTokens } from './promptUsage';
+import { clearRunMarker, readRunMarker, writeRunMarker } from './runMarker';
 import type { AgentBusyAction, AgentToolEvent } from './types';
 
 export interface UseAgentSessionOptions {
@@ -139,6 +143,8 @@ export interface UseAgentSessionReturn {
   clearError: () => void;
   /** Records the review result on the last run so the next run knows what landed. */
   noteReviewOutcome: (note: string) => void;
+  /** Call when a run's writes are staged for review, so leaving before review is noted on the next load. */
+  holdRunForReview: () => void;
   isAIConfigured: boolean;
   isHydrating: boolean;
   hasOlderMessages: boolean;
@@ -383,14 +389,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     setError(null);
   }, []);
 
-  const noteReviewOutcome = useCallback((note: string) => {
-    const history = chatHistoryRef.current;
-    let target: ChatMessage | undefined;
-    for (let i = history.length - 1; i >= 0 && !target; i -= 1) {
-      if (history[i].role === 'assistant') target = history[i];
-    }
-    if (!target) return;
-    const event: AgentToolEvent = { toolName: REVIEW_NOTE_TOOL, ok: true, message: note };
+  const appendToolEvent = useCallback((target: ChatMessage, event: AgentToolEvent) => {
     const nextEvents = {
       ...toolEventsRef.current,
       [target.id]: [...(toolEventsRef.current[target.id] ?? []), event],
@@ -399,6 +398,48 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     setToolEventsByMessageId(nextEvents);
     persistMessage(target);
   }, [persistMessage]);
+
+  const noteReviewOutcome = useCallback((note: string) => {
+    clearRunMarker(threadRef());
+    const history = chatHistoryRef.current;
+    let target: ChatMessage | undefined;
+    for (let i = history.length - 1; i >= 0 && !target; i -= 1) {
+      if (history[i].role === 'assistant') target = history[i];
+    }
+    if (!target) return;
+    appendToolEvent(target, { toolName: REVIEW_NOTE_TOOL, ok: true, message: note });
+  }, [appendToolEvent]);
+
+  const holdRunForReview = useCallback(() => {
+    writeRunMarker(threadRef(), { reviewWaiting: true });
+  }, []);
+
+  const noteInterruptedRun = useCallback((reviewWaiting: boolean) => {
+    const history = chatHistoryRef.current;
+    const lastUserIndex = lastUserMessageIndex(history);
+    if (lastUserIndex < 0) return;
+    const run = history.slice(lastUserIndex + 1);
+    const wrote = run.some((message) =>
+      visibleToolEvents(toolEventsRef.current[message.id] ?? [], lookupToolNamesRef.current)
+        .some((event) => event.ok),
+    );
+    let target = run.at(-1);
+    if (!target) {
+      target = {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        suppressInitialAnimation: true,
+      };
+      commitMessage(target);
+    }
+    appendToolEvent(target, {
+      toolName: RUN_INTERRUPTED_TOOL,
+      ok: false,
+      message: interruptedRunNotice(wrote, reviewWaiting),
+    });
+  }, [appendToolEvent, commitMessage]);
 
   const handleAbort = useCallback(() => {
     abortedRef.current = true;
@@ -477,6 +518,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const handleNewChat = useCallback(() => {
     const thread = threadRef();
     releaseSession(true);
+    clearRunMarker(thread);
     historyReadyRef.current = true;
     if (thread.ownerId) {
       void chatHistoryService.clear(thread);
@@ -553,6 +595,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         hydratingRef.current = false;
         historyReadyRef.current = true;
         setIsHydrating(false);
+        const marker = readRunMarker(thread);
+        if (marker) {
+          clearRunMarker(thread);
+          noteInterruptedRun(marker.reviewWaiting);
+        }
       })
       .catch(async () => {
         if (cancelled || hydrateGenerationRef.current !== generation || !isMountedRef.current) {
@@ -574,7 +621,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     return () => {
       cancelled = true;
     };
-  }, [abortInFlight, chatOwnerType, chatOwnerId, chatPanel]);
+  }, [abortInFlight, chatOwnerType, chatOwnerId, chatPanel, noteInterruptedRun]);
 
   const handleLoadOlder = useCallback(async () => {
     if (
@@ -698,6 +745,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         );
 
         const requestId = ++requestIdRef.current;
+        const runThread = threadRef();
+        writeRunMarker(runThread, { reviewWaiting: false });
         abortedRef.current = false;
         isProcessingRef.current = true;
         setIsProcessing(true);
@@ -896,6 +945,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
           }
           attachError(err instanceof Error ? err.message : 'Agent request failed');
         } finally {
+          clearRunMarker(runThread, { keepReview: true });
           if (requestId === requestIdRef.current) {
             dropLookupOnlyMessage(lastAssistantIdRef.current);
             if (aiServiceRef.current === runService) {
@@ -1013,6 +1063,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     handleAbort,
     clearError,
     noteReviewOutcome,
+    holdRunForReview,
     isAIConfigured,
     isHydrating,
     hasOlderMessages,
