@@ -171,3 +171,58 @@ describe('searchInText', () => {
     expect(searchInText('hello', '')).toEqual({ count: 0, snippet: null });
   });
 });
+
+describe('dash folding is one-way', () => {
+  const hyphens = 'A jackal demi-human in a green t-shirt.';
+
+  it('does not count hyphens when searching for an em dash', () => {
+    expect(searchInText(hyphens, '\u2014')).toEqual({ count: 0, snippet: null });
+    expect(searchInText('Calm \u2014 mostly \u2014 fine.', '\u2014').count).toBe(2);
+  });
+
+  it('still finds every dash kind from a plain hyphen', () => {
+    expect(searchInText('a-b a\u2013b a\u2014b', 'a-b').count).toBe(3);
+  });
+
+  it('does not rewrite hyphens when removing em dashes from text that has none', () => {
+    expect(replaceText(hyphens, '\u2014', ', ', true)).toEqual({
+      ok: false,
+      message: expect.stringContaining('old not found'),
+    });
+    expect(replaceText(hyphens, ' \u2014 ', ', ', true)).toEqual({
+      ok: false,
+      message: expect.stringContaining('old not found'),
+    });
+  });
+
+  it('does not let an en dash stand in for an em dash', () => {
+    expect(replaceText('Calm \u2013 mostly.', '\u2014', ',', true).ok).toBe(false);
+  });
+
+  it('replaces real em dashes and leaves hyphens alone', () => {
+    expect(replaceText('Calm \u2014 a demi-human \u2014 mostly.', ' \u2014 ', ', ', true)).toEqual({
+      ok: true,
+      text: 'Calm, a demi-human, mostly.',
+      count: 2,
+    });
+  });
+
+  it('keeps an em dash strict inside a longer folded match', () => {
+    const source = 'She said \u201cwait\u201d \u2014 then left. He said \u201cwait\u201d - then stayed.';
+    const result = replaceText(source, '"wait" \u2014 then', '"stop" \u2014 then', false);
+    expect(result).toEqual({
+      ok: true,
+      text: 'She said "stop" \u2014 then left. He said \u201cwait\u201d - then stayed.',
+      count: 1,
+    });
+  });
+
+  it('applies to the case-insensitive fallback', () => {
+    expect(replaceText('DEMI-HUMAN', 'demi\u2014human', 'x', false).ok).toBe(false);
+    expect(replaceText('DEMI\u2014HUMAN', 'demi\u2014human', 'x', false)).toEqual({
+      ok: true,
+      text: 'x',
+      count: 1,
+    });
+  });
+});

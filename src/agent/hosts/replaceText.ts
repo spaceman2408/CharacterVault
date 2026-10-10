@@ -56,25 +56,13 @@ export function searchInText(
   source: string,
   query: string,
 ): { count: number; snippet: string | null } {
-  const needle = normalizeForMatch(query).normalized.toLowerCase();
-  if (!needle || !source) return { count: 0, snippet: null };
-  const hay = normalizeForMatch(source);
-  const hayLower = hay.normalized.toLowerCase();
-  let count = 0;
-  let snippet: string | null = null;
-  let from = 0;
-  while (from <= hayLower.length - needle.length) {
-    const at = hayLower.indexOf(needle, from);
-    if (at === -1) break;
-    if (snippet == null) {
-      const start = hay.origIndex[at];
-      const end = hay.origIndex[at + needle.length];
-      snippet = makeSearchSnippet(source, start, end);
-    }
-    count += 1;
-    from = at + needle.length;
-  }
-  return { count, snippet };
+  if (!query || !source) return { count: 0, snippet: null };
+  const ranges = findFoldedRanges(source, query, true) ?? findFoldedRanges(source, query, false) ?? [];
+  if (ranges.length === 0) return { count: 0, snippet: null };
+  return {
+    count: ranges.length,
+    snippet: makeSearchSnippet(source, ranges[0].start, ranges[0].end),
+  };
 }
 
 function findExactRanges(haystack: string, needle: string): Range[] {
@@ -142,45 +130,56 @@ function normalizeForMatch(text: string): { normalized: string; origIndex: numbe
   return { normalized, origIndex };
 }
 
-function findNormalizedRanges(haystack: string, needle: string): Range[] {
+/**
+ * Folding is one-way for dashes: a plain hyphen in the needle matches any
+ * dash, but an em/en/other dash the model typed matches only that dash.
+ * Otherwise removing em dashes from text that has none rewrites hyphens
+ * ("demi-human" → "demi, human").
+ */
+function isStrictDash(ch: string): boolean {
+  return ch !== '-' && foldChar(ch) === '-';
+}
+
+/** Null when lowercasing changes the length, which would break the index map. */
+function findFoldedRanges(haystack: string, needle: string, ignoreCase: boolean): Range[] | null {
+  const foldedNeedle = normalizeForMatch(needle);
+  let needleText = foldedNeedle.normalized;
+  if (!needleText) return [];
   const hay = normalizeForMatch(haystack);
-  const foldedNeedle = normalizeForMatch(needle).normalized;
-  if (!foldedNeedle) return [];
+  let hayText = hay.normalized;
+  if (ignoreCase) {
+    const hayLower = hayText.toLowerCase();
+    const needleLower = needleText.toLowerCase();
+    if (hayLower.length !== hayText.length || needleLower.length !== needleText.length) return null;
+    hayText = hayLower;
+    needleText = needleLower;
+  }
+  const strict: Array<{ offset: number; ch: string }> = [];
+  for (let k = 0; k < foldedNeedle.normalized.length; k += 1) {
+    const ch = needle[foldedNeedle.origIndex[k]];
+    if (isStrictDash(ch)) strict.push({ offset: k, ch });
+  }
   const ranges: Range[] = [];
   let from = 0;
-  while (from <= hay.normalized.length - foldedNeedle.length) {
-    const at = hay.normalized.indexOf(foldedNeedle, from);
+  while (from <= hayText.length - needleText.length) {
+    const at = hayText.indexOf(needleText, from);
     if (at === -1) break;
-    ranges.push({
-      start: hay.origIndex[at],
-      end: hay.origIndex[at + foldedNeedle.length],
-    });
-    from = at + foldedNeedle.length;
+    if (strict.every(({ offset, ch }) => haystack[hay.origIndex[at + offset]] === ch)) {
+      ranges.push({ start: hay.origIndex[at], end: hay.origIndex[at + needleText.length] });
+      from = at + needleText.length;
+    } else {
+      from = at + 1;
+    }
   }
   return ranges;
 }
 
+function findNormalizedRanges(haystack: string, needle: string): Range[] {
+  return findFoldedRanges(haystack, needle, false) ?? [];
+}
+
 function findCaseInsensitiveRanges(haystack: string, needle: string): Range[] | null {
-  const needleNorm = normalizeForMatch(needle).normalized;
-  if (!needleNorm) return [];
-  const needleLower = needleNorm.toLowerCase();
-  const hay = normalizeForMatch(haystack);
-  const hayLower = hay.normalized.toLowerCase();
-  if (hayLower.length !== hay.normalized.length || needleLower.length !== needleNorm.length) {
-    return null;
-  }
-  const ranges: Range[] = [];
-  let from = 0;
-  while (from <= hayLower.length - needleLower.length) {
-    const at = hayLower.indexOf(needleLower, from);
-    if (at === -1) break;
-    ranges.push({
-      start: hay.origIndex[at],
-      end: hay.origIndex[at + needleLower.length],
-    });
-    from = at + needleLower.length;
-  }
-  return ranges;
+  return findFoldedRanges(haystack, needle, true);
 }
 
 function nonemptyLines(text: string): string[] {
