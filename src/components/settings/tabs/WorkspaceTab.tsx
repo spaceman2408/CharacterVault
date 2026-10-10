@@ -221,22 +221,38 @@ export const WorkspaceTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) =>
           <ShieldCheck className="w-4 h-4" />
           Agent edits
         </h3>
-        <SettingsToggle
-          stacked
-          checked={draft.requireAgentReview}
-          onChange={(checked) =>
-            setDraft((prev) => ({ ...prev, requireAgentReview: checked }))
-          }
-          label="Review agent edits before applying"
-          description={
-            <>
-              When enabled, the Agent stages its card and lorebook edits instead of writing
-              them directly. You can review each change, edit the proposed text, and approve
-              or deny changes before anything is applied. Snapshots are still taken when you
-              apply.
-            </>
-          }
-        />
+        <div className="space-y-4">
+          <SettingsToggle
+            stacked
+            checked={draft.requireAgentReview}
+            onChange={(checked) =>
+              setDraft((prev) => ({ ...prev, requireAgentReview: checked }))
+            }
+            label="Review agent edits before applying"
+            description={
+              <>
+                When enabled, the Agent stages its card and lorebook edits instead of writing
+                them directly. You can review each change, edit the proposed text, and approve
+                or deny changes before anything is applied. Snapshots are still taken when you
+                apply.
+              </>
+            }
+          />
+          <SettingsToggle
+            stacked
+            checked={draft.agentKeepEdits}
+            onChange={(checked) => setDraft((prev) => ({ ...prev, agentKeepEdits: checked }))}
+            label="Remember earlier edits in the chat"
+            description={
+              <>
+                Each new message sends the Agent the exact text of its earlier edits in this chat,
+                so follow-ups like &quot;change the second edit&quot; work without searching for
+                them again. This can help models, but every message costs more tokens than having
+                the Agent read the current text fresh.
+              </>
+            }
+          />
+        </div>
       </SettingsCard>
 
       <SettingsCard>

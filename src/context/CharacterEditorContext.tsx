@@ -23,6 +23,7 @@ import {
   DEFAULT_SPELLCHECK_SETTINGS,
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_REQUIRE_AGENT_REVIEW,
+  DEFAULT_AGENT_KEEP_EDITS,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   DEFAULT_MACRO_AUTO_CONVERT,
   EMPTY_CUSTOM_CONTEXT_META,
@@ -92,6 +93,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   );
   const [requireAgentReview, setRequireAgentReview] = useState(
     () => settings?.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
+  );
+  const [agentKeepEdits, setAgentKeepEdits] = useState(
+    () => settings?.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
   );
   const [creatorNotesRemoteWarning, setCreatorNotesRemoteWarning] = useState(
     () => settings?.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
@@ -449,6 +453,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       );
       setDefaultChatPanel(normalizeDefaultChatPanel(settings.ui.defaultChatPanel));
       setRequireAgentReview(settings.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW);
+      setAgentKeepEdits(settings.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS);
       setCreatorNotesRemoteWarning(
         settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
       );
@@ -1272,6 +1277,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     markdownImageOpenLinks,
     defaultChatPanel,
     requireAgentReview,
+    agentKeepEdits,
     creatorNotesRemoteWarning,
     roleplayHighlight,
     macroHighlight,

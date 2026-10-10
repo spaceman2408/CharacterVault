@@ -7,7 +7,7 @@ import {
 
 const MESSAGE_OVERHEAD_TOKENS = 6;
 
-function messageTokenText(message: AgentMessage): string {
+export function messageTokenText(message: AgentMessage): string {
   const parts: string[] = [];
   if (message.content) parts.push(message.content);
   if (message.tool_calls?.length) parts.push(JSON.stringify(message.tool_calls));

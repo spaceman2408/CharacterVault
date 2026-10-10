@@ -82,6 +82,24 @@ describe('chatHistoryMap', () => {
     });
   });
 
+  it('keeps write arguments on tool events through a store and reload', () => {
+    const toolEvents = [
+      {
+        toolName: 'replace_in_field',
+        ok: true,
+        message: 'ok description (Description) — replaced 1',
+        call: { headers: { id: 'description', old: 'grim', new: 'wry' }, body: '' },
+      },
+    ];
+    const stored = chatMessageToStored(
+      { id: 'a1', role: 'assistant', content: '', timestamp: 5 },
+      { ownerType: 'character', ownerId: 'c1', panel: 'agent', seq: 2 },
+      { toolEvents },
+    );
+    const reloaded = storedToAgentThread([structuredClone(stored)]);
+    expect(reloaded.toolEventsByMessageId.a1).toEqual(toolEvents);
+  });
+
   it('allocates monotonic seq and reuses ids', () => {
     const seqById = new Map<string, number>();
     const maxSeq = { current: 2 };

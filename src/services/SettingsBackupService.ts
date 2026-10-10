@@ -15,6 +15,7 @@ import type {
 } from '../db/characterTypes';
 import {
   CHARACTER_SECTIONS,
+  DEFAULT_AGENT_KEEP_EDITS,
   DEFAULT_CHARACTER_VAULT_SETTINGS,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   DEFAULT_MACRO_AUTO_CONVERT,
@@ -232,6 +233,7 @@ function normalizeBackupUi(value: unknown): CharacterVaultSettings['ui'] {
     markdownImageOpenLinks: asBoolean(raw.markdownImageOpenLinks, true),
     defaultChatPanel: normalizeDefaultChatPanel(raw.defaultChatPanel),
     requireAgentReview: asBoolean(raw.requireAgentReview, false),
+    agentKeepEdits: asBoolean(raw.agentKeepEdits, DEFAULT_AGENT_KEEP_EDITS),
     creatorNotesRemoteWarning: asBoolean(
       raw.creatorNotesRemoteWarning,
       DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
@@ -360,6 +362,7 @@ export interface BackupDraftTarget {
   markdownImageOpenLinks: boolean;
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
+  agentKeepEdits: boolean;
   creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
@@ -405,6 +408,7 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
     markdownImageOpenLinks: settings.ui.markdownImageOpenLinks ?? true,
     defaultChatPanel: normalizeDefaultChatPanel(settings.ui.defaultChatPanel),
     requireAgentReview: settings.ui.requireAgentReview ?? false,
+    agentKeepEdits: settings.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
     creatorNotesRemoteWarning:
       settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
     roleplayHighlight: normalizeRoleplayHighlight(settings.ui.roleplayHighlight),

@@ -57,6 +57,7 @@ function makeDraft(): BackupDraftTarget {
     markdownImageOpenLinks: true,
     defaultChatPanel: 'orion',
     requireAgentReview: false,
+    agentKeepEdits: false,
     creatorNotesRemoteWarning: true,
     roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
     macroHighlight: { ...DEFAULT_MACRO_HIGHLIGHT_SETTINGS },
@@ -259,6 +260,26 @@ describe('applyBackupToDraft', () => {
     expect(next.spellcheckIgnoredWords).toEqual(['foo']);
     expect(next.studioFavorites).toEqual([{ category: 'mood', tag: 'brooding' }]);
     expect(next.agentModel).toBeUndefined();
+  });
+
+  it('keeps agent edits off unless the backup turned them on', () => {
+    expect(applyBackupToDraft(makeDraft(), buildSettingsBackup(makeSaved(), false)).agentKeepEdits).toBe(
+      false,
+    );
+    const saved = makeSaved();
+    saved.ui.agentKeepEdits = true;
+    const file = parseSettingsBackup(JSON.parse(JSON.stringify(buildSettingsBackup(saved, false))));
+    expect(file.settings.ui.agentKeepEdits).toBe(true);
+    expect(applyBackupToDraft(makeDraft(), file).agentKeepEdits).toBe(true);
+  });
+
+  it('reads a non-boolean agentKeepEdits as off', () => {
+    const file = parseSettingsBackup({
+      kind: 'charactervault-settings',
+      version: 1,
+      settings: { ui: { agentKeepEdits: 'yes' } },
+    });
+    expect(file.settings.ui.agentKeepEdits).toBe(false);
   });
 });
 

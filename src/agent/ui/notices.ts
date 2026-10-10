@@ -1,4 +1,6 @@
 import { DEFAULT_MAX_TURNS } from '../core/runLoop';
+import type { ActionResult, ParsedAction } from '../core/types';
+import { parseToolTarget } from './toolTarget';
 import type { AgentToolEvent } from './types';
 
 export const TURN_LIMIT_NOTICE = `Stopped at the ${DEFAULT_MAX_TURNS}-turn limit for one run.`;
@@ -140,6 +142,24 @@ export function compactToolResultMessage(
   if (!lookupTools.has(toolName)) return message;
   const line = message.split('\n', 1)[0]?.trim();
   return line || toolName;
+}
+
+/** Transcript row for one tool result. Successful writes keep their arguments; lookups keep a header only. */
+export function toAgentToolEvent(
+  result: ActionResult,
+  action: ParsedAction | undefined,
+  lookupTools: ReadonlySet<string>,
+): AgentToolEvent {
+  const event: AgentToolEvent = {
+    toolName: result.toolName,
+    ok: result.ok,
+    message: compactToolResultMessage(result.toolName, result.message, lookupTools),
+    target: parseToolTarget(result.toolName, result.ok, result.message),
+  };
+  if (result.ok && action && !lookupTools.has(result.toolName)) {
+    event.call = { headers: { ...action.headers }, body: action.body };
+  }
+  return event;
 }
 
 export function isLookupOnlyTurn(

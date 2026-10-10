@@ -9,6 +9,7 @@ import {
   REVIEW_NOTE_TOOL,
   RUN_INTERRUPTED_TOOL,
   shouldRenderAgentMessage,
+  toAgentToolEvent,
   visibleToolEvents,
   writeRecapLine,
 } from '../../../src/agent/ui/notices';
@@ -230,5 +231,72 @@ describe('writeRecapLine', () => {
     expect(writeRecapLine([okAdd, okUpdate])).toBe('Applied 2 writes');
     expect(writeRecapLine([failed])).toBeNull();
     expect(writeRecapLine([])).toBeNull();
+  });
+});
+
+describe('toAgentToolEvent', () => {
+  const replace = {
+    name: 'replace_in_field',
+    headers: { id: 'description', old: 'grim', new: 'wry' },
+    body: '',
+  };
+
+  it('keeps the arguments of a successful write', () => {
+    const event = toAgentToolEvent(
+      { ok: true, toolName: 'replace_in_field', message: 'ok description (Description) — replaced 1' },
+      replace,
+      CHARACTER_LOOKUP_TOOLS,
+    );
+    expect(event).toEqual({
+      toolName: 'replace_in_field',
+      ok: true,
+      message: 'ok description (Description) — replaced 1',
+      target: { type: 'field', id: 'description' },
+      call: { headers: { id: 'description', old: 'grim', new: 'wry' }, body: '' },
+    });
+  });
+
+  it('copies the headers so later changes to the action do not leak in', () => {
+    const action = { ...replace, headers: { ...replace.headers } };
+    const event = toAgentToolEvent(
+      { ok: true, toolName: 'replace_in_field', message: 'ok description (Description) — replaced 1' },
+      action,
+      CHARACTER_LOOKUP_TOOLS,
+    );
+    action.headers.new = 'changed';
+    expect(event.call?.headers.new).toBe('wry');
+  });
+
+  it('keeps no arguments for failed writes', () => {
+    const event = toAgentToolEvent(
+      { ok: false, toolName: 'replace_in_field', message: 'error: old text not found' },
+      replace,
+      CHARACTER_LOOKUP_TOOLS,
+    );
+    expect(event.call).toBeUndefined();
+    expect(event.target).toBeUndefined();
+  });
+
+  it('keeps no arguments or body for lookups', () => {
+    const event = toAgentToolEvent(
+      { ok: true, toolName: 'read_field', message: 'description (Description)\n---\nSECRET BODY' },
+      { name: 'read_field', headers: { id: 'description' }, body: '' },
+      CHARACTER_LOOKUP_TOOLS,
+    );
+    expect(event).toEqual({
+      toolName: 'read_field',
+      ok: true,
+      message: 'description (Description)',
+      target: undefined,
+    });
+  });
+
+  it('works without an action', () => {
+    const event = toAgentToolEvent(
+      { ok: false, toolName: 'add_entry', message: 'too_many_actions: max 12 per turn' },
+      undefined,
+      CHARACTER_LOOKUP_TOOLS,
+    );
+    expect(event.call).toBeUndefined();
   });
 });

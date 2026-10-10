@@ -250,6 +250,7 @@ export interface StoredChatToolEvent {
     | { type: 'field'; id: string }
     | { type: 'greeting'; index: number }
     | { type: 'entry'; id: number };
+  call?: { headers: Record<string, string>; body: string };
 }
 
 export interface StoredChatResponseStats {
@@ -506,6 +507,8 @@ export interface CharacterVaultSettings {
     defaultChatPanel?: DefaultChatPanel;
     /** When true, Agent tool-loop edits need review before they are applied. */
     requireAgentReview?: boolean;
+    /** When true, later Agent runs are sent the exact edits of earlier runs. Missing = off. */
+    agentKeepEdits?: boolean;
     /** Warn when a Creator Notes preview loads remote resources. Missing = on. */
     creatorNotesRemoteWarning?: boolean;
     spellcheck?: SpellcheckSettings;
@@ -621,6 +624,8 @@ export const DEFAULT_CHAT_PANEL: DefaultChatPanel = 'orion';
 
 /** Default for Studio → Agent review gate (auto-apply preserves legacy behavior). */
 export const DEFAULT_REQUIRE_AGENT_REVIEW = false;
+
+export const DEFAULT_AGENT_KEEP_EDITS = false;
 
 export const DEFAULT_CREATOR_NOTES_REMOTE_WARNING = true;
 

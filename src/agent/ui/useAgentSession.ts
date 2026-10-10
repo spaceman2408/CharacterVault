@@ -38,19 +38,18 @@ import { AGENT_MAX_OUTPUT_TOKENS, runLoop } from '../core/runLoop';
 import { withTransientRetry } from '../core/retry';
 import { stripFences } from '../core/stripFences';
 import type { AgentHost, AgentMessage, AgentToolMode } from '../core/types';
-import { parseToolTarget } from './toolTarget';
 import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
 import { LIVE_SPEECH_MAX_CHARS, liveAgentSpeech } from './speechDraft';
 import { noteRunFinished } from './finishNotice';
-import { toLoopHistory } from './loopHistory';
+import { keptEditsOptions, toLoopHistory } from './loopHistory';
 import {
-  compactToolResultMessage,
   interruptedRunNotice,
   isLookupOnlyTurn,
   REVIEW_NOTE_TOOL,
   RUN_INTERRUPTED_TOOL,
+  toAgentToolEvent,
   TURN_LIMIT_NOTICE,
   visibleToolEvents,
 } from './notices';
@@ -69,6 +68,8 @@ export interface UseAgentSessionOptions {
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
   chatPanel?: ChatPanel;
+  /** Send earlier runs' write calls in full instead of one-line summaries. */
+  keepEditsInContext?: boolean;
 }
 
 function resolveAgentToolMode(config: AIConfig): AgentToolMode {
@@ -163,6 +164,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     chatOwnerType,
     chatOwnerId,
     chatPanel = 'agent',
+    keepEditsInContext = false,
   } = options;
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -217,6 +219,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const aiConfigRef = useRef(aiConfig);
   const samplerSettingsRef = useRef(samplerSettings);
   const promptSettingsRef = useRef(promptSettings);
+  const keepEditsInContextRef = useRef(keepEditsInContext);
 
   createHostRef.current = createHost;
   flushDraftRef.current = flushDraft;
@@ -225,6 +228,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   aiConfigRef.current = aiConfig;
   samplerSettingsRef.current = samplerSettings;
   promptSettingsRef.current = promptSettings;
+  keepEditsInContextRef.current = keepEditsInContext;
   errorByMessageIdRef.current = errorByMessageId;
   chatOwnerTypeRef.current = chatOwnerType;
   chatOwnerIdRef.current = chatOwnerId;
@@ -742,6 +746,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
           toolEventsRef.current,
           lookupToolNamesRef.current,
           errorByMessageIdRef.current,
+          keptEditsOptions(
+            keepEditsInContextRef.current,
+            resolveAgentToolMode(aiConfigRef.current),
+            samplerSettingsRef.current,
+          ),
         );
 
         const requestId = ++requestIdRef.current;
@@ -886,20 +895,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                   };
                   commitMessage(placeholder);
                 }
-                const eventRow: AgentToolEvent = {
-                  toolName: event.result.toolName,
-                  ok: event.result.ok,
-                  message: compactToolResultMessage(
-                    event.result.toolName,
-                    event.result.message,
-                    lookupToolNamesRef.current,
-                  ),
-                  target: parseToolTarget(
-                    event.result.toolName,
-                    event.result.ok,
-                    event.result.message,
-                  ),
-                };
+                const eventRow = toAgentToolEvent(
+                  event.result,
+                  event.action,
+                  lookupToolNamesRef.current,
+                );
                 const nextEvents = {
                   ...toolEventsRef.current,
                   [targetId]: [...(toolEventsRef.current[targetId] ?? []), eventRow],

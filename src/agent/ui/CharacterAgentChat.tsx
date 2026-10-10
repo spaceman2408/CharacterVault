@@ -32,6 +32,7 @@ import {
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
+import { contextMeterHistory, keptEditsOptions } from './loopHistory';
 import { characterMentions } from './mentions';
 import { characterSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
@@ -56,6 +57,7 @@ export interface CharacterAgentChatProps {
   onRunningChange?: (running: boolean) => void;
   onOpenTarget?: (target: AgentToolTarget) => void;
   requireReview?: boolean;
+  keepEdits?: boolean;
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
 }
@@ -78,6 +80,7 @@ export function CharacterAgentChat({
   onRunningChange,
   onOpenTarget,
   requireReview = false,
+  keepEdits = false,
   chatOwnerType,
   chatOwnerId,
 }: CharacterAgentChatProps): React.ReactElement {
@@ -109,6 +112,7 @@ export function CharacterAgentChat({
     onRunningChange,
     chatOwnerType,
     chatOwnerId,
+    keepEditsInContext: keepEdits,
   });
   const { noteReviewOutcome, holdRunForReview } = session;
   useEffect(() => {
@@ -218,7 +222,13 @@ export function CharacterAgentChat({
       book: getBook(),
       customContextCharLength,
       customContextIncluded,
-      history: session.chatHistory,
+      history: contextMeterHistory(
+        session.chatHistory,
+        session.toolEventsByMessageId,
+        CHARACTER_LOOKUP_TOOLS,
+        session.errorByMessageId,
+        keptEditsOptions(keepEdits, session.toolMode, samplerSettings),
+      ),
       contextLength: samplerSettings.contextLength,
     });
   }, [
@@ -226,9 +236,13 @@ export function CharacterAgentChat({
     customContextIncluded,
     getBook,
     getSpec,
-    samplerSettings.contextLength,
+    keepEdits,
+    samplerSettings,
     session.chatHistory,
+    session.errorByMessageId,
     session.livePromptTokens,
+    session.toolEventsByMessageId,
+    session.toolMode,
   ]);
 
   const lostMessageIds = useMemo(

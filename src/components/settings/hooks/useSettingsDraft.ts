@@ -20,6 +20,7 @@ import {
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_CHAT_PANEL,
   DEFAULT_REQUIRE_AGENT_REVIEW,
+  DEFAULT_AGENT_KEEP_EDITS,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   DEFAULT_MACRO_AUTO_CONVERT,
   DEFAULT_MACRO_HIGHLIGHT_SETTINGS,
@@ -67,6 +68,7 @@ export function createDefaultDraft(): SettingsDraft {
     markdownImageOpenLinks: DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
     defaultChatPanel: DEFAULT_CHAT_PANEL,
     requireAgentReview: DEFAULT_REQUIRE_AGENT_REVIEW,
+    agentKeepEdits: DEFAULT_AGENT_KEEP_EDITS,
     creatorNotesRemoteWarning: DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
     roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
     macroHighlight: { ...DEFAULT_MACRO_HIGHLIGHT_SETTINGS },
@@ -273,6 +275,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           defaultChatPanel: normalizeDefaultChatPanel(fullSettings.ui?.defaultChatPanel),
           requireAgentReview:
             fullSettings.ui?.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
+          agentKeepEdits: fullSettings.ui?.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
           creatorNotesRemoteWarning:
             fullSettings.ui?.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
           roleplayHighlight: normalizeRoleplayHighlight(roleplayHighlight),
@@ -405,6 +408,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
           markdownImageOpenLinks: draft.markdownImageOpenLinks,
           defaultChatPanel: draft.defaultChatPanel,
           requireAgentReview: draft.requireAgentReview,
+          agentKeepEdits: draft.agentKeepEdits,
           creatorNotesRemoteWarning: draft.creatorNotesRemoteWarning,
           roleplayHighlight: normalizeRoleplayHighlight(draft.roleplayHighlight),
           macroHighlight: normalizeMacroHighlight(draft.macroHighlight),

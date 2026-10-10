@@ -352,6 +352,56 @@ Castle
     expect(calls).toHaveLength(0);
   });
 
+  const replayedHistory: AgentMessage[] = [
+    { role: 'user', content: 'Add Harbor' },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: [{ id: 'k00000001', name: 'add_entry', arguments: '{"name":"Harbor","content":"Fog."}' }],
+    },
+    { role: 'tool', tool_call_id: 'k00000001', content: 'ok #4 Harbor' },
+    { role: 'assistant', content: 'Done.' },
+  ];
+
+  function hasNativeTurns(messages: AgentMessage[]): boolean {
+    return messages.some((message) => message.role === 'tool' || Boolean(message.tool_calls?.length));
+  }
+
+  it('sends replayed native history as XML when the run starts in XML mode', async () => {
+    const { host } = fakeHost();
+    const complete = vi.fn(scriptedComplete(['Stopped.']));
+    await runLoop({ host, complete, userMessage: 'go', history: replayedHistory, toolMode: 'xml' });
+    const sent = complete.mock.calls[0][0];
+    expect(hasNativeTurns(sent)).toBe(false);
+    expect(sent.map((message) => message.role)).toEqual(['system', 'user', 'assistant', 'user', 'assistant', 'user']);
+    expect(sent[2].content).toContain('<tool_call>\nadd_entry\nname: Harbor\n---\nFog.\n</tool_call>');
+    expect(sent[3].content).toBe('Tool results:\n[add_entry] ok #4 Harbor');
+  });
+
+  it('keeps replayed native history as tool calls in native mode', async () => {
+    const { host } = fakeHost();
+    const complete = vi.fn(scriptedComplete(['Stopped.']));
+    await runLoop({ host, complete, userMessage: 'go', history: replayedHistory, toolMode: 'native' });
+    expect(complete.mock.calls[0][0].slice(1, -1)).toEqual(replayedHistory);
+  });
+
+  it('converts replayed native history when native tools are rejected mid-run', async () => {
+    const { host } = fakeHost();
+    const sent: AgentMessage[][] = [];
+    const complete = vi.fn(async (messages: AgentMessage[]) => {
+      sent.push(structuredClone(messages));
+      if (sent.length === 1) {
+        throw Object.assign(new Error('Unknown parameter: tools'), { type: 'tools_unsupported' });
+      }
+      return { content: 'Stopped.' };
+    });
+    await runLoop({ host, complete, userMessage: 'go', history: replayedHistory, toolMode: 'native' });
+    expect(hasNativeTurns(sent[0])).toBe(true);
+    expect(hasNativeTurns(sent[1])).toBe(false);
+    expect(sent[1][2].content).toContain('<tool_call>\nadd_entry');
+    expect(sent[1].at(-1)).toEqual({ role: 'user', content: 'go' });
+  });
+
   it('rebuilds an XML prompt after native tools are rejected', async () => {
     const { host, calls } = fakeHost();
     host.buildSystemPrompt = ({ extraChunks, toolMode }) =>
@@ -386,5 +436,78 @@ Castle
     expect(result.reason).toBe('complete');
     expect(attempts).toBe(3);
     expect(calls[0]?.headers.name).toBe('Keep');
+  });
+
+  it('hands each executed action to its tool_result event', async () => {
+    const { host } = fakeHost();
+    const events: AgentEvent[] = [];
+    await runLoop({
+      host,
+      complete: scriptedComplete([
+        {
+          content: '',
+          toolCalls: [
+            {
+              id: 'call_keep',
+              name: 'add_entry',
+              arguments: '{"name":"Keep","keys":"keep","content":"Castle"}',
+            },
+          ],
+        },
+        'Stopped.',
+      ]),
+      userMessage: 'go',
+      onEvent: collect(events).push,
+    });
+    const results = events.filter((event) => event.type === 'tool_result');
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      result: { ok: true, toolName: 'add_entry' },
+      action: { name: 'add_entry', headers: { name: 'Keep', keys: 'keep' }, body: 'Castle' },
+    });
+  });
+
+  it('hands XML actions to their tool_result events too', async () => {
+    const { host } = fakeHost();
+    const events: AgentEvent[] = [];
+    await runLoop({
+      host,
+      toolMode: 'xml',
+      complete: scriptedComplete([
+        `<tool_call>
+add_entry
+name: Keep
+keys: keep
+---
+Castle
+</tool_call>`,
+        'Stopped.',
+      ]),
+      userMessage: 'go',
+      onEvent: collect(events).push,
+    });
+    const result = events.find((event) => event.type === 'tool_result');
+    expect(result).toMatchObject({
+      action: { name: 'add_entry', headers: { name: 'Keep' }, body: 'Castle' },
+    });
+  });
+
+  it('sends no action with results for calls that never ran', async () => {
+    const { host } = fakeHost();
+    const events: AgentEvent[] = [];
+    const call = '<tool_call>\nadd_entry\nname: Keep\n---\nCastle\n</tool_call>';
+    await runLoop({
+      host,
+      toolMode: 'xml',
+      maxActionsPerTurn: 1,
+      complete: scriptedComplete([`${call}\n${call}`, 'Stopped.']),
+      userMessage: 'go',
+      onEvent: collect(events).push,
+    });
+    const results = events.filter((event) => event.type === 'tool_result');
+    expect(results).toHaveLength(2);
+    expect(results[0].type === 'tool_result' && results[0].action?.name).toBe('add_entry');
+    expect(results[1].type === 'tool_result' && results[1].result.message).toContain('too_many_actions');
+    expect(results[1].type === 'tool_result' && results[1].action).toBeUndefined();
   });
 });

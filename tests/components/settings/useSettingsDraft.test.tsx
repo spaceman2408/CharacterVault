@@ -96,6 +96,32 @@ describe('useSettingsDraft', () => {
       expect(hook.result.current.isDirty).toBe(false);
     });
 
+    it('loads agent edits off by default and saves the toggle', async () => {
+      const hook = await loaded();
+      expect(hook.result.current.draft.agentKeepEdits).toBe(false);
+      act(() => hook.result.current.setDraft((prev) => ({ ...prev, agentKeepEdits: true })));
+      expect(hook.result.current.isDirty).toBe(true);
+      await act(async () => {
+        await hook.result.current.save();
+      });
+      expect(characterSettingsService.saveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ ui: expect.objectContaining({ agentKeepEdits: true }) }),
+      );
+    });
+
+    it('loads a stored agentKeepEdits=true', async () => {
+      mockStorage();
+      vi.mocked(characterSettingsService.getSettings).mockResolvedValue({
+        ...DEFAULT_CHARACTER_VAULT_SETTINGS,
+        id: 'app-settings',
+        ui: { ...DEFAULT_CHARACTER_VAULT_SETTINGS.ui, agentKeepEdits: true },
+      });
+      const { hook } = setup();
+      await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+      expect(hook.result.current.draft.agentKeepEdits).toBe(true);
+      expect(hook.result.current.isDirty).toBe(false);
+    });
+
     it('is clean after a successful save', async () => {
       const hook = await loaded();
       act(() =>

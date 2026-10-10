@@ -19,7 +19,7 @@ export const NATIVE_TOOL_INTRO =
   'Call tools with the provided functions. Do not write tool XML or JSON in the message body.';
 
 export const HISTORY_NOTES_GUIDE =
-  'Earlier replies may end with [App note: …] lines. The app adds them to list what that run changed and what the user kept after review. Never write them yourself.';
+  'Earlier replies and tool results may include [App note: …] lines. The app adds them to list what that run changed, what the user kept after review, and why a run stopped. Never write them yourself.';
 
 export const MENTIONS_GUIDE =
   'In user messages, @Name points at the field, greeting, or entry with that name, e.g. @Description, @Greeting 2, or @“Harbor” (#4) for entry #4.';

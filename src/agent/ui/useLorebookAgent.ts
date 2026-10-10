@@ -35,6 +35,7 @@ export interface UseLorebookAgentOptions {
   onRunningChange?: (running: boolean) => void;
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
+  keepEditsInContext?: boolean;
 }
 
 export type UseLorebookAgentReturn = UseAgentSessionReturn;
@@ -54,6 +55,7 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     onRunningChange,
     chatOwnerType,
     chatOwnerId,
+    keepEditsInContext,
   } = options;
 
   const checkShouldReview = useCallback(() => shouldReview?.() ?? false, [shouldReview]);
@@ -89,5 +91,6 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     chatOwnerType,
     chatOwnerId,
     chatPanel: 'agent',
+    keepEditsInContext,
   });
 }

@@ -49,7 +49,7 @@ export type AgentToolMode = 'native' | 'xml';
 export type AgentEvent =
   | { type: 'assistant_text'; text: string; reasoning?: string }
   | { type: 'tool_start'; toolName: string; headers: Record<string, string> }
-  | { type: 'tool_result'; result: ActionResult }
+  | { type: 'tool_result'; result: ActionResult; action?: ParsedAction }
   | { type: 'error'; message: string }
   | { type: 'done'; reason: AgentDoneReason };
 

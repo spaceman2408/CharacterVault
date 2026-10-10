@@ -109,6 +109,8 @@ export interface CharacterEditorContextValue {
   defaultChatPanel: DefaultChatPanel;
   /** Studio gate: review Agent edits before they are applied. */
   requireAgentReview: boolean;
+  /** Agent: send earlier runs' exact edits with each new message. */
+  agentKeepEdits: boolean;
   /** Warn when the Creator Notes preview loads remote resources. */
   creatorNotesRemoteWarning: boolean;
   /** Prose color coding for "dialogue", narration, and *actions*. */

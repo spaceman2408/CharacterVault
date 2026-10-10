@@ -34,6 +34,7 @@ import type {
 } from '../../db/characterTypes';
 import {
   createEmptyCharacterBook,
+  DEFAULT_AGENT_KEEP_EDITS,
   DEFAULT_MACRO_AUTO_CONVERT,
   DEFAULT_SETTINGS,
   EMPTY_CUSTOM_CONTEXT_META,
@@ -214,6 +215,7 @@ export function LorebookWorkspace(): React.ReactElement {
     setMacroAutoConvert(macroAutoConvert);
   }, [macroAutoConvert]);
   const requireAgentReview = settings?.ui?.requireAgentReview ?? false;
+  const agentKeepEdits = settings?.ui?.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS;
 
   const entryCount = currentLorebook?.book?.entries?.length ?? 0;
   const totalTokens = useMemo(() => {
@@ -727,6 +729,7 @@ export function LorebookWorkspace(): React.ReactElement {
                   onRunningChange={setAgentRunning}
                   onOpenTarget={openAgentTarget}
                   requireReview={requireAgentReview}
+                  keepEdits={agentKeepEdits}
                 />
               ) : (
                 <AIChatPanel

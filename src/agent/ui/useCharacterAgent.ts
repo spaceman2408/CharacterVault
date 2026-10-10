@@ -35,6 +35,7 @@ export interface UseCharacterAgentOptions {
   onRunningChange?: (running: boolean) => void;
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
+  keepEditsInContext?: boolean;
 }
 
 export type UseCharacterAgentReturn = UseAgentSessionReturn;
@@ -55,6 +56,7 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
     onRunningChange,
     chatOwnerType,
     chatOwnerId,
+    keepEditsInContext,
   } = options;
 
   const checkShouldReview = useCallback(() => shouldReview?.() ?? false, [shouldReview]);
@@ -97,5 +99,6 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
     chatOwnerType,
     chatOwnerId,
     chatPanel: 'agent',
+    keepEditsInContext,
   });
 }

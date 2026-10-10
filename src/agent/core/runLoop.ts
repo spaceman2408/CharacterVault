@@ -1,7 +1,8 @@
 import { parseActions } from './parseActions';
-import { pruneMessagesToBudget, TOOL_RESULTS_PREFIX } from './pruneMessages';
+import { pruneMessagesToBudget } from './pruneMessages';
 import { stripFences } from './stripFences';
 import { mapNativeToolCalls } from './toolCalls';
+import { formatToolResults, hasNativeToolTurns, nativeToXmlMessages } from './xmlHistory';
 import type {
   ActionResult,
   AgentMessage,
@@ -29,11 +30,6 @@ export function isLengthFinish(reason: string | null | undefined): boolean {
   if (!reason) return false;
   const normalized = reason.toLowerCase();
   return normalized === 'length' || normalized === 'max_tokens' || normalized === 'max_output_tokens';
-}
-
-export function formatToolResults(results: ActionResult[]): string {
-  const lines = results.map((result) => `[${result.toolName}] ${result.message}`);
-  return `${TOOL_RESULTS_PREFIX}${lines.join('\n')}`;
 }
 
 function unfinishedNameFromRaw(raw: string): string | null {
@@ -123,9 +119,12 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
   let toolMode: AgentToolMode =
     initialToolMode ?? (host.tools && host.tools.length > 0 ? 'native' : 'xml');
   const extra = await host.extraContextChunks();
+  const priorTurns = history.filter((message) => message.role !== 'system');
   const messages: AgentMessage[] = [
     { role: 'system', content: host.buildSystemPrompt({ extraChunks: extra, toolMode }) },
-    ...history.filter((message) => message.role !== 'system'),
+    ...(toolMode === 'xml' && hasNativeToolTurns(priorTurns)
+      ? nativeToXmlMessages(priorTurns)
+      : priorTurns),
     { role: 'user', content: userMessage },
   ];
   const notifyPrompt = (prompt: AgentMessage[] = messages) => {
@@ -161,6 +160,9 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
       }
       if (isToolsUnsupportedError(err) && toolMode === 'native') {
         toolMode = 'xml';
+        if (hasNativeToolTurns(messages)) {
+          messages.splice(0, messages.length, ...nativeToXmlMessages(messages));
+        }
         messages[0] = {
           role: 'system',
           content: host.buildSystemPrompt({ extraChunks: extra, toolMode: 'xml' }),
@@ -258,7 +260,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
             message: `unknown_action: ${action.name}`,
           };
       results.push(result);
-      emit({ type: 'tool_result', result });
+      emit({ type: 'tool_result', result, action });
       const nativeId = nativeIds[index];
       if (nativeId) nativeResultById.set(nativeId, result);
     }

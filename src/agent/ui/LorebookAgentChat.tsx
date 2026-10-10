@@ -21,9 +21,11 @@ import { AgentToolModeChip } from './AgentToolModeChip';
 import { formatAgentBusyLabel } from './busyLabel';
 import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
+import { contextMeterHistory, keptEditsOptions } from './loopHistory';
 import {
   CONTINUE_MESSAGE,
   interruptedRunMessageIds,
+  LOREBOOK_LOOKUP_TOOLS,
   messageNotices,
   shouldRenderAgentMessage,
   visibleToolEvents,
@@ -52,6 +54,7 @@ export interface LorebookAgentChatProps {
   onRunningChange?: (running: boolean) => void;
   onOpenTarget?: (target: AgentToolTarget) => void;
   requireReview?: boolean;
+  keepEdits?: boolean;
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
   title?: string;
@@ -81,6 +84,7 @@ export function LorebookAgentChat({
   composerHint = 'Stop, then Send to retry · Writes go into this book',
   onOpenTarget,
   requireReview = false,
+  keepEdits = false,
   chatOwnerType,
   chatOwnerId,
 }: LorebookAgentChatProps): React.ReactElement {
@@ -111,6 +115,7 @@ export function LorebookAgentChat({
     onRunningChange,
     chatOwnerType,
     chatOwnerId,
+    keepEditsInContext: keepEdits,
   });
   const { noteReviewOutcome, holdRunForReview } = session;
   useEffect(() => {
@@ -219,16 +224,26 @@ export function LorebookAgentChat({
       book: getBook(),
       customContextCharLength,
       customContextIncluded,
-      history: session.chatHistory,
+      history: contextMeterHistory(
+        session.chatHistory,
+        session.toolEventsByMessageId,
+        LOREBOOK_LOOKUP_TOOLS,
+        session.errorByMessageId,
+        keptEditsOptions(keepEdits, session.toolMode, samplerSettings),
+      ),
       contextLength: samplerSettings.contextLength,
     });
   }, [
     customContextCharLength,
     customContextIncluded,
     getBook,
-    samplerSettings.contextLength,
+    keepEdits,
+    samplerSettings,
     session.chatHistory,
+    session.errorByMessageId,
     session.livePromptTokens,
+    session.toolEventsByMessageId,
+    session.toolMode,
   ]);
 
   const lostMessageIds = useMemo(
