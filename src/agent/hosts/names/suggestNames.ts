@@ -22,6 +22,7 @@ export const NAME_ORIGINS = [
   'indian',
   'indonesian',
   'italian',
+  'japanese',
   'kurdish',
   'latvian',
   'mexican',
@@ -73,7 +74,9 @@ export interface NameData {
 let namesPromise: Promise<NameData> | null = null;
 
 export function loadNameData(): Promise<NameData> {
-  namesPromise ??= import('./fakerNames.json').then((module) => module.default as NameData);
+  namesPromise ??= Promise.all([import('./fakerNames.json'), import('./japaneseNames.json')]).then(
+    ([faker, japanese]) => ({ origins: { ...faker.default.origins, ...japanese.default.origins } }) as NameData,
+  );
   return namesPromise;
 }
 

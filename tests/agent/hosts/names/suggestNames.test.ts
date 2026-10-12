@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { createCharacterHost } from '../../../../src/agent/hosts/character/createHost';
 import { createLorebookHost } from '../../../../src/agent/hosts/lorebook/createHost';
 import fakerNames from '../../../../src/agent/hosts/names/fakerNames.json';
+import japaneseNames from '../../../../src/agent/hosts/names/japaneseNames.json';
 import { OVERUSED_NAMES } from '../../../../src/agent/hosts/names/overused';
 import { MAX_NAME_COUNT, NAME_ORIGINS, suggestNames } from '../../../../src/agent/hosts/names/suggestNames';
 import type { CharacterBook, CharacterSpec } from '../../../../src/db/characterTypes';
 import { createEmptyCharacterBook } from '../../../../src/db/characterTypes';
 
-const { origins } = fakerNames;
+const origins = { ...fakerNames.origins, ...japaneseNames.origins };
 
 function action(headers: Record<string, string>) {
   return { name: 'suggest_names', headers, body: '' };
@@ -72,6 +73,15 @@ describe('suggestNames', () => {
     }
   });
 
+  it('romanizes Japanese names without long-vowel marks', async () => {
+    const { japanese } = origins;
+    expect(japanese.last.any).toEqual(expect.arrayContaining(['Sato', 'Ito', 'Saito', 'Suzuki', 'Takahashi']));
+    expect(japanese.first.male).toEqual(expect.arrayContaining(['Shota', 'Keiichi', 'Ryota']));
+    expect(japanese.first.female).toEqual(expect.arrayContaining(['Yoko', 'Kyoko']));
+    const result = await suggestNames(action({ origin: 'japanese', count: '30' }), []);
+    for (const name of namesIn(result.message)) expect(name).toMatch(/^[A-Z][a-z]+ [A-Z][a-z]+$/);
+  });
+
   it('puts the Vietnamese family name first', async () => {
     const result = await suggestNames(action({ origin: 'vietnamese', gender: 'male', count: '20' }), []);
     for (const name of namesIn(result.message)) {
@@ -82,7 +92,7 @@ describe('suggestNames', () => {
   it('never suggests overused names', async () => {
     for (let run = 0; run < 20; run += 1) {
       const result = await suggestNames(
-        action({ origin: 'american, british, german, dutch, swedish', part: 'first', count: '30' }),
+        action({ origin: 'american, british, german, dutch, swedish, japanese', part: 'first', count: '30' }),
         [],
       );
       for (const token of namesIn(result.message).flatMap((name) => name.split(/[\s'-]+/))) {
