@@ -144,6 +144,52 @@ describe('suggestNames', () => {
   });
 });
 
+describe('suggestNames invented', () => {
+  const realNames = new Set(
+    Object.values(origins)
+      .flatMap((origin) => [...Object.values(origin.first), ...Object.values(origin.last)].flat())
+      .map((name) => name.toLowerCase()),
+  );
+
+  it('invents first names that are real in no origin', async () => {
+    const result = await suggestNames(
+      action({ origin: 'finnish', gender: 'female', part: 'first', invented: 'true', count: '20' }),
+      [],
+    );
+    expect(result.ok).toBe(true);
+    expect(result.message.split('\n')[0]).toMatch(/^suggest_names: \d+ invented first names?, female, finnish$/);
+    const names = namesIn(result.message);
+    expect(names.length).toBeGreaterThan(0);
+    for (const name of names) expect(realNames.has(name.toLowerCase())).toBe(false);
+  });
+
+  it('invents full names from blended origins', async () => {
+    const result = await suggestNames(action({ origin: 'finnish, japanese', invented: 'true' }), []);
+    expect(result.ok).toBe(true);
+    for (const name of namesIn(result.message)) {
+      const parts = name.split(' ');
+      expect(parts).toHaveLength(2);
+      for (const part of parts) expect(realNames.has(part.toLowerCase())).toBe(false);
+    }
+  });
+
+  it('capitalizes every word of a multi-word invented name', async () => {
+    const result = await suggestNames(
+      action({ origin: 'vietnamese', part: 'first', invented: 'true', count: '20' }),
+      [],
+    );
+    for (const word of namesIn(result.message).flatMap((name) => name.split(' '))) {
+      expect(word[0]).toBe(word[0].toUpperCase());
+    }
+  });
+
+  it('keeps real names when invented is not true', async () => {
+    const result = await suggestNames(action({ origin: 'finnish', part: 'first', invented: 'false' }), []);
+    expect(result.message.split('\n')[0]).not.toContain('invented');
+    for (const name of namesIn(result.message)) expect(realNames.has(name.toLowerCase())).toBe(true);
+  });
+});
+
 describe('suggest_names in the hosts', () => {
   it('skips names used on the card and in its lorebook', async () => {
     const book: CharacterBook = {

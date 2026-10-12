@@ -1,5 +1,6 @@
 import type { ActionResult, AgentToolSpec, ParsedAction } from '../../core/types';
 import { parseCommaList } from '../commaList';
+import { buildNameModel, inventName, type NameModel } from './inventNames';
 import { OVERUSED_NAMES } from './overused';
 
 export const NAME_ORIGINS = [
@@ -60,6 +61,7 @@ const SURNAME_FIRST = new Set<string>(['vietnamese']);
 
 type Gender = 'female' | 'male';
 type NamePart = 'first' | 'last' | 'full';
+type NameKind = 'first' | 'last';
 
 interface NameLists {
   female?: string[];
@@ -72,6 +74,8 @@ export interface NameData {
 }
 
 let namesPromise: Promise<NameData> | null = null;
+let realNames: Set<string> | null = null;
+const modelCache = new Map<string, NameModel | null>();
 
 export function loadNameData(): Promise<NameData> {
   namesPromise ??= Promise.all([import('./fakerNames.json'), import('./japaneseNames.json')]).then(
@@ -83,7 +87,7 @@ export function loadNameData(): Promise<NameData> {
 export const SUGGEST_NAMES_TOOL_SPEC: AgentToolSpec = {
   name: 'suggest_names',
   description:
-    'Random real names from the chosen origins, minus overused AI names and names already used in the open card or book. Use for any new character or NPC name the user did not give; pick one that fits instead of inventing one.',
+    'Random real names from the chosen origins, or invented ones that sound like them, minus overused AI names and names already used in the open card or book. Use for any new character or NPC name the user did not give; pick one that fits instead of making one up yourself.',
   parameters: {
     type: 'object',
     properties: {
@@ -97,12 +101,16 @@ export const SUGGEST_NAMES_TOOL_SPEC: AgentToolSpec = {
         type: 'integer',
         description: `How many names (default ${DEFAULT_NAME_COUNT}, max ${MAX_NAME_COUNT})`,
       },
+      invented: {
+        type: 'boolean',
+        description: 'true for made-up names that sound like the chosen origins, for an invented culture (several origins blend). Default false: real names.',
+      },
     },
     required: ['origin'],
   },
 };
 
-export const SUGGEST_NAMES_TOOL_DOC = `- suggest_names — origin (one or more, comma-separated: ${NAME_ORIGINS.join(', ')}), optional gender (female, male, any), part (first, last, full; default full), count (default ${DEFAULT_NAME_COUNT}, max ${MAX_NAME_COUNT}). Random real names minus overused AI names and names already in use.`;
+export const SUGGEST_NAMES_TOOL_DOC = `- suggest_names — origin (one or more, comma-separated: ${NAME_ORIGINS.join(', ')}), optional gender (female, male, any), part (first, last, full; default full), count (default ${DEFAULT_NAME_COUNT}, max ${MAX_NAME_COUNT}), invented (true for made-up names that sound like the origins; several origins blend). Real or invented names minus overused AI names and names already in use.`;
 
 function fail(message: string): ActionResult {
   return { ok: false, toolName: 'suggest_names', message: `error: ${message}` };
@@ -124,15 +132,54 @@ function listFor(lists: NameLists, gender: Gender): string[] {
   return lists[gender] ?? lists.any ?? [];
 }
 
-function buildName(data: NameData, origin: string, gender: Gender, part: NamePart): string | undefined {
-  const entry = data.origins[origin];
-  if (!entry) return undefined;
-  const first = part === 'last' ? undefined : pick(listFor(entry.first, gender));
-  const last = part === 'first' ? undefined : pick(listFor(entry.last, gender));
+function composeName(
+  part: NamePart,
+  surnameFirst: boolean,
+  pickPart: (kind: NameKind) => string | undefined,
+): string | undefined {
+  const first = part === 'last' ? undefined : pickPart('first');
+  const last = part === 'first' ? undefined : pickPart('last');
   if (part === 'first') return first;
   if (part === 'last') return last;
   if (!first || !last) return undefined;
-  return SURNAME_FIRST.has(origin) ? `${last} ${first}` : `${first} ${last}`;
+  return surnameFirst ? `${last} ${first}` : `${first} ${last}`;
+}
+
+function realName(data: NameData, origins: string[], gender: Gender, part: NamePart): string | undefined {
+  const origin = pick(origins)!;
+  const entry = data.origins[origin];
+  return composeName(part, SURNAME_FIRST.has(origin), (kind) => pick(listFor(entry[kind], gender)));
+}
+
+function allRealNames(data: NameData): ReadonlySet<string> {
+  if (!realNames) {
+    realNames = new Set();
+    for (const origin of Object.values(data.origins)) {
+      for (const lists of [origin.first, origin.last]) {
+        for (const list of Object.values(lists)) {
+          for (const name of list ?? []) realNames.add(name.toLowerCase());
+        }
+      }
+    }
+  }
+  return realNames;
+}
+
+function nameModel(data: NameData, origins: string[], kind: NameKind, gender: Gender): NameModel | null {
+  const key = `${[...origins].sort().join(',')}|${kind}|${gender}`;
+  if (!modelCache.has(key)) {
+    modelCache.set(key, buildNameModel(origins.map((origin) => listFor(data.origins[origin][kind], gender))));
+  }
+  return modelCache.get(key) ?? null;
+}
+
+function inventedName(data: NameData, origins: string[], gender: Gender, part: NamePart): string | undefined {
+  const real = allRealNames(data);
+  const surnameFirst = origins.every((origin) => SURNAME_FIRST.has(origin));
+  return composeName(part, surnameFirst, (kind) => {
+    const model = nameModel(data, origins, kind, gender);
+    return model ? inventName(model, real) : undefined;
+  });
 }
 
 /** usedTexts: the card and/or book text. A name sharing a capitalized word with it is skipped. */
@@ -162,6 +209,7 @@ export async function suggestNames(action: ParsedAction, usedTexts: readonly str
     return fail('part must be first, last, or full');
   }
   const part: NamePart = partRaw;
+  const invented = (action.headers.invented ?? '').trim().toLowerCase() === 'true';
   const parsedCount = Number.parseInt(action.headers.count ?? '', 10);
   const count = Number.isFinite(parsedCount)
     ? Math.min(Math.max(parsedCount, 1), MAX_NAME_COUNT)
@@ -173,7 +221,8 @@ export async function suggestNames(action: ParsedAction, usedTexts: readonly str
   const names: string[] = [];
   const seen = new Set<string>();
   for (let attempt = 0; attempt < count * 25 && names.length < count; attempt += 1) {
-    const name = buildName(data, pick(origins)!, pick(genders)!, part);
+    const gender = pick(genders)!;
+    const name = invented ? inventedName(data, origins, gender, part) : realName(data, origins, gender, part);
     if (!name || seen.has(name)) continue;
     seen.add(name);
     const tokens = nameTokens(name);
@@ -182,7 +231,7 @@ export async function suggestNames(action: ParsedAction, usedTexts: readonly str
   }
   if (names.length === 0) return fail('no unused names left for that origin; try another origin');
 
-  const header = `suggest_names: ${names.length} ${part} name${names.length === 1 ? '' : 's'}, ${genderRaw}, ${origins.join(', ')}`;
+  const header = `suggest_names: ${names.length} ${invented ? 'invented ' : ''}${part} name${names.length === 1 ? '' : 's'}, ${genderRaw}, ${origins.join(', ')}`;
   const skipped = unknown.length > 0 ? `\nUnknown origin skipped: ${unknown.join(', ')}` : '';
   return { ok: true, toolName: 'suggest_names', message: `${header}${skipped}\n${names.join('\n')}` };
 }
