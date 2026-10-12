@@ -5,7 +5,8 @@ import type { CharacterReviewPayload } from '../../review/types';
 import { createLorebookHost } from '../lorebook/createHost';
 import { LOREBOOK_TOOL_SPECS } from '../lorebook/schemas';
 import { LOREBOOK_TOOL_NAMES } from '../lorebook/tools';
-import { MAX_REPLACE_ACROSS_PER_RUN } from '../search';
+import { suggestNames } from '../names/suggestNames';
+import { collectBookTargets, MAX_REPLACE_ACROSS_PER_RUN } from '../search';
 import { formatFieldCatalog, formatFieldRead, formatGreetingRead } from './catalog';
 import { cloneSpec, isCharacterAgentFieldId, parseGreetingIndex } from './fields';
 import { buildCharacterAgentSystemPrompt } from './prompt';
@@ -16,6 +17,7 @@ import {
   auditCard,
   CHARACTER_OVERRIDES_LOREBOOK_TOOLS,
   CHARACTER_TOOL_NAMES,
+  collectCharacterTargets,
   deleteGreeting,
   listFields,
   listGreetings,
@@ -122,6 +124,10 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
       }
       if (action.name === 'audit_card') {
         return auditCard(spec, loreHost.peekBook());
+      }
+      if (action.name === 'suggest_names') {
+        const targets = [...collectCharacterTargets(spec), ...collectBookTargets(loreHost.peekBook())];
+        return suggestNames(action, targets.map((target) => target.text));
       }
       if (action.name === 'replace_across') {
         if (replaceAcrossThisRun >= MAX_REPLACE_ACROSS_PER_RUN) {

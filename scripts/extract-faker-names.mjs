@@ -45,7 +45,7 @@ const ORIGINS = [
   { id: 'nepali', label: 'Nepali', locale: 'en_NP' },
   { id: 'nigerian', label: 'Nigerian', locale: 'en_NG' },
   { id: 'norwegian', label: 'Norwegian', locale: 'nb_NO' },
-  { id: 'polish', label: 'Polish', locale: 'pl' },
+  { id: 'polish', label: 'Polish', locale: 'pl', feminineSurname: (name) => name.replace(/ki$/, 'ka').replace(/y$/, 'a') },
   { id: 'portuguese', label: 'Portuguese', locale: 'pt_PT' },
   { id: 'romanian', label: 'Romanian', locale: 'ro' },
   { id: 'senegalese', label: 'Senegalese', locale: 'fr_SN' },
@@ -199,8 +199,12 @@ async function main() {
     for (const origin of ORIGINS) {
       const stats = { dropped: [] };
       const first = toGenderedLists(await readNameFile(fakerDir, origin.firstFrom ?? origin.locale, 'first_name'), stats);
-      const last = toGenderedLists(await readNameFile(fakerDir, origin.locale, 'last_name'), stats);
+      let last = toGenderedLists(await readNameFile(fakerDir, origin.locale, 'last_name'), stats);
       if (!first || !last) throw new Error(`${origin.locale}: missing first or last names`);
+      // Faker keeps only the masculine form; adjectival surnames take a feminine ending (Kowalski/Kowalska).
+      if (origin.feminineSurname && last.any) {
+        last = { female: [...new Set(last.any.map(origin.feminineSurname))].sort(), male: last.any };
+      }
       origins[origin.id] = { label: origin.label, first, last };
       const dropped = stats.dropped.length > 0 ? `  dropped ${stats.dropped.length}: ${stats.dropped.slice(0, 5).join(', ')}` : '';
       console.log(`${origin.id.padEnd(14)} first ${String(countNames(first)).padStart(5)}  last ${String(countNames(last)).padStart(5)}${dropped}`);

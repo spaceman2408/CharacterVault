@@ -2,7 +2,8 @@ import type { CharacterBook } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
 import type { ActionResult, AgentHost, AgentToolMode, ParsedAction } from '../../core/types';
 import type { LorebookReviewPayload } from '../../review/types';
-import { MAX_REPLACE_ACROSS_PER_RUN } from '../search';
+import { suggestNames } from '../names/suggestNames';
+import { collectBookTargets, MAX_REPLACE_ACROSS_PER_RUN } from '../search';
 import { formatEntryCatalog } from './catalog';
 import { buildLorebookAgentSystemPrompt } from './prompt';
 import { LOREBOOK_TOOL_SPECS } from './schemas';
@@ -166,6 +167,9 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
       }
       if (action.name === 'audit_book') {
         return auditBook(book);
+      }
+      if (action.name === 'suggest_names') {
+        return suggestNames(action, collectBookTargets(book).map((target) => target.text));
       }
       if (action.name === 'read_recursion') {
         return readRecursion(book, action);

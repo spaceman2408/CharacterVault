@@ -45,9 +45,15 @@ export const CHARACTER_TOOL_NAMES = [
   'search',
   'replace_across',
   'audit_card',
+  'suggest_names',
 ] as const;
 
-export const CHARACTER_OVERRIDES_LOREBOOK_TOOLS = new Set(['search', 'replace_across', 'audit_book']);
+export const CHARACTER_OVERRIDES_LOREBOOK_TOOLS = new Set([
+  'search',
+  'replace_across',
+  'audit_book',
+  'suggest_names',
+]);
 export type CharacterToolName = (typeof CHARACTER_TOOL_NAMES)[number];
 
 export const MAX_FIELD_UPDATES_PER_RUN = 30;

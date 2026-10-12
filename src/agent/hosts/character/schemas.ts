@@ -1,4 +1,5 @@
 import type { AgentToolSpec } from '../../core/types';
+import { SUGGEST_NAMES_TOOL_SPEC } from '../names/suggestNames';
 
 export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
@@ -212,4 +213,5 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
       properties: {},
     },
   },
+  SUGGEST_NAMES_TOOL_SPEC,
 ];

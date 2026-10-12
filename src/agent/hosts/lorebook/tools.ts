@@ -35,6 +35,7 @@ export const LOREBOOK_TOOL_NAMES = [
   'read_recursion',
   'test_keys',
   'update_book_settings',
+  'suggest_names',
 ] as const;
 export type LorebookToolName = (typeof LOREBOOK_TOOL_NAMES)[number];
 

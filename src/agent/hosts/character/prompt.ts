@@ -1,6 +1,7 @@
 import { buildSystemPrompt } from '../../../services/PromptBuilder';
 import { formatAgentToolGuide } from '../../core/prompts';
 import type { AgentToolMode } from '../../core/types';
+import { SUGGEST_NAMES_TOOL_DOC } from '../names/suggestNames';
 
 export const CHARACTER_ACTION_SYNTAX = `Use XML:
 <tool_call>
@@ -24,6 +25,7 @@ avatar is a URL to a hosted image, not the card PNG; do not set or offer it unle
 The current field catalog, book settings, and lorebook entry catalog are already in context (ids, token sizes, flags; bodies omitted). Do not call list_fields or list_entries unless you need a refresh after writes.
 To find text, search. To rename a term everywhere, replace_across with replace_all true. Search is case-insensitive; replace_across uses unique-match rules like replace_in_field (copy the exact snippet).
 To revise a field, read_field that id. For a small edit, replace_in_field with a unique snippet from that latest read. Quotes and dashes can differ. After a replace, read_field again before another replace in that field. To drop a section, old can be its first line through its last unique line; empty new deletes that span. Do not delete a heading alone. If a large delete fails, update_field with the remaining full value. To add a paragraph, append_to_field. For a full rewrite, update_field. Do not read fields you will not edit.
+When the character, an NPC, or a family needs a new name the user did not give, call suggest_names with origins that fit the setting (for an invented setting, real origins whose sound fits the culture) and pick from its results. Do not invent names. Call it again for more. To rename the character, replace_across the old name with replace_all true.
 first_mes is the main greeting. Alternate greetings are numbered from 1 (Greeting 1 is the first alternate, matching the editor): add_greeting, update_greeting, replace_in_greeting, delete_greeting, move_greeting. After a delete or move, later indexes shift; list_greetings if you are unsure.
 To revise a lorebook entry, read_entry that id. For a small edit, replace_in_entry with a unique snippet from that latest read. After a replace, read_entry again before another replace in that entry. If a large delete fails, update_entry with the remaining full body. Do not add an entry whose name is already in the catalog. To remove an entry, delete_entry by id.
 Common lorebook activation on add_entry / update_entry: enabled, position (before_char, after_char, before_example, after_example, at_depth), depth (with at_depth), insertion_order, secondary_keys, selective, probability, excludeRecursion (non-recursable), preventRecursion, delayUntilRecursion. To inspect who can unlock whom, read_recursion (optional id for one entry). To check which entries a chat line would activate, and that keys do not fire on common words, test_keys with a sample line. Use update_book_settings for scan_depth, token_budget, and recursive_scanning. After a large write, audit_card if you need a size/consistency check.
@@ -45,6 +47,7 @@ export const CHARACTER_TOOL_LIST = `- list_fields — no arguments. Returns id, 
 - search — query. Case-insensitive across fields, greetings, and lorebook. Locations and snippets only.
 - replace_across — old, new or content, optional replace_all. Unique match per place unless replace_all.
 - audit_card — no arguments. Reports description, first_mes, alternate_greetings, mes_example, scenario, physical_description, personality, system_prompt, post_history_instructions, tags, and lorebook. personality and physical_description may be empty if description already contains that material. system_prompt, post_history_instructions, and scenario are optional. Omits name, creator, creator_notes, character_version, avatar. Active vs inactive tokens, duplicate keys, recursion, macros, example dialogue blocks. No bodies.
+${SUGGEST_NAMES_TOOL_DOC}
 - list_entries — no arguments. Returns lorebook id, name, keys, size, flags, and book settings. Skip if the catalog in context is enough.
 - read_entry — id. Returns that entry's name, keys, common activation fields, and content.
 - add_entry — name, keys (comma-separated string), optional constant, enabled, position, depth, insertion_order, secondary_keys, selective, probability, excludeRecursion, preventRecursion, delayUntilRecursion, content (the entry body). Non-constant entries need at least one key. One add_entry per name.

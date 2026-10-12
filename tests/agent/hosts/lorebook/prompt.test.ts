@@ -18,6 +18,7 @@ const TOOL_NAMES = [
   'excludeRecursion',
   'update_book_settings',
   'insertion_order',
+  'suggest_names',
 ] as const;
 
 describe('buildLorebookAgentSystemPrompt', () => {
