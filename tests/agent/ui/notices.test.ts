@@ -209,15 +209,20 @@ describe('isLookupOnlyTurn', () => {
 
 describe('isSilentLookupTurn', () => {
   it('drops a lookup turn only when it said nothing', () => {
-    expect(isSilentLookupTurn('', [okList])).toBe(true);
-    expect(isSilentLookupTurn('  ', [okRead])).toBe(true);
-    expect(isSilentLookupTurn('Let me check the harbor first.', [okList])).toBe(false);
-    expect(isSilentLookupTurn('', [okList, okAdd])).toBe(false);
-    expect(isSilentLookupTurn('', [])).toBe(false);
+    expect(isSilentLookupTurn({ content: '' }, [okList])).toBe(true);
+    expect(isSilentLookupTurn({ content: '  ' }, [okRead])).toBe(true);
+    expect(isSilentLookupTurn({ content: 'Let me check the harbor first.' }, [okList])).toBe(false);
+    expect(isSilentLookupTurn({ content: '' }, [okList, okAdd])).toBe(false);
+    expect(isSilentLookupTurn({ content: '' }, [])).toBe(false);
+  });
+
+  it('keeps a lookup turn that only has thinking', () => {
+    expect(isSilentLookupTurn({ content: '', reasoning: 'Check the harbor entry first.' }, [okList])).toBe(false);
+    expect(isSilentLookupTurn({ content: '', reasoning: '  ' }, [okList])).toBe(true);
   });
 
   it('treats speech that is only tool markup as silent', () => {
-    expect(isSilentLookupTurn('<tool_call>list_entries</tool_call>', [okList])).toBe(true);
+    expect(isSilentLookupTurn({ content: '<tool_call>list_entries</tool_call>' }, [okList])).toBe(true);
   });
 });
 

@@ -367,8 +367,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const dropLookupOnlyMessage = useCallback((messageId: string | null) => {
     if (!messageId) return;
     const events = toolEventsRef.current[messageId] ?? [];
-    const content = chatHistoryRef.current.find((row) => row.id === messageId)?.content ?? '';
-    if (!isSilentLookupTurn(content, events, lookupToolNamesRef.current)) return;
+    const message = chatHistoryRef.current.find((row) => row.id === messageId) ?? { content: '' };
+    if (!isSilentLookupTurn(message, events, lookupToolNamesRef.current)) return;
     if (errorByMessageIdRef.current[messageId]) return;
 
     const nextHistory = chatHistoryRef.current.filter((message) => message.id !== messageId);

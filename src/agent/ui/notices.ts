@@ -172,13 +172,14 @@ export function isLookupOnlyTurn(
   return events.length > 0 && events.every((event) => event.ok && lookupTools.has(event.toolName));
 }
 
-/** A turn that only looked things up and said nothing. Speech keeps the turn, like on write turns. */
+/** A turn that only looked things up and said nothing. Speech or thinking keeps the turn, like on write turns. */
 export function isSilentLookupTurn(
-  content: string,
+  message: { content: string; reasoning?: string },
   events: AgentToolEvent[],
   lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
 ): boolean {
-  return !stripFences(content).trim() && isLookupOnlyTurn(events, lookupTools);
+  if (stripFences(message.content).trim() || message.reasoning?.trim()) return false;
+  return isLookupOnlyTurn(events, lookupTools);
 }
 
 export function writeRecapLine(events: AgentToolEvent[], lost = false): string | null {
