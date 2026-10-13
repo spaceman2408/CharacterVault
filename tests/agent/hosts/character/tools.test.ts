@@ -222,6 +222,18 @@ describe('greetings', () => {
     expect(result.message).toBe('ok greeting 1/2 — replaced 1');
   });
 
+  it('refuses a replace that would leave a greeting empty', () => {
+    const card = spec({ alternate_greetings: ['Hello there.', 'Other'] });
+    const { spec: next, result, changed } = replaceInGreeting(
+      card,
+      action('replace_in_greeting', { index: '1', old: 'Hello there.', new: '' }),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain('delete_greeting');
+    expect(changed).toBe(false);
+    expect(next).toBe(card);
+  });
+
   it('rejects 0 and out-of-range indexes', () => {
     const empty = readGreeting(spec(), action('read_greeting', { index: '1' }));
     expect(empty.ok).toBe(false);
@@ -524,6 +536,19 @@ describe('replaceAcrossCard', () => {
     expect(applied.book.entries[0].content).toBe('Lyra lives here.');
     expect(applied.book.entries[0].keys).toEqual(['Lyra']);
     expect(applied.book.entries[0].name).toBe('Lyra');
+  });
+
+  it('fails instead of leaving a greeting empty', () => {
+    const card = spec({ alternate_greetings: ['Other', 'Hi Aria.'] });
+    const applied = replaceAcrossCard(
+      card,
+      createEmptyCharacterBook('Aria'),
+      action('replace_across', { old: 'Hi Aria.', new: '' }),
+    );
+    expect(applied.result.ok).toBe(false);
+    expect(applied.result.message).toContain('greeting 2');
+    expect(applied.result.message).toContain('delete_greeting');
+    expect(applied.spec).toBe(card);
   });
 });
 

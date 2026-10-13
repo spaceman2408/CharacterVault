@@ -84,18 +84,18 @@ export function diffSpecChanges(
       afterGreetings.slice(0, overlap).forEach((after, index) => {
         const before = beforeGreetings[index] ?? '';
         if (before !== after) {
-          changes.push({ id: `greeting:${index}`, kind: 'greeting', index, before, after });
+          changes.push({ id: `greeting:${index}`, kind: 'greeting', index, before, after, added: false });
         }
       });
       afterGreetings.slice(overlap).forEach((after, offset) => {
         const index = overlap + offset;
-        changes.push({ id: `greeting:${index}`, kind: 'greeting', index, before: '', after });
+        changes.push({ id: `greeting:${index}`, kind: 'greeting', index, before: '', after, added: true });
       });
     } else if (beforeGreetings.length === afterGreetings.length) {
       afterGreetings.forEach((after, index) => {
         const before = beforeGreetings[index] ?? '';
         if (before !== after) {
-          changes.push({ id: `greeting:${index}`, kind: 'greeting', index, before, after });
+          changes.push({ id: `greeting:${index}`, kind: 'greeting', index, before, after, added: false });
         }
       });
     } else {
@@ -290,7 +290,7 @@ export function applySpecDecisions(
       const greetings = [...(next.alternate_greetings ?? [])];
       const text = decision.edited ?? change.after;
       if (text.trim() === '') continue;
-      if (change.before === '') {
+      if (change.added) {
         greetings.splice(Math.max(0, Math.min(change.index, greetings.length)), 0, text);
         next.alternate_greetings = greetings;
         changed = true;

@@ -79,7 +79,7 @@ describe('diffSpecChanges', () => {
       spec({ alternate_greetings: ['Hi.', 'Hello there.'] }),
     );
     expect(changes).toEqual([
-      { id: 'greeting:1', kind: 'greeting', index: 1, before: 'Yo.', after: 'Hello there.' },
+      { id: 'greeting:1', kind: 'greeting', index: 1, before: 'Yo.', after: 'Hello there.', added: false },
     ]);
   });
 
@@ -89,7 +89,7 @@ describe('diffSpecChanges', () => {
       spec({ alternate_greetings: ['Hi.', 'Welcome.'] }),
     );
     expect(changes).toEqual([
-      { id: 'greeting:1', kind: 'greeting', index: 1, before: '', after: 'Welcome.' },
+      { id: 'greeting:1', kind: 'greeting', index: 1, before: '', after: 'Welcome.', added: true },
     ]);
   });
 
@@ -99,8 +99,8 @@ describe('diffSpecChanges', () => {
       spec({ alternate_greetings: ['Hi edited.', 'Welcome.'] }),
     );
     expect(changes).toEqual([
-      { id: 'greeting:0', kind: 'greeting', index: 0, before: 'Hi.', after: 'Hi edited.' },
-      { id: 'greeting:1', kind: 'greeting', index: 1, before: '', after: 'Welcome.' },
+      { id: 'greeting:0', kind: 'greeting', index: 0, before: 'Hi.', after: 'Hi edited.', added: false },
+      { id: 'greeting:1', kind: 'greeting', index: 1, before: '', after: 'Welcome.', added: true },
     ]);
   });
 
@@ -386,6 +386,14 @@ describe('live-base merging', () => {
     decisions.greetings = { approved: true, edited: 'Line one\nLine two\n---\nB part one\nB part two\n---\n' };
     const merged = applySpecDecisions(original, changes, decisions);
     expect(merged?.alternate_greetings).toEqual(['Line one\nLine two', 'B part one\nB part two']);
+  });
+
+  it('fills an empty greeting slot in place instead of inserting a new one', () => {
+    const original = spec({ alternate_greetings: ['A.', ''] });
+    const proposed = spec({ alternate_greetings: ['A.', 'B.'] });
+    const changes = diffSpecChanges(original, proposed);
+    const merged = applySpecDecisions(original, changes, defaultDecisions(changes));
+    expect(merged?.alternate_greetings).toEqual(['A.', 'B.']);
   });
 
   it('skips whitespace-only greeting edits instead of saving empty greetings', () => {

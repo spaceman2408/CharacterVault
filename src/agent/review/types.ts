@@ -15,7 +15,7 @@ export interface LorebookReviewPayload {
 
 export type AgentReviewChange =
   | { id: string; kind: 'field'; fieldId: CharacterAgentFieldId; label: string; before: string; after: string }
-  | { id: string; kind: 'greeting'; index: number; before: string; after: string }
+  | { id: string; kind: 'greeting'; index: number; before: string; after: string; added: boolean }
   | { id: string; kind: 'greetings'; before: string[]; after: string[] }
   | { id: string; kind: 'entry-added'; entryId: number; title: string; keys: string[]; content: string }
   | {

@@ -248,6 +248,13 @@ export function replaceInGreeting(
   if (!applied.ok) {
     return { spec, changed: false, result: fail('replace_in_greeting', applied.message) };
   }
+  if (!applied.text.trim()) {
+    return {
+      spec,
+      changed: false,
+      result: fail('replace_in_greeting', 'error: this would leave the greeting empty (use delete_greeting to remove)'),
+    };
+  }
   greetings[index] = applied.text;
   return {
     spec: { ...spec, alternate_greetings: greetings },
@@ -440,6 +447,20 @@ export function replaceAcrossCard(
       specChanged: false,
       bookChanged: false,
       result: { ok: false, toolName: 'replace_across', message: applied.message },
+    };
+  }
+  const emptied = applied.replacements.find((item) => item.id.startsWith('greeting:') && !item.text.trim());
+  if (emptied) {
+    return {
+      spec,
+      book,
+      specChanged: false,
+      bookChanged: false,
+      result: {
+        ok: false,
+        toolName: 'replace_across',
+        message: `error: in ${emptied.loc} — this would leave the greeting empty (use delete_greeting to remove)`,
+      },
     };
   }
 

@@ -40,7 +40,7 @@ function changeTitle(change: AgentReviewChange): { label: string; detail: string
     case 'field':
       return { label: change.label, detail: 'Character field' };
     case 'greeting':
-      if (change.before === '') {
+      if (change.added) {
         return { label: `Greeting #${change.index + 1}`, detail: 'New alternate greeting' };
       }
       if (change.after === '') {
