@@ -446,17 +446,16 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     });
   }, [appendToolEvent, commitMessage]);
 
+  // The stopped run still saves its edits and commits its partial reply; it leaves the busy state
+  // itself, so a quick Send cannot start from the unsaved card or wipe the next run's marker.
   const handleAbort = useCallback(() => {
     abortedRef.current = true;
     cancelStreamFlush();
     aiServiceRef.current?.abort();
-    isProcessingRef.current = false;
     if (isMountedRef.current) {
-      setIsProcessing(false);
       setIsStreaming(false);
       setBusyAction(null);
     }
-    onRunningChangeRef.current?.(false);
   }, [cancelStreamFlush]);
 
   const abortInFlight = useCallback(() => {
