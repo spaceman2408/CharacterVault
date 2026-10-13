@@ -41,7 +41,7 @@ import type { AgentHost, AgentMessage, AgentToolMode } from '../core/types';
 import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
-import { LIVE_SPEECH_MAX_CHARS, liveAgentSpeech } from './speechDraft';
+import { liveAgentSpeech } from './speechDraft';
 import { noteRunFinished } from './finishNotice';
 import { keptEditsOptions, toLoopHistory } from './loopHistory';
 import {
@@ -297,11 +297,9 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       }
       if (aiConfigRef.current.showReasoning ?? true) dirty = true;
     }
+    // Not capped like reasoning: Stop commits the speech, and a tail can start inside a tool call.
     if (chunk.content) {
       streamContentRef.current.append(chunk.content);
-      if (streamContentRef.current.length > LIVE_SPEECH_MAX_CHARS * 2) {
-        streamContentRef.current.capToTail(LIVE_SPEECH_MAX_CHARS);
-      }
       dirty = true;
     }
     if (dirty) scheduleStreamFlush();
@@ -810,12 +808,13 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                   appendStreamChunk(chunk);
                 }
               : undefined,
-            complete: withTransientRetry(async (messages, onChunk) => {
+            complete: withTransientRetry(async (messages, onChunk, continues) => {
               if (!isCurrent() || abortedRef.current) {
                 throw new AIError('Request was cancelled', 'unknown');
               }
               if (isMountedRef.current) setIsStreaming(streaming);
               clearStreamDraft();
+              if (continues && onChunk) appendStreamChunk(continues);
               if (!isCurrent() || abortedRef.current) {
                 throw new AIError('Request was cancelled', 'unknown');
               }

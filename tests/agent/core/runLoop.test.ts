@@ -262,6 +262,7 @@ Castle
     expect(calls[0]?.headers.name).toBe('Keep');
     const continueMessages = complete.mock.calls[1][0];
     expect(continueMessages.at(-1)?.content).toContain('cut off');
+    expect(complete.mock.calls[1][2]).toEqual({ content: '<tool_call>\nadd_entry\n', reasoning: undefined });
   });
 
   it('prefers native tool_calls and echoes role=tool results', async () => {

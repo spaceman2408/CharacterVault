@@ -62,9 +62,11 @@ export interface CompleterResult {
   toolCalls?: NativeToolCall[];
 }
 
+/** `continues` is the cut-off reply this call continues; a live draft should start from it. */
 export type Completer = (
   messages: AgentMessage[],
   onChunk?: (chunk: CompleterChunk) => void,
+  continues?: CompleterChunk,
 ) => Promise<CompleterResult>;
 
 export interface AgentHost {

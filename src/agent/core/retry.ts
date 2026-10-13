@@ -99,12 +99,12 @@ export function withTransientRetry(complete: Completer, options: TransientRetryO
     maxDelayMs = DEFAULT_MAX_DELAY_MS,
     sleep,
   } = options;
-  return async (messages, onChunk) => {
+  return async (messages, onChunk, continues) => {
     let retryIndex = 0;
     for (;;) {
       if (shouldAbort()) throw cancelledError();
       try {
-        return await complete(messages, onChunk);
+        return await complete(messages, onChunk, continues);
       } catch (err) {
         if (shouldAbort()) throw cancelledError();
         if (!isRetryableError(err) || retryIndex >= maxRetries) throw err;

@@ -246,6 +246,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
           const continuation = await complete(
             continuationRequest,
             onChunk,
+            { content, reasoning },
           );
           content += continuation.content ?? '';
           if (continuation.reasoning) {
