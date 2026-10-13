@@ -50,6 +50,7 @@ export interface LorebookHostIO {
 export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
   const maxNewEntries = io.maxNewEntries ?? MAX_NEW_ENTRIES_PER_RUN;
   const originalBook = structuredClone(io.getBook());
+  const originalIds = new Set((originalBook.entries ?? []).map((entry) => entry.id));
   let book = structuredClone(originalBook);
   let dirty = false;
   let addedThisRun = 0;
@@ -115,7 +116,7 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
             message: `limit: max ${maxNewEntries} new entries per run`,
           };
         }
-        const applied = addEntry(book, action, revisableIds);
+        const applied = addEntry(book, action, revisableIds, originalIds);
         if (!applied.result.ok) return applied.result;
         if (applied.entryId != null) revisableIds.add(applied.entryId);
         if (applied.created) addedThisRun += 1;

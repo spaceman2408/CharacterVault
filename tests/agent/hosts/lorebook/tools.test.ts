@@ -679,6 +679,27 @@ describe('createLorebookHost', () => {
     expect(book.entries).toHaveLength(0);
   });
 
+  it('does not give a new entry the id of one deleted in the same run', async () => {
+    let book = createEmptyCharacterBook('World');
+    book.entries = [
+      { id: 0, keys: ['a'], content: 'A.', extensions: {}, enabled: true, name: 'Alpha' },
+      { id: 1, keys: ['b'], content: 'B.', extensions: {}, enabled: true, name: 'Beta' },
+    ];
+    const host = createLorebookHost({
+      getBook: () => book,
+      setBook: async (next) => {
+        book = next;
+      },
+      getCustomContext: async () => null,
+    });
+
+    await host.execute(action('delete_entry', { id: '1' }));
+    const added = await host.execute(action('add_entry', { name: 'Gamma', keys: 'g' }, 'G.'));
+    expect(added.message).toBe('ok #2 Gamma');
+    await host.flush?.();
+    expect(book.entries?.map((entry) => [entry.id, entry.name])).toEqual([[0, 'Alpha'], [2, 'Gamma']]);
+  });
+
   it('searches the in-run book after add_entry and persists replace_across on flush', async () => {
     let book = createEmptyCharacterBook('World');
     const host = createLorebookHost({

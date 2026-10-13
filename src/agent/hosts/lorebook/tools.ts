@@ -50,8 +50,8 @@ export function parseConstantFlag(raw: string | undefined): boolean {
   return raw.trim().toLowerCase() === 'true';
 }
 
-export function nextAvailableEntryId(entries: LorebookEntry[]): number {
-  const usedIds = new Set(entries.map((entry) => entry.id));
+export function nextAvailableEntryId(entries: LorebookEntry[], reservedIds: ReadonlySet<number> = new Set()): number {
+  const usedIds = new Set([...reservedIds, ...entries.map((entry) => entry.id)]);
   let id = 0;
   while (usedIds.has(id)) id += 1;
   return id;
@@ -333,10 +333,12 @@ function addEntryError(book: CharacterBook, message: string): AddEntryResult {
   };
 }
 
+/** `reservedIds` are never given to a new entry (the run's starting ids, so a delete then add is not one "update"). */
 export function addEntry(
   book: CharacterBook,
   action: ParsedAction,
   revisableIds: ReadonlySet<number> = new Set(),
+  reservedIds: ReadonlySet<number> = new Set(),
 ): AddEntryResult {
   const content = action.body.trim();
   const constant = parseConstantFlag(action.headers.constant);
@@ -415,7 +417,7 @@ export function addEntry(
     };
   }
 
-  const entry = applyEntryFlagPatch(createBlankLorebookEntry(nextAvailableEntryId(entries)), flags.patch);
+  const entry = applyEntryFlagPatch(createBlankLorebookEntry(nextAvailableEntryId(entries, reservedIds)), flags.patch);
   entry.name = name;
   entry.keys = keys;
   entry.content = content;
