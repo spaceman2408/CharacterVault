@@ -5,9 +5,11 @@ import { mapNativeToolCalls } from './toolCalls';
 import { formatToolResults, hasNativeToolTurns, nativeToXmlMessages } from './xmlHistory';
 import type {
   ActionResult,
+  AgentHost,
   AgentMessage,
   AgentToolMode,
   NativeToolCall,
+  ParsedAction,
   ParseResult,
   RunLoopOptions,
   RunLoopResult,
@@ -90,6 +92,16 @@ function formatIncompleteNative(call: NativeToolCall, applied: ActionResult[]): 
     toolName: 'incomplete_action',
     message: parts.join(' '),
   };
+}
+
+// A throw would skip flush() and lose the run's earlier writes.
+async function executeAction(host: AgentHost, action: ParsedAction): Promise<ActionResult> {
+  try {
+    return await host.execute(action);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, toolName: action.name, message: `error: ${message}` };
+  }
 }
 
 export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
@@ -253,7 +265,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
       const action = toRun[index];
       emit({ type: 'tool_start', toolName: action.name, headers: action.headers });
       const result = host.toolNames.includes(action.name)
-        ? await host.execute(action)
+        ? await executeAction(host, action)
         : {
             ok: false,
             toolName: action.name,

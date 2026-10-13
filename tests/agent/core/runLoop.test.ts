@@ -133,6 +133,36 @@ Docks
     expect(persist).toHaveBeenCalledTimes(1);
   });
 
+  it('turns a throwing tool into a failed result and still persists', async () => {
+    const { host, persist, calls } = fakeHost(async (action) => {
+      if (action.headers.name === 'Bad') throw new Error('Failed to fetch dynamically imported module');
+      return { ok: true, toolName: action.name, message: `ok ${action.name}` };
+    });
+    const complete = vi.fn(
+      scriptedComplete([
+        {
+          content: '',
+          toolCalls: [
+            { id: 'call_keep', name: 'add_entry', arguments: '{"name":"Keep","keys":"keep","content":"Castle"}' },
+            { id: 'call_bad', name: 'add_entry', arguments: '{"name":"Bad","keys":"bad","content":"Oops"}' },
+          ],
+        },
+        'Saved the keep.',
+      ]),
+    );
+    const events: AgentEvent[] = [];
+    const result = await runLoop({ host, complete, userMessage: 'go', onEvent: collect(events).push });
+    expect(result.reason).toBe('complete');
+    expect(calls).toHaveLength(2);
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(collect(events).results()).toEqual([
+      { ok: true, toolName: 'add_entry', message: 'ok add_entry' },
+      { ok: false, toolName: 'add_entry', message: 'error: Failed to fetch dynamically imported module' },
+    ]);
+    const replies = complete.mock.calls[1][0].filter((message: AgentMessage) => message.role === 'tool');
+    expect(replies.map((message: AgentMessage) => message.tool_call_id)).toEqual(['call_keep', 'call_bad']);
+  });
+
   it('stops on abort without throwing', async () => {
     let aborted = false;
     const { host, persist } = fakeHost();
