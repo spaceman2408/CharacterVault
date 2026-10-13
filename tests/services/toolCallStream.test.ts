@@ -28,6 +28,37 @@ describe('toolCallStream', () => {
     ]);
   });
 
+  it('starts a new call for an index-less delta with a new id', () => {
+    const acc: AccumulatingToolCall[] = [];
+    applyToolCallDeltas(acc, [{ id: 'a', function: { name: 'read_entry', arguments: '{"id":0}' } }]);
+    applyToolCallDeltas(acc, [{ id: 'b', function: { name: 'read_entry', arguments: '{"id":1}' } }]);
+    expect(finalizeToolCalls(acc)).toEqual([
+      { id: 'a', name: 'read_entry', arguments: '{"id":0}' },
+      { id: 'b', name: 'read_entry', arguments: '{"id":1}' },
+    ]);
+  });
+
+  it('starts a new call for an index-less delta that names a tool when the last call has a name', () => {
+    const acc: AccumulatingToolCall[] = [];
+    applyToolCallDeltas(acc, [{ function: { name: 'list_entries', arguments: '{}' } }]);
+    applyToolCallDeltas(acc, [{ function: { name: 'read_entry' } }]);
+    applyToolCallDeltas(acc, [{ function: { arguments: '{"id":2}' } }]);
+    expect(finalizeToolCalls(acc)).toEqual([
+      { id: 'call_0', name: 'list_entries', arguments: '{}' },
+      { id: 'call_1', name: 'read_entry', arguments: '{"id":2}' },
+    ]);
+  });
+
+  it('keeps index-less argument pieces and repeated ids on the same call', () => {
+    const acc: AccumulatingToolCall[] = [];
+    applyToolCallDeltas(acc, [{ id: 'a', function: { name: 'add_entry' } }]);
+    applyToolCallDeltas(acc, [{ function: { arguments: '{"name":' } }]);
+    applyToolCallDeltas(acc, [{ id: 'a', function: { arguments: '"Harbor"}' } }]);
+    expect(finalizeToolCalls(acc)).toEqual([
+      { id: 'a', name: 'add_entry', arguments: '{"name":"Harbor"}' },
+    ]);
+  });
+
   it('normalizes a non-stream message tool_calls array', () => {
     expect(
       normalizeMessageToolCalls([

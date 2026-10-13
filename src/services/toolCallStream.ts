@@ -23,9 +23,18 @@ export interface AccumulatingToolCall {
   arguments: ChunkString;
 }
 
+// Without an index, a new id or a second tool name means the next call has started.
+function indexWithoutIndex(acc: AccumulatingToolCall[], delta: ToolCallDelta): number {
+  const last = acc.at(-1);
+  if (!last) return 0;
+  const newId = !!delta.id && !!last.id && delta.id !== last.id;
+  const newName = !delta.id && !!delta.function?.name && last.name.length > 0;
+  return newId || newName ? acc.length : acc.length - 1;
+}
+
 export function applyToolCallDeltas(acc: AccumulatingToolCall[], deltas: ToolCallDelta[]): void {
   for (const delta of deltas) {
-    const index = delta.index ?? Math.max(0, acc.length - 1);
+    const index = delta.index ?? indexWithoutIndex(acc, delta);
     while (acc.length <= index) {
       acc.push({ id: '', name: '', arguments: new ChunkString() });
     }
