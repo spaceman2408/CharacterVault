@@ -209,12 +209,15 @@ function salvageOrIncomplete(
   return { kind: 'incomplete' };
 }
 
+// An opener that cannot start a call is prose; only one at the end of the text may still be streaming in.
 function parseOneFence(
   text: string,
   openAt: number,
-): { kind: 'action'; action: ParsedAction; end: number } | { kind: 'incomplete' } {
+): { kind: 'action'; action: ParsedAction; end: number } | { kind: 'speech'; end: number } | { kind: 'incomplete' } {
+  const proseEnd = { kind: 'speech' as const, end: openAt + FENCE_OPEN.length };
   let i = skipSpaces(text, openAt + FENCE_OPEN.length);
-  if (i >= text.length || !isNameStart(text[i])) return { kind: 'incomplete' };
+  if (i >= text.length) return { kind: 'incomplete' };
+  if (!isNameStart(text[i])) return proseEnd;
 
   const nameStart = i;
   i += 1;
@@ -236,7 +239,7 @@ function parseOneFence(
   } else if (i >= text.length) {
     return salvageOrIncomplete({ name, headers: {}, body: '' }, text.length);
   } else {
-    return { kind: 'incomplete' };
+    return proseEnd;
   }
 
   const headers: Record<string, string> = {};
@@ -292,6 +295,16 @@ function parseOneFence(
   );
 }
 
+/** An unclosed call starts with JSON or a tool-name line (possibly still streaming); prose that mentions the tag does not. */
+function startsLikeCall(inner: string): boolean {
+  const text = inner.trimStart();
+  if (!text || text.startsWith('{')) return true;
+  const newline = text.indexOf('\n');
+  const first = lineToolToken(newline === -1 ? text : text.slice(0, newline));
+  if (newline === -1 && /^[A-Za-z][A-Za-z0-9_]*$/.test(first)) return true;
+  return isUsableToolName(first) || isPlaceholderName(first);
+}
+
 function parseOneToolCall(
   text: string,
   openAt: number,
@@ -334,7 +347,11 @@ function parseOneToolCall(
     i = quoted.end;
   }
 
-  if (!tagClosed) return { kind: 'incomplete' };
+  if (!tagClosed) {
+    return text.includes('\n', openAt)
+      ? { kind: 'speech', end: openAt + TOOL_CALL_OPEN.length }
+      : { kind: 'incomplete' };
+  }
 
   if (selfClosing) {
     if (!nameAttr) return { kind: 'speech', end: i };
@@ -343,6 +360,7 @@ function parseOneToolCall(
 
   const closeAt = indexOfIgnoreCase(text, TOOL_CALL_CLOSE, i);
   if (closeAt === -1) {
+    if (!nameAttr && !startsLikeCall(text.slice(i))) return { kind: 'speech', end: i };
     const salvaged = salvageOrIncomplete(actionFromInner(nameAttr, text.slice(i)), text.length);
     if (salvaged.kind === 'action') return salvaged;
     return { kind: 'incomplete' };

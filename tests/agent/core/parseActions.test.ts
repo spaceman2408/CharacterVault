@@ -272,4 +272,27 @@ describe('stripFences', () => {
   it('strips <tool_call> blocks from speech', () => {
     expect(stripFences('Checking.\n<tool_call> list_entries </tool_call>')).toBe('Checking.');
   });
+
+  it('keeps prose after a <<< that cannot start a fence', () => {
+    expect(stripFences('She whispered <<<softly, and the room went still.')).toBe(
+      'She whispered <<<softly, and the room went still.',
+    );
+    expect(stripFences('Turn it down <<< 3 notches. Done.')).toBe('Turn it down <<< 3 notches. Done.');
+  });
+
+  it('keeps prose that mentions an unclosed <tool_call> tag', () => {
+    expect(stripFences('Wrap calls in <tool_call> tags. Then I added the entry.')).toBe(
+      'Wrap calls in <tool_call> tags. Then I added the entry.',
+    );
+    expect(stripFences('I used `<tool_call>` before.\nEverything else is fine.')).toBe(
+      'I used `<tool_call>` before.\nEverything else is fine.',
+    );
+    expect(stripFences('The <tool_call tag\nis not closed here.')).toBe('The <tool_call tag\nis not closed here.');
+  });
+
+  it('still hides a call whose tool name is streaming in', () => {
+    expect(stripFences('Adding it.\n<tool_call>\nadd_en')).toBe('Adding it.');
+    expect(stripFences('Adding it.\n<tool_call name="add_en')).toBe('Adding it.');
+    expect(stripFences('Adding it.\n<<<')).toBe('Adding it.');
+  });
 });
