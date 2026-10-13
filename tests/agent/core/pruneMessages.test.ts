@@ -142,7 +142,7 @@ describe('pruneMessagesToBudget drop phase', () => {
     ]);
   });
 
-  it('pins the first user message while dropping lone history singletons', () => {
+  it('pins the latest user request while dropping older history singletons', () => {
     const messages: AgentMessage[] = [
       sys(),
       user('stale history one'),
@@ -150,11 +150,11 @@ describe('pruneMessagesToBudget drop phase', () => {
       ...nativeExchange('only', 'body'),
       user('go'),
     ];
-    const budget = charMeasure([sys(), user('stale history one'), ...nativeExchange('only', 'body'), user('go')]);
+    const budget = charMeasure([sys(), user('stale history two'), ...nativeExchange('only', 'body'), user('go')]);
     const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
     expect(pruned.map((m) => m.content)).toEqual([
       'system prompt',
-      'stale history one',
+      'stale history two',
       '',
       'body',
       'go',
@@ -162,14 +162,29 @@ describe('pruneMessagesToBudget drop phase', () => {
     expectValidPairing(pruned);
   });
 
-  it('drops a huge middle user question as a singleton instead of truncating it', () => {
+  it('keeps the current request over earlier runs mid-run, in order', () => {
+    const messages: AgentMessage[] = [
+      sys(),
+      user('earlier run request'),
+      { role: 'assistant', content: 'Earlier run reply.' },
+      user('current request'),
+      ...nativeExchange('one', 'A'.repeat(1000)),
+      ...nativeExchange('two', 'B'.repeat(1000)),
+    ];
+    const budget = charMeasure([sys(), user('current request'), ...nativeExchange('two', 'B'.repeat(1000))]);
+    const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
+    expect(pruned.map((m) => m.content)).toEqual(['system prompt', 'current request', '', 'B'.repeat(1000)]);
+    expectValidPairing(pruned);
+  });
+
+  it('drops a huge older user question as a singleton instead of truncating it', () => {
     const bigQuestion = 'Q'.repeat(5000);
-    const messages: AgentMessage[] = [sys(), user('anchor'), user(bigQuestion), ...nativeExchange('n', 'body'), user('go')];
-    const budget = charMeasure([sys(), user('anchor'), ...nativeExchange('n', 'body'), user('go')]);
+    const messages: AgentMessage[] = [sys(), user(bigQuestion), user('current'), ...nativeExchange('n', 'body'), user('go')];
+    const budget = charMeasure([sys(), user('current'), ...nativeExchange('n', 'body'), user('go')]);
     const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
     expect(pruned.every((m) => m.content !== bigQuestion)).toBe(true);
     expect(pruned.every((m) => typeof m.content !== 'string' || !m.content.includes(TRUNCATION_SUFFIX.trim()))).toBe(true);
-    expect(pruned.map((m) => m.content)).toEqual(['system prompt', 'anchor', '', 'body', 'go']);
+    expect(pruned.map((m) => m.content)).toEqual(['system prompt', 'current', '', 'body', 'go']);
   });
 });
 

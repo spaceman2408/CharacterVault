@@ -61,21 +61,16 @@ function withTruncatedBody(
 }
 
 /**
- * Group the droppable middle (everything between the pinned system message,
- * the pinned anchor user message, and the pinned trailing message) into
- * atomic units: an `assistant` message plus its following `tool` replies
- * (native) or result blob (XML). Lone messages form singleton groups. Whole
- * groups are dropped oldest-first so a surviving `assistant(tool_calls)`
- * never loses its `tool` replies.
+ * Group the middle (everything between the pinned system message and the
+ * pinned trailing message) into atomic units: an `assistant` message plus its
+ * following `tool` replies (native) or result blob (XML). Lone messages form
+ * singleton groups. Whole groups are dropped oldest-first so a surviving
+ * `assistant(tool_calls)` never loses its `tool` replies.
  */
-function groupMiddle(messages: AgentMessage[], last: number, skipIndex: number): AgentMessage[][] {
+function groupMiddle(messages: AgentMessage[], last: number): AgentMessage[][] {
   const groups: AgentMessage[][] = [];
   let i = 1;
   while (i < last) {
-    if (i === skipIndex) {
-      i += 1;
-      continue;
-    }
     const message = messages[i];
     if (message.role === 'assistant') {
       const group = [message];
@@ -99,8 +94,9 @@ function groupMiddle(messages: AgentMessage[], last: number, skipIndex: number):
  * (2) oldest exchange groups are dropped while over budget; (3) if the pinned
  * minimum itself is over budget, the newest exchange's tool bodies are
  * trimmed just enough to fit. Pinned throughout: the system message, the
- * first user message (conversation anchor — never a result blob), the
- * trailing message, and at least the newest exchange group.
+ * latest user request (never a result blob; earlier runs' requests come
+ * before it), the trailing message, and at least the newest exchange group.
+ * Messages keep their order.
  * Pure: never mutates the input; returns it untouched when under budget.
  */
 export function pruneMessagesToBudget(
@@ -117,16 +113,14 @@ export function pruneMessagesToBudget(
 
   const pinnedFirst = messages[0];
   const pinnedLast = messages[messages.length - 1];
-  let pinnedAnchor: AgentMessage | null = null;
-  let pinnedAnchorIndex = -1;
-  for (let i = 1; i < messages.length - 1; i += 1) {
+  let pinnedRequest: AgentMessage | null = null;
+  for (let i = messages.length - 2; i >= 1; i -= 1) {
     if (messages[i].role === 'user' && !isResultBlob(messages[i])) {
-      pinnedAnchor = messages[i];
-      pinnedAnchorIndex = i;
+      pinnedRequest = messages[i];
       break;
     }
   }
-  let groups = groupMiddle(messages, messages.length - 1, pinnedAnchorIndex);
+  let groups = groupMiddle(messages, messages.length - 1);
 
   const capHogs = (list: AgentMessage[][], cap: number, skipNewest: boolean): AgentMessage[][] => {
     const newest = list[list.length - 1];
@@ -142,16 +136,15 @@ export function pruneMessagesToBudget(
     });
   };
 
-  const assemble = (list: AgentMessage[][]): AgentMessage[] => [
-    pinnedFirst,
-    ...(pinnedAnchor ? [pinnedAnchor] : []),
-    ...list.flat(),
-    pinnedLast,
-  ];
+  const assemble = (list: AgentMessage[][]): AgentMessage[] => [pinnedFirst, ...list.flat(), pinnedLast];
 
   groups = capHogs(groups, hogCap, true);
-  while (groups.length > 1 && measure(assemble(groups)) > budget) {
-    groups = groups.slice(1);
+  while (measure(assemble(groups)) > budget) {
+    const oldest = groups.findIndex(
+      (group, index) => index < groups.length - 1 && group[0] !== pinnedRequest,
+    );
+    if (oldest === -1) break;
+    groups = groups.filter((_, index) => index !== oldest);
   }
 
   let pruned = assemble(groups);
