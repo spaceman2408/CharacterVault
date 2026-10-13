@@ -24,7 +24,7 @@ import {
   type DiffLabels,
   type TextPair,
 } from '../../components/diff';
-import { countApproved, defaultDecisions, formatGreetingsForEdit } from './diff';
+import { countApproved, defaultDecisions, formatGreetingsForEdit, greetingsEditSeparator } from './diff';
 import type { AgentReviewChange, ReviewDecision, ReviewDecisions } from './types';
 
 interface AgentReviewModalProps {
@@ -362,7 +362,7 @@ function ChangeRow({
               />
               {change.kind === 'greetings' && (
                 <p className="text-[11px] text-fg-subtle">
-                  Separate greetings with a line containing only ---.
+                  Separate greetings with a line containing only {greetingsEditSeparator(change.after)}.
                 </p>
               )}
             </div>

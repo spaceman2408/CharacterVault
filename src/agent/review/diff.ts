@@ -256,15 +256,22 @@ export function countApproved(decisions: ReviewDecisions): number {
   return Object.values(decisions).filter((decision) => decision.approved).length;
 }
 
-export const GREETINGS_EDIT_SEPARATOR = '\n---\n';
-
-export function formatGreetingsForEdit(greetings: string[]): string {
-  return greetings.join(GREETINGS_EDIT_SEPARATOR);
+/** The shortest dash line (`---` or longer) that is no line of any greeting, so `---` scene breaks survive an edit. */
+export function greetingsEditSeparator(greetings: string[]): string {
+  const lines = new Set(greetings.flatMap((greeting) => greeting.split('\n')));
+  let separator = '---';
+  while (lines.has(separator)) separator += '-';
+  return separator;
 }
 
-export function parseGreetingsFromEdit(raw: string): string[] {
-  if (raw.includes(GREETINGS_EDIT_SEPARATOR)) {
-    return raw.split(GREETINGS_EDIT_SEPARATOR).filter((part) => part.trim() !== '');
+export function formatGreetingsForEdit(greetings: string[]): string {
+  return greetings.join(`\n${greetingsEditSeparator(greetings)}\n`);
+}
+
+export function parseGreetingsFromEdit(raw: string, separator = '---'): string[] {
+  const split = `\n${separator}\n`;
+  if (raw.includes(split)) {
+    return raw.split(split).filter((part) => part.trim() !== '');
   }
   if (raw.trim() === '') return [];
   return [raw];
@@ -304,7 +311,9 @@ export function applySpecDecisions(
       }
     } else if (change.kind === 'greetings') {
       const lines =
-        decision.edited != null ? parseGreetingsFromEdit(decision.edited) : [...change.after];
+        decision.edited != null
+          ? parseGreetingsFromEdit(decision.edited, greetingsEditSeparator(change.after))
+          : [...change.after];
       next.alternate_greetings = lines;
       changed = true;
     }

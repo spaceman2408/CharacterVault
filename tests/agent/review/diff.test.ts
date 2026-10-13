@@ -10,6 +10,7 @@ import {
   diffLorebookReview,
   diffSpecChanges,
   formatGreetingsForEdit,
+  greetingsEditSeparator,
   formatReviewOutcome,
   parseGreetingsFromEdit,
 } from '../../../src/agent/review/diff';
@@ -439,5 +440,18 @@ describe('parseGreetingsFromEdit', () => {
   it('drops whitespace-only blocks instead of creating empty greetings', () => {
     expect(parseGreetingsFromEdit('A.\n---\n   \n---\nB.')).toEqual(['A.', 'B.']);
     expect(parseGreetingsFromEdit('   ')).toEqual([]);
+  });
+
+  it('keeps --- scene breaks inside a greeting when the list is edited and applied', () => {
+    const original = spec({ alternate_greetings: ['Dawn.\n---\nDusk.', 'Rain.', 'Gone.'] });
+    const proposed = spec({ alternate_greetings: ['Dawn.\n---\nDusk.', 'Rain.'] });
+    const changes = diffSpecChanges(original, proposed);
+    const change = changes.find((row) => row.kind === 'greetings');
+    if (change?.kind !== 'greetings') throw new Error('expected a greetings change');
+    const separator = greetingsEditSeparator(change.after);
+    expect(separator).toBe('----');
+    const edited = formatGreetingsForEdit(change.after).replace('Rain.', 'Snow.');
+    const merged = applySpecDecisions(original, changes, { greetings: { approved: true, edited } });
+    expect(merged?.alternate_greetings).toEqual(['Dawn.\n---\nDusk.', 'Snow.']);
   });
 });
