@@ -1,4 +1,4 @@
-import { parseActions } from './parseActions';
+import { isValidToolName, parseActions } from './parseActions';
 import { pruneMessagesToBudget } from './pruneMessages';
 import { stripFences } from './stripFences';
 import { mapNativeToolCalls } from './toolCalls';
@@ -90,6 +90,20 @@ function formatIncompleteNative(call: NativeToolCall, applied: ActionResult[]): 
   return {
     ok: false,
     toolName: 'incomplete_action',
+    message: parts.join(' '),
+  };
+}
+
+function formatInvalidNative(call: NativeToolCall): ActionResult {
+  const name = call.name.trim();
+  const problem = isValidToolName(name) ? 'its arguments are not valid JSON' : 'its name is not a tool name';
+  const stub = call.arguments.replace(/\s+/g, ' ').trim().slice(0, 240);
+  const parts = [`error: this call could not be read: ${problem}.`];
+  if (stub) parts.push(`Stub: ${stub}`);
+  parts.push('Re-send only this call, fixed.');
+  return {
+    ok: false,
+    toolName: name || 'unknown_action',
     message: parts.join(' '),
   };
 }
@@ -193,6 +207,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
 
     let parsed: ParseResult;
     let nativeIds: string[] = [];
+    let nativeInvalid: NativeToolCall[] = [];
     let nativeIncomplete: NativeToolCall | null = null;
     const native = toolCalls.length > 0;
 
@@ -205,6 +220,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
         incomplete: mapped.incomplete != null,
       };
       nativeIds = mapped.ids;
+      nativeInvalid = mapped.invalid;
       nativeIncomplete = mapped.incomplete;
     } else if (toolMode === 'native') {
       parsed = {
@@ -288,6 +304,14 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
       emit({ type: 'tool_result', result });
       const nativeId = nativeIds[toRun.length + extraIndex] ?? toolCalls[toRun.length + extraIndex]?.id;
       if (nativeId) nativeResultById.set(nativeId, result);
+    }
+
+    // Strict providers reject the next request unless every call id gets a tool reply.
+    for (const call of nativeInvalid) {
+      const result = formatInvalidNative(call);
+      results.push(result);
+      emit({ type: 'tool_result', result });
+      if (call.id) nativeResultById.set(call.id, result);
     }
 
     if (parsed.incomplete) {

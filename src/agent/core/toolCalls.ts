@@ -101,19 +101,28 @@ export function parsedActionFromToolCall(call: NativeToolCall): ParsedAction | n
 export interface MappedToolCalls {
   actions: ParsedAction[];
   ids: string[];
+  /** Unreadable calls before the last one: malformed, not cut off. */
+  invalid: NativeToolCall[];
+  /** An unreadable last call: the reply was cut off mid-call. */
   incomplete: NativeToolCall | null;
 }
 
 export function mapNativeToolCalls(calls: NativeToolCall[]): MappedToolCalls {
   const actions: ParsedAction[] = [];
   const ids: string[] = [];
-  for (const call of calls) {
+  const invalid: NativeToolCall[] = [];
+  let incomplete: NativeToolCall | null = null;
+  for (let index = 0; index < calls.length; index += 1) {
+    const call = calls[index];
     const action = parsedActionFromToolCall(call);
-    if (!action) {
-      return { actions, ids, incomplete: call };
+    if (action) {
+      actions.push(action);
+      ids.push(call.id);
+    } else if (index === calls.length - 1) {
+      incomplete = call;
+    } else {
+      invalid.push(call);
     }
-    actions.push(action);
-    ids.push(call.id);
   }
-  return { actions, ids, incomplete: null };
+  return { actions, ids, invalid, incomplete };
 }

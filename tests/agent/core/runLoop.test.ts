@@ -325,6 +325,32 @@ Castle
     expect(incomplete?.type === 'tool_result' && incomplete.result.message).toContain('tool call JSON was cut off');
   });
 
+  it('runs the calls after a malformed one and answers every call id', async () => {
+    const { host, calls } = fakeHost();
+    const events: AgentEvent[] = [];
+    const complete = vi.fn(
+      scriptedComplete([
+        {
+          content: '',
+          toolCalls: [
+            { id: 'call_keep', name: 'add_entry', arguments: '{"name":"Keep","keys":"keep","content":"Castle"}' },
+            { id: 'call_bad', name: 'add_entry', arguments: '{name: Bad}' },
+            { id: 'call_dock', name: 'add_entry', arguments: '{"name":"Dock","keys":"dock","content":"Pier"}' },
+          ],
+        },
+        'Stopped.',
+      ]),
+    );
+    await runLoop({ host, complete, userMessage: 'go', onEvent: collect(events).push });
+    expect(calls.map((action) => action.headers.name)).toEqual(['Keep', 'Dock']);
+    const bad = collect(events).results().find((result) => !result.ok);
+    expect(bad?.toolName).toBe('add_entry');
+    expect(bad?.message).toContain('not valid JSON');
+    expect(bad?.message).not.toContain('cut off');
+    const replies = complete.mock.calls[1][0].filter((message: AgentMessage) => message.role === 'tool');
+    expect(replies.map((message: AgentMessage) => message.tool_call_id)).toEqual(['call_keep', 'call_bad', 'call_dock']);
+  });
+
   it('prunes the live prompt to maxInputTokens while keeping the newest exchange', async () => {
     const big = 'x'.repeat(2000);
     const { host } = fakeHost(async () => ({

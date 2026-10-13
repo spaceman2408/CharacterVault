@@ -81,7 +81,7 @@ describe('parsedActionFromToolCall tool names', () => {
   });
 });
 describe('mapNativeToolCalls', () => {
-  it('stops at the first unrepairable call and keeps earlier actions', () => {
+  it('treats an unrepairable last call as cut off and keeps earlier actions', () => {
     const mapped = mapNativeToolCalls([
       {
         id: 'a',
@@ -92,6 +92,17 @@ describe('mapNativeToolCalls', () => {
     ]);
     expect(mapped.actions).toHaveLength(1);
     expect(mapped.ids).toEqual(['a']);
+    expect(mapped.invalid).toEqual([]);
     expect(mapped.incomplete?.id).toBe('b');
+  });
+
+  it('skips an unrepairable earlier call and maps the calls after it', () => {
+    const mapped = mapNativeToolCalls([
+      { id: 'a', name: 'add_entry', arguments: '{not-json' },
+      { id: 'b', name: 'add_entry', arguments: '{"name":"Keep","keys":"keep","content":"Castle"}' },
+    ]);
+    expect(mapped.ids).toEqual(['b']);
+    expect(mapped.invalid.map((call) => call.id)).toEqual(['a']);
+    expect(mapped.incomplete).toBeNull();
   });
 });
