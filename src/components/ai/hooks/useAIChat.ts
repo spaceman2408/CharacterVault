@@ -429,7 +429,7 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     };
   }, [chatOwnerType, chatOwnerId, chatPanel, invalidateInFlight]);
 
-  const handleLoadOlder = useCallback(async () => {
+  const loadOlderBefore = useCallback(async (beforeSeq: number | undefined) => {
     if (
       loadOlderLockRef.current
       || hydratingRef.current
@@ -439,8 +439,6 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     }
     const generation = hydrateGenerationRef.current;
     const thread = threadRef();
-    const oldest = chatHistoryRef.current[0];
-    const beforeSeq = oldest ? seqByIdRef.current.get(oldest.id) : undefined;
     if (!thread.ownerId || beforeSeq == null) return;
     if (chatHistoryRef.current.length >= CHAT_UI_HARD_WINDOW) return;
 
@@ -481,6 +479,11 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
       loadOlderLockRef.current = false;
     }
   }, []);
+
+  const handleLoadOlder = useCallback(async () => {
+    const oldest = chatHistoryRef.current[0];
+    await loadOlderBefore(oldest ? seqByIdRef.current.get(oldest.id) : undefined);
+  }, [loadOlderBefore]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -570,8 +573,10 @@ export function useAIChat(options: UseAIChatOptions): UseAIChatReturn {
     setError(null);
     if (fromSeq != null) {
       void chatHistoryService.deleteFrom(threadRef(), fromSeq);
+      // An empty window hides "Load earlier messages", so bring the older saved rows back now.
+      if (nextHistory.length === 0 && hasOlderRef.current) void loadOlderBefore(fromSeq);
     }
-  }, []);
+  }, [loadOlderBefore]);
 
   const finishTurn = useCallback(() => {
     clearStreamDraft();
