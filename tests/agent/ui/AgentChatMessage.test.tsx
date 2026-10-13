@@ -68,6 +68,27 @@ function renderUserMessage(onEdit?: () => void, isProcessing = false, onCancelEd
   );
 }
 
+describe('AgentChatMessage user notices', () => {
+  it('shows an error on the user message without hovering', () => {
+    render(
+      <AgentChatMessage
+        message={{ id: 'u1', role: 'user', content: 'Write a greeting', timestamp: 1 }}
+        messageIndex={0}
+        chatHistoryLength={1}
+        isProcessing={false}
+        showReasoning={false}
+        showRegenerate={false}
+        notices={['API error: Invalid API key']}
+        toolEvents={[]}
+        onRegenerate={() => undefined}
+        onDelete={() => undefined}
+      />,
+    );
+    expect(screen.getByText('API error: Invalid API key')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Message notes' })).toBeNull();
+  });
+});
+
 describe('AgentChatMessage edit', () => {
   it('offers edit on the last user message', () => {
     const onEdit = vi.fn();

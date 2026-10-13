@@ -9,7 +9,6 @@ import type { ChatMessage } from '../../components/ai/types';
 import { formatTime } from '../../components/ai/utils';
 import { FoldedText } from '../../components/ai/components/FoldedText';
 import { StatsInfoButton } from '../../components/ai/components/StatsInfoButton';
-import { HoverInfoTip } from './HoverInfoTip';
 import { TURN_LIMIT_NOTICE } from './notices';
 import { ToolEventList } from './ToolEventList';
 import type { AgentToolEvent, AgentToolTarget } from './types';
@@ -59,7 +58,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
 
   if (message.role === 'user') {
     return (
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-1">
         <div
           className={`group relative max-w-[90%] rounded-xl rounded-br-md bg-accent px-3 py-2 text-accent-fg shadow-sm ${
             message.suppressInitialAnimation ? '' : 'message-animate'
@@ -77,14 +76,10 @@ export const AgentChatMessage = memo(function AgentChatMessage({
                 · Editing
               </span>
             ) : null}
-            {notices.length > 0 ? (
-              <HoverInfoTip label="Message notes">
-                {notices.map((notice, noticeIndex) => (
-                  <div key={`${noticeIndex}-${notice}`}>{notice}</div>
-                ))}
-              </HoverInfoTip>
-            ) : null}
           </span>
+        </div>
+        <div className="max-w-[90%]">
+          <NoticeList notices={notices} />
         </div>
       </div>
     );
@@ -111,34 +106,7 @@ export const AgentChatMessage = memo(function AgentChatMessage({
 
       <ToolEventList events={toolEvents} lost={writesLost} onOpenTarget={onOpenTarget} />
 
-      {notices.length > 0 ? (
-        <ul className="space-y-1">
-          {notices.map((notice, noticeIndex) => {
-            const turnLimit = notice === TURN_LIMIT_NOTICE;
-            return (
-              <li
-                key={`${noticeIndex}-${notice}`}
-                className={`flex items-center gap-2 rounded-md px-2 py-1 text-xs leading-5 ${
-                  turnLimit
-                    ? 'bg-warning-soft text-warning-soft-fg'
-                    : 'bg-danger-soft text-danger-soft-fg'
-                }`}
-              >
-                <span className="min-w-0 flex-1">{notice}</span>
-                {turnLimit && onContinue ? (
-                  <button
-                    type="button"
-                    onClick={onContinue}
-                    className="shrink-0 rounded-md border border-warning/40 px-2 font-medium hover:opacity-90"
-                  >
-                    Continue
-                  </button>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      <NoticeList notices={notices} onContinue={onContinue} />
 
       <div className="flex items-center gap-1 text-[11px] text-fg-muted">
         <span>{formatTime(message.timestamp)}</span>
@@ -159,3 +127,41 @@ export const AgentChatMessage = memo(function AgentChatMessage({
     </div>
   );
 });
+
+function NoticeList({
+  notices,
+  onContinue,
+}: {
+  notices: string[];
+  onContinue?: () => void;
+}): React.ReactElement | null {
+  if (notices.length === 0) return null;
+  return (
+    <ul className="space-y-1">
+      {notices.map((notice, noticeIndex) => {
+        const turnLimit = notice === TURN_LIMIT_NOTICE;
+        return (
+          <li
+            key={`${noticeIndex}-${notice}`}
+            className={`flex items-center gap-2 rounded-md px-2 py-1 text-xs leading-5 ${
+              turnLimit
+                ? 'bg-warning-soft text-warning-soft-fg'
+                : 'bg-danger-soft text-danger-soft-fg'
+            }`}
+          >
+            <span className="min-w-0 flex-1">{notice}</span>
+            {turnLimit && onContinue ? (
+              <button
+                type="button"
+                onClick={onContinue}
+                className="shrink-0 rounded-md border border-warning/40 px-2 font-medium hover:opacity-90"
+              >
+                Continue
+              </button>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
