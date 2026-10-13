@@ -1,4 +1,5 @@
 import { DEFAULT_MAX_TURNS } from '../core/runLoop';
+import { stripFences } from '../core/stripFences';
 import type { ActionResult, ParsedAction } from '../core/types';
 import { parseToolTarget } from './toolTarget';
 import type { AgentToolEvent } from './types';
@@ -169,6 +170,15 @@ export function isLookupOnlyTurn(
   lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
 ): boolean {
   return events.length > 0 && events.every((event) => event.ok && lookupTools.has(event.toolName));
+}
+
+/** A turn that only looked things up and said nothing. Speech keeps the turn, like on write turns. */
+export function isSilentLookupTurn(
+  content: string,
+  events: AgentToolEvent[],
+  lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
+): boolean {
+  return !stripFences(content).trim() && isLookupOnlyTurn(events, lookupTools);
 }
 
 export function writeRecapLine(events: AgentToolEvent[], lost = false): string | null {

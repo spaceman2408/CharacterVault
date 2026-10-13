@@ -5,6 +5,7 @@ import {
   interruptedRunMessageIds,
   interruptedRunNotice,
   isLookupOnlyTurn,
+  isSilentLookupTurn,
   messageNotices,
   REVIEW_NOTE_TOOL,
   RUN_INTERRUPTED_TOOL,
@@ -203,6 +204,20 @@ describe('isLookupOnlyTurn', () => {
       message: 'Recursion map — 2 entries, 1 edge, 0 isolated, cycle: none; recursive_scanning on',
     };
     expect(isLookupOnlyTurn([okRecursion], CHARACTER_LOOKUP_TOOLS)).toBe(true);
+  });
+});
+
+describe('isSilentLookupTurn', () => {
+  it('drops a lookup turn only when it said nothing', () => {
+    expect(isSilentLookupTurn('', [okList])).toBe(true);
+    expect(isSilentLookupTurn('  ', [okRead])).toBe(true);
+    expect(isSilentLookupTurn('Let me check the harbor first.', [okList])).toBe(false);
+    expect(isSilentLookupTurn('', [okList, okAdd])).toBe(false);
+    expect(isSilentLookupTurn('', [])).toBe(false);
+  });
+
+  it('treats speech that is only tool markup as silent', () => {
+    expect(isSilentLookupTurn('<tool_call>list_entries</tool_call>', [okList])).toBe(true);
   });
 });
 

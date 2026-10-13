@@ -46,7 +46,7 @@ import { noteRunFinished } from './finishNotice';
 import { keptEditsOptions, toLoopHistory } from './loopHistory';
 import {
   interruptedRunNotice,
-  isLookupOnlyTurn,
+  isSilentLookupTurn,
   REVIEW_NOTE_TOOL,
   RUN_INTERRUPTED_TOOL,
   toAgentToolEvent,
@@ -367,7 +367,8 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const dropLookupOnlyMessage = useCallback((messageId: string | null) => {
     if (!messageId) return;
     const events = toolEventsRef.current[messageId] ?? [];
-    if (!isLookupOnlyTurn(events, lookupToolNamesRef.current)) return;
+    const content = chatHistoryRef.current.find((row) => row.id === messageId)?.content ?? '';
+    if (!isSilentLookupTurn(content, events, lookupToolNamesRef.current)) return;
     if (errorByMessageIdRef.current[messageId]) return;
 
     const nextHistory = chatHistoryRef.current.filter((message) => message.id !== messageId);
