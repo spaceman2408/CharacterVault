@@ -177,6 +177,18 @@ export function LorebookAgentChat({
     return session.handleRegenerate();
   }, [review, session]);
 
+  // The review outcome is noted on the last agent reply, so deleting replies would move it to an earlier run.
+  const handleDeleteGuarded = useCallback(
+    (messageId: string) => {
+      if (review) {
+        setReviewOpen(true);
+        return;
+      }
+      session.handleDeleteMessage(messageId);
+    },
+    [review, session],
+  );
+
   const { lastUserIndex, editingId, startEdit, cancelEdit, commitEdit } = useEditLastMessage(
     session.chatHistory,
     session.handleDeleteMessage,
@@ -284,7 +296,7 @@ export function LorebookAgentChat({
           writesLost={writesLost}
           recapLine={recapLine}
           onRegenerate={handleRegenerateGuarded}
-          onDelete={session.handleDeleteMessage}
+          onDelete={handleDeleteGuarded}
           onOpenTarget={onOpenTarget}
           onContinue={
             index === session.chatHistory.length - 1 && !session.isProcessing
@@ -307,6 +319,7 @@ export function LorebookAgentChat({
       cancelEdit,
       editingId,
       handleContinue,
+      handleDeleteGuarded,
       handleEditGuarded,
       handleRegenerateGuarded,
       lastUserIndex,
@@ -314,7 +327,6 @@ export function LorebookAgentChat({
       onOpenTarget,
       session.chatHistory.length,
       session.errorByMessageId,
-      session.handleDeleteMessage,
       session.isProcessing,
       session.toolEventsByMessageId,
     ],
@@ -364,7 +376,7 @@ export function LorebookAgentChat({
       handleAsk={handleComposerAsk}
       handleRegenerate={handleRegenerateGuarded}
       handleNewChat={session.handleNewChat}
-      handleDeleteMessage={session.handleDeleteMessage}
+      handleDeleteMessage={handleDeleteGuarded}
       handleAbort={session.handleAbort}
       clearError={session.clearError}
       isHydrating={session.isHydrating}
