@@ -1000,9 +1000,12 @@ Provide only the generated text without any additional commentary.`;
       }
       let currentRequest = request;
       let response = await this.sendRequest(currentRequest, signal);
+      // The generic strip is a guess, so it is cached only once its retry gets through.
+      let unconfirmedStrip: ReturnType<typeof stripAllNonStandardParams> | null = null;
 
       for (let attempt = 0; attempt < 3; attempt++) {
         if (response.status !== 400) break;
+        unconfirmedStrip = null;
 
         const errorText = await response.text().catch(() => '');
         console.warn(`[AIService] Attempt ${attempt + 1} failed with 400. Response body:`, errorText.slice(0, LOGGED_ERROR_BODY_CHARS));
@@ -1062,7 +1065,7 @@ Provide only the generated text without any additional commentary.`;
 
         const fallback = stripAllNonStandardParams(currentRequest as ChatRequestLike);
         if (fallback.removed.length > 0) {
-          recordRepairInCache(cache, fallback);
+          unconfirmedStrip = fallback;
           console.warn(
             `[AIService] Generic 400 error. Proactively stripping non-standard params: ${fallback.removed.join(', ')}. ` +
               `Retrying without them...`
@@ -1096,6 +1099,7 @@ Provide only the generated text without any additional commentary.`;
         );
       }
 
+      if (unconfirmedStrip && response.ok) recordRepairInCache(cache, unconfirmedStrip);
       return await this.handleResponse(response, !!useStreaming, onChunk);
     } catch (error) {
       if (error instanceof AIError) throw error;
