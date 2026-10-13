@@ -96,3 +96,21 @@ describe('useAgentSession Stop keeps only speech', () => {
     expect(await askThenStop(2)).toEqual(["I'll rewrite it."]);
   });
 });
+
+describe('useAgentSession error mid-reply', () => {
+  it('keeps the speech streamed before the error and notes the error on it', async () => {
+    vi.spyOn(AIService.prototype, 'chat').mockImplementation(async (_messages, _context, onChunk) => {
+      onChunk?.({ content: 'Here is my plan.\n<tool_call>\nupdate_entry\nid: 4\n---\nHalf', reasoning: 'Think first.' });
+      throw new TypeError('network error');
+    });
+    const { result } = renderSession();
+    await act(async () => {
+      await result.current.handleAsk('Rewrite Harbor');
+    });
+    const reply = result.current.chatHistory.at(-1);
+    expect(reply?.role).toBe('assistant');
+    expect(reply?.content).toBe('Here is my plan.');
+    expect(reply?.reasoning).toBe('Think first.');
+    expect(result.current.errorByMessageId[reply?.id ?? '']).toBe('network error');
+  });
+});

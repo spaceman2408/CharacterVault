@@ -297,7 +297,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       }
       if (aiConfigRef.current.showReasoning ?? true) dirty = true;
     }
-    // Not capped like reasoning: Stop commits the speech, and a tail can start inside a tool call.
+    // Not capped like reasoning: Stop and errors commit the speech, and a tail can start inside a tool call.
     if (chunk.content) {
       streamContentRef.current.append(chunk.content);
       dirty = true;
@@ -774,6 +774,24 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
         const isCurrent = () => isMountedRef.current && requestId === requestIdRef.current;
         let runService: AIService | null = null;
+        // Stop and a failed turn keep what the user already watched stream in.
+        const commitStreamedPartial = () => {
+          dropLookupOnlyMessage(lastAssistantIdRef.current);
+          const speech = stripFences(streamContentRef.current.toString());
+          const reasoning = streamReasoningRef.current.toString();
+          if (!speech && !reasoning) return;
+          const id = generateMessageId();
+          lastAssistantIdRef.current = id;
+          commitMessage({
+            id,
+            role: 'assistant' as const,
+            content: speech,
+            reasoning: clipCommitReasoning(reasoning),
+            timestamp: Date.now(),
+            stats: consumeAssistantStats(false),
+            suppressInitialAnimation: true,
+          });
+        };
 
         try {
           await flushDraftRef.current();
@@ -915,6 +933,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 return;
               }
               if (event.type === 'error') {
+                commitStreamedPartial();
                 attachError(event.message);
               }
             },
@@ -925,22 +944,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
           }
 
           if (result.reason === 'abort' && isCurrent()) {
-            dropLookupOnlyMessage(lastAssistantIdRef.current);
-            const speech = stripFences(streamContentRef.current.toString());
-            const reasoning = streamReasoningRef.current.toString();
-            if (speech || reasoning) {
-              const id = generateMessageId();
-              lastAssistantIdRef.current = id;
-              commitMessage({
-                id,
-                role: 'assistant' as const,
-                content: speech,
-                reasoning: clipCommitReasoning(reasoning),
-                timestamp: Date.now(),
-                stats: consumeAssistantStats(false),
-                suppressInitialAnimation: true,
-              });
-            }
+            commitStreamedPartial();
           }
         } catch (err) {
           if (!isCurrent()) return;
