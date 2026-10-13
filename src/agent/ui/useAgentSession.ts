@@ -761,8 +761,13 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         setIsProcessing(true);
         setBusyAction(null);
         setError(null);
+        const noticedIds = Object.keys(errorByMessageIdRef.current);
         errorByMessageIdRef.current = {};
         setErrorByMessageId({});
+        for (const id of noticedIds) {
+          const row = chatHistoryRef.current.find((message) => message.id === id);
+          if (row) persistMessage(row);
+        }
         clearStreamDraft();
         lastAssistantIdRef.current = null;
         pendingStatsRef.current = undefined;
