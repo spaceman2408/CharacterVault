@@ -82,6 +82,12 @@ describe('matchRejectedParams', () => {
     expect(found).not.toContain('reasoning');
   });
 
+  it('never names model or messages, which a retry cannot drop', () => {
+    const keys = ['model', 'messages', 'temperature'];
+    expect(matchRejectedParams({ error: { param: 'messages', message: 'bad messages' } }, keys)).toEqual([]);
+    expect(matchRejectedParams({ error: { param: 'model', message: 'The model does not exist' } }, keys)).toEqual([]);
+  });
+
   it('matches min_p from message without false positives', () => {
     const keys = ['min_p', 'top_p', 'temperature'];
     const found = matchRejectedParams(
@@ -141,6 +147,22 @@ describe('repairChatRequest', () => {
     const result = repairChatRequest(
       { model: 'x', temperature: 0.5 },
       { error: { message: 'Something completely unrelated went wrong' } }
+    );
+    expect(result).toBeNull();
+  });
+
+  it('keeps messages when OpenAI rejects them for a missing tool reply', () => {
+    const result = repairChatRequest(
+      { model: 'x', messages: [{ role: 'user', content: 'hi' }], temperature: 0.5 },
+      {
+        error: {
+          message:
+            "An assistant message with 'tool_calls' must be followed by tool messages responding to each 'tool_call_id'. The following tool_call_ids did not have response messages: call_2",
+          type: 'invalid_request_error',
+          param: 'messages',
+          code: null,
+        },
+      },
     );
     expect(result).toBeNull();
   });

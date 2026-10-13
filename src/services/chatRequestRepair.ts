@@ -34,6 +34,9 @@ const STRIPPABLE_PARAMS = [
   'tool_choice',
 ] as const;
 
+/** Errors about the conversation name these too; dropping them can never fix a request. */
+const REQUIRED_PARAMS = new Set(['model', 'messages']);
+
 /** Effort rank high → low. max and xhigh are adjacent peers. */
 const EFFORT_RANK: ReasoningEffortValue[] = [
   'max',
@@ -218,7 +221,7 @@ export function matchRejectedParams(
   };
 
   const param = extractErrorParam(errorData);
-  if (param && present.has(param)) {
+  if (param && present.has(param) && !REQUIRED_PARAMS.has(param)) {
     add(param);
   }
 
