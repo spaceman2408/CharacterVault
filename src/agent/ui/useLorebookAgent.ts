@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type {
   AIConfig,
   CharacterBook,
@@ -64,15 +64,20 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     [onPendingReview],
   );
 
+  const noteRenumberedRef = useRef<(renumbered: ReadonlyMap<number, number>) => void>(() => {});
   const createHost = useCallback(() => {
     const originalBook = structuredClone(getBook());
     return createLorebookHost({
       getBook,
-      setBook: (proposedBook) =>
-        setBook((latest) => {
+      setBook: async (proposedBook) => {
+        const renumbered = new Map<number, number>();
+        await setBook((latest) => {
+          renumbered.clear();
           const payload: LorebookReviewPayload = { originalBook, proposedBook };
-          return applyLorebookReview(payload, defaultDecisions(diffLorebookReview(payload)), latest);
-        }),
+          return applyLorebookReview(payload, defaultDecisions(diffLorebookReview(payload)), latest, renumbered);
+        });
+        noteRenumberedRef.current(renumbered);
+      },
       getCustomContext,
       takeSnapshot,
       shouldReview: checkShouldReview,
@@ -80,7 +85,7 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     });
   }, [getBook, getCustomContext, setBook, takeSnapshot, checkShouldReview, forwardPendingReview]);
 
-  return useAgentSession({
+  const session = useAgentSession({
     aiConfig,
     samplerSettings,
     promptSettings,
@@ -93,4 +98,9 @@ export function useLorebookAgent(options: UseLorebookAgentOptions): UseLorebookA
     chatPanel: 'agent',
     keepEditsInContext,
   });
+  const { noteRenumberedEntries } = session;
+  useEffect(() => {
+    noteRenumberedRef.current = noteRenumberedEntries;
+  }, [noteRenumberedEntries]);
+  return session;
 }

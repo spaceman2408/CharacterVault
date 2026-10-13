@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type {
   AIConfig,
   CharacterBook,
@@ -65,22 +65,27 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
     [onPendingReview],
   );
 
+  const noteRenumberedRef = useRef<(renumbered: ReadonlyMap<number, number>) => void>(() => {});
   const createHost = useCallback(() => {
     const originalSpec = cloneSpec(getSpec());
     const originalBook = structuredClone(getBook());
     return createCharacterHost({
       getSpec,
       getBook,
-      persist: (update) =>
-        persist((latest) => {
+      persist: async (update) => {
+        const renumbered = new Map<number, number>();
+        await persist((latest) => {
+          renumbered.clear();
           const payload: CharacterReviewPayload = {
             originalSpec,
             proposedSpec: update.spec,
             originalBook,
             proposedBook: update.book,
           };
-          return applyCharacterReview(payload, defaultDecisions(diffCharacterReview(payload)), latest);
-        }),
+          return applyCharacterReview(payload, defaultDecisions(diffCharacterReview(payload)), latest, renumbered);
+        });
+        noteRenumberedRef.current(renumbered);
+      },
       getCustomContext,
       takeSnapshot,
       shouldReview: checkShouldReview,
@@ -88,7 +93,7 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
     });
   }, [getBook, getCustomContext, getSpec, persist, takeSnapshot, checkShouldReview, forwardPendingReview]);
 
-  return useAgentSession({
+  const session = useAgentSession({
     aiConfig,
     samplerSettings,
     promptSettings,
@@ -101,4 +106,9 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
     chatPanel: 'agent',
     keepEditsInContext,
   });
+  const { noteRenumberedEntries } = session;
+  useEffect(() => {
+    noteRenumberedRef.current = noteRenumberedEntries;
+  }, [noteRenumberedEntries]);
+  return session;
 }

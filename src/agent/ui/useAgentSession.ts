@@ -42,6 +42,7 @@ import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
 import { liveAgentSpeech } from './speechDraft';
+import { renumberEntryEvents } from './toolTarget';
 import { noteRunFinished } from './finishNotice';
 import { keptEditsOptions, toLoopHistory } from './loopHistory';
 import {
@@ -146,6 +147,8 @@ export interface UseAgentSessionReturn {
   noteReviewOutcome: (note: string) => void;
   /** Call when a run's writes are staged for review, so leaving before review is noted on the next load. */
   holdRunForReview: () => void;
+  /** After a save that gave the run's added entries new ids, so its rows and history name the saved ids. */
+  noteRenumberedEntries: (renumbered: ReadonlyMap<number, number>) => void;
   isAIConfigured: boolean;
   isHydrating: boolean;
   hasOlderMessages: boolean;
@@ -416,6 +419,20 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const holdRunForReview = useCallback(() => {
     writeRunMarker(threadRef(), { reviewWaiting: true });
   }, []);
+
+  const noteRenumberedEntries = useCallback((renumbered: ReadonlyMap<number, number>) => {
+    if (renumbered.size === 0) return;
+    const history = chatHistoryRef.current;
+    for (const message of history.slice(lastUserMessageIndex(history) + 1)) {
+      const events = toolEventsRef.current[message.id];
+      if (!events) continue;
+      const next = renumberEntryEvents(events, renumbered);
+      if (next === events) continue;
+      toolEventsRef.current = { ...toolEventsRef.current, [message.id]: next };
+      persistMessage(message);
+    }
+    setToolEventsByMessageId(toolEventsRef.current);
+  }, [persistMessage]);
 
   const noteInterruptedRun = useCallback((reviewWaiting: boolean) => {
     const history = chatHistoryRef.current;
@@ -1077,6 +1094,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     clearError,
     noteReviewOutcome,
     holdRunForReview,
+    noteRenumberedEntries,
     isAIConfigured,
     isHydrating,
     hasOlderMessages,

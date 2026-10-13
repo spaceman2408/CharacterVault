@@ -117,7 +117,7 @@ export function LorebookAgentChat({
     chatOwnerId,
     keepEditsInContext: keepEdits,
   });
-  const { noteReviewOutcome, holdRunForReview } = session;
+  const { noteReviewOutcome, holdRunForReview, noteRenumberedEntries } = session;
   useEffect(() => {
     holdRunRef.current = holdRunForReview;
   }, [holdRunForReview]);
@@ -137,15 +137,20 @@ export function LorebookAgentChat({
       setIsApplyingReview(true);
       try {
         await takeSnapshot();
-        await setBook((latest) => applyLorebookReview(review, decisions, latest));
-        noteReviewOutcome(outcome);
+        const renumbered = new Map<number, number>();
+        await setBook((latest) => {
+          renumbered.clear();
+          return applyLorebookReview(review, decisions, latest, renumbered);
+        });
+        noteRenumberedEntries(renumbered);
+        noteReviewOutcome(formatReviewOutcome(diffLorebookReview(review), decisions, renumbered));
       } finally {
         setIsApplyingReview(false);
         setReview(null);
         setReviewOpen(false);
       }
     },
-    [noteReviewOutcome, review, setBook, takeSnapshot],
+    [noteRenumberedEntries, noteReviewOutcome, review, setBook, takeSnapshot],
   );
 
   const handleDiscardReview = useCallback(() => {

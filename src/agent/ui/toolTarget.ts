@@ -1,5 +1,5 @@
 import { isCharacterAgentFieldId } from '../hosts/character/fields';
-import type { AgentToolTarget } from './types';
+import type { AgentToolEvent, AgentToolTarget } from './types';
 
 const FIELD_TOOLS = new Set(['update_field', 'replace_in_field', 'append_to_field']);
 const GREETING_TOOLS = new Set([
@@ -37,4 +37,24 @@ export function parseToolTarget(toolName: string, ok: boolean, message: string):
   }
 
   return undefined;
+}
+
+/** Points a run's entry rows (text, link, and call id) at the ids its added entries were saved under. */
+export function renumberEntryEvents(
+  events: AgentToolEvent[],
+  renumbered: ReadonlyMap<number, number>,
+): AgentToolEvent[] {
+  let changed = false;
+  const next = events.map((event) => {
+    if (event.target?.type !== 'entry') return event;
+    const from = event.target.id;
+    const id = renumbered.get(from);
+    if (id == null) return event;
+    changed = true;
+    const call = event.call?.headers.id === String(from)
+      ? { ...event.call, headers: { ...event.call.headers, id: String(id) } }
+      : event.call;
+    return { ...event, message: event.message.replace(/^ok #\d+/, `ok #${id}`), target: { type: 'entry' as const, id }, call };
+  });
+  return changed ? next : events;
 }

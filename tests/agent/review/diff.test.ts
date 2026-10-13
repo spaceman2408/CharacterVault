@@ -347,6 +347,26 @@ describe('live-base merging', () => {
     expect(applied?.entries.map((row) => row.content)).toEqual(['User A.', 'Agent B.']);
   });
 
+  it('reports the new id when an added entry collides with one added in the editor', () => {
+    const payload = {
+      originalBook: book([entry({ id: 0, content: 'A.' })]),
+      proposedBook: book([entry({ id: 0, content: 'A.' }), entry({ id: 1, comment: 'Agent', content: 'Agent.' })]),
+    };
+    const latest = book([entry({ id: 0, content: 'A.' }), entry({ id: 1, comment: 'User', content: 'User.' })]);
+    const changes = diffLorebookReview(payload);
+    const decisions = defaultDecisions(changes);
+    const renumbered = new Map<number, number>();
+    const applied = applyLorebookReview(payload, decisions, latest, renumbered);
+    expect(applied?.entries.map((row) => [row.id, row.content])).toEqual([
+      [0, 'A.'],
+      [1, 'User.'],
+      [2, 'Agent.'],
+    ]);
+    expect([...renumbered]).toEqual([[1, 2]]);
+    const edited = { ...decisions, [changes[0].id]: { approved: true, edited: 'Mine.' } };
+    expect(formatReviewOutcome(changes, edited, renumbered)).toContain('(#2)');
+  });
+
   it('skips per-greeting edits when the live list shrank', () => {
     const original = spec({ alternate_greetings: ['A.', 'B.'] });
     const proposed = spec({ alternate_greetings: ['A.', 'B edited.'] });

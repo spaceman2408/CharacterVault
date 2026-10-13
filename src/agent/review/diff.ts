@@ -207,7 +207,7 @@ export function defaultDecisions(changes: AgentReviewChange[]): ReviewDecisions 
   return decisions;
 }
 
-function reviewChangeLabel(change: AgentReviewChange): string {
+function reviewChangeLabel(change: AgentReviewChange, renumbered?: ReadonlyMap<number, number>): string {
   switch (change.kind) {
     case 'field':
       return change.label;
@@ -216,6 +216,7 @@ function reviewChangeLabel(change: AgentReviewChange): string {
     case 'greetings':
       return 'the greetings list';
     case 'entry-added':
+      return `“${change.title}” (#${renumbered?.get(change.entryId) ?? change.entryId})`;
     case 'entry-updated':
     case 'entry-deleted':
       return `“${change.title}” (#${change.entryId})`;
@@ -228,6 +229,7 @@ function reviewChangeLabel(change: AgentReviewChange): string {
 export function formatReviewOutcome(
   changes: AgentReviewChange[],
   decisions: ReviewDecisions | null,
+  renumbered?: ReadonlyMap<number, number>,
 ): string {
   if (!decisions) return 'The user discarded every change from this run.';
   const applied: string[] = [];
@@ -235,7 +237,7 @@ export function formatReviewOutcome(
   const rejected: string[] = [];
   for (const change of changes) {
     const decision = decisions[change.id];
-    const label = reviewChangeLabel(change);
+    const label = reviewChangeLabel(change, renumbered);
     if (!decision?.approved) rejected.push(label);
     else if (decision.edited != null || decision.editedKeys != null) edited.push(label);
     else applied.push(label);
@@ -317,11 +319,13 @@ export function applySpecDecisions(
  * have added entries while the review was staged). Updates targeting entries
  * that no longer exist are skipped — the newer delete wins.
  */
+/** `renumbered` collects added entries whose id was taken meanwhile (proposed id → saved id). */
 export function applyBookDecisions(
   base: CharacterBook,
   proposed: CharacterBook,
   changes: AgentReviewChange[],
   decisions: ReviewDecisions,
+  renumbered?: Map<number, number>,
 ): CharacterBook | undefined {
   let changed = false;
   const next = cloneBook(base);
@@ -340,6 +344,7 @@ export function applyBookDecisions(
       if (usedIds.has(entry.id)) {
         let freshId = 0;
         while (usedIds.has(freshId)) freshId += 1;
+        renumbered?.set(entry.id, freshId);
         entry.id = freshId;
       }
       if (decision.edited != null) entry.content = decision.edited;
@@ -388,6 +393,7 @@ export function applyCharacterReview(
     spec: payload.originalSpec,
     book: payload.originalBook,
   },
+  renumbered?: Map<number, number>,
 ): AppliedCharacterReview {
   const result: AppliedCharacterReview = {};
   if (payload.proposedSpec) {
@@ -397,7 +403,7 @@ export function applyCharacterReview(
   }
   if (payload.proposedBook) {
     const changes = diffBookChanges(payload.originalBook, payload.proposedBook);
-    const book = applyBookDecisions(base.book, payload.proposedBook, changes, decisions);
+    const book = applyBookDecisions(base.book, payload.proposedBook, changes, decisions, renumbered);
     if (book) result.book = book;
   }
   return result;
@@ -407,7 +413,8 @@ export function applyLorebookReview(
   payload: LorebookReviewPayload,
   decisions: ReviewDecisions,
   base: CharacterBook = payload.originalBook,
+  renumbered?: Map<number, number>,
 ): CharacterBook | null {
   const changes = diffBookChanges(payload.originalBook, payload.proposedBook);
-  return applyBookDecisions(base, payload.proposedBook, changes, decisions) ?? null;
+  return applyBookDecisions(base, payload.proposedBook, changes, decisions, renumbered) ?? null;
 }

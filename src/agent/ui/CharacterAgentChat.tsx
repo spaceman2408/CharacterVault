@@ -114,7 +114,7 @@ export function CharacterAgentChat({
     chatOwnerId,
     keepEditsInContext: keepEdits,
   });
-  const { noteReviewOutcome, holdRunForReview } = session;
+  const { noteReviewOutcome, holdRunForReview, noteRenumberedEntries } = session;
   useEffect(() => {
     holdRunRef.current = holdRunForReview;
   }, [holdRunForReview]);
@@ -134,15 +134,20 @@ export function CharacterAgentChat({
       setIsApplyingReview(true);
       try {
         await takeSnapshot();
-        await persist((latest) => applyCharacterReview(review, decisions, latest));
-        noteReviewOutcome(outcome);
+        const renumbered = new Map<number, number>();
+        await persist((latest) => {
+          renumbered.clear();
+          return applyCharacterReview(review, decisions, latest, renumbered);
+        });
+        noteRenumberedEntries(renumbered);
+        noteReviewOutcome(formatReviewOutcome(diffCharacterReview(review), decisions, renumbered));
       } finally {
         setIsApplyingReview(false);
         setReview(null);
         setReviewOpen(false);
       }
     },
-    [noteReviewOutcome, persist, review, takeSnapshot],
+    [noteRenumberedEntries, noteReviewOutcome, persist, review, takeSnapshot],
   );
 
   const handleDiscardReview = useCallback(() => {
