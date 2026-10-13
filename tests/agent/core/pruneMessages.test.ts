@@ -268,6 +268,26 @@ describe('pruneMessagesToBudget last resort', () => {
     expectValidPairing(pruned);
   });
 
+  it('trims a huge newest tool result at the end of the prompt', () => {
+    const messages: AgentMessage[] = [sys('S'), user('Q'), ...nativeExchange('new', 'N'.repeat(8000))];
+    const budget = charMeasure([sys('S'), user('Q')]) + 2000;
+    const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
+    expect(charMeasure(pruned)).toBeLessThanOrEqual(budget);
+    expect(pruned.map((m) => m.role)).toEqual(['system', 'user', 'assistant', 'tool']);
+    expect(pruned[1].content).toBe('Q');
+    expect(pruned[3].content).toContain(TRUNCATION_SUFFIX.trim());
+    expectValidPairing(pruned);
+  });
+
+  it('trims a huge trailing XML result blob instead of the request', () => {
+    const messages: AgentMessage[] = [sys('S'), user('Q'), ...xmlExchange('new', 'N'.repeat(8000))];
+    const budget = charMeasure([sys('S'), user('Q')]) + 2000;
+    const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
+    expect(charMeasure(pruned)).toBeLessThanOrEqual(budget);
+    expect(pruned.slice(0, 3).map((m) => m.content)).toEqual(['S', 'Q', 'thinking new']);
+    expect(pruned[3].content).toContain(TRUNCATION_SUFFIX.trim());
+  });
+
   it('sends as-is when system plus trailing question alone exceed the budget', () => {
     const messages: AgentMessage[] = [sys('S'.repeat(5000)), ...nativeExchange('new', 'body'), user('Q')];
     const pruned = pruneMessagesToBudget(messages, 100, charMeasure);

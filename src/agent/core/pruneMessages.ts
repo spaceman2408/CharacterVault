@@ -92,8 +92,9 @@ function groupMiddle(messages: AgentMessage[], last: number): AgentMessage[][] {
  * Shrink a prompt to `budget` tokens in three phases: (1) dynamic hog-guard
  * caps each older tool-result body at `min(maxHogTokens, budget*hogFraction)`;
  * (2) oldest exchange groups are dropped while over budget; (3) if the pinned
- * minimum itself is over budget, the newest exchange's tool bodies are
- * trimmed just enough to fit. Pinned throughout: the system message, the
+ * minimum itself is over budget, the newest exchange's tool bodies (with the
+ * trailing tool result or result blob mid-run) are trimmed just enough to
+ * fit. Pinned throughout: the system message, the
  * latest user request (never a result blob; earlier runs' requests come
  * before it), the trailing message, and at least the newest exchange group.
  * Messages keep their order.
@@ -147,12 +148,11 @@ export function pruneMessagesToBudget(
     groups = groups.filter((_, index) => index !== oldest);
   }
 
-  let pruned = assemble(groups);
-  if (measure(pruned) <= budget || groups.length === 0) return pruned;
+  const pruned = assemble(groups);
+  if (measure(pruned) <= budget) return pruned;
 
-  const newest = groups[groups.length - 1];
   let overage = measure(pruned) - budget;
-  const trimmedNewest = newest.map((message) => {
+  const trimToFit = (message: AgentMessage): AgentMessage => {
     if (overage <= 0 || !isTruncatable(message)) return message;
     const tokens = messageTokens(message, measure);
     if (tokens <= NEWEST_TRUNCATE_FLOOR_TOKENS) return message;
@@ -160,8 +160,11 @@ export function pruneMessagesToBudget(
     const next = withTruncatedBody(message, target, measure);
     overage -= tokens - messageTokens(next, measure);
     return next;
-  });
-  groups = [...groups.slice(0, -1), trimmedNewest];
-  pruned = assemble(groups);
-  return pruned;
+  };
+  return [
+    pinnedFirst,
+    ...groups.slice(0, -1).flat(),
+    ...(groups.at(-1) ?? []).map(trimToFit),
+    trimToFit(pinnedLast),
+  ];
 }
