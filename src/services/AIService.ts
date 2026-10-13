@@ -16,7 +16,7 @@ import type {
   CustomToolbarOp,
 } from '../db/characterTypes';
 import { resolvePromptTemplate } from './toolbarConfig';
-import { ReasoningParser, extractMessageReasoning } from './ReasoningParser';
+import { ReasoningParser, extractMessageReasoning, parseInlineTags } from './ReasoningParser';
 import {
   resolveProvider,
   NanoGPTProvider,
@@ -1180,17 +1180,19 @@ Provide only the generated text without any additional commentary.`;
 
     const choice = data.choices[0];
     const message = choice.message;
+    const inline = parseInlineTags(message.content ?? '');
 
     return {
-      content: message.content ?? '',
-      reasoning: extractMessageReasoning(
-        message as {
-          content?: string;
-          reasoning_content?: string;
-          reasoning?: string;
-          reasoning_details?: Array<{ type?: string; text?: string }>;
-        }
-      ),
+      content: inline.text,
+      reasoning:
+        extractMessageReasoning(
+          message as {
+            content?: string;
+            reasoning_content?: string;
+            reasoning?: string;
+            reasoning_details?: Array<{ type?: string; text?: string }>;
+          }
+        ) ?? (inline.reasoning || undefined),
       finishReason: choice.finish_reason ?? null,
       toolCalls: normalizeMessageToolCalls(message.tool_calls),
       provider: typeof data.provider === 'string' ? data.provider : undefined,

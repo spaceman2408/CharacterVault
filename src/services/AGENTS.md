@@ -34,7 +34,7 @@ The lorebook tool-loop agent lives in `src/agent/` (not this folder). `AIService
 3. Build body (`buildChatCompletionBody`: sampler, reasoning flags, capability-cache sanitize).
 4. `sendRequest`. On 400, `repairChatRequest` / strip non-standard params and retry (few attempts).
 5. Stream: SSE `data:` lines → `ReasoningParser.parseChunk` → `onChunk({ content?, reasoning? })`.
-6. Non-stream: `extractMessageReasoning` on the final assistant message.
+6. Non-stream: `extractMessageReasoning` on the final assistant message, and `parseInlineTags` moves think tags out of the content like the stream does (the reasoning field wins over tag text).
 
 Streaming and UI use separate content and reasoning deltas.
 
