@@ -25,7 +25,6 @@ import { estimateCharacterCardTokens, formatTokenEstimate } from '../../services
 import { characterExportService } from '../../services/CharacterExportService';
 import { characterSnapshotService } from '../../services/CharacterSnapshotService';
 import { customContextService } from '../../services/CustomContextService';
-import { lorebookAttachmentService } from '../../services/LorebookAttachmentService';
 import { showEphemeralToast } from '../../utils/ephemeralToast';
 import {
   ArrowLeft,
@@ -1019,16 +1018,6 @@ function CharacterWorkspaceInner({
         extensions: character.data.extensions,
       },
     });
-    if (!update.book) return;
-    try {
-      await lorebookAttachmentService.syncEmbeddedIfAttached(
-        character.id,
-        update.book,
-        spec.name?.trim() || character.name,
-      );
-    } catch (error) {
-      console.error('Failed to sync embedded lorebook to the attached vault book:', error);
-    }
   }, [currentCharacter, flushPendingSaves, updateCharacter]);
 
   const getAgentCustomContext = useCallback(async (): Promise<string | null> => {

@@ -171,23 +171,6 @@ export class LorebookAttachmentService {
   }
 
   /**
-   * If this character has a vault lorebook attached, overwrite that vault book
-   * and every other linked character. Does not rewrite the source character.
-   */
-  async syncEmbeddedIfAttached(
-    characterId: string,
-    embedded: CharacterBook,
-    fallbackName: string,
-  ): Promise<boolean> {
-    const { lorebookIds } = await this.getAttachments(characterId);
-    const lorebookId = lorebookIds.length > 0 ? lorebookIds[lorebookIds.length - 1] : undefined;
-    if (!lorebookId) return false;
-    if (!(await characterDb.hasLorebook(lorebookId))) return false;
-    await this.writeEmbeddedToVault(lorebookId, embedded, fallbackName, characterId);
-    return true;
-  }
-
-  /**
    * After a card save, push its lorebook to the attached vault book and the
    * other linked characters. Only pushes when the card matched the vault book
    * before this save, so a card linked without copying keeps its own entries
