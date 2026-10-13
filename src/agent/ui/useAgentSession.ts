@@ -625,7 +625,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     };
   }, [abortInFlight, chatOwnerType, chatOwnerId, chatPanel, noteInterruptedRun]);
 
-  const handleLoadOlder = useCallback(async () => {
+  const loadOlderBefore = useCallback(async (beforeSeq: number | undefined) => {
     if (
       loadOlderLockRef.current
       || hydratingRef.current
@@ -635,8 +635,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     }
     const generation = hydrateGenerationRef.current;
     const thread = threadRef();
-    const oldest = chatHistoryRef.current[0];
-    const beforeSeq = oldest ? seqByIdRef.current.get(oldest.id) : undefined;
     if (!thread.ownerId || beforeSeq == null) return;
     if (chatHistoryRef.current.length >= CHAT_UI_HARD_WINDOW) return;
 
@@ -692,6 +690,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     }
   }, []);
 
+  const handleLoadOlder = useCallback(async () => {
+    const oldest = chatHistoryRef.current[0];
+    await loadOlderBefore(oldest ? seqByIdRef.current.get(oldest.id) : undefined);
+  }, [loadOlderBefore]);
+
   const handleDeleteMessage = useCallback((messageId: string) => {
     if (isProcessingRef.current) return;
     const history = chatHistoryRef.current;
@@ -721,8 +724,10 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     setLivePromptTokens(null);
     if (fromSeq != null) {
       void chatHistoryService.deleteFrom(threadRef(), fromSeq);
+      // An empty window hides "Load earlier messages", so bring the older saved rows back now.
+      if (nextHistory.length === 0 && hasOlderRef.current) void loadOlderBefore(fromSeq);
     }
-  }, []);
+  }, [loadOlderBefore]);
 
   const startRun = useCallback(
     async (question: string, priorHistory: ChatMessage[]) => {
