@@ -1,5 +1,5 @@
 import { isValidToolName, parseActions } from './parseActions';
-import { pruneMessagesToBudget } from './pruneMessages';
+import { CONTINUE_NUDGE, pruneMessagesToBudget } from './pruneMessages';
 import { stripFences } from './stripFences';
 import { mapNativeToolCalls } from './toolCalls';
 import { formatToolResults, hasNativeToolTurns, nativeToXmlMessages } from './xmlHistory';
@@ -18,9 +18,6 @@ import type {
 export const DEFAULT_MAX_TURNS = 32;
 export const DEFAULT_MAX_ACTIONS_PER_TURN = 12;
 export const AGENT_MAX_OUTPUT_TOKENS = 16384;
-
-const CONTINUE_NUDGE =
-  'Your last tool_call was cut off (output length). Continue exactly from the cutoff and close </tool_call>. Do not repeat completed calls.';
 
 export function isToolsUnsupportedError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;

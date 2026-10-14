@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CONTINUE_NUDGE,
   pruneMessagesToBudget,
   TOOL_RESULTS_PREFIX,
   TRUNCATION_SUFFIX,
@@ -142,7 +143,7 @@ describe('pruneMessagesToBudget drop phase', () => {
     ]);
   });
 
-  it('pins the latest user request while dropping older history singletons', () => {
+  it('keeps the previous request at run start while older history singletons drop', () => {
     const messages: AgentMessage[] = [
       sys(),
       user('stale history one'),
@@ -160,6 +161,37 @@ describe('pruneMessagesToBudget drop phase', () => {
       'go',
     ]);
     expectValidPairing(pruned);
+  });
+
+  it('drops the previous request last at run start when it alone is too big', () => {
+    const previous = 'P'.repeat(5000);
+    const messages: AgentMessage[] = [
+      sys(),
+      user('stale history one'),
+      user(previous),
+      ...nativeExchange('only', 'body'),
+      user('go'),
+    ];
+    const budget = charMeasure([sys(), ...nativeExchange('only', 'body'), user('go')]);
+    const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
+    expect(pruned.map((m) => m.content)).toEqual(['system prompt', '', 'body', 'go']);
+    expectValidPairing(pruned);
+  });
+
+  it('keeps the current request, not the continue nudge, when continuing a cut-off call', () => {
+    const cutOff = '<tool_call>\nupdate_entry\nid: 4\n---\nHalf';
+    const messages: AgentMessage[] = [
+      sys(),
+      user('earlier run request'),
+      { role: 'assistant', content: 'Earlier run reply.' },
+      user('current request'),
+      ...xmlExchange('one', 'A'.repeat(1000)),
+      { role: 'assistant', content: cutOff },
+      user(CONTINUE_NUDGE),
+    ];
+    const budget = charMeasure([sys(), { role: 'assistant', content: cutOff }, user(CONTINUE_NUDGE)]);
+    const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
+    expect(pruned.map((m) => m.content)).toEqual(['system prompt', 'current request', cutOff, CONTINUE_NUDGE]);
   });
 
   it('keeps the current request over earlier runs mid-run, in order', () => {

@@ -3,6 +3,10 @@ import type { AgentMessage } from './types';
 /** Prefix runLoop uses for XML-mode tool-result blobs. */
 export const TOOL_RESULTS_PREFIX = 'Tool results:\n';
 
+/** User message runLoop appends to ask for the rest of a cut-off XML tool call. */
+export const CONTINUE_NUDGE =
+  'Your last tool_call was cut off (output length). Continue exactly from the cutoff and close </tool_call>. Do not repeat completed calls.';
+
 /** Absolute ceiling for one retained tool-result body (tokens). */
 export const DEFAULT_MAX_HOG_TOKENS = 32000;
 /** One older message may keep at most this share of the total budget. */
@@ -95,8 +99,10 @@ function groupMiddle(messages: AgentMessage[], last: number): AgentMessage[][] {
  * minimum itself is over budget, the newest exchange's tool bodies (with the
  * trailing tool result or result blob mid-run) are trimmed just enough to
  * fit. Pinned throughout: the system message, the
- * latest user request (never a result blob; earlier runs' requests come
- * before it), the trailing message, and at least the newest exchange group.
+ * latest user request before the trailing message (never a result blob or
+ * continue nudge; earlier runs' requests come before it; at run start, when
+ * the trailing message is the request, it is dropped last instead of kept),
+ * the trailing message, and at least the newest exchange group.
  * Messages keep their order.
  * Pure: never mutates the input; returns it untouched when under budget.
  */
@@ -114,9 +120,12 @@ export function pruneMessagesToBudget(
 
   const pinnedFirst = messages[0];
   const pinnedLast = messages[messages.length - 1];
+  const isRequest = (message: AgentMessage) =>
+    message.role === 'user' && !isResultBlob(message) && message.content !== CONTINUE_NUDGE;
+  const requestIsLast = isRequest(pinnedLast);
   let pinnedRequest: AgentMessage | null = null;
   for (let i = messages.length - 2; i >= 1; i -= 1) {
-    if (messages[i].role === 'user' && !isResultBlob(messages[i])) {
+    if (isRequest(messages[i])) {
       pinnedRequest = messages[i];
       break;
     }
@@ -144,7 +153,13 @@ export function pruneMessagesToBudget(
     const oldest = groups.findIndex(
       (group, index) => index < groups.length - 1 && group[0] !== pinnedRequest,
     );
-    if (oldest === -1) break;
+    if (oldest === -1) {
+      // At run start the pinned request is an earlier run's (the current one is
+      // trailing), so it may go last; mid-run it is the current one and stays.
+      if (!requestIsLast || !pinnedRequest) break;
+      pinnedRequest = null;
+      continue;
+    }
     groups = groups.filter((_, index) => index !== oldest);
   }
 
