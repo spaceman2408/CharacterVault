@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.8.4
-Pin and rank OpenRouter hosts, filter for privacy or free models, and merge a library lorebook into a character.
+::: tip CharacterVault 1.8.5
+The Agent warns before you leave mid-run, can remember what it wrote earlier, and picks real names that fit the setting.
 
-[Try it](https://vault.charactervault.app) · [OpenRouter Options](/configuration/ai-setup#openrouter-options) · [Lorebook merge](/features/lorebook-vault#merge-into-existing-entries)
+[Try it](https://vault.charactervault.app) · [Leaving mid-run](/features/ai-agent#leaving-mid-run) · [Remember earlier edits](/features/ai-agent#remember-earlier-edits)
 :::
 
 # CharacterVault

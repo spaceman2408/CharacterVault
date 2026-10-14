@@ -69,6 +69,16 @@ That lorebook Agent does not edit character spec fields. For description, greeti
 
 Same lorebook entry and settings tools as above, for the vault book you have open.
 
+### Character names {#character-names}
+
+Ask for a rename or new characters without giving names, for example *add her two brothers, they grew up in 1920s Kraków*, and the Agent picks real names that fit the setting instead of making them up.
+
+- Names come from lists for 44 origins, from Polish and Italian to Yoruba and Vietnamese. Japanese names come romanized (*Sato*, *Yuko*).
+- It never suggests a name already on the card or in its lorebook.
+- For an invented culture (*a desert clan*, *a forest elf village*) it makes up names that share one sound across the group.
+
+Both the character Agent and the lorebook Agent do this. Give the names yourself if you already have them.
+
 ### What it can check
 
 Ask it to check the card or book and it runs read-only reports. Nothing is written.
@@ -114,6 +124,14 @@ Catalogs in the prompt are built at the **start** of the run. After names or key
 
 The Agent remembers earlier requests in the same chat. Each past run carries a short note on what it changed, whether you applied or discarded its review, and whether it hit the turn limit, so “undo that” or “do the same for greeting 2” work. Full text is never resent; the Agent reads the current card again when it needs to. **New chat** starts over.
 
+### Remember earlier edits {#remember-earlier-edits}
+
+To let the Agent see exactly what it wrote in earlier runs, turn on **Settings → Character Workspace → Agent edits → Remember earlier edits in the chat** (off by default) and save. Each earlier run's edits then go back to the Agent as the calls it made, so *reword the second sentence you just wrote* works without a search.
+
+- The character and lorebook Agent share this setting. It also covers runs from before you turned it on.
+- Interrupted runs, runs saved before 1.8.5, and runs larger than a quarter of the input budget still get the short note.
+- The replayed edits count toward the context meter. Turn it off if long threads crowd a small context.
+
 ### What you see in chat
 
 - **Tool lines:** color-coded list / read / write results, including lorebook entry ids. Click a successful write to open that field, greeting, or lorebook entry.
@@ -141,6 +159,12 @@ The thread is stored in the browser with the vault. Long threads keep a small wi
 - **@-mentions:** type `@` to pick a field, alternate greeting, or lorebook entry. It inserts plain text such as `@Description`, `@Greeting 2`, or `@“Harbor” (#4)`, and the Agent reads it as that item. **↑** / **↓** move, **Enter** or **Tab** picks, **Esc** closes the list.
 
 If you Stop while it is still thinking, Send is available again so you can retry or type a new ask.
+
+### Leaving mid-run {#leaving-mid-run}
+
+A run only writes when it finishes, and a waiting review only writes when you apply it. So refreshing or closing the tab while a run is going, or while a review is waiting, makes the browser ask first. That also happens with the tab in the background. With the Agent idle, the page leaves without asking.
+
+If you leave anyway (refresh mid-run, refresh with a review waiting, or go back to the library with a review waiting), those edits are lost. When you reopen the chat, that run says **Interrupted by leaving or refreshing the page**. Its write lines show struck through as **Not saved**, and the Agent is told nothing from that run landed. Ask again to redo the work.
 
 ## Context meter
 
@@ -197,7 +221,7 @@ A shield icon in the chat header shows while this is on. Character Agent and lor
 When a run that changed something finishes, **Review agent edits** opens instead of writing:
 
 - Each field, greeting, and lorebook change is a row with an **Original / Agent** diff and `+added` / `−removed` word counts. On wider screens the two sides sit next to each other, aligned line by line; on phones the diff is one inline column. Reworded lines highlight only the words that changed. Runs of unchanged lines fold behind **Show N unchanged lines**. Lines that changed too much, and very long texts, show as whole removed and added lines.
-- Greeting changes are labeled: an added greeting shows as **New alternate greeting** with an empty **Original**, a deleted one as **Deleted alternate greeting**, and a **Greetings list** rewrite shows per-greeting blocks with `+N` / `−N` greeting counts and **New** / **Removed** badges. When editing a Greetings list change, separate greetings with a line containing only `---`.
+- Greeting changes are labeled: an added greeting shows as **New alternate greeting** with an empty **Original**, a deleted one as **Deleted alternate greeting**, and a **Greetings list** rewrite shows per-greeting blocks with `+N` / `−N` greeting counts and **New** / **Removed** badges. When editing a Greetings list change, separate greetings with a line containing only `---`, or a longer dash line when a greeting already has a `---` scene break. The hint under the box shows which.
 - Approve or deny per change. **Approve all** / **Deny all** set every row. Denied rows stay in the list but are not applied.
 - Expand an approved change to **edit** the proposed text (and lorebook keys) before it lands.
 - **Apply N** takes **one snapshot**, then writes only the approved rows (it is disabled when nothing is approved). **Discard all** throws the whole proposal away after a **Confirm discard** step.
