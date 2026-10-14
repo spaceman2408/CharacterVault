@@ -211,6 +211,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const hydratingRef = useRef(Boolean(chatOwnerId));
   const historyReadyRef = useRef(!chatOwnerId);
   const loadOlderLockRef = useRef(false);
+  const refillRef = useRef<Promise<void> | null>(null);
   const chatOwnerTypeRef = useRef(chatOwnerType);
   const chatOwnerIdRef = useRef(chatOwnerId);
   const chatPanelRef = useRef(chatPanel);
@@ -746,7 +747,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     if (fromSeq != null) {
       void chatHistoryService.deleteFrom(threadRef(), fromSeq);
       // An empty window hides "Load earlier messages", so bring the older saved rows back now.
-      if (nextHistory.length === 0 && hasOlderRef.current) void loadOlderBefore(fromSeq);
+      if (nextHistory.length === 0 && hasOlderRef.current) refillRef.current = loadOlderBefore(fromSeq);
     }
   }, [loadOlderBefore]);
 
@@ -1063,6 +1064,13 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       if (!trimmed) {
         await handleRegenerate();
         return;
+      }
+      // Edit-and-send deletes first; let the older rows that delete pages back land before the new turn.
+      const refill = refillRef.current;
+      if (refill) {
+        refillRef.current = null;
+        await refill;
+        if (leavingRef.current || isProcessingRef.current || hydratingRef.current) return;
       }
 
       const userMessage: ChatMessage = {
