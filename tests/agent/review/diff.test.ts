@@ -454,4 +454,16 @@ describe('parseGreetingsFromEdit', () => {
     const merged = applySpecDecisions(original, changes, { greetings: { approved: true, edited } });
     expect(merged?.alternate_greetings).toEqual(['Dawn.\n---\nDusk.', 'Snow.']);
   });
+
+  it('keeps a CRLF --- scene break inside a greeting once the textarea turns it into LF', () => {
+    const original = spec({ alternate_greetings: ['Dawn.\r\n---\r\nDusk.', 'Rain.', 'Gone.'] });
+    const proposed = spec({ alternate_greetings: ['Dawn.\r\n---\r\nDusk.', 'Rain.'] });
+    const changes = diffSpecChanges(original, proposed);
+    const change = changes.find((row) => row.kind === 'greetings');
+    if (change?.kind !== 'greetings') throw new Error('expected a greetings change');
+    expect(greetingsEditSeparator(change.after)).toBe('----');
+    const edited = formatGreetingsForEdit(change.after).replace(/\r\n/g, '\n').replace('Rain.', 'Snow.');
+    const merged = applySpecDecisions(original, changes, { greetings: { approved: true, edited } });
+    expect(merged?.alternate_greetings).toEqual(['Dawn.\n---\nDusk.', 'Snow.']);
+  });
 });

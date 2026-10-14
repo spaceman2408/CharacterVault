@@ -258,7 +258,7 @@ export function countApproved(decisions: ReviewDecisions): number {
 
 /** The shortest dash line (`---` or longer) that is no line of any greeting, so `---` scene breaks survive an edit. */
 export function greetingsEditSeparator(greetings: string[]): string {
-  const lines = new Set(greetings.flatMap((greeting) => greeting.split('\n')));
+  const lines = new Set(greetings.flatMap((greeting) => greeting.split(/\r?\n/)));
   let separator = '---';
   while (lines.has(separator)) separator += '-';
   return separator;
