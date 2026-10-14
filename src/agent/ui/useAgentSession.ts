@@ -1038,7 +1038,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     setToolEventsByMessageId(nextEvents);
     const nextErrors: Record<string, string> = {};
     for (const [id, message] of Object.entries(errorByMessageIdRef.current)) {
-      if (keepIds.has(id) && id !== lastUser.id) nextErrors[id] = message;
+      if (keepIds.has(id)) nextErrors[id] = message;
     }
     errorByMessageIdRef.current = nextErrors;
     setErrorByMessageId(nextErrors);

@@ -58,4 +58,37 @@ describe('useAgentSession notices', () => {
     expect(saved).toBeDefined();
     expect(saved?.error).toBeUndefined();
   });
+
+  it('clears a failed request error on disk when it is regenerated', async () => {
+    vi.spyOn(chatHistoryService, 'loadTail').mockResolvedValue({
+      messages: [stored('u1', 1, 'user', 'Go', 'Request failed (401)')],
+      hasMore: false,
+    });
+    const puts: StoredChatMessage[] = [];
+    vi.spyOn(chatHistoryService, 'put').mockImplementation(async (row) => {
+      puts.push(row);
+    });
+    vi.spyOn(AIService.prototype, 'chat').mockResolvedValue({ content: 'Done.' });
+    const { result } = renderHook(() =>
+      useAgentSession({
+        aiConfig: { ...DEFAULT_SETTINGS.ai, baseUrl: 'http://notices.test/v1', modelId: 'mock', enableStreaming: false },
+        samplerSettings: DEFAULT_SETTINGS.sampler,
+        promptSettings: DEFAULT_SETTINGS.prompts,
+        createHost: host,
+        flushDraft: () => undefined,
+        lookupToolNames: new Set(),
+        chatOwnerType: 'lorebook',
+        chatOwnerId: 'book-1',
+      }),
+    );
+    await waitFor(() => expect(result.current.errorByMessageId).toEqual({ u1: 'Request failed (401)' }));
+
+    await act(async () => {
+      await result.current.handleRegenerate();
+    });
+    expect(result.current.errorByMessageId).toEqual({});
+    const saved = puts.filter((row) => row.id === 'u1').at(-1);
+    expect(saved).toBeDefined();
+    expect(saved?.error).toBeUndefined();
+  });
 });
