@@ -16,7 +16,7 @@ import type {
 } from './types';
 
 export const DEFAULT_MAX_TURNS = 32;
-export const DEFAULT_MAX_ACTIONS_PER_TURN = 12;
+export const DEFAULT_MAX_ACTIONS_PER_TURN = 24;
 export const AGENT_MAX_OUTPUT_TOKENS = 16384;
 
 export function isToolsUnsupportedError(error: unknown): boolean {

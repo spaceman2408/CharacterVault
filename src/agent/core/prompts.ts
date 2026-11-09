@@ -1,3 +1,4 @@
+import { DEFAULT_MAX_ACTIONS_PER_TURN } from './runLoop';
 import type { AgentToolMode } from './types';
 
 export const ACTION_SYNTAX = `Use XML:
@@ -34,7 +35,7 @@ export function formatAgentToolGuide(
 
 ${toolList}
 
-You may emit up to 12 actions per reply, then wait for tool results. Finish each call with complete JSON arguments before starting the next.
+You may emit up to ${DEFAULT_MAX_ACTIONS_PER_TURN} actions per reply, then wait for tool results. Finish each call with complete JSON arguments before starting the next.
 
 ${HISTORY_NOTES_GUIDE}
 
@@ -44,7 +45,7 @@ ${MENTIONS_GUIDE}`;
 
 ${toolList}
 
-You may emit up to 12 actions per reply, then wait for tool results. Close every </tool_call> before starting the next.
+You may emit up to ${DEFAULT_MAX_ACTIONS_PER_TURN} actions per reply, then wait for tool results. Close every </tool_call> before starting the next.
 
 ${HISTORY_NOTES_GUIDE}
 

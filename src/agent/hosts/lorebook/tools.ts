@@ -40,7 +40,7 @@ export const LOREBOOK_TOOL_NAMES = [
 export type LorebookToolName = (typeof LOREBOOK_TOOL_NAMES)[number];
 
 export const MAX_NEW_ENTRIES_PER_RUN = 50;
-export const MAX_UPDATES_PER_RUN = 50;
+export const MAX_UPDATES_PER_RUN = 150;
 export const MAX_DELETES_PER_RUN = 50;
 
 export { parseCommaList };
