@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.8.6 staging 1';
+export const STAGING_VERSION = 'v1.8.6 staging 2';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -34,4 +34,6 @@ export const STAGING_TEST_NOTES: string[] = [
   'Agent with a DeepSeek or Kimi thinking model → ask for an edit that takes a few tool calls: the run should get past its first tool call instead of failing with an error about reasoning_content. Try it with "Remember earlier edits in the chat" on as well, over two or three runs.',
   'OpenAI reasoning models (o-series, GPT-5) on api.openai.com → chat with Orion and run the agent: replies should keep your Max Tokens limit instead of failing or ignoring it.',
   'OpenRouter → if a model errors partway through a reply, you should see the provider’s error instead of a cut-off reply shown as finished.',
+  'Settings → AI Config → new presets: Moonshot (Kimi), Z.ai (GLM), Z.ai Coding Plan and DeepSeek. If you have a key for one, fetch models, chat with Orion and run the agent on it. Note anything that errors or ignores the Reasoning toggle.',
+  'Settings → AI Config → pick a provider (or Custom URL) and a model, then "Save as preset" under the URL. Save a few on OpenRouter with different models: each shows under Saved, picking one switches to its model, and they all share one OpenRouter key. "Remove preset" asks first. Clear AI Settings keeps saved presets but drops their keys.',
 ];
