@@ -8,6 +8,7 @@ import {
 } from '../../../src/components/settings/hooks/useSettingsDraft';
 import {
   DEFAULT_CHARACTER_VAULT_SETTINGS,
+  DEFAULT_SETTINGS,
   type CharacterVaultSettings,
 } from '../../../src/db/characterTypes';
 import { characterSettingsService } from '../../../src/services/CharacterSettingsService';
@@ -47,6 +48,35 @@ describe('useSettingsDraft', () => {
     act(() => hook.result.current.retryLoad());
     await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
     expect(hook.result.current.loadFailed).toBe(false);
+  });
+
+  it('keeps saved presets but drops keys when AI settings are cleared', async () => {
+    const MINE = 'https://my.host/v1';
+    vi.spyOn(characterSettingsService, 'getSettings').mockResolvedValue({
+      ...DEFAULT_CHARACTER_VAULT_SETTINGS,
+      id: 'app-settings',
+    });
+    vi.spyOn(characterSettingsService, 'getAISettings').mockResolvedValue({
+      ...DEFAULT_SETTINGS.ai,
+      baseUrl: MINE,
+      apiKey: 'sk-mine',
+      apiKeysByBaseUrl: { [MINE]: 'sk-mine' },
+      customBaseUrlPresets: [{ label: 'Mine', baseUrl: MINE }],
+    });
+    vi.spyOn(characterSettingsService, 'clearAISettings').mockResolvedValue();
+
+    const { hook } = setup();
+    await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+    await act(async () => {
+      await hook.result.current.clearAISettings();
+    });
+
+    const { ai } = hook.result.current.draft;
+    expect(ai.customBaseUrlPresets).toEqual([{ label: 'Mine', baseUrl: MINE }]);
+    expect(ai.apiKey).toBe('');
+    expect(ai.apiKeysByBaseUrl).toEqual({});
+    expect(ai.baseUrl).toBe(DEFAULT_SETTINGS.ai.baseUrl);
+    expect(hook.result.current.isDirty).toBe(false);
   });
 
   describe('isDirty', () => {

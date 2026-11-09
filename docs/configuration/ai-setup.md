@@ -34,7 +34,7 @@ Close the panel with **Cancel** or `Escape`. If you have unsaved changes, it ask
 
 ### Security Notice
 
-At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to reset all AI configuration to defaults — your characters are not affected. A confirmation step prevents accidental clears. The clear happens immediately (no Save needed) and removes saved keys for **every** provider, not just the current one, along with remembered models, the NanoGPT and OpenRouter options, and the streaming/reasoning toggles. Prompt templates, **per-prompt model mappings**, and the **Agent** model mapping on the Prompts tab are kept (they do not store secrets).
+At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to reset all AI configuration to defaults — your characters are not affected. A confirmation step prevents accidental clears. The clear happens immediately (no Save needed) and removes saved keys for **every** provider, not just the current one, along with remembered models, the NanoGPT and OpenRouter options, and the streaming/reasoning toggles. [Saved presets](#saved-presets) stay in the dropdown, but without their keys. Prompt templates, **per-prompt model mappings**, and the **Agent** model mapping on the Prompts tab are kept (they do not store secrets).
 
 ### API Base URL
 
@@ -54,6 +54,20 @@ Choose a provider preset from the dropdown, or select **Custom URL** to type in 
 | **Custom URL** | Any URL | Any OpenAI-compatible endpoint (e.g., a self-hosted API). |
 
 Nano-GPT is selected by default. When you switch presets, the text field below updates. Each base URL keeps its own saved key and model, so you can switch between providers without re-entering them.
+
+#### Saved presets {#saved-presets}
+
+A saved preset remembers an endpoint and the model you picked, under a name of your choice. Use them to keep a custom endpoint in the dropdown, or to switch between favorite models on one provider, such as Kimi, GLM and DeepSeek on OpenRouter.
+
+1. Pick a preset or **Custom URL** and enter the URL.
+2. Pick a model.
+3. Click **Save as preset** under the URL field. The name starts as the provider and model, like `OpenRouter · kimi-k3`. Press **Enter** or **Save preset**.
+
+It appears under **Saved** in the dropdown. Picking it switches to that endpoint and model. Presets on the same endpoint share its key, so you enter an OpenRouter key once for all your OpenRouter presets. A custom endpoint saved before you pick a model uses whichever model you last chose for it. If you change the model while a saved preset is selected, the dropdown goes back to the plain provider (or **Custom URL**), and **Save as preset** saves the new pair.
+
+The Prompts tab's endpoint list shows saved custom endpoints by name. Choose the model there as usual.
+
+To remove one, pick it and click **Remove preset**, then confirm. Only the preset goes away: the URL, key and model stay as they are. Saving and removing take effect when you click **Save Settings**.
 
 Next to **Get your key**, the Nano-GPT and Synthetic presets also show **New? Sign up (referral)**. That's a referral link: signing up through it supports CharacterVault, and you get a perk too. On NanoGPT you get 5% off usage. On Synthetic you get $10 in subscription credit when you subscribe (it doesn't stack with other offers). Use the provider's plain site if you prefer.
 

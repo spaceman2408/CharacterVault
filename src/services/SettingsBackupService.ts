@@ -30,7 +30,11 @@ import {
   normalizeStudioSettings,
   normalizeToolbarConfig,
 } from '../db/characterTypes';
-import { getStoredApiKey, normalizeBaseUrl } from '../utils/aiBaseUrl';
+import {
+  getStoredApiKey,
+  normalizeBaseUrl,
+  normalizeCustomBaseUrlPresets,
+} from '../utils/aiBaseUrl';
 import { MAX_FONT_SIZE, MIN_FONT_SIZE } from '../editor/extensions/fontSizeControl';
 import { persistableAIConfig } from './CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from './resolveOperationConfig';
@@ -159,6 +163,7 @@ function normalizeBackupAI(value: unknown): AIConfig {
         ? (raw.reasoningEffort as AIConfig['reasoningEffort'])
         : DEFAULT_SETTINGS.ai.reasoningEffort,
     lastCustomBaseUrl: asString(raw.lastCustomBaseUrl, ''),
+    customBaseUrlPresets: normalizeCustomBaseUrlPresets(raw.customBaseUrlPresets),
     selectedProvider: typeof raw.selectedProvider === 'string' ? raw.selectedProvider : undefined,
     providerByModelId: asStringMap(raw.providerByModelId),
     subscriptionModelsOnly: asBoolean(

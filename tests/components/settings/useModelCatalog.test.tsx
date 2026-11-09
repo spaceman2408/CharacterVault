@@ -213,4 +213,120 @@ describe('useModelCatalog', () => {
       expect(hook.result.current.draft.ai.apiKey).toBe('sk-custom');
     });
   });
+
+  describe('saved presets', () => {
+    const MINE = 'https://my.host/v1';
+
+    it('saves the current custom URL and selects it by name', () => {
+      const hook = setup({ baseUrl: `${MINE}/`, apiKey: 'sk-mine' });
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('custom');
+
+      act(() => hook.result.current.catalog.saveCustomPreset('  Mine  '));
+
+      expect(hook.result.current.draft.ai.customBaseUrlPresets).toEqual([
+        { label: 'Mine', baseUrl: MINE },
+      ]);
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('saved:0');
+    });
+
+    it('saves a preset per model on a built-in endpoint, sharing its key', () => {
+      const KIMI = 'moonshotai/kimi-k3';
+      const GLM = 'z-ai/glm-5.3';
+      const hook = setup({
+        baseUrl: OPENROUTER,
+        apiKey: 'sk-or',
+        modelId: KIMI,
+        apiKeysByBaseUrl: { [OPENROUTER]: 'sk-or' },
+      });
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('openrouter');
+
+      act(() => hook.result.current.catalog.saveCustomPreset(''));
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('saved:0');
+
+      act(() => hook.result.current.catalog.handleModelChange(GLM));
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('openrouter');
+      act(() => hook.result.current.catalog.saveCustomPreset('GLM'));
+
+      const presets = hook.result.current.draft.ai.customBaseUrlPresets ?? [];
+      expect(presets).toEqual([
+        { label: 'OpenRouter · kimi-k3', baseUrl: OPENROUTER, modelId: KIMI },
+        { label: 'GLM', baseUrl: OPENROUTER, modelId: GLM },
+      ]);
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('saved:1');
+
+      act(() => hook.result.current.catalog.handleBaseUrlChange(NANO, true));
+      act(() => hook.result.current.catalog.selectSavedPreset(presets[0]));
+      const { ai } = hook.result.current.draft;
+      expect(ai.baseUrl).toBe(OPENROUTER);
+      expect(ai.apiKey).toBe('sk-or');
+      expect(ai.modelId).toBe(KIMI);
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('saved:0');
+    });
+
+    it('names a preset after its host when the name is blank, and never saves a built-in', () => {
+      const hook = setup({ baseUrl: MINE });
+      act(() => hook.result.current.catalog.saveCustomPreset(''));
+      expect(hook.result.current.draft.ai.customBaseUrlPresets).toEqual([
+        { label: 'my.host', baseUrl: MINE },
+      ]);
+
+      act(() => hook.result.current.catalog.handleBaseUrlChange(NANO, true));
+      act(() => hook.result.current.catalog.saveCustomPreset('Nano again'));
+      expect(hook.result.current.draft.ai.customBaseUrlPresets).toHaveLength(1);
+    });
+
+    it('restores the saved key and model when the preset is picked again', () => {
+      const hook = setup({
+        customBaseUrlPresets: [{ label: 'Mine', baseUrl: MINE }],
+        apiKeysByBaseUrl: { [NANO]: 'sk-nano', [MINE]: 'sk-mine' },
+        modelIdsByBaseUrl: { [MINE]: 'mine-model' },
+      });
+      act(() => hook.result.current.catalog.handleBaseUrlChange(MINE, true));
+
+      const { ai } = hook.result.current.draft;
+      expect(ai.apiKey).toBe('sk-mine');
+      expect(ai.modelId).toBe('mine-model');
+    });
+
+    it('never carries a saved preset key to an edited URL', () => {
+      const hook = setup({
+        baseUrl: MINE,
+        apiKey: 'sk-mine',
+        customBaseUrlPresets: [{ label: 'Mine', baseUrl: MINE }],
+        apiKeysByBaseUrl: { [MINE]: 'sk-mine' },
+      });
+      act(() => hook.result.current.catalog.handleCustomUrlChange('https://my.host/v2'));
+
+      const { ai } = hook.result.current.draft;
+      expect(ai.apiKey).toBe('');
+      expect(ai.apiKeysByBaseUrl).toEqual({ [MINE]: 'sk-mine' });
+    });
+
+    it('does not remember a saved preset as the last custom URL', () => {
+      const hook = setup({
+        baseUrl: MINE,
+        lastCustomBaseUrl: 'https://other.host/v1',
+        customBaseUrlPresets: [{ label: 'Mine', baseUrl: MINE }],
+      });
+      act(() => hook.result.current.catalog.handleBaseUrlChange(NANO, true));
+      expect(hook.result.current.draft.ai.lastCustomBaseUrl).toBe('https://other.host/v1');
+    });
+
+    it('removes a preset but keeps its stored key', () => {
+      const hook = setup({
+        baseUrl: MINE,
+        apiKey: 'sk-mine',
+        customBaseUrlPresets: [{ label: 'Mine', baseUrl: MINE }],
+        apiKeysByBaseUrl: { [MINE]: 'sk-mine' },
+      });
+      act(() =>
+        hook.result.current.catalog.removeCustomPreset({ label: 'Mine', baseUrl: `${MINE}/` })
+      );
+
+      const { ai } = hook.result.current.draft;
+      expect(ai.customBaseUrlPresets).toEqual([]);
+      expect(ai.apiKeysByBaseUrl).toEqual({ [MINE]: 'sk-mine' });
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('custom');
+    });
+  });
 });

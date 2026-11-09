@@ -9,6 +9,7 @@ import {
   Brain,
   CreditCard,
   Gauge,
+  Bookmark,
   Key,
   Loader2,
   LogIn,
@@ -20,8 +21,14 @@ import {
 } from 'lucide-react';
 import {
   AI_BASE_URL_PRESETS,
+  SAVED_PRESET_PREFIX,
+  builtinPresetForUrl,
+  findSavedPreset,
   getStoredApiKey,
   getStoredModelId,
+  isPresetUrl,
+  normalizeBaseUrl,
+  suggestPresetLabel,
 } from '../config/aiBaseUrlPresets';
 import { ModelSelect } from '../components/ModelSelect';
 import { NanoGPTAccountOverview } from '../components/NanoGPTAccountOverview';
@@ -36,7 +43,13 @@ import { getOpenRouterPinnedHost, isOpenRouterBaseUrl } from '../../../services/
 import { getHiddenChainOfThoughtNote } from '../../../services/reasoning/hiddenChainOfThought';
 import type { SettingsTabProps } from '../types';
 
+const smallButtonClass =
+  'inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50';
+
 export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpers }) => {
+  const [naming, setNaming] = React.useState<{ key: string; label: string } | null>(null);
+  const [removingKey, setRemovingKey] = React.useState<string | null>(null);
+
   if (!helpers) return null;
 
   const {
@@ -58,6 +71,9 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
     handleApiKeyChange,
     handleModelChange,
     handleProviderChange,
+    selectSavedPreset,
+    saveCustomPreset,
+    removeCustomPreset,
     handleClearAISettings,
     startSignIn,
   } = helpers;
@@ -66,6 +82,29 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
   const hiddenCotNote = getHiddenChainOfThoughtNote(localAIConfig.modelId);
   const isOpenRouter = isOpenRouterBaseUrl(localAIConfig.baseUrl);
   const openRouterPin = isOpenRouter ? getOpenRouterPinnedHost(localAIConfig) : undefined;
+  const savedPresets = localAIConfig.customBaseUrlPresets ?? [];
+  const currentUrl = normalizeBaseUrl(localAIConfig.baseUrl);
+  const currentModel = localAIConfig.modelId;
+  const builtinPreset = builtinPresetForUrl(currentUrl);
+  const builtinId = builtinPreset?.id;
+  const savedPreset = findSavedPreset(savedPresets, currentUrl, currentModel);
+  const currentKey = `${currentUrl}
+${currentModel}`;
+  const savedPresetKey = savedPreset ? `${savedPreset.baseUrl}
+${savedPreset.modelId ?? ''}` : '';
+  const isAlreadySaved = savedPresets.some(
+    (preset) =>
+      normalizeBaseUrl(preset.baseUrl) === currentUrl && (preset.modelId ?? '') === currentModel
+  );
+  const canSavePreset = !!currentUrl && !isAlreadySaved && (!builtinPreset || !!currentModel);
+  const isNaming = canSavePreset && naming?.key === currentKey;
+  const isConfirmingRemove = !!savedPreset && removingKey === savedPresetKey;
+
+  const commitPresetName = () => {
+    if (!naming) return;
+    saveCustomPreset(naming.label);
+    setNaming(null);
+  };
 
   return (
     <div className="space-y-5">
@@ -110,8 +149,8 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                 Clear AI Settings?
               </h4>
               <p className="text-xs text-danger mb-3">
-                This will remove your API key, base URL, and model selection. Your characters and
-                other data will remain untouched.
+                This will remove your API key, base URL, and model selection. Saved presets stay,
+                without their keys. Your characters and other data will remain untouched.
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -157,9 +196,16 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                   );
                   if (selectedPreset) {
                     handleBaseUrlChange(selectedPreset.baseUrl, true);
+                  } else if (e.target.value.startsWith(SAVED_PRESET_PREFIX)) {
+                    const preset =
+                      savedPresets[Number(e.target.value.slice(SAVED_PRESET_PREFIX.length))];
+                    if (preset) selectSavedPreset(preset);
                   } else if (e.target.value === 'custom') {
                     setDraft((prev) => {
-                      const customUrl = prev.ai.lastCustomBaseUrl ?? '';
+                      const lastCustom = prev.ai.lastCustomBaseUrl ?? '';
+                      const customUrl = isPresetUrl(lastCustom, prev.ai.customBaseUrlPresets)
+                        ? ''
+                        : lastCustom;
                       return {
                         ...prev,
                         ai: {
@@ -184,6 +230,19 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                     {preset.label}
                   </option>
                 ))}
+                {savedPresets.length > 0 && (
+                  <optgroup label="Saved">
+                    {savedPresets.map((preset, index) => (
+                      <option
+                        key={`${preset.baseUrl}
+${preset.modelId ?? ''}`}
+                        value={`${SAVED_PRESET_PREFIX}${index}`}
+                      >
+                        {preset.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
                 <option value="custom">Custom URL</option>
               </select>
               <input
@@ -197,9 +256,98 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
               <p className="text-xs text-fg-muted">
                 {selectedBaseUrlPreset === 'custom'
                   ? 'Pick a preset above or enter a custom OpenAI-compatible endpoint.'
-                  : AI_BASE_URL_PRESETS.find((preset) => preset.id === selectedBaseUrlPreset)
-                      ?.helper}
+                  : savedPreset
+                    ? savedPreset.modelId
+                      ? `Saved preset: ${savedPreset.modelId} on ${builtinPreset?.label ?? currentUrl}.`
+                      : 'Saved endpoint.'
+                    : builtinPreset?.helper}
               </p>
+              {isNaming && naming ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={naming.label}
+                    onChange={(e) => setNaming({ key: currentKey, label: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitPresetName();
+                      } else if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        setNaming(null);
+                      }
+                    }}
+                    {...PASSWORD_MANAGER_IGNORE_PROPS}
+                    aria-label="Preset name"
+                    placeholder="Preset name"
+                    className="flex-1 min-w-40 px-3 py-1.5 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={commitPresetName}
+                    className={`${smallButtonClass} bg-accent text-accent-fg hover:opacity-90`}
+                  >
+                    Save preset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNaming(null)}
+                    className={`${smallButtonClass} text-fg-muted hover:text-fg hover:bg-muted`}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : canSavePreset ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNaming({
+                      key: currentKey,
+                      label: suggestPresetLabel(currentUrl, currentModel),
+                    })
+                  }
+                  className={`${smallButtonClass} text-accent hover:bg-accent-soft`}
+                >
+                  <Bookmark className="w-3.5 h-3.5" />
+                  Save as preset
+                </button>
+              ) : null}
+              {savedPreset &&
+                (isConfirmingRemove ? (
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-fg-muted">
+                    <span className="basis-full">
+                      Remove “{savedPreset.label}” from saved presets? Your URL, key and model
+                      stay as they are.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        removeCustomPreset(savedPreset);
+                        setRemovingKey(null);
+                      }}
+                      className={`${smallButtonClass} text-white bg-danger hover:opacity-90`}
+                    >
+                      Remove
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRemovingKey(null)}
+                      className={`${smallButtonClass} text-fg-muted hover:text-fg hover:bg-muted`}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setRemovingKey(savedPresetKey)}
+                    className={`${smallButtonClass} text-fg-muted hover:text-danger hover:bg-danger-soft`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove preset
+                  </button>
+                ))}
             </div>
           </div>
 
@@ -209,11 +357,11 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
                 <Key className="w-4 h-4" />
               </span>
               API Key
-              {selectedBaseUrlPreset === 'lmstudio' && (
+              {builtinId === 'lmstudio' && (
                 <span className="text-xs font-normal text-fg-muted">(optional for local)</span>
               )}
               {(() => {
-                const preset = AI_BASE_URL_PRESETS.find((p) => p.id === selectedBaseUrlPreset);
+                const preset = builtinPreset;
                 return (
                   <>
                     {preset?.keyUrl && (
@@ -246,12 +394,12 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
               onChange={(e) => handleApiKeyChange(e.target.value)}
               className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
               placeholder={
-                selectedBaseUrlPreset === 'lmstudio'
+                builtinId === 'lmstudio'
                   ? 'Optional for local endpoints'
                   : 'Enter your API key'
               }
             />
-            {selectedBaseUrlPreset === 'nano-gpt' && (
+            {builtinId === 'nano-gpt' && (
               <>
                 <div className="flex items-center gap-3 my-1">
                   <div className="h-px flex-1 bg-hover" />
@@ -350,7 +498,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
         </div>
       </SettingsCard>
 
-      {selectedBaseUrlPreset === 'nano-gpt' && (
+      {builtinId === 'nano-gpt' && (
         <NanoGPTAccountOverview
           baseUrl={localAIConfig.baseUrl}
           apiKey={localAIConfig.apiKey}
@@ -358,7 +506,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
         />
       )}
 
-      {selectedBaseUrlPreset === 'synthetic' && (
+      {builtinId === 'synthetic' && (
         <SyntheticAccountOverview
           baseUrl={localAIConfig.baseUrl}
           apiKey={localAIConfig.apiKey}
@@ -366,7 +514,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
         />
       )}
 
-      {selectedBaseUrlPreset === 'openrouter' && (
+      {builtinId === 'openrouter' && (
         <OpenRouterAccountOverview
           baseUrl={localAIConfig.baseUrl}
           apiKey={localAIConfig.apiKey}
@@ -499,7 +647,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
         </SettingsCard>
       )}
 
-      {selectedBaseUrlPreset === 'nano-gpt' && (
+      {builtinId === 'nano-gpt' && (
         <SettingsCard
           title="NanoGPT Options"
           icon={<CreditCard className="w-4 h-4 text-fg-muted" />}

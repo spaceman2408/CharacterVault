@@ -553,8 +553,11 @@ export class CharacterSettingsService {
     
     const updatedSettings: CharacterVaultSettings = {
       ...settings,
-      // Reset AI config to defaults (clears apiKey, baseUrl, modelId)
-      ai: DEFAULT_SETTINGS.ai,
+      // Reset AI config to defaults (clears apiKey, baseUrl, modelId); saved preset names hold no secrets
+      ai: {
+        ...DEFAULT_SETTINGS.ai,
+        customBaseUrlPresets: settings.ai?.customBaseUrlPresets ?? [],
+      },
       // Keep sampler settings as they're not sensitive
       sampler: settings.sampler ?? DEFAULT_SETTINGS.sampler,
       // Keep prompts as they're not sensitive

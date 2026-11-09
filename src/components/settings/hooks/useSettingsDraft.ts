@@ -452,12 +452,13 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
 
   const clearAISettings = useCallback(async () => {
     await characterSettingsService.clearAISettings();
-    const clearedAi: AIConfig = {
+    const clearedAi = (ai: AIConfig): AIConfig => ({
       ...DEFAULT_SETTINGS.ai,
       lastCustomBaseUrl: '',
-    };
-    setDraft((prev) => ({ ...prev, ai: clearedAi }));
-    setSavedDraft((prev) => (prev ? { ...prev, ai: clearedAi } : prev));
+      customBaseUrlPresets: ai.customBaseUrlPresets ?? [],
+    });
+    setDraft((prev) => ({ ...prev, ai: clearedAi(prev.ai) }));
+    setSavedDraft((prev) => (prev ? { ...prev, ai: clearedAi(prev.ai) } : prev));
   }, []);
 
   const isDirty = useMemo(

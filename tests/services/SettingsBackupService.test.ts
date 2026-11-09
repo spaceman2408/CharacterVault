@@ -179,6 +179,35 @@ describe('parseSettingsBackup', () => {
     expect(unknownSort.settings.ai.openRouter?.sort).toBeUndefined();
   });
 
+  it('keeps saved base URL presets and drops malformed or duplicate ones', () => {
+    const file = parseSettingsBackup({
+      kind: 'charactervault-settings',
+      version: 1,
+      settings: {
+        ai: {
+          customBaseUrlPresets: [
+            { label: ' Mine ', baseUrl: 'https://my.host/v1/' },
+            { label: 'Copy', baseUrl: 'https://my.host/v1' },
+            { label: 'Mine · big', baseUrl: 'https://my.host/v1', modelId: ' big ' },
+            { label: 'Copy · big', baseUrl: 'https://my.host/v1/', modelId: 'big' },
+            { label: '', baseUrl: 'https://other.host/v1', modelId: 7 },
+            { label: 'No URL' },
+            { label: 'Blank', baseUrl: '   ' },
+            'junk',
+          ],
+        },
+      },
+    });
+    expect(file.settings.ai.customBaseUrlPresets).toEqual([
+      { label: 'Mine', baseUrl: 'https://my.host/v1' },
+      { label: 'Mine · big', baseUrl: 'https://my.host/v1', modelId: 'big' },
+      { label: 'other.host', baseUrl: 'https://other.host/v1' },
+    ]);
+
+    const missing = parseSettingsBackup({ kind: 'charactervault-settings', version: 1, settings: {} });
+    expect(missing.settings.ai.customBaseUrlPresets).toEqual([]);
+  });
+
   it('drops invalid and duplicate favorite refs', () => {
     const file = parseSettingsBackup({
       kind: 'charactervault-settings',

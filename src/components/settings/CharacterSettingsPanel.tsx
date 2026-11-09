@@ -248,6 +248,9 @@ export function CharacterSettingsPanel({
     handleApiKeyChange: modelCatalog.handleApiKeyChange,
     handleModelChange: modelCatalog.handleModelChange,
     handleProviderChange: modelCatalog.handleProviderChange,
+    selectSavedPreset: modelCatalog.selectSavedPreset,
+    saveCustomPreset: modelCatalog.saveCustomPreset,
+    removeCustomPreset: modelCatalog.removeCustomPreset,
     handleClearAISettings,
     startSignIn: nanoGPT.startSignIn,
   };

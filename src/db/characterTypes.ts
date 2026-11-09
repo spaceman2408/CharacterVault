@@ -692,6 +692,15 @@ export interface AIModelInfo {
  */
 export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
+/** Identified by `baseUrl` + `modelId`, so one endpoint can have a preset per model. */
+export interface CustomBaseUrlPreset {
+  label: string;
+  /** Normalized */
+  baseUrl: string;
+  /** Picked along with the URL; without it the URL's remembered model is used */
+  modelId?: string;
+}
+
 export interface AIConfig {
   baseUrl: string;
   apiKey: string;
@@ -705,6 +714,8 @@ export interface AIConfig {
   reasoningEffort?: ReasoningEffort;
   /** Preserved when switching between preset and custom base URLs */
   lastCustomBaseUrl?: string;
+  /** User-named endpoints shown under Saved in the base URL dropdown; kept by Clear AI Settings */
+  customBaseUrlPresets?: CustomBaseUrlPreset[];
   selectedProvider?: string;
   providerByModelId?: Record<string, string>;
   subscriptionModelsOnly?: boolean;
@@ -1092,6 +1103,7 @@ export const DEFAULT_SETTINGS = {
     subscriptionModelsOnly: false,
     billingMode: 'sub',
     enableCacheProviderRouting: false,
+    customBaseUrlPresets: [],
   } satisfies AIConfig,
   sampler: {
     temperature: 1.0,
