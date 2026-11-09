@@ -46,6 +46,10 @@ Choose a provider preset from the dropdown, or select **Custom URL** to type in 
 | **Synthetic** | `https://api.synthetic.new/v1` | OpenAI-compatible endpoint. Prefer `syn:` aliases so you always get the latest recommended model. |
 | **OpenRouter** | `https://openrouter.ai/api/v1` | OpenRouter multi-model gateway. Use `org/model` slugs such as `openai/gpt-4o`. Supports host selection plus routing and privacy options. |
 | **Minimax** | `https://api.minimax.io/v1` | OpenAI-compatible endpoint. API keys start with `sk-cp`. |
+| **Moonshot (Kimi)** | `https://api.moonshot.ai/v1` | Kimi models direct from Moonshot, pay as you go. Use a key from the Moonshot platform. Kimi's coding-plan endpoint blocks browser requests, so it can't be used here. |
+| **Z.ai (GLM)** | `https://api.z.ai/api/paas/v4` | GLM models direct from Z.ai, pay as you go. |
+| **Z.ai Coding Plan** | `https://api.z.ai/api/coding/paas/v4` | GLM models on a GLM Coding Plan subscription. Uses a normal Z.ai API key. |
+| **DeepSeek** | `https://api.deepseek.com/v1` | DeepSeek models direct from DeepSeek. |
 | **LM Studio / localhost** | `http://127.0.0.1:1234/v1` | Local inference with LM Studio. |
 | **Custom URL** | Any URL | Any OpenAI-compatible endpoint (e.g., a self-hosted API). |
 
