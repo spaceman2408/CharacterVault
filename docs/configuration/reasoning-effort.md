@@ -97,6 +97,8 @@ If a parameter is completely unsupported (not just a bad value), Character Vault
 | OpenAI peak reasoning | **Extra high** when the model supports it |
 | Cost / latency sensitive | Lower effort, or disable reasoning |
 
+Thinking usually counts against [Max Tokens](/configuration/sampler-settings#max-tokens). If replies come back cut off or empty at higher effort, raise Max Tokens or step the effort down.
+
 Higher effort does **not** always improve creative prose. For roleplay flavor and style, sampler settings (temperature, top-p, etc.) often matter more. Use high effort when the task is **logical or multi-step**, not only when you want “more words.”
 
 ## Related settings
