@@ -859,7 +859,10 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
               if (!isCurrent() || abortedRef.current) {
                 throw new AIError('Request was cancelled', 'unknown');
               }
-              if (isMountedRef.current) setIsStreaming(streaming);
+              if (isMountedRef.current) {
+                setIsStreaming(streaming);
+                setBusyAction(null);
+              }
               clearStreamDraft();
               if (continues && onChunk) appendStreamChunk(continues);
               if (!isCurrent() || abortedRef.current) {
