@@ -92,6 +92,8 @@ export interface SettingsPanelHelpers {
   handleApiKeyChange: (apiKey: string) => void;
   handleModelChange: (modelId: string) => void;
   handleProviderChange: (providerId: string) => void;
+  /** Switches to a built-in preset and keeps it selected even if its model matches a saved one. */
+  selectBuiltinPreset: (presetId: string) => void;
   /** Switches to the preset's URL, then its model when it pins one. */
   selectSavedPreset: (preset: CustomBaseUrlPreset) => void;
   /** Saves the current base URL and model under `label` (draft only). */

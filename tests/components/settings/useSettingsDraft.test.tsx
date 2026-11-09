@@ -79,6 +79,35 @@ describe('useSettingsDraft', () => {
     expect(hook.result.current.isDirty).toBe(false);
   });
 
+  it('keeps the URL’s own model when a saved preset’s pinned model is active', async () => {
+    const OPENROUTER = 'https://openrouter.ai/api/v1';
+    vi.spyOn(characterSettingsService, 'getSettings').mockResolvedValue({
+      ...DEFAULT_CHARACTER_VAULT_SETTINGS,
+      id: 'app-settings',
+    });
+    vi.spyOn(characterSettingsService, 'getAISettings').mockResolvedValue({
+      ...DEFAULT_SETTINGS.ai,
+      baseUrl: OPENROUTER,
+      modelId: 'kimi',
+      modelIdsByBaseUrl: { [OPENROUTER]: 'deepseek' },
+      customBaseUrlPresets: [{ label: 'Kimi', baseUrl: OPENROUTER, modelId: 'kimi' }],
+    });
+    const saveAll = vi.spyOn(characterSettingsService, 'saveAllAISettings').mockResolvedValue();
+    vi.spyOn(characterSettingsService, 'saveRoleplayHighlight').mockResolvedValue();
+    vi.spyOn(characterSettingsService, 'saveMacroHighlight').mockResolvedValue();
+    vi.spyOn(characterSettingsService, 'saveSettings').mockResolvedValue();
+    vi.spyOn(characterSettingsService, 'saveSpellcheckSettings').mockResolvedValue();
+
+    const { hook } = setup();
+    await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+    expect(hook.result.current.draft.ai.modelIdsByBaseUrl).toEqual({ [OPENROUTER]: 'deepseek' });
+
+    await act(async () => {
+      await hook.result.current.save();
+    });
+    expect(saveAll.mock.calls[0]?.[0].modelIdsByBaseUrl).toEqual({ [OPENROUTER]: 'deepseek' });
+  });
+
   describe('isDirty', () => {
     function mockStorage() {
       vi.spyOn(characterSettingsService, 'getSettings').mockResolvedValue({

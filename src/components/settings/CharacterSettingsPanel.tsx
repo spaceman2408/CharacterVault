@@ -248,6 +248,7 @@ export function CharacterSettingsPanel({
     handleApiKeyChange: modelCatalog.handleApiKeyChange,
     handleModelChange: modelCatalog.handleModelChange,
     handleProviderChange: modelCatalog.handleProviderChange,
+    selectBuiltinPreset: modelCatalog.selectBuiltinPreset,
     selectSavedPreset: modelCatalog.selectSavedPreset,
     saveCustomPreset: modelCatalog.saveCustomPreset,
     removeCustomPreset: modelCatalog.removeCustomPreset,

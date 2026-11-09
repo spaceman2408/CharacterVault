@@ -23,7 +23,6 @@ import {
   AI_BASE_URL_PRESETS,
   SAVED_PRESET_PREFIX,
   builtinPresetForUrl,
-  findSavedPreset,
   getStoredApiKey,
   getStoredModelId,
   isPresetUrl,
@@ -66,11 +65,11 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
     isClearing,
     fetchModels,
     filterModelsForUrl,
-    handleBaseUrlChange,
     handleCustomUrlChange,
     handleApiKeyChange,
     handleModelChange,
     handleProviderChange,
+    selectBuiltinPreset,
     selectSavedPreset,
     saveCustomPreset,
     removeCustomPreset,
@@ -87,7 +86,9 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
   const currentModel = localAIConfig.modelId;
   const builtinPreset = builtinPresetForUrl(currentUrl);
   const builtinId = builtinPreset?.id;
-  const savedPreset = findSavedPreset(savedPresets, currentUrl, currentModel);
+  const savedPreset = selectedBaseUrlPreset.startsWith(SAVED_PRESET_PREFIX)
+    ? savedPresets[Number(selectedBaseUrlPreset.slice(SAVED_PRESET_PREFIX.length))]
+    : undefined;
   const currentKey = `${currentUrl}
 ${currentModel}`;
   const savedPresetKey = savedPreset ? `${savedPreset.baseUrl}
@@ -195,7 +196,7 @@ ${savedPreset.modelId ?? ''}` : '';
                     (preset) => preset.id === e.target.value
                   );
                   if (selectedPreset) {
-                    handleBaseUrlChange(selectedPreset.baseUrl, true);
+                    selectBuiltinPreset(selectedPreset.id);
                   } else if (e.target.value.startsWith(SAVED_PRESET_PREFIX)) {
                     const preset =
                       savedPresets[Number(e.target.value.slice(SAVED_PRESET_PREFIX.length))];

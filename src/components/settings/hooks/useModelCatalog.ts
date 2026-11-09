@@ -22,6 +22,7 @@ import {
   MODEL_CACHE_STALENESS_MS,
   SAVED_PRESET_PREFIX,
   addSavedPreset,
+  builtinPresetForUrl,
   findSavedPreset,
   getStoredApiKey,
   getStoredModelId,
@@ -99,6 +100,8 @@ export function useModelCatalog({
   fetchingModelsByBaseUrlRef.current = fetchingModelsByBaseUrl;
   const isOpenRef = useRef(isOpen);
   isOpenRef.current = isOpen;
+  // A built-in picked from the dropdown stays selected even when its model matches a saved preset.
+  const [pickedBuiltinId, setPickedBuiltinId] = useState<string | null>(null);
   const catalogAbortRef = useRef<AbortController | null>(null);
   /** Skip setState after unmount when in-flight model/provider fetches complete */
   const mountedRef = useRef(true);
@@ -111,6 +114,7 @@ export function useModelCatalog({
 
   useEffect(() => {
     if (!isOpen) {
+      setPickedBuiltinId(null);
       catalogAbortRef.current?.abort();
       catalogAbortRef.current = null;
       setModelsByBaseUrl({});
@@ -506,13 +510,13 @@ export function useModelCatalog({
     [setDraft]
   );
 
-  const handleModelChange = useCallback(
-    (modelId: string) => {
+  const applyModel = useCallback(
+    (modelId: string, rememberForUrl: boolean) => {
       setDraft((prev) => {
         const normalizedBaseUrl = normalizeBaseUrl(prev.ai.baseUrl);
         const modelIdsByBaseUrl = { ...(prev.ai.modelIdsByBaseUrl ?? {}) };
 
-        if (normalizedBaseUrl) {
+        if (normalizedBaseUrl && rememberForUrl) {
           if (modelId) {
             modelIdsByBaseUrl[normalizedBaseUrl] = modelId;
           } else {
@@ -543,6 +547,11 @@ export function useModelCatalog({
       });
     },
     [setDraft]
+  );
+
+  const handleModelChange = useCallback(
+    (modelId: string) => applyModel(modelId, true),
+    [applyModel]
   );
 
   const handleProviderChange = useCallback(
@@ -587,22 +596,36 @@ export function useModelCatalog({
 
   const savedPresets = draft.ai.customBaseUrlPresets ?? [];
   const savedPreset = findSavedPreset(savedPresets, draft.ai.baseUrl, draft.ai.modelId);
-  const selectedBaseUrlPreset = savedPreset
-    ? `${SAVED_PRESET_PREFIX}${savedPresets.indexOf(savedPreset)}`
-    : (AI_BASE_URL_PRESETS.find(
-        (preset) => normalizeBaseUrl(preset.baseUrl) === normalizeBaseUrl(draft.ai.baseUrl)
-      )?.id ?? 'custom');
+  const builtinForUrl = builtinPresetForUrl(draft.ai.baseUrl);
+  const selectedBaseUrlPreset =
+    pickedBuiltinId && builtinForUrl?.id === pickedBuiltinId
+      ? pickedBuiltinId
+      : savedPreset
+        ? `${SAVED_PRESET_PREFIX}${savedPresets.indexOf(savedPreset)}`
+        : (builtinForUrl?.id ?? 'custom');
+
+  const selectBuiltinPreset = useCallback(
+    (presetId: string) => {
+      const preset = AI_BASE_URL_PRESETS.find((p) => p.id === presetId);
+      if (!preset) return;
+      setPickedBuiltinId(preset.id);
+      handleBaseUrlChange(preset.baseUrl, true);
+    },
+    [handleBaseUrlChange]
+  );
 
   const selectSavedPreset = useCallback(
     (preset: CustomBaseUrlPreset) => {
+      setPickedBuiltinId(null);
       handleBaseUrlChange(preset.baseUrl, true);
-      if (preset.modelId) handleModelChange(preset.modelId);
+      if (preset.modelId) applyModel(preset.modelId, false);
     },
-    [handleBaseUrlChange, handleModelChange]
+    [handleBaseUrlChange, applyModel]
   );
 
   const saveCustomPreset = useCallback(
     (label: string) => {
+      setPickedBuiltinId(null);
       setDraft((prev) => ({
         ...prev,
         ai: {
@@ -725,6 +748,7 @@ export function useModelCatalog({
     handleApiKeyChange,
     handleModelChange,
     handleProviderChange,
+    selectBuiltinPreset,
     selectSavedPreset,
     saveCustomPreset,
     removeCustomPreset,

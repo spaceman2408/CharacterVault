@@ -4,6 +4,7 @@ import {
   defaultPresetLabel,
   findSavedPreset,
   isPresetUrl,
+  rememberModelForUrl,
   removeSavedPreset,
   suggestPresetLabel,
 } from '../../../src/components/settings/config/aiBaseUrlPresets';
@@ -61,6 +62,15 @@ describe('saved base URL presets', () => {
     expect(removeSavedPreset(list, { label: '', baseUrl: `${OPENROUTER}/`, modelId: 'z-ai/glm-5.3' }))
       .toEqual([list[0]]);
     expect(removeSavedPreset(list, { label: '', baseUrl: OPENROUTER })).toEqual(list);
+  });
+
+  it('remembers a model for its URL unless a saved preset pins that pair', () => {
+    const list = [{ label: 'OR · kimi', baseUrl: OPENROUTER, modelId: 'kimi' }];
+    const map = { [OPENROUTER]: 'glm' };
+    expect(rememberModelForUrl(map, list, `${OPENROUTER}/`, 'kimi')).toEqual(map);
+    expect(rememberModelForUrl(map, list, OPENROUTER, 'deepseek')).toEqual({ [OPENROUTER]: 'deepseek' });
+    expect(rememberModelForUrl(map, saved, MINE, 'any')).toEqual({ ...map, [MINE]: 'any' });
+    expect(rememberModelForUrl(map, list, OPENROUTER, '')).toEqual(map);
   });
 
   it('labels a URL by its host, or the URL itself when it does not parse', () => {

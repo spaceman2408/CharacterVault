@@ -129,6 +129,21 @@ export function findSavedPreset(
   );
 }
 
+/** Skips the write when `url` + `modelId` is a saved preset pinning that model, so the URL keeps its own model. */
+export function rememberModelForUrl(
+  modelIdsByBaseUrl: Record<string, string> | undefined,
+  saved: CustomBaseUrlPreset[] | undefined,
+  url: string,
+  modelId: string
+): Record<string, string> {
+  const map = { ...(modelIdsByBaseUrl ?? {}) };
+  const normalized = normalizeBaseUrl(url);
+  if (!normalized || !modelId) return map;
+  if (findSavedPreset(saved, normalized, modelId)?.modelId === modelId) return map;
+  map[normalized] = modelId;
+  return map;
+}
+
 export function suggestPresetLabel(url: string, modelId?: string): string {
   const base = builtinPresetForUrl(url)?.label ?? defaultPresetLabel(url);
   const model = modelId?.trim();

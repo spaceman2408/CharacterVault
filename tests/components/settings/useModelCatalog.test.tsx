@@ -288,6 +288,56 @@ describe('useModelCatalog', () => {
       expect(ai.modelId).toBe('mine-model');
     });
 
+    it('keeps the built-in selected when picked, even if its model matches a saved preset', () => {
+      const KIMI = 'moonshotai/kimi-k3';
+      const hook = setup({
+        baseUrl: OPENROUTER,
+        apiKey: 'sk-or',
+        modelId: KIMI,
+        apiKeysByBaseUrl: { [OPENROUTER]: 'sk-or' },
+        modelIdsByBaseUrl: { [OPENROUTER]: KIMI },
+      });
+      act(() => hook.result.current.catalog.saveCustomPreset('Kimi'));
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('saved:0');
+
+      act(() => hook.result.current.catalog.selectBuiltinPreset('nano-gpt'));
+      act(() => hook.result.current.catalog.selectBuiltinPreset('openrouter'));
+      expect(hook.result.current.draft.ai.modelId).toBe(KIMI);
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('openrouter');
+
+      act(() => hook.result.current.catalog.handleModelChange('z-ai/glm-5.3'));
+      act(() => hook.result.current.catalog.handleModelChange(KIMI));
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('openrouter');
+
+      const [kimi] = hook.result.current.draft.ai.customBaseUrlPresets ?? [];
+      act(() => hook.result.current.catalog.selectSavedPreset(kimi));
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('saved:0');
+    });
+
+    it('keeps the built-in model after visiting a saved preset on the same URL', () => {
+      const KIMI = 'moonshotai/kimi-k3';
+      const DEEPSEEK = 'deepseek/deepseek-v4.1-flash';
+      const hook = setup({
+        baseUrl: OPENROUTER,
+        apiKey: 'sk-or',
+        modelId: KIMI,
+        customBaseUrlPresets: [{ label: 'Kimi', baseUrl: OPENROUTER, modelId: KIMI }],
+        apiKeysByBaseUrl: { [OPENROUTER]: 'sk-or' },
+        modelIdsByBaseUrl: { [OPENROUTER]: KIMI },
+      });
+      act(() => hook.result.current.catalog.selectBuiltinPreset('openrouter'));
+      act(() => hook.result.current.catalog.handleModelChange(DEEPSEEK));
+
+      const [kimi] = hook.result.current.draft.ai.customBaseUrlPresets ?? [];
+      act(() => hook.result.current.catalog.selectSavedPreset(kimi));
+      expect(hook.result.current.draft.ai.modelId).toBe(KIMI);
+      expect(hook.result.current.draft.ai.modelIdsByBaseUrl?.[OPENROUTER]).toBe(DEEPSEEK);
+
+      act(() => hook.result.current.catalog.selectBuiltinPreset('openrouter'));
+      expect(hook.result.current.draft.ai.modelId).toBe(DEEPSEEK);
+      expect(hook.result.current.catalog.selectedBaseUrlPreset).toBe('openrouter');
+    });
+
     it('never carries a saved preset key to an edited URL', () => {
       const hook = setup({
         baseUrl: MINE,
