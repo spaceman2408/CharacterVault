@@ -12,6 +12,7 @@ import {
   Sparkles,
   Sun,
   Upload,
+  X,
 } from 'lucide-react';
 import { StagingPromoBanner } from '../StagingPromoBanner';
 import { IconButton } from './IconButton';
@@ -38,6 +39,62 @@ export interface VaultHeaderProps {
   createLabel?: string;
 }
 
+interface VaultSearchInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  className: string;
+}
+
+function VaultSearchInput({
+  value,
+  onChange,
+  placeholder,
+  inputRef,
+  className,
+}: VaultSearchInputProps): React.ReactElement {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Escape') return;
+    if (value) onChange('');
+    else event.currentTarget.blur();
+  };
+
+  return (
+    <div className="relative group">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle group-focus-within:text-accent transition-colors" />
+      <input
+        ref={inputRef}
+        type="text"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className={`w-full bg-muted border border-transparent focus:bg-surface focus:border-border-strong focus:ring-2 focus:ring-accent/20 rounded-full pl-9 pr-9 text-sm transition-all outline-none ${className}`}
+      />
+      {value && (
+        <button
+          type="button"
+          onClick={() => {
+            onChange('');
+            inputRef.current?.focus();
+          }}
+          aria-label="Clear search"
+          title="Clear search (Esc)"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-fg-subtle hover:text-fg hover:bg-accent-soft transition-colors"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}
+
 export function VaultHeader({
   searchQuery,
   onSearchChange,
@@ -61,6 +118,24 @@ export function VaultHeader({
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const desktopSearchRef = useRef<HTMLInputElement>(null);
+  const mobileSearchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleSlash = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isTypingTarget(event.target) || document.querySelector('[aria-modal="true"]')) return;
+      const input = [desktopSearchRef.current, mobileSearchRef.current].find(
+        (el) => el && el.offsetParent !== null
+      );
+      if (!input) return;
+      event.preventDefault();
+      input.focus();
+      input.select();
+    };
+    document.addEventListener('keydown', handleSlash);
+    return () => document.removeEventListener('keydown', handleSlash);
+  }, []);
 
   useEffect(() => {
     if (!isMoreOpen) return;
@@ -102,16 +177,13 @@ export function VaultHeader({
             </div>
 
             <div className="flex-1 min-w-0 max-w-md hidden sm:block">
-              <div className="relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle group-focus-within:text-accent transition-colors" />
-                <input
-                  type="text"
-                  placeholder={searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="w-full bg-muted border border-transparent focus:bg-surface focus:border-border-strong focus:ring-2 focus:ring-accent/20 rounded-full py-2 pl-9 pr-4 text-sm transition-all outline-none"
-                />
-              </div>
+              <VaultSearchInput
+                value={searchQuery}
+                onChange={onSearchChange}
+                placeholder={searchPlaceholder}
+                inputRef={desktopSearchRef}
+                className="py-2"
+              />
             </div>
 
             <div className="flex-1 sm:hidden" />
@@ -352,16 +424,13 @@ export function VaultHeader({
       </div>
 
       <div className="sm:hidden px-4 pt-3">
-        <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle group-focus-within:text-accent transition-colors" />
-          <input
-            type="text"
-            placeholder={searchPlaceholder}
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-muted border border-transparent focus:bg-surface focus:border-border-strong focus:ring-2 focus:ring-accent/20 rounded-full py-2.5 pl-9 pr-4 text-sm transition-all outline-none"
-          />
-        </div>
+        <VaultSearchInput
+          value={searchQuery}
+          onChange={onSearchChange}
+          placeholder={searchPlaceholder}
+          inputRef={mobileSearchRef}
+          className="py-2.5"
+        />
       </div>
     </>
   );
