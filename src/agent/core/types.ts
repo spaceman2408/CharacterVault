@@ -39,6 +39,8 @@ export interface AgentMessage {
   content: string | null;
   tool_calls?: NativeToolCall[];
   tool_call_id?: string;
+  /** Thinking echoed on an in-run tool-call turn; DeepSeek and Kimi reject the next request without it. */
+  reasoning_content?: string;
 }
 
 export type AgentDoneReason = 'complete' | 'max_turns' | 'abort' | 'error';

@@ -329,6 +329,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
         role: 'assistant',
         content: content || '',
         tool_calls: toolCalls,
+        ...(reasoning ? { reasoning_content: reasoning } : {}),
       });
       for (const call of toolCalls) {
         const result = nativeResultById.get(call.id);

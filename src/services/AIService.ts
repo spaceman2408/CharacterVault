@@ -352,6 +352,7 @@ export interface ChatMessage {
   tool_calls?: ChatToolCall[];
   tool_call_id?: string;
   name?: string;
+  reasoning_content?: string;
 }
 
 /**
@@ -508,6 +509,7 @@ export class AIService {
   private messageTokenText(message: ChatMessage): string {
     const parts: string[] = [];
     if (message.content) parts.push(message.content);
+    if (message.reasoning_content) parts.push(message.reasoning_content);
     if (message.tool_calls?.length) parts.push(JSON.stringify(message.tool_calls));
     if (message.tool_call_id) parts.push(message.tool_call_id);
     return parts.join('\n');

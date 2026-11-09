@@ -82,6 +82,7 @@ function toServiceMessages(messages: AgentMessage[]): ServiceChatMessage[] {
     role: message.role,
     content: message.content,
     tool_call_id: message.tool_call_id,
+    reasoning_content: message.reasoning_content,
     tool_calls: message.tool_calls?.map((call) => ({
       id: call.id,
       type: 'function' as const,
