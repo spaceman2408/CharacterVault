@@ -776,6 +776,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
             keepEditsInContextRef.current,
             resolveAgentToolMode(aiConfigRef.current),
             samplerSettingsRef.current,
+            aiConfigRef.current.modelId,
           ),
         );
 

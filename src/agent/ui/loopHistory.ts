@@ -22,6 +22,8 @@ export interface LoopHistoryOptions {
   toolMode?: AgentToolMode;
   /** A run whose replay would take more than this many tokens is sent as summary notes instead. */
   maxKeptRunTokens?: number;
+  /** Replayed calls carry a run's thinking only when this model wrote it; strict hosts reject the field. */
+  modelId?: string;
 }
 
 /** Final reply for a replayed run that ended without speech, so a user turn never follows a tool result. */
@@ -30,15 +32,20 @@ export const KEPT_RUN_EMPTY_REPLY = 'Done.';
 /** Share of the input budget one replayed run may take. Call arguments cannot be trimmed at send time. */
 export const KEPT_RUN_BUDGET_SHARE = 0.25;
 
+/** Tail of a run's thinking sent with its replayed calls. DeepSeek and Kimi need the field, not the whole text. */
+export const KEPT_RUN_REASONING_CHARS = 2000;
+
 export function keptEditsOptions(
   keepEdits: boolean,
   toolMode: AgentToolMode,
   sampler: Pick<SamplerSettings, 'contextLength' | 'maxTokens'>,
+  modelId?: string,
 ): LoopHistoryOptions {
   return {
     keepEdits,
     toolMode,
     maxKeptRunTokens: Math.floor(AIService.inputTokenBudget(sampler) * KEPT_RUN_BUDGET_SHARE),
+    modelId,
   };
 }
 
@@ -71,6 +78,7 @@ function replayRun(
   writes: AgentToolEvent[],
   notes: string[],
   speech: string,
+  reasoning: string,
   toolMode: AgentToolMode,
   nextId: () => string,
 ): AgentMessage[] {
@@ -96,7 +104,12 @@ function replayRun(
     arguments: callArguments(event.call!),
   }));
   return [
-    { role: 'assistant', content: '', tool_calls: calls },
+    {
+      role: 'assistant',
+      content: '',
+      tool_calls: calls,
+      ...(reasoning ? { reasoning_content: reasoning.slice(-KEPT_RUN_REASONING_CHARS) } : {}),
+    },
     ...calls.map((call, index): AgentMessage => ({
       role: 'tool',
       tool_call_id: call.id,
@@ -124,6 +137,7 @@ export function toLoopHistory(
   let speech: string[] = [];
   let edits: string[] = [];
   let writes: AgentToolEvent[] = [];
+  let reasoning: string[] = [];
   let review: string[] = [];
   let hitTurnLimit = false;
   let interrupted = false;
@@ -134,6 +148,7 @@ export function toLoopHistory(
     speech = [];
     edits = [];
     writes = [];
+    reasoning = [];
     review = [];
     hitTurnLimit = false;
     interrupted = false;
@@ -147,7 +162,14 @@ export function toLoopHistory(
     const canReplay =
       options.keepEdits && !interrupted && writes.length > 0 && writes.every((event) => event.call);
     if (canReplay) {
-      const replay = replayRun(writes, notes, speech.join('\n\n'), options.toolMode ?? 'native', nextId);
+      const replay = replayRun(
+        writes,
+        notes,
+        speech.join('\n\n'),
+        reasoning.join('\n\n'),
+        options.toolMode ?? 'native',
+        nextId,
+      );
       if (options.maxKeptRunTokens == null || estimatePromptTokens(replay) <= options.maxKeptRunTokens) {
         messages.push(...replay);
         reset();
@@ -180,7 +202,12 @@ export function toLoopHistory(
     for (const event of visibleToolEvents(events, lookupToolNames)) {
       if (event.ok) edits.push(formatToolEvent(event));
     }
-    writes.push(...keptWriteEvents(events, lookupToolNames));
+    const turnWrites = keptWriteEvents(events, lookupToolNames);
+    writes.push(...turnWrites);
+    const thought = message.reasoning?.trim();
+    if (turnWrites.length > 0 && thought && options.modelId && message.stats?.modelId === options.modelId) {
+      reasoning.push(thought);
+    }
   }
   flushRun();
   return messages;

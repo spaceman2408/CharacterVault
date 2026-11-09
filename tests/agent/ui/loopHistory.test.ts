@@ -4,6 +4,7 @@ import { parseActions } from '../../../src/agent/core/parseActions';
 import {
   contextMeterHistory,
   KEPT_RUN_EMPTY_REPLY,
+  KEPT_RUN_REASONING_CHARS,
   keptEditsOptions,
   keptWriteEvents,
   toLoopHistory,
@@ -209,6 +210,47 @@ describe('toLoopHistory with keepEdits', () => {
       { role: 'assistant', content: 'Done. Softened it and added Harbor.' },
       { role: 'user', content: 'Change the keys in edit 2' },
     ]);
+  });
+
+  it('sends the thinking of write turns with the replayed calls when the same model wrote it', () => {
+    const thinking = (id: string, reasoning: string, modelId?: string): ChatMessage => ({
+      ...message(id, 'assistant'),
+      reasoning,
+      stats: modelId ? { modelId } : undefined,
+    });
+    const history = [
+      message('u1', 'user', 'Soften the tone and add Harbor'),
+      thinking('a0', 'Look first.', 'kimi-k2.6'),
+      thinking('a1', 'Soften it.', 'kimi-k2.6'),
+      thinking('a2', 'Now Harbor.', 'kimi-k2.6'),
+      message('u2', 'user', 'Again'),
+    ];
+    const events = { a0: [readField], a1: [replaceTone], a2: [addHarborCall] };
+    const toolCallTurn = (modelId?: string) =>
+      toLoopHistory(history, events, CHARACTER_LOOKUP_TOOLS, {}, { keepEdits: true, modelId }).find(
+        (entry) => entry.tool_calls?.length,
+      );
+
+    expect(toolCallTurn('kimi-k2.6')?.reasoning_content).toBe('Soften it.\n\nNow Harbor.');
+    expect(toolCallTurn('gpt-5.4')).not.toHaveProperty('reasoning_content');
+    expect(toolCallTurn(undefined)).not.toHaveProperty('reasoning_content');
+  });
+
+  it('keeps only the tail of long replayed thinking', () => {
+    const long = `${'a'.repeat(KEPT_RUN_REASONING_CHARS)}END`;
+    const history = [
+      message('u1', 'user', 'Soften'),
+      { ...message('a1', 'assistant'), reasoning: long, stats: { modelId: 'm' } },
+    ];
+    const [, replayed] = toLoopHistory(
+      history,
+      { a1: [replaceTone] },
+      CHARACTER_LOOKUP_TOOLS,
+      {},
+      { keepEdits: true, modelId: 'm' },
+    );
+    expect(replayed.reasoning_content).toHaveLength(KEPT_RUN_REASONING_CHARS);
+    expect(replayed.reasoning_content?.endsWith('END')).toBe(true);
   });
 
   it('replays a run as XML calls the parser reads back to the same arguments', () => {

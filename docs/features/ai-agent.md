@@ -130,6 +130,7 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings â
 
 - The character and lorebook Agent share this setting. It also covers runs from before you turned it on.
 - Interrupted runs, runs saved before 1.8.5, and runs larger than a quarter of the input budget still get the short note.
+- With a thinking model, each replayed run also carries the last part of its thinking, which models such as DeepSeek and Kimi require. It is sent only to the model that wrote it.
 - The replayed edits count toward the context meter. Turn it off if long threads crowd a small context.
 
 ### What you see in chat
