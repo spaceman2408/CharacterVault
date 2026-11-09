@@ -27,4 +27,11 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 export const STAGING_VERSION = 'v1.8.6 staging 1';
 
 /** One short line per thing you want testers to try. */
-export const STAGING_TEST_NOTES: string[] = [];
+export const STAGING_TEST_NOTES: string[] = [
+  'Library → click a tag chip on a card: the search fills with that tag and the library narrows to matching cards. The "+N" chip still opens the card details.',
+  'Library search → a × appears once you type; Escape clears the search, and Escape again leaves the box. Press / anywhere on the library (not while typing) to jump to the search.',
+  'Library → new "Created" sort next to Name and Recent: newest created or imported cards first. Cards you already had should sort by when they were added too.',
+  'Agent with a DeepSeek or Kimi thinking model → ask for an edit that takes a few tool calls: the run should get past its first tool call instead of failing with an error about reasoning_content. Try it with "Remember earlier edits in the chat" on as well, over two or three runs.',
+  'OpenAI reasoning models (o-series, GPT-5) on api.openai.com → chat with Orion and run the agent: replies should keep your Max Tokens limit instead of failing or ignoring it.',
+  'OpenRouter → if a model errors partway through a reply, you should see the provider’s error instead of a cut-off reply shown as finished.',
+];
