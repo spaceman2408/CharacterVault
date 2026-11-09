@@ -355,6 +355,7 @@ export interface CharacterListItem {
   thumbnailData: string;
   lastOpenedAt?: Timestamp;
   updatedAt: Timestamp;
+  createdAt: Timestamp;
   /** Tokens sent with every chat message (core definition fields) */
   activeTokens: number;
   /** Chat-relevant max: active plus greetings and lorebook entry bodies. Excludes metadata never sent to chat. */

@@ -144,6 +144,7 @@ export function toCharacterListItem(character: Character): CharacterListItem {
     thumbnailData: character.thumbnailData,
     lastOpenedAt: character.lastOpenedAt,
     updatedAt: character.updatedAt,
+    createdAt: character.createdAt,
     activeTokens: tokens.active,
     totalTokens: tokens.total,
     tags: character.data.spec.tags ?? [],
@@ -467,6 +468,35 @@ export class CharacterDatabase extends Dexie {
       chatMessages:
         'id, [ownerType+ownerId], [ownerType+ownerId+panel], &[ownerType+ownerId+panel+seq]',
     });
+
+    this.version(14)
+      .stores({
+        characters: 'id, name, updatedAt, createdAt',
+        settings: 'id',
+        snapshots: 'id, characterId, createdAt, [characterId+createdAt]',
+        snapshotIndex: 'id, characterId, createdAt, [characterId+createdAt]',
+        storedImages: 'id',
+        spellDictionaryCache: 'id',
+        characterListIndex: 'id, name, updatedAt, lastOpenedAt',
+        characterCustomContext: 'characterId',
+        lorebooks: 'id, name, updatedAt, createdAt',
+        lorebookListIndex: 'id, name, updatedAt, lastOpenedAt',
+        lorebookSnapshots: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+        lorebookSnapshotIndex: 'id, lorebookId, createdAt, [lorebookId+createdAt]',
+        characterLorebookAttachments: 'characterId',
+        lorebookCustomContext: 'lorebookId',
+        chatMessages:
+          'id, [ownerType+ownerId], [ownerType+ownerId+panel], &[ownerType+ownerId+panel+seq]',
+      })
+      .upgrade(async (tx) => {
+        const indexTable = tx.table<CharacterListItem, string>('characterListIndex');
+        await tx
+          .table<Character, string>('characters')
+          .toCollection()
+          .each(async (character) => {
+            await indexTable.update(character.id, { createdAt: character.createdAt });
+          });
+      });
   }
 
   private async syncLorebookListIndex(lorebook: VaultLorebook): Promise<void> {

@@ -2,6 +2,12 @@ import { ArrowUpDown, Play, User } from 'lucide-react';
 import type { CharacterListItem } from '../../db';
 import type { VaultSortMode } from './types';
 
+const SORT_OPTIONS: { mode: VaultSortMode; label: string; title: string }[] = [
+  { mode: 'name', label: 'Name', title: 'Sort A–Z by name' },
+  { mode: 'recent', label: 'Recent', title: 'Recently opened first' },
+  { mode: 'created', label: 'Created', title: 'Newest created or imported first' },
+];
+
 export interface VaultToolbarProps {
   totalCount: number;
   filteredCount: number;
@@ -37,28 +43,21 @@ export function VaultToolbar({
       <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
         <div className="inline-flex items-center gap-1 rounded-full border border-border bg-surface p-1 shadow-xs">
           <ArrowUpDown className="w-3.5 h-3.5 text-fg-subtle ml-2" />
-          <button
-            type="button"
-            onClick={() => onSortChange('name')}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-              sortMode === 'name'
-                ? 'bg-accent text-accent-fg'
-                : 'text-fg-muted hover:text-fg hover:bg-accent-soft'
-            }`}
-          >
-            Name
-          </button>
-          <button
-            type="button"
-            onClick={() => onSortChange('recent')}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-              sortMode === 'recent'
-                ? 'bg-accent text-accent-fg'
-                : 'text-fg-muted hover:text-fg hover:bg-accent-soft'
-            }`}
-          >
-            Recent
-          </button>
+          {SORT_OPTIONS.map(({ mode, label, title }) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => onSortChange(mode)}
+              title={title}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                sortMode === mode
+                  ? 'bg-accent text-accent-fg'
+                  : 'text-fg-muted hover:text-fg hover:bg-accent-soft'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {!searchQuery && lastActive && onContinue && (
