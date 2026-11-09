@@ -89,7 +89,7 @@ Unsupported sampler or reasoning parameters are handled in `chatRequestRepair.ts
 
 - `NON_STANDARD_PARAMS` and related strip lists define removable fields.
 - Capability cache stores rejected params and effort allowlists per model.
-- Strict hosts (e.g. api.openai.com) omit non-standard samplers up front via `sanitizeSamplerParams`.
+- Strict hosts (e.g. api.openai.com) omit non-standard samplers and send `max_completion_tokens` instead of `max_tokens` up front via `sanitizeSamplerParams`. Elsewhere, a 400 that asks for `max_completion_tokens` renames the cap and the cache keeps the new name.
 
 Remaps, strip lists, and host snippets live here with tests in `tests/services/chatRequestRepair.test.ts`.
 
