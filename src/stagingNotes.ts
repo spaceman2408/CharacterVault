@@ -36,4 +36,5 @@ export const STAGING_TEST_NOTES: string[] = [
   'OpenRouter → if a model errors partway through a reply, you should see the provider’s error instead of a cut-off reply shown as finished.',
   'Settings → AI Config → new presets: Moonshot (Kimi), Z.ai (GLM), Z.ai Coding Plan and DeepSeek. If you have a key for one, fetch models, chat with Orion and run the agent on it. Note anything that errors or ignores the Reasoning toggle.',
   'Settings → AI Config → pick a provider (or Custom URL) and a model, then "Save as preset" under the URL. Save a few on OpenRouter with different models: each shows under Saved, picking one switches to its model, and they all share one OpenRouter key. "Remove preset" asks first. Clear AI Settings keeps saved presets but drops their keys.',
+  'Settings → AI Config → with an OpenRouter preset saved, pick plain OpenRouter and choose a different model, then switch to the saved preset and back. Plain OpenRouter should stay selected with its own model, both right away and after Save and reopening Settings.',
 ];
