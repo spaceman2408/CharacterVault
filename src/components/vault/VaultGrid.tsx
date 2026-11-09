@@ -18,6 +18,7 @@ export interface VaultGridProps {
   onDuplicate: (id: string, name: string) => void;
   onDelete: (id: string, name: string) => void;
   onExport: (id: string, format: CardExportFormat) => Promise<void>;
+  onTagClick: (tag: string) => void;
   exportingCardId: string | null;
   onImportClick: () => void;
 }
@@ -35,6 +36,7 @@ export function VaultGrid({
   onDuplicate,
   onDelete,
   onExport,
+  onTagClick,
   exportingCardId,
   onImportClick,
 }: VaultGridProps): React.ReactElement {
@@ -150,6 +152,7 @@ export function VaultGrid({
             onDuplicate={onDuplicate}
             onDelete={onDelete}
             onExport={onExport}
+            onTagClick={onTagClick}
             isExporting={exportingCardId === char.id}
           />
         ))}

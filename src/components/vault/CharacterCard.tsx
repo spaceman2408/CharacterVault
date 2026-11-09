@@ -38,6 +38,7 @@ export interface CharacterCardProps {
   onDuplicate: (id: string, name: string) => void;
   onDelete: (id: string, name: string) => void;
   onExport: (id: string, format: CardExportFormat) => Promise<void>;
+  onTagClick: (tag: string) => void;
   isExporting?: boolean;
 }
 
@@ -47,6 +48,7 @@ export function CharacterCard({
   onDuplicate,
   onDelete,
   onExport,
+  onTagClick,
   isExporting = false,
 }: CharacterCardProps): React.ReactElement {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -220,26 +222,35 @@ export function CharacterCard({
 
         <div className="hidden sm:flex flex-col gap-2.5 flex-1">
           {(visibleTags.length > 0 || overflowTagCount > 0) ? (
-            <button
-              type="button"
+            <div
               onClick={openDetails}
-              className="flex flex-wrap gap-1 text-left rounded-lg -mx-0.5 px-0.5 py-0.5 hover:bg-accent-soft/40 active:bg-accent-soft/60 transition-colors touch-manipulation"
-              aria-label={`Show all tags for ${character.name}`}
+              className="flex flex-wrap gap-1 rounded-lg -mx-0.5 px-0.5 py-0.5"
             >
               {visibleTags.map((tag) => (
-                <span
+                <button
                   key={tag}
-                  className="inline-flex max-w-full items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-accent-soft text-accent border border-accent/25 truncate"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTagClick(tag);
+                  }}
+                  title={`Filter library by “${tag}”`}
+                  className="inline-flex max-w-full items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-accent-soft text-accent border border-accent/25 truncate hover:border-accent/60 hover:bg-accent/15 transition-colors touch-manipulation"
                 >
-                  {tag}
-                </span>
+                  <span className="truncate">{tag}</span>
+                </button>
               ))}
               {overflowTagCount > 0 && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-fg-muted border border-border">
+                <button
+                  type="button"
+                  onClick={openDetails}
+                  aria-label={`Show all tags for ${character.name}`}
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-fg-muted border border-border hover:text-accent hover:border-accent/40 transition-colors touch-manipulation"
+                >
                   +{overflowTagCount}
-                </span>
+                </button>
               )}
-            </button>
+            </div>
           ) : (
             <button
               type="button"
