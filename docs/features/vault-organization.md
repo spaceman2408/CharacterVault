@@ -21,13 +21,17 @@ All characters are displayed as portrait-style cards in a responsive grid that a
 | Tablet | 3 |
 | Desktop | 4 |
 
-On desktop, each card shows the character's portrait thumbnail, name, tag chips, **Opened …** / **Edited …** lines, and a compact **active / total** token chip. On mobile, cards show only the image and name. Sort the grid by name or recent activity (see below).
+On desktop, each card shows the character's portrait thumbnail, name, tag chips, **Opened …** / **Edited …** lines, and a compact **active / total** token chip. On mobile, cards show only the image and name. Sort the grid by name, recent activity, or date created (see below).
 
 ## Search
 
 Use the search bar (in the header on desktop, below the header on mobile) to filter characters. The grid updates in real-time as you type.
 
 Search matches **character name** and **tags**.
+
+- **Tag chips**: click a tag on a library card to fill the search with that tag. The **+N** chip still opens the card details.
+- **Clear**: click the **×** in the search box, or press **Escape**. Press **Escape** again to leave the box.
+- **Jump to search**: press **/** anywhere on the library, except while typing in a field.
 
 ## Sort
 
@@ -37,6 +41,7 @@ Above the grid, switch between:
 | :--- | :--- |
 | **Name** | Alphabetical (case-insensitive, natural numbers) |
 | **Recent** | Most recently opened first (falls back to last updated) |
+| **Created** | Newest created or imported first |
 
 Your sort preference is remembered in the browser.
 

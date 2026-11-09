@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.8.5
-The Agent warns before you leave mid-run, can remember what it wrote earlier, and picks real names that fit the setting.
+::: tip CharacterVault 1.9.0
+Save endpoint and model pairs as named presets, use new Kimi, GLM, and DeepSeek presets, and search and sort the library faster.
 
-[Try it](https://vault.charactervault.app) · [Leaving mid-run](/features/ai-agent#leaving-mid-run) · [Remember earlier edits](/features/ai-agent#remember-earlier-edits)
+[Try it](https://vault.charactervault.app) · [Saved presets](/configuration/ai-setup#saved-presets) · [Library search](/features/vault-organization#search)
 :::
 
 # CharacterVault

@@ -4,6 +4,18 @@ Quick overview of recent updates to CharacterVault.
 
 ---
 
+## November 2026
+
+### 1.9.0
+
+CharacterVault 1.9.0 lets you save an endpoint and model as a named preset and switch between them from the AI Config dropdown, adds Moonshot (Kimi), Z.ai (GLM), Z.ai Coding Plan, and DeepSeek presets, and makes the library quicker to search and sort with clickable tag chips, search shortcuts, and a Created sort, plus bigger Agent batches and fixes for thinking and reasoning models.
+
+- **Saved presets**: **Settings → AI Config → Save as preset** keeps an endpoint and model under a name in the **Saved** group of the **API Base URL** dropdown, and presets on one endpoint share its key
+- **New provider presets**: Moonshot (Kimi), Z.ai (GLM), Z.ai Coding Plan, and DeepSeek in **Settings → AI Config → API Base URL**
+- **Library search and sort**: click a tag chip on a library card to search by it, press **/** to jump to the search and **Escape** to clear it, and sort by **Created**
+
+[Release 1.9.0 →](/releases/v1.9.0) · [AI Setup →](/configuration/ai-setup#saved-presets)
+
 ## October 2026
 
 ### 1.8.5

@@ -82,10 +82,11 @@ Character Vault works with any OpenAI-compatible endpoint. Presets are available
 - **Synthetic** — hosted endpoint with `syn:` aliases and a live usage card
 - **OpenRouter** — multi-model gateway with key spend, optional spending cap, host selection, and routing and privacy options
 - **Minimax** — OpenAI-compatible endpoint
+- **Moonshot (Kimi)**, **Z.ai (GLM)**, **Z.ai Coding Plan**, and **DeepSeek** — direct endpoints for those models
 - **LM Studio / localhost** — local inference
 - **Custom URL** — any compatible endpoint
 
-Each preset saves your API key and model selection separately, so switching between providers restores your saved credentials.
+Each preset saves your API key and model selection separately, so switching between providers restores your saved credentials. To keep an endpoint and model pair under your own name, use [Saved presets](/configuration/ai-setup#saved-presets).
 :::
 
 ::: details What does the AI toolbar do?
@@ -344,7 +345,7 @@ On **Settings → Prompts**, the **Toolbar Buttons** card has a **New custom but
 :::
 
 ::: details Can each toolbar button use a different model?
-Yes. On **Settings → Prompts**, expand any operation and set **Model for this prompt**. You can keep **Default (AI Config)** or point that op at another endpoint (Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio, custom) and model. Keys are configured on the **AI Config** tab first. Custom buttons you create get the same picker inside their button editor.
+Yes. On **Settings → Prompts**, expand any operation and set **Model for this prompt**. You can keep **Default (AI Config)** or point that op at another endpoint (any provider preset, LM Studio, a saved custom endpoint, or a custom URL) and model. Keys are configured on the **AI Config** tab first. Custom buttons you create get the same picker inside their button editor.
 
 Orion chat and AI Creation Studio always use the global AI Config model. The **Agent** uses the **Agent** mapping at the top of the Prompts tab (Default follows AI Config). Lorebook ✨ key generation follows the **Custom** prompt mapping when set.
 

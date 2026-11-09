@@ -200,8 +200,10 @@ If a job is huge, send a second ask for the rest.
 | :--- | :--- |
 | Field updates | 30 |
 | Greeting add/update/delete | 20 |
-| Lorebook add / update / delete | 50 each |
-| Tool calls in one model reply | 12 |
+| Lorebook adds | 50 |
+| Lorebook updates (each update, replace, or book-settings change counts) | 150 |
+| Lorebook deletes | 50 |
+| Tool calls in one model reply | 24 |
 | Loop turns | 32 |
 | Find-and-replace across the card or book | 10 |
 
