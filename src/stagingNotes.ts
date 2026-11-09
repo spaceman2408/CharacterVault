@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.8.6 staging 2';
+export const STAGING_VERSION = 'v1.8.6 staging 3';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -37,4 +37,6 @@ export const STAGING_TEST_NOTES: string[] = [
   'Settings → AI Config → new presets: Moonshot (Kimi), Z.ai (GLM), Z.ai Coding Plan and DeepSeek. If you have a key for one, fetch models, chat with Orion and run the agent on it. Note anything that errors or ignores the Reasoning toggle.',
   'Settings → AI Config → pick a provider (or Custom URL) and a model, then "Save as preset" under the URL. Save a few on OpenRouter with different models: each shows under Saved, picking one switches to its model, and they all share one OpenRouter key. "Remove preset" asks first. Clear AI Settings keeps saved presets but drops their keys.',
   'Settings → AI Config → with an OpenRouter preset saved, pick plain OpenRouter and choose a different model, then switch to the saved preset and back. Plain OpenRouter should stay selected with its own model, both right away and after Save and reopening Settings.',
+  'Agent → ask for a change that takes a few tool calls on a slower model: while the model writes its next reply, the spinner should say "Working…" instead of staying on the last tool (like "Reading First Message").',
+  'Agent → ask for a lorebook overhaul that touches many entries: a reply can now hold up to 24 tool calls (was 12) and a run up to 150 entry updates (was 50), so big passes should stop hitting "max updates per run".',
 ];
