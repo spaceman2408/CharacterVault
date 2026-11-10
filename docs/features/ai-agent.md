@@ -84,8 +84,10 @@ Both the character Agent and the lorebook Agent do this. Give the names yourself
 Ask it to check the card or book and it runs read-only reports. Nothing is written.
 
 - **Audit:** sizes, empty fields, duplicate keys, and `{{char}}` / `{{user}}` use. On a card it also checks example dialogue: a `<START>` line, and a `{{char}}:` line in each block.
-- **Recursion map:** which entries can unlock which.
-- **Key test:** give it a line a user might write, such as *we head down to the harbor at night*. It lists the entries that would activate and the key that matched, plus key hits that stay off (disabled, secondary keys, delay until recursion). It follows recursion when recursive scanning is on. It is an estimate: earlier chat messages, inclusion groups, and timed effects are not replayed.
+- **Recursion map:** which entries can unlock which. Asked about one entry, it also lists the links that **Non-recursable** or **Prevent further** blocks and whose flag blocks each one. It warns about entries that can never activate: **Delay until recursion** together with **Non-recursable**, or with **Recursive scanning** off.
+- **Key test:** give it a line a user might write, such as *we head down to the harbor at night*. It lists the entries that would activate and the key that matched, plus key hits that stay off (disabled, secondary keys, delay until recursion) and why. It follows recursion when recursive scanning is on; unset counts as off, as in the editor. It is an estimate: earlier chat messages, inclusion groups, and timed effects are not replayed.
+
+When the Agent sets one of those flags so that an entry can never activate, its write says so too.
 
 ### What it does not write
 
@@ -135,8 +137,8 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings �
 
 ### What you see in chat
 
-- **Tool lines:** color-coded list / read / write results, including lorebook entry ids. Click a successful write to open that field, greeting, or lorebook entry.
-- **Write recap:** speech from a turn that also called tools stays on the message. If there was no speech, **Applied N writes** sits above the tool list.
+- **Tool lines:** color-coded list / read / write results, including lorebook entry ids. Click a successful write to open that field, greeting, or lorebook entry. A lorebook write that changed nothing reads **No change to …**.
+- **Write recap:** speech from a turn that also called tools stays on the message. If there was no speech, **Applied N writes** sits above the tool list. Writes that changed nothing are not counted.
 - **Status line:** while a tool runs, the spinner names what it is working on, such as *Updating Description*, *Reading entry “Harbor”*, or *Searching “harbor”*. An entry added earlier in the same run shows by id (*entry #4*).
 - **Turn limit:** a run that stops at the [loop-turn cap](#limits-per-run) says so on its last message, with a **Continue** button that sends “Continue where you left off.”
 - **Starter suggestions:** an empty chat offers a few first requests based on what the card or book is missing, such as *Write a description*, *Write 2 alternate greetings*, or *Build a lorebook from my custom context*. It never suggests Appearance, Personality, Scenario, System prompt, or Post-history. A finished card gets the usual *Audit this card* style chips.
@@ -225,6 +227,7 @@ When a run that changed something finishes, **Review agent edits** opens instead
 
 - Each field, greeting, and lorebook change is a row with an **Original / Agent** diff and `+added` / `−removed` word counts. On wider screens the two sides sit next to each other, aligned line by line; on phones the diff is one inline column. Reworded lines highlight only the words that changed. Runs of unchanged lines fold behind **Show N unchanged lines**. Lines that changed too much, and very long texts, show as whole removed and added lines.
 - Greeting changes are labeled: an added greeting shows as **New alternate greeting** with an empty **Original**, a deleted one as **Deleted alternate greeting**, and a **Greetings list** rewrite shows per-greeting blocks with `+N` / `−N` greeting counts and **New** / **Removed** badges. When editing a Greetings list change, separate greetings with a line containing only `---`, or a longer dash line when a greeting already has a `---` scene break. The hint under the box shows which.
+- A lorebook row lists each entry setting the Agent changed above the content diff, such as **Non-recursable: on → off** or **Position: Before Character → At Depth**, with the same names as [Snapshots](/features/snapshots-history).
 - Approve or deny per change. **Approve all** / **Deny all** set every row. Denied rows stay in the list but are not applied.
 - Expand an approved change to **edit** the proposed text (and lorebook keys) before it lands.
 - **Apply N** takes **one snapshot**, then writes only the approved rows (it is disabled when nothing is approved). **Discard all** throws the whole proposal away after a **Confirm discard** step.
