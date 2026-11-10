@@ -11,6 +11,14 @@ const MAX_SOURCE_LINES = 80;
 const SCANNING_OFF_WARNING = 'Warning: recursive_scanning is off, so these edges will not fire in SillyTavern.';
 const MAX_NEIGHBORS = 40;
 const MAX_ISOLATED = 24;
+const MAX_FLAGGED = 24;
+
+export const NEVER_ACTIVATES = 'excludeRecursion with delayUntilRecursion means this entry never activates';
+
+/** The initial scan skips a delayed entry and recursive passes skip an excluded one. Constants skip both checks. */
+export function neverActivates(entry: LorebookEntry): boolean {
+  return entry.excludeRecursion === true && entry.delayUntilRecursion === true && !entry.constant;
+}
 
 export function entryLabel(entry: LorebookEntry): string {
   return `#${entry.id} ${entry.name?.trim() || entry.comment?.trim() || entry.keys?.[0] || '(unnamed)'}`;
@@ -75,6 +83,43 @@ function flagBits(entry: LorebookEntry): string[] {
   return bits;
 }
 
+/** Edges the graph would have if no entry had excludeRecursion or preventRecursion. */
+function findBlockedEdges(entries: LorebookEntry[], graph: RecursionGraph): RecursionEdge[] {
+  if (!entries.some((entry) => entry.excludeRecursion || entry.preventRecursion)) return [];
+  const open = buildRecursionGraph(
+    entries.map((entry) => ({ ...entry, excludeRecursion: false, preventRecursion: false })),
+  );
+  const blocked: RecursionEdge[] = [];
+  for (const [fromId, edges] of open.outgoing) {
+    const kept = new Set((graph.outgoing.get(fromId) ?? []).map((edge) => edge.toId));
+    for (const edge of edges) if (!kept.has(edge.toId)) blocked.push(edge);
+  }
+  return blocked;
+}
+
+function blockReason(edge: RecursionEdge, byId: Map<number, LorebookEntry>): string {
+  const reasons: string[] = [];
+  if (byId.get(edge.fromId)?.preventRecursion) reasons.push(`#${edge.fromId} has preventRecursion`);
+  if (byId.get(edge.toId)?.excludeRecursion) reasons.push(`#${edge.toId} has excludeRecursion`);
+  return reasons.join(', ');
+}
+
+function edgeLines(
+  title: string,
+  edges: RecursionEdge[],
+  byId: Map<number, LorebookEntry>,
+  blocked = false,
+): string[] {
+  if (edges.length === 0) return [`${title}: (none)`];
+  const shown = edges.slice(0, MAX_NEIGHBORS);
+  const lines = [`${title}:`];
+  for (const edge of shown) {
+    lines.push(`- ${formatEdge(edge, byId)}${blocked ? ` — ${blockReason(edge, byId)}` : ''}`);
+  }
+  if (edges.length > shown.length) lines.push(`…and ${edges.length - shown.length} more`);
+  return lines;
+}
+
 export function formatRecursionMap(book: CharacterBook, focusId?: number): string {
   const entries = book.entries ?? [];
   const byId = new Map(entries.map((entry) => [entry.id, entry]));
@@ -82,9 +127,10 @@ export function formatRecursionMap(book: CharacterBook, focusId?: number): strin
   const stats = getBookRecursionStats(entries, graph);
   const cycle = findCycle(entries, graph);
   const scan = recursiveScanningLabel(book);
+  const blocked = findBlockedEdges(entries, graph);
 
   if (focusId != null) {
-    return formatEgoMap(focusId, byId, graph, scan, cycle);
+    return formatEgoMap(focusId, byId, graph, blocked, scan, cycle);
   }
 
   const header = `Recursion map — ${stats.entryCount} ${
@@ -124,14 +170,22 @@ export function formatRecursionMap(book: CharacterBook, focusId?: number): strin
     );
   }
 
+  if (blocked.length > 0) {
+    lines.push(
+      `Blocked by excludeRecursion / preventRecursion: ${blocked.length} ${
+        blocked.length === 1 ? 'edge' : 'edges'
+      }; read_recursion with an id lists them.`,
+    );
+  }
+
   const flagged = entries.filter((entry) => flagBits(entry).length > 0);
   if (flagged.length > 0) {
-    lines.push(
-      `Flags: ${flagged
-        .slice(0, 24)
-        .map((entry) => `${entryLabel(entry)} ${flagBits(entry).join(', ')}`)
-        .join('; ')}`,
-    );
+    const shown = flagged.slice(0, MAX_FLAGGED).map((entry) => {
+      const note = neverActivates(entry) ? ' (never activates)' : '';
+      return `${entryLabel(entry)} ${flagBits(entry).join(', ')}${note}`;
+    });
+    const extra = flagged.length - shown.length;
+    lines.push(`Flags: ${shown.join('; ')}${extra > 0 ? `; …+${extra}` : ''}`);
   }
 
   return lines.join('\n');
@@ -141,6 +195,7 @@ function formatEgoMap(
   focusId: number,
   byId: Map<number, LorebookEntry>,
   graph: RecursionGraph,
+  blocked: RecursionEdge[],
   scan: string,
   cycle: string | null,
 ): string {
@@ -149,35 +204,21 @@ function formatEgoMap(
 
   const incoming = graph.incoming.get(focusId) ?? [];
   const outgoing = graph.outgoing.get(focusId) ?? [];
+  const blockedIn = blocked.filter((edge) => edge.toId === focusId);
+  const blockedOut = blocked.filter((edge) => edge.fromId === focusId);
   const flags = flagBits(entry);
   const header = `Recursion for ${entryLabel(entry)} — ${incoming.length} in, ${outgoing.length} out; recursive_scanning ${scan}`;
 
   const lines = [header];
   if (scan === 'off' && incoming.length + outgoing.length > 0) lines.push(SCANNING_OFF_WARNING);
   if (flags.length > 0) lines.push(`flags: ${flags.join(', ')}`);
+  if (neverActivates(entry)) lines.push(`Warning: ${NEVER_ACTIVATES}.`);
   if (cycle) lines.push(`cycle: ${cycle}`);
 
-  if (incoming.length === 0) {
-    lines.push('Incoming: (none)');
-  } else {
-    const shown = incoming.slice(0, MAX_NEIGHBORS);
-    lines.push('Incoming:');
-    for (const edge of shown) lines.push(`- ${formatEdge(edge, byId)}`);
-    if (incoming.length > shown.length) {
-      lines.push(`…and ${incoming.length - shown.length} more`);
-    }
-  }
-
-  if (outgoing.length === 0) {
-    lines.push('Outgoing: (none)');
-  } else {
-    const shown = outgoing.slice(0, MAX_NEIGHBORS);
-    lines.push('Outgoing:');
-    for (const edge of shown) lines.push(`- ${formatEdge(edge, byId)}`);
-    if (outgoing.length > shown.length) {
-      lines.push(`…and ${outgoing.length - shown.length} more`);
-    }
-  }
+  lines.push(...edgeLines('Incoming', incoming, byId));
+  if (blockedIn.length > 0) lines.push(...edgeLines('Blocked incoming', blockedIn, byId, true));
+  lines.push(...edgeLines('Outgoing', outgoing, byId));
+  if (blockedOut.length > 0) lines.push(...edgeLines('Blocked outgoing', blockedOut, byId, true));
 
   return lines.join('\n');
 }

@@ -122,6 +122,22 @@ describe('formatKeyTest', () => {
     expect(on).not.toContain('but delayUntilRecursion');
   });
 
+  it('says a delayed entry that is also non-recursable never activates', () => {
+    const result = formatKeyTest(
+      book(
+        [
+          entry(1, 'Harbor', ['harbor'], 'Fog rolls in.'),
+          entry(2, 'Fog', ['fog'], 'Thick fog.', { delayUntilRecursion: true, excludeRecursion: true }),
+        ],
+        { recursive_scanning: true },
+      ),
+      'Fog over the harbor.',
+    );
+    expect(result).toContain(
+      '- #2 Fog — "fog", but excludeRecursion with delayUntilRecursion means this entry never activates',
+    );
+  });
+
   it('notes chance and the token budget', () => {
     const result = formatKeyTest(
       book([entry(1, 'Harbor', ['harbor'], 'x'.repeat(400), { probability: 40, useProbability: true })], {

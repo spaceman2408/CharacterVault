@@ -2,7 +2,7 @@ import type { CharacterBook, LorebookEntry } from '../../../db/characterTypes';
 import { contentMatchesKey } from '../../../components/editor/lorebook/recursionGraph';
 import { SELECTIVE_LOGIC_OPTIONS } from '../../../components/editor/lorebook/constants';
 import { estimateTokens } from '../../../services/AIService';
-import { entryLabel } from './recursion';
+import { entryLabel, NEVER_ACTIVATES, neverActivates } from './recursion';
 
 const MAX_ACTIVE_LINES = 60;
 const MAX_MISSED_LINES = 30;
@@ -132,7 +132,8 @@ export function formatKeyTest(book: CharacterBook, text: string): string {
     const key = firstMatchingKey(chat, entry);
     if (!key) continue;
     if (entry.delayUntilRecursion) {
-      missed.set(entry.id, `${entryLabel(entry)} — "${key}", but delayUntilRecursion and no recursive pass reached it`);
+      const why = neverActivates(entry) ? NEVER_ACTIVATES : 'delayUntilRecursion and no recursive pass reached it';
+      missed.set(entry.id, `${entryLabel(entry)} — "${key}", but ${why}`);
       held.set(entry.id, key);
       continue;
     }

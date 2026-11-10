@@ -12,7 +12,7 @@ import {
 import { formatBookAudit } from './audit';
 import { formatEntryCatalog } from './catalog';
 import { formatKeyTest } from './keyTest';
-import { formatRecursionMap } from './recursion';
+import { formatRecursionMap, NEVER_ACTIVATES, neverActivates } from './recursion';
 import {
   applyEntryFlagPatch,
   ENTRY_FLAG_KEYS,
@@ -68,8 +68,14 @@ function noteEntryState(
 ): ActionResult {
   if (!result.ok || !entry) return result;
   const sent = formatSentFields(entry, headers);
-  const note = changed ? (sent ? `now ${sent}` : '') : sent ? `no change, already ${sent}` : 'no change';
-  return note ? { ...result, message: `${result.message} — ${note}` } : result;
+  const notes = [changed ? (sent ? `now ${sent}` : '') : sent ? `no change, already ${sent}` : 'no change'];
+  const sentPairField = ['excludeRecursion', 'delayUntilRecursion', 'constant'].some((key) => hasHeader(headers, key));
+  if (sentPairField && neverActivates(entry)) notes.push(`warning: ${NEVER_ACTIVATES}`);
+  const suffix = notes
+    .filter(Boolean)
+    .map((note) => ` — ${note}`)
+    .join('');
+  return suffix ? { ...result, message: `${result.message}${suffix}` } : result;
 }
 
 function noteUnknownFields(result: ActionResult, unknown: string[]): ActionResult {

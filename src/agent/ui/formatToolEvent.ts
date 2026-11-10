@@ -4,7 +4,7 @@ import type { AgentToolEvent } from './types';
 function parseOkEntry(
   message: string,
 ): { id: string; name: string; replaced?: number; noChange?: boolean } | null {
-  const match = /^ok #(\d+)\s+(.+?)(?: — (now |no change|ignored unknown fields: ).*)?$/.exec(message);
+  const match = /^ok #(\d+)\s+(.+?)(?: — (now |no change|warning: |ignored unknown fields: ).*)?$/.exec(message);
   if (!match) return null;
   const replaced = /^(.*) — replaced (\d+)$/.exec(match[2]);
   if (replaced) {

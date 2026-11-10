@@ -70,6 +70,14 @@ describe('formatToolEvent', () => {
     expect(formatToolEvent(event('add_entry', 'ok #0 Harbor — now position: at_depth, depth: 4'))).toBe(
       'Added “Harbor” (#0)',
     );
+    expect(
+      formatToolEvent(
+        event(
+          'update_entry',
+          'ok #4 Keep — now delayUntilRecursion: true — warning: excludeRecursion with delayUntilRecursion means this entry never activates',
+        ),
+      ),
+    ).toBe('Updated “Keep” (#4)');
   });
 
   it('says No change when a write changed nothing', () => {

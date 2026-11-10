@@ -430,6 +430,31 @@ describe('updateEntry', () => {
     expect(body.result.message).toBe('ok #4 The Red Keep — no change');
   });
 
+  it('warns when a write leaves an entry with excludeRecursion and delayUntilRecursion', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'Castle.',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+        excludeRecursion: true,
+      },
+    ];
+    const { result } = updateEntry(book, action('update_entry', { id: '4', delayUntilRecursion: 'true' }));
+    expect(result.message).toBe(
+      'ok #4 The Red Keep — now delayUntilRecursion: true — warning: excludeRecursion with delayUntilRecursion means this entry never activates',
+    );
+
+    const bodyOnly = updateEntry(
+      { ...book, entries: [{ ...book.entries[0], delayUntilRecursion: true }] },
+      action('update_entry', { id: '4' }, 'A castle.'),
+    );
+    expect(bodyOnly.result.message).toBe('ok #4 The Red Keep');
+  });
+
   it('reports depth and selective when the write set them as a side effect', () => {
     const book = createEmptyCharacterBook('World');
     book.entries = [
@@ -1192,6 +1217,55 @@ describe('readRecursion', () => {
     expect(focused).toContain('Warning: recursive_scanning is off');
 
     expect(readRecursion(linkedBook(), action('read_recursion', { id: '2' })).message).not.toContain('Warning');
+  });
+
+  it('lists the edges a flag blocks and which flag blocks them', () => {
+    const book = linkedBook();
+    book.entries[1].excludeRecursion = true;
+
+    const target = readRecursion(book, action('read_recursion', { id: '2' })).message;
+    expect(target).toContain('Incoming: (none)');
+    expect(target).toContain('Blocked incoming:\n- #1 Harbor → #2 Docks (docks) — #2 has excludeRecursion');
+
+    const source = readRecursion(book, action('read_recursion', { id: '1' })).message;
+    expect(source).toContain('Outgoing: (none)');
+    expect(source).toContain('Blocked outgoing:\n- #1 Harbor → #2 Docks (docks) — #2 has excludeRecursion');
+
+    const whole = readRecursion(book, action('read_recursion')).message;
+    expect(whole).toContain('Blocked by excludeRecursion / preventRecursion: 1 edge;');
+
+    const prevented = linkedBook();
+    prevented.entries[0].preventRecursion = true;
+    expect(readRecursion(prevented, action('read_recursion', { id: '1' })).message).toContain(
+      '- #1 Harbor → #2 Docks (docks) — #1 has preventRecursion',
+    );
+    expect(readRecursion(linkedBook(), action('read_recursion', { id: '1' })).message).not.toContain('Blocked');
+  });
+
+  it('warns when excludeRecursion and delayUntilRecursion leave an entry unable to activate', () => {
+    const book = linkedBook();
+    book.entries[1].excludeRecursion = true;
+    book.entries[1].delayUntilRecursion = true;
+    expect(readRecursion(book, action('read_recursion', { id: '2' })).message).toContain(
+      'Warning: excludeRecursion with delayUntilRecursion means this entry never activates.',
+    );
+    expect(readRecursion(book, action('read_recursion')).message).toContain(
+      '#2 Docks excludeRecursion, delayUntilRecursion (never activates)',
+    );
+  });
+
+  it('says how many flagged entries the Flags line leaves out', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = Array.from({ length: 30 }, (_, id) => ({
+      id,
+      keys: [`key${id}`],
+      content: 'Body.',
+      extensions: {},
+      enabled: true,
+      name: `E${id}`,
+      preventRecursion: true,
+    }));
+    expect(readRecursion(book, action('read_recursion')).message).toMatch(/^Flags: .*#23 E23 preventRecursion; …\+6$/m);
   });
 
   it('does not warn when off but no entry unlocks another', () => {
