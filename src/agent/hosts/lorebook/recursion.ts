@@ -5,8 +5,10 @@ import {
   type RecursionEdge,
   type RecursionGraph,
 } from '../../../components/editor/lorebook/recursionGraph';
+import { recursiveScanningLabel } from './flags';
 
 const MAX_SOURCE_LINES = 80;
+const SCANNING_OFF_WARNING = 'Warning: recursive_scanning is off, so these edges will not fire in SillyTavern.';
 const MAX_NEIGHBORS = 40;
 const MAX_ISOLATED = 24;
 
@@ -30,12 +32,6 @@ function formatMatchedKeys(keys: string[]): string {
 
 function formatEdge(edge: RecursionEdge, byId: Map<number, LorebookEntry>): string {
   return `${labelFor(byId, edge.fromId)} → ${labelFor(byId, edge.toId)} (${formatMatchedKeys(edge.matchedKeys)})`;
-}
-
-function scanningLabel(book: CharacterBook): string {
-  if (book.recursive_scanning === false) return 'off';
-  if (book.recursive_scanning === true) return 'on';
-  return 'unset';
 }
 
 export function findCycle(
@@ -85,7 +81,7 @@ export function formatRecursionMap(book: CharacterBook, focusId?: number): strin
   const graph = buildRecursionGraph(entries);
   const stats = getBookRecursionStats(entries, graph);
   const cycle = findCycle(entries, graph);
-  const scan = scanningLabel(book);
+  const scan = recursiveScanningLabel(book);
 
   if (focusId != null) {
     return formatEgoMap(focusId, byId, graph, scan, cycle);
@@ -98,9 +94,7 @@ export function formatRecursionMap(book: CharacterBook, focusId?: number): strin
   }; recursive_scanning ${scan}`;
 
   const lines = [header];
-  if (book.recursive_scanning === false) {
-    lines.push('Warning: recursive_scanning is off, so these edges will not fire in SillyTavern.');
-  }
+  if (scan === 'off' && stats.edgeCount > 0) lines.push(SCANNING_OFF_WARNING);
 
   const sources = entries.filter((entry) => (graph.outgoing.get(entry.id) ?? []).length > 0);
   const shownSources = sources.slice(0, MAX_SOURCE_LINES);
@@ -159,6 +153,7 @@ function formatEgoMap(
   const header = `Recursion for ${entryLabel(entry)} — ${incoming.length} in, ${outgoing.length} out; recursive_scanning ${scan}`;
 
   const lines = [header];
+  if (scan === 'off' && incoming.length + outgoing.length > 0) lines.push(SCANNING_OFF_WARNING);
   if (flags.length > 0) lines.push(`flags: ${flags.join(', ')}`);
   if (cycle) lines.push(`cycle: ${cycle}`);
 

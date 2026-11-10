@@ -312,6 +312,11 @@ export function formatEntryFlagSuffix(entry: LorebookEntry): string {
   return parts.join(', ');
 }
 
+/** Unset counts as off, as in the editor's checkbox and in test_keys. */
+export function recursiveScanningLabel(book: CharacterBook): 'on' | 'off' {
+  return book.recursive_scanning === true ? 'on' : 'off';
+}
+
 export function formatBookSettings(book: CharacterBook): string {
   const name = book.name?.trim();
   const description = book.description ?? '';
@@ -320,7 +325,7 @@ export function formatBookSettings(book: CharacterBook): string {
     description ? `description: ${estimateTokens(description)} tokens` : null,
     `scan_depth: ${book.scan_depth ?? '(default)'}`,
     `token_budget: ${book.token_budget ?? '(default)'}`,
-    `recursive_scanning: ${book.recursive_scanning ? 'on' : 'off'}`,
+    `recursive_scanning: ${recursiveScanningLabel(book)}`,
   ].filter((part): part is string => part != null);
   return `Book settings: ${parts.join('; ')}`;
 }

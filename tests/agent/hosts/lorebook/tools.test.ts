@@ -1084,6 +1084,16 @@ describe('auditBook', () => {
     expect(result.message).toContain('Duplicate keys');
     expect(result.message).not.toContain('SECRET BODY');
   });
+
+  it('says whether recursive_scanning is on next to the recursion counts', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      { id: 1, keys: ['harbor'], content: 'Ships.', extensions: {}, enabled: true, name: 'Harbor' },
+    ];
+    expect(auditBook(book).message).toMatch(/^Recursion: .*; recursive_scanning off$/m);
+    book.recursive_scanning = true;
+    expect(auditBook(book).message).toMatch(/^Recursion: .*; recursive_scanning on$/m);
+  });
 });
 
 describe('updateBookSettings', () => {
@@ -1149,6 +1159,31 @@ describe('readRecursion', () => {
     ];
     return book;
   }
+
+  it('reads an unset recursive_scanning as off and warns next to edges', () => {
+    const book = linkedBook();
+    delete book.recursive_scanning;
+    const whole = readRecursion(book, action('read_recursion')).message;
+    expect(whole).toContain('recursive_scanning off');
+    expect(whole).toContain('Warning: recursive_scanning is off');
+
+    const focused = readRecursion(book, action('read_recursion', { id: '2' })).message;
+    expect(focused).toContain('recursive_scanning off');
+    expect(focused).toContain('Warning: recursive_scanning is off');
+
+    expect(readRecursion(linkedBook(), action('read_recursion', { id: '2' })).message).not.toContain('Warning');
+  });
+
+  it('does not warn when off but no entry unlocks another', () => {
+    const book = createEmptyCharacterBook('World');
+    book.recursive_scanning = false;
+    book.entries = [
+      { id: 1, keys: ['harbor'], content: 'Ships.', extensions: {}, enabled: true, name: 'Harbor' },
+    ];
+    const result = readRecursion(book, action('read_recursion')).message;
+    expect(result).toContain('recursive_scanning off');
+    expect(result).not.toContain('Warning');
+  });
 
   it('maps who can unlock whom without dumping bodies', () => {
     const result = readRecursion(linkedBook(), action('read_recursion'));
