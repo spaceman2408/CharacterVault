@@ -46,6 +46,40 @@ export function hasAnyFlagHeader(headers: Record<string, string>): boolean {
   return ENTRY_FLAG_KEYS.some((key) => hasHeader(headers, key));
 }
 
+/** Keyed by the name in lower case without `_` or `-`. */
+const RECURSION_FIELD_ALIASES: Record<string, string> = {
+  excluderecursion: 'excludeRecursion',
+  nonrecursable: 'excludeRecursion',
+  preventrecursion: 'preventRecursion',
+  preventfurtherrecursion: 'preventRecursion',
+  delayuntilrecursion: 'delayUntilRecursion',
+  recursivescanning: 'recursive_scanning',
+};
+
+/**
+ * Keeps the fields a tool knows. Other spellings of the recursion fields (snake_case,
+ * any case, SillyTavern's labels) are renamed to ours, and the exact spelling wins.
+ * Only those are matched loosely, so a body line like `Name: …` or `Depth: …` that the
+ * XML parser read as a header never becomes a field.
+ */
+export function readToolFields(
+  headers: Record<string, string>,
+  known: readonly string[],
+): { headers: Record<string, string>; unknown: string[] } {
+  const fields: Record<string, string> = {};
+  const unknown: string[] = [];
+  for (const [key, value] of Object.entries(headers)) {
+    if (known.includes(key)) {
+      fields[key] = value;
+      continue;
+    }
+    const alias = RECURSION_FIELD_ALIASES[key.toLowerCase().replace(/[_-]/g, '')];
+    if (!alias || !known.includes(alias)) unknown.push(key);
+    else if (!hasHeader(headers, alias)) fields[alias] = value;
+  }
+  return { headers: fields, unknown };
+}
+
 function parseBool(raw: string, field: string): { ok: true; value: boolean } | { ok: false; message: string } {
   const trimmed = raw.trim().toLowerCase();
   if (trimmed === 'true') return { ok: true, value: true };

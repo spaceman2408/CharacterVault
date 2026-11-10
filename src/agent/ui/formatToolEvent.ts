@@ -3,7 +3,7 @@ import type { AgentToolEvent } from './types';
 function parseOkEntry(
   message: string,
 ): { id: string; name: string; replaced?: number } | null {
-  const match = /^ok #(\d+)\s+(.+)$/.exec(message);
+  const match = /^ok #(\d+)\s+(.+?)(?: — ignored unknown fields: .+)?$/.exec(message);
   if (!match) return null;
   const replaced = /^(.*) — replaced (\d+)$/.exec(match[2]);
   if (replaced) {

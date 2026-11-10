@@ -15,11 +15,13 @@ import { formatKeyTest } from './keyTest';
 import { formatRecursionMap } from './recursion';
 import {
   applyEntryFlagPatch,
+  ENTRY_FLAG_KEYS,
   formatBookSettings,
   formatEntryFlagLines,
   hasAnyFlagHeader,
   parseBookSettings,
   parseEntryFlags,
+  readToolFields,
 } from './flags';
 
 export const LOREBOOK_TOOL_NAMES = [
@@ -42,6 +44,28 @@ export type LorebookToolName = (typeof LOREBOOK_TOOL_NAMES)[number];
 export const MAX_NEW_ENTRIES_PER_RUN = 50;
 export const MAX_UPDATES_PER_RUN = 150;
 export const MAX_DELETES_PER_RUN = 50;
+
+const ADD_ENTRY_FIELDS: readonly string[] = ['name', 'keys', 'constant', ...ENTRY_FLAG_KEYS];
+const UPDATE_ENTRY_FIELDS: readonly string[] = ['id', ...ADD_ENTRY_FIELDS];
+const BOOK_SETTING_FIELDS: readonly string[] = [
+  'name',
+  'description',
+  'scan_depth',
+  'token_budget',
+  'recursive_scanning',
+];
+const MAX_UNKNOWN_FIELDS_SHOWN = 6;
+
+/** The chat row drops this note when it reads the result (`parseOkEntry` in ui/formatToolEvent.ts). */
+function noteUnknownFields(result: ActionResult, unknown: string[]): ActionResult {
+  if (unknown.length === 0) return result;
+  const shown = unknown.slice(0, MAX_UNKNOWN_FIELDS_SHOWN).join(', ');
+  const extra = unknown.length - MAX_UNKNOWN_FIELDS_SHOWN;
+  return {
+    ...result,
+    message: `${result.message} — ignored unknown fields: ${shown}${extra > 0 ? `, …+${extra}` : ''}`,
+  };
+}
 
 export { parseCommaList };
 
@@ -158,6 +182,12 @@ function updateEntryError(
 }
 
 export function updateEntry(book: CharacterBook, action: ParsedAction): UpdateEntryResult {
+  const fields = readToolFields(action.headers, UPDATE_ENTRY_FIELDS);
+  const applied = applyUpdateEntry(book, { ...action, headers: fields.headers });
+  return { ...applied, result: noteUnknownFields(applied.result, fields.unknown) };
+}
+
+function applyUpdateEntry(book: CharacterBook, action: ParsedAction): UpdateEntryResult {
   const id = parseEntryId(action.headers.id);
   if (id == null) {
     return updateEntryError(book, 'error: id must be a non-negative integer');
@@ -339,6 +369,17 @@ export function addEntry(
   action: ParsedAction,
   revisableIds: ReadonlySet<number> = new Set(),
   reservedIds: ReadonlySet<number> = new Set(),
+): AddEntryResult {
+  const fields = readToolFields(action.headers, ADD_ENTRY_FIELDS);
+  const applied = applyAddEntry(book, { ...action, headers: fields.headers }, revisableIds, reservedIds);
+  return { ...applied, result: noteUnknownFields(applied.result, fields.unknown) };
+}
+
+function applyAddEntry(
+  book: CharacterBook,
+  action: ParsedAction,
+  revisableIds: ReadonlySet<number>,
+  reservedIds: ReadonlySet<number>,
 ): AddEntryResult {
   const content = action.body.trim();
   const constant = parseConstantFlag(action.headers.constant);
@@ -537,12 +578,16 @@ export function updateBookSettings(
   book: CharacterBook,
   action: ParsedAction,
 ): { book: CharacterBook; result: ActionResult; changed: boolean } {
-  const parsed = parseBookSettings(action.headers, action.body);
+  const fields = readToolFields(action.headers, BOOK_SETTING_FIELDS);
+  const parsed = parseBookSettings(fields.headers, action.body);
   if ('error' in parsed) {
     return {
       book,
       changed: false,
-      result: { ok: false, toolName: 'update_book_settings', message: parsed.error },
+      result: noteUnknownFields(
+        { ok: false, toolName: 'update_book_settings', message: parsed.error },
+        fields.unknown,
+      ),
     };
   }
   const next: CharacterBook = { ...book, ...parsed.patch };
@@ -555,10 +600,9 @@ export function updateBookSettings(
   return {
     book: next,
     changed: !unchanged,
-    result: {
-      ok: true,
-      toolName: 'update_book_settings',
-      message: `ok ${formatBookSettings(next)}`,
-    },
+    result: noteUnknownFields(
+      { ok: true, toolName: 'update_book_settings', message: `ok ${formatBookSettings(next)}` },
+      fields.unknown,
+    ),
   };
 }

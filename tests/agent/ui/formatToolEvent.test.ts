@@ -58,6 +58,12 @@ describe('formatToolEvent', () => {
     );
   });
 
+  it('leaves the unknown-fields note out of the entry name', () => {
+    expect(
+      formatToolEvent(event('update_entry', 'ok #4 The Red Keep — ignored unknown fields: recursion, Depth')),
+    ).toBe('Updated “The Red Keep” (#4)');
+  });
+
   it('formats field updates, greetings, and lists', () => {
     expect(
       formatToolEvent(event('update_field', 'ok description (Description) — 3849 tokens')),
