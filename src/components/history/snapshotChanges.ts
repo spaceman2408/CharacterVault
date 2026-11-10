@@ -71,6 +71,24 @@ const BOOK_SETTING_LABELS: Record<string, string> = {
   recursive_scanning: 'Recursive scanning',
 };
 
+/**
+ * What an unset on/off setting means, so one cleared by deleting it reads "off" (or "on"
+ * for enabled) instead of "—". Unset recursive_scanning is off, as in the editor's checkbox.
+ */
+const BOOLEAN_SETTING_DEFAULTS: Record<string, boolean> = {
+  enabled: true,
+  constant: false,
+  selective: false,
+  excludeRecursion: false,
+  preventRecursion: false,
+  delayUntilRecursion: false,
+  recursive_scanning: false,
+};
+
+export function settingValueOrDefault(key: string, value: unknown): unknown {
+  return value === undefined || value === null ? (BOOLEAN_SETTING_DEFAULTS[key] ?? value) : value;
+}
+
 /** Vault-only extension keys that are not part of the card. */
 const IGNORED_EXTENSION_KEYS: ReadonlySet<string> = new Set(['context_enabled']);
 
@@ -170,8 +188,10 @@ function settingChanges(
       }
       continue;
     }
-    if (snapshotValuesMatch(before[key], after[key])) continue;
-    changes.push(settingChange(labels[key] ?? key, formatSetting(key, before[key]), formatSetting(key, after[key])));
+    const beforeValue = settingValueOrDefault(key, before[key]);
+    const afterValue = settingValueOrDefault(key, after[key]);
+    if (snapshotValuesMatch(beforeValue, afterValue)) continue;
+    changes.push(settingChange(labels[key] ?? key, formatSetting(key, beforeValue), formatSetting(key, afterValue)));
   }
   return changes;
 }

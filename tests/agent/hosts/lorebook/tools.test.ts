@@ -1215,6 +1215,15 @@ describe('updateBookSettings', () => {
     expect(other.result.message).not.toContain('warning');
   });
 
+  it('treats turning off an unset recursive_scanning as no change', () => {
+    const { changed, result } = updateBookSettings(
+      createEmptyCharacterBook('World'),
+      action('update_book_settings', { recursive_scanning: 'false' }),
+    );
+    expect(changed).toBe(false);
+    expect(result.message).toMatch(/recursive_scanning: off — no change$/);
+  });
+
   it('says when the settings were already as asked', () => {
     const book = createEmptyCharacterBook('World');
     book.recursive_scanning = true;

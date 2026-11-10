@@ -647,7 +647,7 @@ export function updateBookSettings(
     next.description === book.description &&
     next.scan_depth === book.scan_depth &&
     next.token_budget === book.token_budget &&
-    next.recursive_scanning === book.recursive_scanning;
+    recursiveScanningLabel(next) === recursiveScanningLabel(book);
   return {
     book: next,
     changed: !unchanged,
