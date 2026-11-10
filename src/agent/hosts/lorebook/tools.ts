@@ -19,7 +19,9 @@ import {
   formatBookSettings,
   formatEntryFlagLines,
   hasAnyFlagHeader,
+  hasHeader,
   parseBookSettings,
+  parseBool,
   parseEntryFlags,
   readToolFields,
 } from './flags';
@@ -69,9 +71,11 @@ function noteUnknownFields(result: ActionResult, unknown: string[]): ActionResul
 
 export { parseCommaList };
 
-export function parseConstantFlag(raw: string | undefined): boolean {
-  if (!raw) return false;
-  return raw.trim().toLowerCase() === 'true';
+function parseConstant(
+  headers: Record<string, string>,
+  fallback: boolean,
+): { ok: true; value: boolean } | { ok: false; message: string } {
+  return hasHeader(headers, 'constant') ? parseBool(headers.constant, 'constant') : { ok: true, value: fallback };
 }
 
 export function nextAvailableEntryId(entries: LorebookEntry[], reservedIds: ReadonlySet<number> = new Set()): number {
@@ -212,11 +216,15 @@ function applyUpdateEntry(book: CharacterBook, action: ParsedAction): UpdateEntr
   if ('error' in flags) {
     return updateEntryError(book, flags.error);
   }
+  const constantFlag = parseConstant(action.headers, Boolean(existing.constant));
+  if (!constantFlag.ok) {
+    return updateEntryError(book, constantFlag.message);
+  }
 
   const content = hasContent ? action.body.trim() : existing.content;
   const name = hasName ? (action.headers.name ?? '').trim() : existing.name;
   const keys = hasKeys ? parseCommaList(action.headers.keys) : existing.keys;
-  const constant = hasConstant ? parseConstantFlag(action.headers.constant) : Boolean(existing.constant);
+  const constant = constantFlag.value;
 
   if (!content) {
     return updateEntryError(book, 'error: content is empty');
@@ -382,13 +390,17 @@ function applyAddEntry(
   reservedIds: ReadonlySet<number>,
 ): AddEntryResult {
   const content = action.body.trim();
-  const constant = parseConstantFlag(action.headers.constant);
   const keys = parseCommaList(action.headers.keys);
   const name = entryDisplayName(action);
   const flags = parseEntryFlags(action.headers);
   if ('error' in flags) {
     return addEntryError(book, flags.error);
   }
+  const constantFlag = parseConstant(action.headers, false);
+  if (!constantFlag.ok) {
+    return addEntryError(book, constantFlag.message);
+  }
+  const constant = constantFlag.value;
 
   if (!content) {
     return addEntryError(book, 'error: content is empty');

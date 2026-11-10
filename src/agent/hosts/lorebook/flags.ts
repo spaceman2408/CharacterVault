@@ -1,6 +1,7 @@
 import type { CharacterBook, LorebookEntry, LorebookPosition } from '../../../db/characterTypes';
 import { estimateTokens } from '../../../services/AIService';
 import { getEntryOrder } from '../../../services/LorebookConverter';
+import { parseBoolText } from '../boolText';
 import { parseCommaList } from '../commaList';
 
 export const ENTRY_FLAG_KEYS = [
@@ -80,11 +81,13 @@ export function readToolFields(
   return { headers: fields, unknown };
 }
 
-function parseBool(raw: string, field: string): { ok: true; value: boolean } | { ok: false; message: string } {
-  const trimmed = raw.trim().toLowerCase();
-  if (trimmed === 'true') return { ok: true, value: true };
-  if (trimmed === 'false') return { ok: true, value: false };
-  return { ok: false, message: `error: ${field} must be true or false` };
+export function parseBool(
+  raw: string | undefined,
+  field: string,
+): { ok: true; value: boolean } | { ok: false; message: string } {
+  const value = parseBoolText(raw);
+  if (value == null) return { ok: false, message: `error: ${field} must be true or false` };
+  return { ok: true, value };
 }
 
 function parseIntValue(

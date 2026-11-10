@@ -1,4 +1,5 @@
 import type { ParsedAction } from '../core/types';
+import { parseBoolText } from './boolText';
 
 export type ReplaceTextResult =
   | { ok: true; text: string; count: number }
@@ -14,7 +15,7 @@ const HEADING_HINT =
 type Range = { start: number; end: number };
 
 export function parseReplaceAll(raw: string | undefined): boolean {
-  return (raw ?? '').trim().toLowerCase() === 'true';
+  return parseBoolText(raw) === true;
 }
 
 export function replacementText(action: ParsedAction): string {
