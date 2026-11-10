@@ -71,6 +71,26 @@ describe('listEntries', () => {
     expect(result.message).toMatch(/keys: keep — \d+ tokens/);
     expect(result.message).not.toContain('SECRET BODY');
   });
+
+  it('names recursion flags by the fields add_entry and update_entry take', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'Castle.',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+        excludeRecursion: true,
+        preventRecursion: true,
+        delayUntilRecursion: true,
+      },
+    ];
+    expect(listEntries(book).message).toMatch(
+      /#4 The Red Keep — keys: keep — \d+ tokens, excludeRecursion, preventRecursion, delayUntilRecursion$/m,
+    );
+  });
 });
 
 describe('readEntry', () => {

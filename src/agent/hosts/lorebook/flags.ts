@@ -306,9 +306,9 @@ export function formatEntryFlagSuffix(entry: LorebookEntry): string {
   if (entry.secondary_keys?.length) {
     parts.push(`filter: ${entry.secondary_keys.join(', ')}`);
   }
-  if (entry.excludeRecursion) parts.push('non-recursable');
-  if (entry.preventRecursion) parts.push('prevent');
-  if (entry.delayUntilRecursion) parts.push('delay');
+  if (entry.excludeRecursion) parts.push('excludeRecursion');
+  if (entry.preventRecursion) parts.push('preventRecursion');
+  if (entry.delayUntilRecursion) parts.push('delayUntilRecursion');
   return parts.join(', ');
 }
 
