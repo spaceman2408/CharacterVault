@@ -275,6 +275,11 @@ function entryTitle(entry: LorebookEntry): string {
 
 const ENTRY_SKIP_KEYS: ReadonlySet<string> = new Set(['id', 'keys', 'content']);
 
+/** Every setting that differs between two versions of one entry, except its keys and content. */
+export function diffEntrySettings(before: LorebookEntry, after: LorebookEntry): SettingChange[] {
+  return settingChanges(asRecord(before), asRecord(after), ENTRY_SETTING_LABELS, ENTRY_SKIP_KEYS);
+}
+
 function entryChange(status: ChangeStatus, before: LorebookEntry | undefined, after: LorebookEntry | undefined): SnapshotChange {
   const entry = (after ?? before) as LorebookEntry;
   const beforeContent = toText(before?.content);
@@ -291,9 +296,7 @@ function entryChange(status: ChangeStatus, before: LorebookEntry | undefined, af
     beforeContent,
     afterContent,
     contentChanged: !snapshotValuesMatch(beforeContent, afterContent),
-    settings: before && after
-      ? settingChanges(asRecord(before), asRecord(after), ENTRY_SETTING_LABELS, ENTRY_SKIP_KEYS)
-      : [],
+    settings: before && after ? diffEntrySettings(before, after) : [],
   };
 }
 

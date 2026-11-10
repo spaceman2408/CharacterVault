@@ -1,3 +1,4 @@
+import { diffEntrySettings } from '../../components/history/snapshotChanges';
 import type { CharacterBook, CharacterSpec, LorebookEntry } from '../../db/characterTypes';
 import {
   fieldLabel,
@@ -143,7 +144,7 @@ export function diffBookChanges(
         afterContent: entry.content ?? '',
         beforeKeys,
         afterKeys,
-        metaChanged: metaOfEntry(before) !== metaOfEntry(entry),
+        settings: diffEntrySettings(before, entry),
       });
     }
   }
@@ -178,12 +179,6 @@ function formatSettingValue(value: unknown): string {
   if (value == null || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'on' : 'off';
   return String(value);
-}
-
-function metaOfEntry(entry: LorebookEntry): string {
-  return JSON.stringify(entry, (key, value: unknown) =>
-    key === 'content' || key === 'keys' ? undefined : value,
-  );
 }
 
 export function diffCharacterReview(payload: CharacterReviewPayload): AgentReviewChange[] {

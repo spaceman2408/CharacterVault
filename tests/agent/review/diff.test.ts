@@ -131,12 +131,24 @@ describe('diffBookChanges', () => {
     ]);
   });
 
-  it('flags entry metadata changes on updates', () => {
-    const before = book([entry({ id: 1, enabled: true })]);
-    const after = book([entry({ id: 1, enabled: false })]);
+  it('names each entry setting an update changed, before and after', () => {
+    const before = book([entry({ id: 1, enabled: true, excludeRecursion: true })]);
+    const after = book([entry({ id: 1, enabled: false, excludeRecursion: false, preventRecursion: true })]);
     const changes = diffBookChanges(before, after);
     expect(changes).toHaveLength(1);
-    expect(changes[0]).toMatchObject({ kind: 'entry-updated', metaChanged: true });
+    expect(changes[0]).toMatchObject({
+      kind: 'entry-updated',
+      settings: [
+        { label: 'Enabled', before: 'on', after: 'off', long: false },
+        { label: 'Non-recursable', before: 'on', after: 'off', long: false },
+        { label: 'Prevent further recursion', before: '', after: 'on', long: false },
+      ],
+    });
+  });
+
+  it('lists no settings when only the content changed', () => {
+    const changes = diffBookChanges(book([entry({ id: 1, content: 'Old.' })]), book([entry({ id: 1, content: 'New.' })]));
+    expect(changes[0]).toMatchObject({ kind: 'entry-updated', settings: [] });
   });
 
   it('summarizes book setting changes', () => {

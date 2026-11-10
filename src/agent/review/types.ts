@@ -1,3 +1,4 @@
+import type { SettingChange } from '../../components/history/snapshotChanges';
 import type { CharacterBook, CharacterSpec, LorebookEntry } from '../../db/characterTypes';
 import type { CharacterAgentFieldId } from '../hosts/character/fields';
 
@@ -27,7 +28,7 @@ export type AgentReviewChange =
       afterContent: string;
       beforeKeys: string[];
       afterKeys: string[];
-      metaChanged: boolean;
+      settings: SettingChange[];
     }
   | { id: string; kind: 'entry-deleted'; entryId: number; title: string; content: string }
   | { id: string; kind: 'book-settings'; summary: string[] };
