@@ -18,6 +18,7 @@ import {
   ENTRY_FLAG_KEYS,
   formatBookSettings,
   formatEntryFlagLines,
+  formatSentFields,
   hasAnyFlagHeader,
   hasHeader,
   parseBookSettings,
@@ -58,7 +59,19 @@ const BOOK_SETTING_FIELDS: readonly string[] = [
 ];
 const MAX_UNKNOWN_FIELDS_SHOWN = 6;
 
-/** The chat row drops this note when it reads the result (`parseOkEntry` in ui/formatToolEvent.ts). */
+/** `parseOkEntry` in ui/formatToolEvent.ts keeps these notes out of the chat row; keep their wording in step. */
+function noteEntryState(
+  result: ActionResult,
+  entry: LorebookEntry | undefined,
+  headers: Record<string, string>,
+  changed: boolean,
+): ActionResult {
+  if (!result.ok || !entry) return result;
+  const sent = formatSentFields(entry, headers);
+  const note = changed ? (sent ? `now ${sent}` : '') : sent ? `no change, already ${sent}` : 'no change';
+  return note ? { ...result, message: `${result.message} — ${note}` } : result;
+}
+
 function noteUnknownFields(result: ActionResult, unknown: string[]): ActionResult {
   if (unknown.length === 0) return result;
   const shown = unknown.slice(0, MAX_UNKNOWN_FIELDS_SHOWN).join(', ');
@@ -188,7 +201,8 @@ function updateEntryError(
 export function updateEntry(book: CharacterBook, action: ParsedAction): UpdateEntryResult {
   const fields = readToolFields(action.headers, UPDATE_ENTRY_FIELDS);
   const applied = applyUpdateEntry(book, { ...action, headers: fields.headers });
-  return { ...applied, result: noteUnknownFields(applied.result, fields.unknown) };
+  const result = noteEntryState(applied.result, applied.entry, fields.headers, applied.changed);
+  return { ...applied, result: noteUnknownFields(result, fields.unknown) };
 }
 
 function applyUpdateEntry(book: CharacterBook, action: ParsedAction): UpdateEntryResult {
@@ -380,7 +394,9 @@ export function addEntry(
 ): AddEntryResult {
   const fields = readToolFields(action.headers, ADD_ENTRY_FIELDS);
   const applied = applyAddEntry(book, { ...action, headers: fields.headers }, revisableIds, reservedIds);
-  return { ...applied, result: noteUnknownFields(applied.result, fields.unknown) };
+  const entry = applied.entryId != null ? findEntryById(applied.book.entries ?? [], applied.entryId) : undefined;
+  const result = noteEntryState(applied.result, entry, fields.headers, applied.changed);
+  return { ...applied, result: noteUnknownFields(result, fields.unknown) };
 }
 
 function applyAddEntry(
@@ -613,7 +629,11 @@ export function updateBookSettings(
     book: next,
     changed: !unchanged,
     result: noteUnknownFields(
-      { ok: true, toolName: 'update_book_settings', message: `ok ${formatBookSettings(next)}` },
+      {
+        ok: true,
+        toolName: 'update_book_settings',
+        message: `ok ${formatBookSettings(next)}${unchanged ? ' — no change' : ''}`,
+      },
       fields.unknown,
     ),
   };

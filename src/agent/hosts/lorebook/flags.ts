@@ -238,6 +238,55 @@ export function formatEntryFlagLines(entry: LorebookEntry): string[] {
   return lines;
 }
 
+const ECHOED_FIELDS = [
+  'constant',
+  'enabled',
+  'position',
+  'depth',
+  'insertion_order',
+  'selective',
+  'probability',
+  'excludeRecursion',
+  'preventRecursion',
+  'delayUntilRecursion',
+] as const;
+type EchoedField = (typeof ECHOED_FIELDS)[number];
+
+function echoedValue(entry: LorebookEntry, field: EchoedField): string {
+  switch (field) {
+    case 'constant':
+      return String(entry.constant === true);
+    case 'enabled':
+      return String(entry.enabled !== false);
+    case 'position':
+      return entry.position ?? 'before_char';
+    case 'depth':
+      return String(entry.depth ?? 4);
+    case 'insertion_order':
+      return String(getEntryOrder(entry));
+    case 'selective':
+      return String(entry.selective === true);
+    case 'probability':
+      return String(entry.probability ?? 100);
+    default:
+      return String(entry[field] === true);
+  }
+}
+
+/**
+ * Stored values of the fields a write sent, plus the two it can set without being asked:
+ * depth when position becomes at_depth, and selective when secondary_keys is sent.
+ */
+export function formatSentFields(entry: LorebookEntry, headers: Record<string, string>): string {
+  const implied: Partial<Record<EchoedField, boolean>> = {
+    depth: hasHeader(headers, 'position') && entry.position === 'at_depth',
+    selective: hasHeader(headers, 'secondary_keys'),
+  };
+  return ECHOED_FIELDS.filter((field) => hasHeader(headers, field) || implied[field])
+    .map((field) => `${field}: ${echoedValue(entry, field)}`)
+    .join(', ');
+}
+
 export function formatEntryFlagSuffix(entry: LorebookEntry): string {
   const parts: string[] = [`${estimateTokens(entry.content ?? '')} tokens`];
   if (entry.enabled === false) parts.push('disabled');

@@ -308,7 +308,9 @@ describe('updateEntry', () => {
         'delay-until-recursion': 'false',
       }),
     );
-    expect(result.message).toBe('ok #4 The Red Keep');
+    expect(result.message).toBe(
+      'ok #4 The Red Keep — now excludeRecursion: true, preventRecursion: true, delayUntilRecursion: false',
+    );
     expect(next.entries[0].excludeRecursion).toBe(true);
     expect(next.entries[0].preventRecursion).toBe(true);
     expect(next.entries[0].delayUntilRecursion).toBe(false);
@@ -376,12 +378,55 @@ describe('updateEntry', () => {
         constant: 'no',
       }),
     );
-    expect(result.message).toBe('ok #4 The Red Keep');
+    expect(result.message).toBe(
+      'ok #4 The Red Keep — now constant: false, enabled: false, excludeRecursion: true, preventRecursion: true, delayUntilRecursion: false',
+    );
     expect(next.entries[0].excludeRecursion).toBe(true);
     expect(next.entries[0].preventRecursion).toBe(true);
     expect(next.entries[0].delayUntilRecursion).toBe(false);
     expect(next.entries[0].enabled).toBe(false);
     expect(next.entries[0].constant).toBeUndefined();
+  });
+
+  it('says when nothing changed and what the sent fields already are', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'Castle.',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+        excludeRecursion: true,
+      },
+    ];
+    const flag = updateEntry(book, action('update_entry', { id: '4', excludeRecursion: 'true' }));
+    expect(flag.changed).toBe(false);
+    expect(flag.result.message).toBe('ok #4 The Red Keep — no change, already excludeRecursion: true');
+
+    const body = updateEntry(book, action('update_entry', { id: '4' }, 'Castle.'));
+    expect(body.changed).toBe(false);
+    expect(body.result.message).toBe('ok #4 The Red Keep — no change');
+  });
+
+  it('reports depth and selective when the write set them as a side effect', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'Castle.',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    const { result } = updateEntry(
+      book,
+      action('update_entry', { id: '4', position: 'at_depth', secondary_keys: 'castle' }),
+    );
+    expect(result.message).toBe('ok #4 The Red Keep — now position: at_depth, depth: 4, selective: true');
   });
 
   it('rejects a value that is not true or false, constant included', () => {
@@ -580,7 +625,7 @@ describe('addEntry', () => {
       createEmptyCharacterBook('World'),
       action('add_entry', { name: 'Harbor', keys: 'harbor', non_recursable: 'true', comment: 'port town' }, 'A busy harbor.'),
     );
-    expect(result.message).toBe('ok #0 Harbor — ignored unknown fields: comment');
+    expect(result.message).toBe('ok #0 Harbor — now excludeRecursion: true — ignored unknown fields: comment');
     expect(next.entries[0].excludeRecursion).toBe(true);
   });
 
@@ -1066,6 +1111,17 @@ describe('updateBookSettings', () => {
 
     const unknownOnly = updateBookSettings(book, action('update_book_settings', { recursion: 'true' }));
     expect(unknownOnly.result.message).toBe('error: nothing to update — ignored unknown fields: recursion');
+  });
+
+  it('says when the settings were already as asked', () => {
+    const book = createEmptyCharacterBook('World');
+    book.recursive_scanning = true;
+    const { result, changed } = updateBookSettings(
+      book,
+      action('update_book_settings', { recursive_scanning: 'true' }),
+    );
+    expect(changed).toBe(false);
+    expect(result.message).toMatch(/recursive_scanning: on — no change$/);
   });
 });
 
