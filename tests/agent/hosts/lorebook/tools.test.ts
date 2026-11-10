@@ -455,6 +455,24 @@ describe('updateEntry', () => {
     expect(bodyOnly.result.message).toBe('ok #4 The Red Keep');
   });
 
+  it('warns when a write delays an entry in a book with recursive_scanning off', () => {
+    const book = createEmptyCharacterBook('World');
+    book.recursive_scanning = false;
+    book.entries = [
+      { id: 4, keys: ['keep'], content: 'Castle.', extensions: {}, enabled: true, name: 'The Red Keep' },
+    ];
+    const off = updateEntry(book, action('update_entry', { id: '4', delayUntilRecursion: 'true' }));
+    expect(off.result.message).toBe(
+      'ok #4 The Red Keep — now delayUntilRecursion: true — warning: delayUntilRecursion with recursive_scanning off means this entry never activates',
+    );
+
+    const on = updateEntry(
+      { ...book, recursive_scanning: true },
+      action('update_entry', { id: '4', delayUntilRecursion: 'true' }),
+    );
+    expect(on.result.message).toBe('ok #4 The Red Keep — now delayUntilRecursion: true');
+  });
+
   it('reports depth and selective when the write set them as a side effect', () => {
     const book = createEmptyCharacterBook('World');
     book.entries = [
@@ -1168,6 +1186,35 @@ describe('updateBookSettings', () => {
     expect(unknownOnly.result.message).toBe('error: nothing to update — ignored unknown fields: recursion');
   });
 
+  it('names the delayed entries that turning recursive_scanning off strands', () => {
+    const book = createEmptyCharacterBook('World');
+    book.recursive_scanning = true;
+    book.entries = [
+      { id: 1, keys: ['fog'], content: 'Fog.', extensions: {}, enabled: true, name: 'Fog', delayUntilRecursion: true },
+      {
+        id: 2,
+        keys: ['mist'],
+        content: 'Mist.',
+        extensions: {},
+        enabled: true,
+        name: 'Mist',
+        delayUntilRecursion: true,
+        excludeRecursion: true,
+      },
+      { id: 3, keys: ['harbor'], content: 'Ships.', extensions: {}, enabled: true, name: 'Harbor' },
+    ];
+    const off = updateBookSettings(book, action('update_book_settings', { recursive_scanning: 'false' }));
+    expect(off.result.message).toMatch(
+      / — warning: delayUntilRecursion entries never activate while recursive_scanning is off: #1 Fog$/,
+    );
+
+    const other = updateBookSettings(
+      { ...book, recursive_scanning: false },
+      action('update_book_settings', { scan_depth: '3' }),
+    );
+    expect(other.result.message).not.toContain('warning');
+  });
+
   it('says when the settings were already as asked', () => {
     const book = createEmptyCharacterBook('World');
     book.recursive_scanning = true;
@@ -1252,6 +1299,20 @@ describe('readRecursion', () => {
     expect(readRecursion(book, action('read_recursion')).message).toContain(
       '#2 Docks excludeRecursion, delayUntilRecursion (never activates)',
     );
+  });
+
+  it('warns when recursive_scanning off leaves a delayed entry unable to activate', () => {
+    const book = linkedBook();
+    book.recursive_scanning = false;
+    book.entries[1].delayUntilRecursion = true;
+    expect(readRecursion(book, action('read_recursion', { id: '2' })).message).toContain(
+      'Warning: delayUntilRecursion with recursive_scanning off means this entry never activates.',
+    );
+    expect(readRecursion(book, action('read_recursion')).message).toContain(
+      '#2 Docks delayUntilRecursion (never activates)',
+    );
+    book.recursive_scanning = true;
+    expect(readRecursion(book, action('read_recursion', { id: '2' })).message).not.toContain('never activates');
   });
 
   it('says how many flagged entries the Flags line leaves out', () => {

@@ -13,11 +13,16 @@ const MAX_NEIGHBORS = 40;
 const MAX_ISOLATED = 24;
 const MAX_FLAGGED = 24;
 
-export const NEVER_ACTIVATES = 'excludeRecursion with delayUntilRecursion means this entry never activates';
-
-/** The initial scan skips a delayed entry and recursive passes skip an excluded one. Constants skip both checks. */
-export function neverActivates(entry: LorebookEntry): boolean {
-  return entry.excludeRecursion === true && entry.delayUntilRecursion === true && !entry.constant;
+/**
+ * Why an entry can never activate, or null. The initial scan skips a delayed entry, and the
+ * recursive pass it waits for skips it under excludeRecursion and never runs with recursive_scanning
+ * off. Constants skip both checks.
+ */
+export function neverActivatesReason(entry: LorebookEntry, recursiveScanning: boolean): string | null {
+  if (entry.constant || !entry.delayUntilRecursion) return null;
+  if (entry.excludeRecursion) return 'excludeRecursion with delayUntilRecursion means this entry never activates';
+  if (!recursiveScanning) return 'delayUntilRecursion with recursive_scanning off means this entry never activates';
+  return null;
 }
 
 export function entryLabel(entry: LorebookEntry): string {
@@ -181,7 +186,7 @@ export function formatRecursionMap(book: CharacterBook, focusId?: number): strin
   const flagged = entries.filter((entry) => flagBits(entry).length > 0);
   if (flagged.length > 0) {
     const shown = flagged.slice(0, MAX_FLAGGED).map((entry) => {
-      const note = neverActivates(entry) ? ' (never activates)' : '';
+      const note = neverActivatesReason(entry, scan === 'on') ? ' (never activates)' : '';
       return `${entryLabel(entry)} ${flagBits(entry).join(', ')}${note}`;
     });
     const extra = flagged.length - shown.length;
@@ -212,7 +217,8 @@ function formatEgoMap(
   const lines = [header];
   if (scan === 'off' && incoming.length + outgoing.length > 0) lines.push(SCANNING_OFF_WARNING);
   if (flags.length > 0) lines.push(`flags: ${flags.join(', ')}`);
-  if (neverActivates(entry)) lines.push(`Warning: ${NEVER_ACTIVATES}.`);
+  const never = neverActivatesReason(entry, scan === 'on');
+  if (never) lines.push(`Warning: ${never}.`);
   if (cycle) lines.push(`cycle: ${cycle}`);
 
   lines.push(...edgeLines('Incoming', incoming, byId));

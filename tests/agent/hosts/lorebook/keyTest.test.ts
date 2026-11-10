@@ -115,7 +115,9 @@ describe('formatKeyTest', () => {
       entry(2, 'Fog', ['fog'], 'Thick fog.', { delayUntilRecursion: true }),
     ];
     const off = formatKeyTest(book(entries), 'Fog over the harbor.');
-    expect(off).toContain('#2 Fog — "fog", but delayUntilRecursion');
+    expect(off).toContain(
+      '#2 Fog — "fog", but delayUntilRecursion with recursive_scanning off means this entry never activates',
+    );
 
     const on = formatKeyTest(book(entries, { recursive_scanning: true }), 'Fog over the harbor.');
     expect(on).toContain('- #2 Fog — "fog" on a recursive pass');

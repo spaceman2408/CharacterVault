@@ -13,6 +13,11 @@ function parseOkEntry(
   return { id: match[1], name: match[2], noChange: match[3] === 'no change' };
 }
 
+/** A write whose result says it changed nothing (written by hosts/lorebook/tools.ts). */
+export function isNoChangeWrite(event: AgentToolEvent): boolean {
+  return event.ok && / — no change(?:,| —|$)/.test(event.message);
+}
+
 function parseOkField(
   message: string,
 ): { label: string; tokens?: number; replaced?: number } | null {
@@ -97,7 +102,7 @@ export function formatToolEvent(event: AgentToolEvent): string {
   }
 
   if (event.toolName === 'update_book_settings') {
-    return / — no change(?: —|$)/.test(event.message) ? 'No change to book settings' : 'Updated book settings';
+    return isNoChangeWrite(event) ? 'No change to book settings' : 'Updated book settings';
   }
 
   if (event.toolName === 'move_greeting') {

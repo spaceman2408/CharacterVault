@@ -12,7 +12,7 @@ import {
 import { formatBookAudit } from './audit';
 import { formatEntryCatalog } from './catalog';
 import { formatKeyTest } from './keyTest';
-import { formatRecursionMap, NEVER_ACTIVATES, neverActivates } from './recursion';
+import { entryLabel, formatRecursionMap, neverActivatesReason } from './recursion';
 import {
   applyEntryFlagPatch,
   ENTRY_FLAG_KEYS,
@@ -25,6 +25,7 @@ import {
   parseBool,
   parseEntryFlags,
   readToolFields,
+  recursiveScanningLabel,
 } from './flags';
 
 export const LOREBOOK_TOOL_NAMES = [
@@ -57,7 +58,12 @@ const BOOK_SETTING_FIELDS: readonly string[] = [
   'token_budget',
   'recursive_scanning',
 ];
-const MAX_UNKNOWN_FIELDS_SHOWN = 6;
+const MAX_NOTE_ITEMS = 6;
+
+function formatNoteList(items: string[]): string {
+  const extra = items.length - MAX_NOTE_ITEMS;
+  return `${items.slice(0, MAX_NOTE_ITEMS).join(', ')}${extra > 0 ? `, …+${extra}` : ''}`;
+}
 
 /** `parseOkEntry` in ui/formatToolEvent.ts keeps these notes out of the chat row; keep their wording in step. */
 function noteEntryState(
@@ -65,12 +71,14 @@ function noteEntryState(
   entry: LorebookEntry | undefined,
   headers: Record<string, string>,
   changed: boolean,
+  recursiveScanning: boolean,
 ): ActionResult {
   if (!result.ok || !entry) return result;
   const sent = formatSentFields(entry, headers);
   const notes = [changed ? (sent ? `now ${sent}` : '') : sent ? `no change, already ${sent}` : 'no change'];
-  const sentPairField = ['excludeRecursion', 'delayUntilRecursion', 'constant'].some((key) => hasHeader(headers, key));
-  if (sentPairField && neverActivates(entry)) notes.push(`warning: ${NEVER_ACTIVATES}`);
+  const sentDelayField = ['excludeRecursion', 'delayUntilRecursion', 'constant'].some((key) => hasHeader(headers, key));
+  const never = sentDelayField ? neverActivatesReason(entry, recursiveScanning) : null;
+  if (never) notes.push(`warning: ${never}`);
   const suffix = notes
     .filter(Boolean)
     .map((note) => ` — ${note}`)
@@ -78,14 +86,21 @@ function noteEntryState(
   return suffix ? { ...result, message: `${result.message}${suffix}` } : result;
 }
 
+/** Turning recursive_scanning off strands delayed entries that only a recursive pass could reach. */
+function noteStrandedEntries(book: CharacterBook, headers: Record<string, string>): string {
+  if (!hasHeader(headers, 'recursive_scanning') || recursiveScanningLabel(book) === 'on') return '';
+  const stranded = (book.entries ?? []).filter(
+    (entry) => neverActivatesReason(entry, false) && !neverActivatesReason(entry, true),
+  );
+  if (stranded.length === 0) return '';
+  return ` — warning: delayUntilRecursion entries never activate while recursive_scanning is off: ${formatNoteList(
+    stranded.map(entryLabel),
+  )}`;
+}
+
 function noteUnknownFields(result: ActionResult, unknown: string[]): ActionResult {
   if (unknown.length === 0) return result;
-  const shown = unknown.slice(0, MAX_UNKNOWN_FIELDS_SHOWN).join(', ');
-  const extra = unknown.length - MAX_UNKNOWN_FIELDS_SHOWN;
-  return {
-    ...result,
-    message: `${result.message} — ignored unknown fields: ${shown}${extra > 0 ? `, …+${extra}` : ''}`,
-  };
+  return { ...result, message: `${result.message} — ignored unknown fields: ${formatNoteList(unknown)}` };
 }
 
 export { parseCommaList };
@@ -207,7 +222,8 @@ function updateEntryError(
 export function updateEntry(book: CharacterBook, action: ParsedAction): UpdateEntryResult {
   const fields = readToolFields(action.headers, UPDATE_ENTRY_FIELDS);
   const applied = applyUpdateEntry(book, { ...action, headers: fields.headers });
-  const result = noteEntryState(applied.result, applied.entry, fields.headers, applied.changed);
+  const scanning = recursiveScanningLabel(book) === 'on';
+  const result = noteEntryState(applied.result, applied.entry, fields.headers, applied.changed, scanning);
   return { ...applied, result: noteUnknownFields(result, fields.unknown) };
 }
 
@@ -401,7 +417,8 @@ export function addEntry(
   const fields = readToolFields(action.headers, ADD_ENTRY_FIELDS);
   const applied = applyAddEntry(book, { ...action, headers: fields.headers }, revisableIds, reservedIds);
   const entry = applied.entryId != null ? findEntryById(applied.book.entries ?? [], applied.entryId) : undefined;
-  const result = noteEntryState(applied.result, entry, fields.headers, applied.changed);
+  const scanning = recursiveScanningLabel(book) === 'on';
+  const result = noteEntryState(applied.result, entry, fields.headers, applied.changed, scanning);
   return { ...applied, result: noteUnknownFields(result, fields.unknown) };
 }
 
@@ -638,7 +655,7 @@ export function updateBookSettings(
       {
         ok: true,
         toolName: 'update_book_settings',
-        message: `ok ${formatBookSettings(next)}${unchanged ? ' — no change' : ''}`,
+        message: `ok ${formatBookSettings(next)}${unchanged ? ' — no change' : ''}${noteStrandedEntries(next, fields.headers)}`,
       },
       fields.unknown,
     ),

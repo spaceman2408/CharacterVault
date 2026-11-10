@@ -252,6 +252,21 @@ describe('writeRecapLine', () => {
     expect(writeRecapLine([failed])).toBeNull();
     expect(writeRecapLine([])).toBeNull();
   });
+
+  it('leaves out writes that changed nothing', () => {
+    const noChange: AgentToolEvent = {
+      toolName: 'update_entry',
+      ok: true,
+      message: 'ok #4 The Red Keep — no change, already excludeRecursion: true',
+    };
+    const settingsNoChange: AgentToolEvent = {
+      toolName: 'update_book_settings',
+      ok: true,
+      message: 'ok Book settings: recursive_scanning: on — no change',
+    };
+    expect(writeRecapLine([noChange, settingsNoChange])).toBeNull();
+    expect(writeRecapLine([okAdd, noChange])).toBe('Applied 1 write');
+  });
 });
 
 describe('toAgentToolEvent', () => {
