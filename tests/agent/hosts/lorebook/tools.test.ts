@@ -16,6 +16,11 @@ import {
   updateBookSettings,
   updateEntry,
 } from '../../../../src/agent/hosts/lorebook/tools';
+import {
+  cardBookEntryToEntry,
+  entryToCardBookEntry,
+  normalizeCardBook,
+} from '../../../../src/services/LorebookConverter';
 
 function action(
   name: string,
@@ -236,6 +241,49 @@ describe('updateEntry', () => {
     expect(next.entries[0].excludeRecursion).toBe(true);
     expect(next.entries[0].preventRecursion).toBe(true);
     expect(next.entries[0].delayUntilRecursion).toBe(true);
+  });
+
+  it('keeps a recursion flag off when a card entry is normalized again', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      cardBookEntryToEntry({
+        id: 4,
+        keys: ['keep'],
+        content: 'The Red Keep is a castle.',
+        extensions: { exclude_recursion: true, prevent_recursion: true },
+        enabled: true,
+        name: 'The Red Keep',
+      }),
+    ];
+    const { book: next, changed } = updateEntry(
+      book,
+      action('update_entry', { id: '4', excludeRecursion: 'false' }),
+    );
+    expect(changed).toBe(true);
+    const reloaded = normalizeCardBook(next).entries[0];
+    expect(reloaded.excludeRecursion).toBe(false);
+    expect(reloaded.preventRecursion).toBe(true);
+    expect(entryToCardBookEntry(reloaded).extensions.exclude_recursion).toBe(false);
+  });
+
+  it('does not add a recursion flag that is already off', () => {
+    const book = createEmptyCharacterBook('World');
+    book.entries = [
+      {
+        id: 4,
+        keys: ['keep'],
+        content: 'Castle.',
+        extensions: {},
+        enabled: true,
+        name: 'The Red Keep',
+      },
+    ];
+    const { book: next, changed } = updateEntry(
+      book,
+      action('update_entry', { id: '4', excludeRecursion: 'false' }, 'A castle on a hill.'),
+    );
+    expect(changed).toBe(true);
+    expect(next.entries[0]).not.toHaveProperty('excludeRecursion');
   });
 
   it('rejects an invalid position', () => {

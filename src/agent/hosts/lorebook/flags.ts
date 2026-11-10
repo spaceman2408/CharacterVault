@@ -169,9 +169,9 @@ function applyBoolFlag(
   key: 'excludeRecursion' | 'preventRecursion' | 'delayUntilRecursion',
   value: boolean | undefined,
 ): void {
-  if (value === undefined) return;
-  if (value) entry[key] = true;
-  else delete entry[key];
+  if (value === undefined || Boolean(entry[key]) === value) return;
+  // Off is stored as false, never deleted: normalizeCardBook refills a missing flag from the card's extensions.
+  entry[key] = value;
 }
 
 export function formatEntryFlagLines(entry: LorebookEntry): string[] {
