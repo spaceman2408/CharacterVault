@@ -332,6 +332,7 @@ export function CharacterCard({
           character={character}
           onClose={() => setDetailsOpen(false)}
           onOpen={onOpen}
+          onTagClick={onTagClick}
         />
       )}
     </div>

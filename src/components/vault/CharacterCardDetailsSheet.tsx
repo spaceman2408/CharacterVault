@@ -26,12 +26,14 @@ export interface CharacterCardDetailsSheetProps {
   character: CharacterListItem;
   onClose: () => void;
   onOpen: (id: string) => void;
+  onTagClick: (tag: string) => void;
 }
 
 export function CharacterCardDetailsSheet({
   character,
   onClose,
   onOpen,
+  onTagClick,
 }: CharacterCardDetailsSheetProps): React.ReactElement {
   const tags = character.tags ?? [];
   const hasImage = Boolean(character.thumbnailData);
@@ -177,12 +179,18 @@ export function CharacterCardDetailsSheet({
             ) : (
               <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
                 {tags.map((tag) => (
-                  <span
+                  <button
                     key={tag}
-                    className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-accent-soft text-accent border border-accent/25 break-all"
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onTagClick(tag);
+                    }}
+                    title={`Filter library by “${tag}”`}
+                    className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium text-left bg-accent-soft text-accent border border-accent/25 break-all hover:border-accent/60 hover:bg-accent/15 transition-colors touch-manipulation"
                   >
                     {tag}
-                  </span>
+                  </button>
                 ))}
               </div>
             )}
