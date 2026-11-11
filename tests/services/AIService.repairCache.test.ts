@@ -87,3 +87,50 @@ describe('AIService blind 400 retry', () => {
     expect(getCapabilityCache('https://example.com/v1', 'test-model').rejectedParams.has('reasoning_effort')).toBe(true);
   });
 });
+
+describe('AIService max_tokens rename', () => {
+  beforeEach(() => {
+    clearCapabilityCaches();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it('retries with max_completion_tokens and starts there next time', async () => {
+    const bodies: ChatCompletionRequestBody[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse(String(init?.body)) as ChatCompletionRequestBody;
+        bodies.push(body);
+        if (body.max_tokens === undefined) return ok();
+        return new Response(
+          JSON.stringify({
+            error: {
+              message:
+                "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.",
+              type: 'invalid_request_error',
+              param: 'max_tokens',
+              code: 'unsupported_parameter',
+            },
+          }),
+          { status: 400 },
+        );
+      }),
+    );
+
+    expect(await chat()).toMatchObject({ content: 'Hi' });
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1].max_completion_tokens).toBe(bodies[0].max_tokens);
+    expect(bodies[1].reasoning_effort).toBe('high');
+
+    await chat();
+    expect(bodies).toHaveLength(3);
+    expect(bodies[2].max_tokens).toBeUndefined();
+    expect(bodies[2].max_completion_tokens).toBe(bodies[0].max_tokens);
+  });
+});

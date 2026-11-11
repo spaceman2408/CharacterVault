@@ -131,12 +131,45 @@ describe('diffBookChanges', () => {
     ]);
   });
 
-  it('flags entry metadata changes on updates', () => {
-    const before = book([entry({ id: 1, enabled: true })]);
-    const after = book([entry({ id: 1, enabled: false })]);
+  it('names each entry setting an update changed, before and after', () => {
+    const before = book([entry({ id: 1, enabled: true, excludeRecursion: true })]);
+    const after = book([entry({ id: 1, enabled: false, excludeRecursion: false, preventRecursion: true })]);
     const changes = diffBookChanges(before, after);
     expect(changes).toHaveLength(1);
-    expect(changes[0]).toMatchObject({ kind: 'entry-updated', metaChanged: true });
+    expect(changes[0]).toMatchObject({
+      kind: 'entry-updated',
+      settings: [
+        { label: 'Enabled', before: 'on', after: 'off', long: false },
+        { label: 'Non-recursable', before: 'on', after: 'off', long: false },
+        { label: 'Prevent further recursion', before: 'off', after: 'on', long: false },
+      ],
+    });
+  });
+
+  it('shows a constant the Agent cleared as off, not blank', () => {
+    const before = book([entry({ id: 1, constant: true })]);
+    const after = book([entry({ id: 1 })]);
+    expect(diffBookChanges(before, after)[0]).toMatchObject({
+      kind: 'entry-updated',
+      settings: [{ label: 'Constant', before: 'on', after: 'off', long: false }],
+    });
+  });
+
+  it('reads an unset recursive_scanning as off in the book settings row', () => {
+    const before = book();
+    const on = book();
+    on.recursive_scanning = true;
+    expect(diffBookChanges(before, on)).toMatchObject([
+      { kind: 'book-settings', summary: ['recursive_scanning: off → on'] },
+    ]);
+    const off = book();
+    off.recursive_scanning = false;
+    expect(diffBookChanges(before, off)).toEqual([]);
+  });
+
+  it('lists no settings when only the content changed', () => {
+    const changes = diffBookChanges(book([entry({ id: 1, content: 'Old.' })]), book([entry({ id: 1, content: 'New.' })]));
+    expect(changes[0]).toMatchObject({ kind: 'entry-updated', settings: [] });
   });
 
   it('summarizes book setting changes', () => {

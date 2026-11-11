@@ -183,6 +183,11 @@ describe('suggestNames invented', () => {
     }
   });
 
+  it('reads invented: yes as true', async () => {
+    const result = await suggestNames(action({ origin: 'finnish', part: 'first', invented: 'yes' }), []);
+    expect(result.message.split('\n')[0]).toContain('invented');
+  });
+
   it('keeps real names when invented is not true', async () => {
     const result = await suggestNames(action({ origin: 'finnish', part: 'first', invented: 'false' }), []);
     expect(result.message.split('\n')[0]).not.toContain('invented');

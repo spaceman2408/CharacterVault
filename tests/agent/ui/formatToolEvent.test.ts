@@ -58,6 +58,43 @@ describe('formatToolEvent', () => {
     );
   });
 
+  it('leaves the result notes out of the entry name', () => {
+    expect(
+      formatToolEvent(event('update_entry', 'ok #4 The Red Keep — ignored unknown fields: recursion, Depth')),
+    ).toBe('Updated “The Red Keep” (#4)');
+    expect(
+      formatToolEvent(
+        event('update_entry', 'ok #4 The Red Keep — now excludeRecursion: true — ignored unknown fields: recursion'),
+      ),
+    ).toBe('Updated “The Red Keep” (#4)');
+    expect(formatToolEvent(event('add_entry', 'ok #0 Harbor — now position: at_depth, depth: 4'))).toBe(
+      'Added “Harbor” (#0)',
+    );
+    expect(
+      formatToolEvent(
+        event(
+          'update_entry',
+          'ok #4 Keep — now delayUntilRecursion: true — warning: excludeRecursion with delayUntilRecursion means this entry never activates',
+        ),
+      ),
+    ).toBe('Updated “Keep” (#4)');
+  });
+
+  it('says No change when a write changed nothing', () => {
+    expect(
+      formatToolEvent(event('update_entry', 'ok #4 The Red Keep — no change, already excludeRecursion: true')),
+    ).toBe('No change to “The Red Keep” (#4)');
+    expect(formatToolEvent(event('update_entry', 'ok #4 The Red Keep — no change'))).toBe(
+      'No change to “The Red Keep” (#4)',
+    );
+    expect(
+      formatToolEvent(event('update_book_settings', 'ok Book settings: scan_depth: 4; recursive_scanning: on — no change')),
+    ).toBe('No change to book settings');
+    expect(formatToolEvent(event('update_book_settings', 'ok Book settings: scan_depth: 4'))).toBe(
+      'Updated book settings',
+    );
+  });
+
   it('formats field updates, greetings, and lists', () => {
     expect(
       formatToolEvent(event('update_field', 'ok description (Description) — 3849 tokens')),

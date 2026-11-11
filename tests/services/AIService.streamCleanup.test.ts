@@ -255,6 +255,50 @@ describe('AIService stream cleanup', () => {
     expect(result.content).toContain('Hi');
   });
 
+  it('fails with the provider message when an error chunk arrives mid-stream', async () => {
+    const body = streamFromParts([
+      sseChunk({ content: 'Hi' }),
+      `data: ${JSON.stringify({
+        id: 'chunk',
+        object: 'chat.completion.chunk',
+        created: 0,
+        model: 'test-model',
+        error: { code: 502, message: 'Upstream provider disconnected' },
+        choices: [{ index: 0, delta: { content: '' }, finish_reason: 'error' }],
+      })}\n\n`,
+      'data: [DONE]\n\n',
+    ]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }))
+    );
+
+    const service = new AIService(baseConfig(), baseSampler());
+    await expect(
+      service.askAIWithConversation('hello', [], [], undefined, () => {})
+    ).rejects.toMatchObject({
+      type: 'server',
+      statusCode: 502,
+      message: 'API error: Upstream provider disconnected',
+    });
+  });
+
+  it('treats finish_reason error without details as a failure', async () => {
+    const body = streamFromParts([
+      sseChunk({ content: 'Hi' }),
+      `data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: 'error' }] })}\n\n`,
+    ]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }))
+    );
+
+    const service = new AIService(baseConfig(), baseSampler());
+    await expect(
+      service.askAIWithConversation('hello', [], [], undefined, () => {})
+    ).rejects.toMatchObject({ type: 'server', message: 'API error: The provider ended the response with an error.' });
+  });
+
   it('fails with a network error when the stream goes silent', async () => {
     vi.useFakeTimers();
     try {

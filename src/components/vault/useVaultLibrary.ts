@@ -8,7 +8,7 @@ export function useVaultLibrary(characterListItems: CharacterListItem[]) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState<VaultSortMode>(() => {
     const stored = localStorage.getItem(VAULT_SORT_STORAGE_KEY);
-    return stored === 'recent' || stored === 'name' ? stored : 'name';
+    return stored === 'recent' || stored === 'name' || stored === 'created' ? stored : 'name';
   });
   const [pageSize, setPageSize] = useState(getVaultPageSize);
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,6 +54,9 @@ export function useVaultLibrary(characterListItems: CharacterListItem[]) {
         if (dateB !== dateA) return dateB - dateA;
         return b.updatedAt.localeCompare(a.updatedAt);
       });
+    }
+    if (sortMode === 'created') {
+      return list.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
     }
     return list.sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })

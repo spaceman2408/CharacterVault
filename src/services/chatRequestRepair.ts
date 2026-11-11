@@ -68,12 +68,15 @@ export interface ChatRequestLike {
   reasoning_effort?: string;
   reasoning_split?: boolean;
   logit_bias?: unknown;
+  max_tokens?: number;
+  max_completion_tokens?: number;
   [key: string]: unknown;
 }
 
 export interface ModelCapabilityCache {
   rejectedParams: Set<string>;
   effortAllowlist?: string[];
+  useMaxCompletionTokens?: boolean;
 }
 
 export interface RepairResult {
@@ -273,6 +276,12 @@ function setEffortOnRequest(request: ChatRequestLike, effort: string): void {
   }
 }
 
+function moveToMaxCompletionTokens(request: ChatRequestLike): void {
+  if (request.max_tokens === undefined) return;
+  request.max_completion_tokens ??= request.max_tokens;
+  delete request.max_tokens;
+}
+
 function getRequestedEffort(request: ChatRequestLike): string | undefined {
   if (typeof request.reasoning_effort === 'string') return request.reasoning_effort;
   if (request.reasoning && typeof request.reasoning === 'object' && typeof request.reasoning.effort === 'string') {
@@ -321,6 +330,16 @@ export function repairChatRequest(
         }
       }
     }
+  }
+
+  // OpenAI reasoning models reject max_tokens but take the same cap as max_completion_tokens.
+  if (
+    cleaned.max_tokens !== undefined &&
+    /max_completion_tokens/i.test(message) &&
+    (matched.includes('max_tokens') || /\bmax_tokens\b/i.test(message))
+  ) {
+    moveToMaxCompletionTokens(cleaned);
+    remapped.max_tokens = 'max_completion_tokens';
   }
 
   // Strip other matched params (not remapped effort)
@@ -384,6 +403,10 @@ export function applyCapabilityCache(
     delete cleaned.tool_choice;
   }
 
+  if (cache.useMaxCompletionTokens) {
+    moveToMaxCompletionTokens(cleaned);
+  }
+
   if (cache.effortAllowlist && cache.effortAllowlist.length > 0) {
     const requested = getRequestedEffort(cleaned);
     if (requested) {
@@ -403,6 +426,9 @@ export function recordRepairInCache(cache: ModelCapabilityCache, repair: RepairR
   for (const param of repair.removed) {
     cache.rejectedParams.add(param);
   }
+  if (repair.remapped.max_tokens) {
+    cache.useMaxCompletionTokens = true;
+  }
   if (repair.remapped.reasoning_effort) {
     // Learn allowlist from successful remap target only if we also parse later;
     // ensure at least the remapped value is considered valid.
@@ -417,7 +443,7 @@ export function recordSupportedEfforts(cache: ModelCapabilityCache, supported: s
   cache.effortAllowlist = supported.map((s) => s.toLowerCase());
 }
 
-/** Omit no-op sampler values and non-standard samplers on strict hosts. */
+/** Omit no-op sampler values; strict hosts also lose non-standard samplers and get max_completion_tokens. */
 export function sanitizeSamplerParams(
   request: ChatRequestLike,
   baseUrl: string
@@ -428,6 +454,7 @@ export function sanitizeSamplerParams(
     delete cleaned.min_p;
     delete cleaned.top_k;
     delete cleaned.repetition_penalty;
+    moveToMaxCompletionTokens(cleaned);
   } else {
     if (typeof cleaned.min_p === 'number' && cleaned.min_p <= 0) delete cleaned.min_p;
     if (typeof cleaned.top_k === 'number' && cleaned.top_k <= 0) delete cleaned.top_k;

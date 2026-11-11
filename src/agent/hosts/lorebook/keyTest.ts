@@ -2,7 +2,7 @@ import type { CharacterBook, LorebookEntry } from '../../../db/characterTypes';
 import { contentMatchesKey } from '../../../components/editor/lorebook/recursionGraph';
 import { SELECTIVE_LOGIC_OPTIONS } from '../../../components/editor/lorebook/constants';
 import { estimateTokens } from '../../../services/AIService';
-import { entryLabel } from './recursion';
+import { entryLabel, neverActivatesReason } from './recursion';
 
 const MAX_ACTIVE_LINES = 60;
 const MAX_MISSED_LINES = 30;
@@ -118,6 +118,7 @@ export function formatKeyTest(book: CharacterBook, text: string): string {
   const missed = new Map<number, string>();
   const held = new Map<number, string>();
   const chat = [text];
+  const recursive = book.recursive_scanning === true;
 
   for (const entry of entries) {
     if (entry.enabled === false) {
@@ -132,7 +133,8 @@ export function formatKeyTest(book: CharacterBook, text: string): string {
     const key = firstMatchingKey(chat, entry);
     if (!key) continue;
     if (entry.delayUntilRecursion) {
-      missed.set(entry.id, `${entryLabel(entry)} — "${key}", but delayUntilRecursion and no recursive pass reached it`);
+      const why = neverActivatesReason(entry, recursive) ?? 'delayUntilRecursion and no recursive pass reached it';
+      missed.set(entry.id, `${entryLabel(entry)} — "${key}", but ${why}`);
       held.set(entry.id, key);
       continue;
     }
@@ -145,7 +147,6 @@ export function formatKeyTest(book: CharacterBook, text: string): string {
     active.set(entry.id, { entry, reason: `"${key}"` });
   }
 
-  const recursive = book.recursive_scanning === true;
   const passCapReached = recursive && runRecursivePasses(entries, text, active, missed, held);
 
   const activations = [...active.values()];

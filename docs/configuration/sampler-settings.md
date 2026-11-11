@@ -105,6 +105,10 @@ The maximum number of tokens the AI will generate in a single response.
 
 **Range**: 100 – 8,100 (step: 100)
 
+With reasoning on, many models count their thinking against Max Tokens, so a long think can use it all up and leave the reply cut off or empty. When nothing was written, the toolbar says the model used up Max Tokens before writing any text. Raise Max Tokens, or lower [Reasoning Effort](/configuration/reasoning-effort). The Agent uses its own larger output budget instead of this slider.
+
+On `api.openai.com` this is sent as `max_completion_tokens`, which OpenAI's reasoning models require. If another host rejects `max_tokens` and asks for `max_completion_tokens`, Character Vault renames it, retries, and keeps using the new name for that model until you reload.
+
 ### Context Length
 
 The total token window for AI requests (input + output combined). Choose a preset from the dropdown, or select **Custom…** to enter any value from 4,096 to 1,000,000 tokens.

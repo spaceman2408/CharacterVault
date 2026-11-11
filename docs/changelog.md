@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.9.0 (2026-11-09)
+
+CharacterVault 1.9.0 lets you save an endpoint and model as a named preset and switch between them from the AI Config dropdown, adds Moonshot (Kimi), Z.ai (GLM), Z.ai Coding Plan, and DeepSeek presets, and makes the library quicker to search and sort with clickable tag chips, search shortcuts, and a Created sort, plus bigger Agent batches, Agent recursion flag edits that stick and explain themselves, and fixes for thinking and reasoning models. Full notes: [v1.9.0 release notes](/releases/v1.9.0).
+
+### Highlights
+
+- **Saved presets** — **Settings → AI Config → Save as preset** keeps an endpoint and model under a name in the **Saved** group of the **API Base URL** dropdown; presets on one endpoint share its key
+- **New provider presets** — Moonshot (Kimi), Z.ai (GLM), Z.ai Coding Plan, and DeepSeek in **Settings → AI Config → API Base URL**
+- **Library search and sort** — click a tag chip on a library card to search by it, clear the search with **×** or **Escape**, press **/** to jump to it, and sort by **Created**
+- **Agent recursion flags** — write results and **Review agent edits** show which entry settings changed, and the recursion map and key test show the links a flag blocks and entries that can never activate
+- Agent replies can hold 24 tool calls and runs can make 150 lorebook updates
+- Fixes for DeepSeek and Kimi thinking models in the Agent, OpenAI reasoning models and **Max Tokens**, OpenRouter errors mid-reply, the Agent spinner, and recursion flags the Agent turns off coming back on
+
+Details: [AI Setup](/configuration/ai-setup#saved-presets) · [What's New](/whats-new)
+
+---
+
 ## 1.8.5 (2026-10-14)
 
 CharacterVault 1.8.5 warns before you leave a running Agent and marks runs that leaving cut short, adds an option for the Agent to remember exactly what it wrote earlier in the chat, and has it pick real names that fit the setting, plus em dash matching that leaves hyphens alone and a large round of Agent and chat fixes. Full notes: [v1.8.5 release notes](/releases/v1.8.5).

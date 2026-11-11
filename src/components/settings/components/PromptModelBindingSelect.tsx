@@ -18,6 +18,9 @@ import {
 import type { AIConfig, AIModelInfo, PromptModelBinding } from '../../../db/characterTypes';
 import {
   AI_BASE_URL_PRESETS,
+  builtinPresetForUrl,
+  defaultPresetLabel,
+  findSavedPreset,
   getStoredApiKey,
   isPresetUrl,
   normalizeBaseUrl,
@@ -39,12 +42,12 @@ interface PromptModelBindingSelectProps {
   bare?: boolean;
 }
 
-function endpointLabel(baseUrl: string): string {
-  const preset = AI_BASE_URL_PRESETS.find(
-    (p) => normalizeBaseUrl(p.baseUrl) === normalizeBaseUrl(baseUrl)
-  );
-  if (preset) return preset.label;
-  return baseUrl;
+function endpointLabel(baseUrl: string, ai: AIConfig): string {
+  const builtin = builtinPresetForUrl(baseUrl);
+  if (builtin) return builtin.label;
+  const saved = ai.customBaseUrlPresets ?? [];
+  if (!isPresetUrl(baseUrl, saved)) return baseUrl;
+  return findSavedPreset(saved, baseUrl)?.label ?? defaultPresetLabel(baseUrl);
 }
 
 function isLocalEndpoint(baseUrl: string): boolean {
@@ -93,19 +96,29 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
       });
     }
 
+    const saved = globalAi.customBaseUrlPresets ?? [];
+    const savedUrls = new Set(
+      saved
+        .map((preset) => normalizeBaseUrl(preset.baseUrl))
+        .filter((url) => !builtinPresetForUrl(url))
+    );
+    for (const url of savedUrls) {
+      options.push({ value: url, label: endpointLabel(url, globalAi) });
+    }
+
     const extraUrls = new Set<string>();
     for (const url of Object.keys(globalAi.apiKeysByBaseUrl ?? {})) {
       const normalized = normalizeBaseUrl(url);
-      if (normalized && !isPresetUrl(normalized)) {
+      if (normalized && !isPresetUrl(normalized, saved)) {
         extraUrls.add(normalized);
       }
     }
     const lastCustom = normalizeBaseUrl(globalAi.lastCustomBaseUrl ?? '');
-    if (lastCustom && !isPresetUrl(lastCustom)) {
+    if (lastCustom && !isPresetUrl(lastCustom, saved)) {
       extraUrls.add(lastCustom);
     }
     const active = normalizeBaseUrl(globalAi.baseUrl);
-    if (active && !isPresetUrl(active)) {
+    if (active && !isPresetUrl(active, saved)) {
       extraUrls.add(active);
     }
 
@@ -177,7 +190,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
 
   const globalSummary =
     globalAi.modelId?.trim()
-      ? `${endpointLabel(globalAi.baseUrl)} · ${globalAi.modelId}`
+      ? `${endpointLabel(globalAi.baseUrl, globalAi)} · ${globalAi.modelId}`
       : 'No global model selected';
 
   const optionClass = (selected: boolean) =>
@@ -209,7 +222,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
                 Choose model
               </h3>
               <p className="text-xs text-fg-muted truncate mt-0.5">
-                {endpointLabel(selectedEndpoint)}
+                {endpointLabel(selectedEndpoint, globalAi)}
                 {models.length > 0
                   ? ` · ${models.length} model${models.length === 1 ? '' : 's'}`
                   : ''}

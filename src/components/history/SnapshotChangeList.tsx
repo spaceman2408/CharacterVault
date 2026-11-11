@@ -125,7 +125,13 @@ function ImageBox({ src, alt }: { src: string; alt: string }): React.ReactElemen
   );
 }
 
-function SettingList({ settings }: { settings: SettingChange[] }): React.ReactElement | null {
+export function SettingList({
+  settings,
+  labels = SNAPSHOT_LABELS,
+}: {
+  settings: SettingChange[];
+  labels?: DiffLabels;
+}): React.ReactElement | null {
   const short = settings.filter((setting) => !setting.long);
   const long = settings.filter((setting) => setting.long);
   return (
@@ -140,18 +146,18 @@ function SettingList({ settings }: { settings: SettingChange[] }): React.ReactEl
         </ul>
       )}
       {long.map((setting) => (
-        <LongSettingDiff key={setting.label} setting={setting} />
+        <LongSettingDiff key={setting.label} setting={setting} labels={labels} />
       ))}
     </>
   );
 }
 
-function LongSettingDiff({ setting }: { setting: SettingChange }): React.ReactElement {
+function LongSettingDiff({ setting, labels }: { setting: SettingChange; labels: DiffLabels }): React.ReactElement {
   const diff = useMemo(() => diffLines(setting.before, setting.after), [setting]);
   return (
     <div className="space-y-1">
       <p className="text-[11px] font-semibold text-fg-subtle">{setting.label}</p>
-      <LineDiffView diff={diff} labels={SNAPSHOT_LABELS} />
+      <LineDiffView diff={diff} labels={labels} />
     </div>
   );
 }

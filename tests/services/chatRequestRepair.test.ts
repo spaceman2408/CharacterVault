@@ -131,6 +131,48 @@ describe('repairChatRequest', () => {
     expect(result!.request.min_p).toBe(0.05);
   });
 
+  it('renames max_tokens to max_completion_tokens when OpenAI asks for it', () => {
+    const result = repairChatRequest(
+      { model: 'gpt-5.4', max_tokens: 2048, temperature: 0.7 },
+      {
+        error: {
+          message:
+            "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.",
+          type: 'invalid_request_error',
+          param: 'max_tokens',
+          code: 'unsupported_parameter',
+        },
+      },
+    );
+
+    expect(result!.request.max_tokens).toBeUndefined();
+    expect(result!.request.max_completion_tokens).toBe(2048);
+    expect(result!.remapped.max_tokens).toBe('max_completion_tokens');
+    expect(result!.removed).toEqual([]);
+    expect(result!.request.temperature).toBe(0.7);
+  });
+
+  it('renames max_tokens when only the message names it', () => {
+    const result = repairChatRequest(
+      { model: 'o4-mini', max_tokens: 512 },
+      { error: { message: "'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead." } },
+    );
+
+    expect(result!.request.max_completion_tokens).toBe(512);
+    expect(result!.request.max_tokens).toBeUndefined();
+  });
+
+  it('still strips max_tokens when the error does not offer max_completion_tokens', () => {
+    const result = repairChatRequest(
+      { model: 'm', max_tokens: 16384 },
+      { error: { message: 'max_tokens is too large', param: 'max_tokens' } },
+    );
+
+    expect(result!.request.max_tokens).toBeUndefined();
+    expect(result!.request.max_completion_tokens).toBeUndefined();
+    expect(result!.removed).toEqual(['max_tokens']);
+  });
+
   it('strips only named sampler params', () => {
     const result = repairChatRequest(baseRequest(), {
       error: { message: 'Unsupported parameter: min_p' },
@@ -234,6 +276,15 @@ describe('sanitizeSamplerParams / strict hosts', () => {
     expect(cleaned.temperature).toBe(0.7);
   });
 
+  it('sends the output cap as max_completion_tokens on strict hosts only', () => {
+    expect(sanitizeSamplerParams({ max_tokens: 512 }, 'https://api.openai.com/v1')).toEqual({
+      max_completion_tokens: 512,
+    });
+    expect(sanitizeSamplerParams({ max_tokens: 512 }, 'https://nano-gpt.com/api/v1')).toEqual({
+      max_tokens: 512,
+    });
+  });
+
   it('keeps Synthetic-supported extras (top_k, repetition_penalty) and drops no-op min_p', () => {
     const cleaned = sanitizeSamplerParams(
       { min_p: 0, top_k: 40, repetition_penalty: 1.1, temperature: 0.7 },
@@ -284,5 +335,20 @@ describe('capability cache', () => {
     expect(next.top_k).toBeUndefined();
     expect(next.reasoning_effort).toBe('high');
     expect(next.reasoning).toEqual({ enabled: true, effort: 'high' });
+  });
+
+  it('keeps sending max_completion_tokens after a rename', () => {
+    const cache = getCapabilityCache('https://example.com/v1', 'gpt-5.4');
+    recordRepairInCache(cache, {
+      request: {},
+      removed: [],
+      remapped: { max_tokens: 'max_completion_tokens' },
+    });
+
+    const next = applyCapabilityCache({ max_tokens: 16384 }, cache);
+
+    expect(next.max_tokens).toBeUndefined();
+    expect(next.max_completion_tokens).toBe(16384);
+    expect(cache.rejectedParams.size).toBe(0);
   });
 });

@@ -352,6 +352,7 @@ export interface ChatMessage {
   tool_calls?: ChatToolCall[];
   tool_call_id?: string;
   name?: string;
+  reasoning_content?: string;
 }
 
 /**
@@ -455,6 +456,20 @@ interface ChatCompletionChunk {
       content?: string;
     };
   }>;
+  error?: { message?: string; code?: number | string } | string;
+}
+
+/** After a 200, gateways like OpenRouter report failures in-band; the partial reply is not a success. */
+function streamChunkError(chunk: ChatCompletionChunk): AIError | null {
+  const raw = chunk.error;
+  const message = typeof raw === 'string' ? raw : raw?.message;
+  if (!raw && chunk.choices?.[0]?.finish_reason !== 'error') return null;
+  const code = typeof raw === 'object' ? raw.code : undefined;
+  return new AIError(
+    `API error: ${message || 'The provider ended the response with an error.'}`,
+    'server',
+    typeof code === 'number' ? code : undefined,
+  );
 }
 
 /**
@@ -508,6 +523,7 @@ export class AIService {
   private messageTokenText(message: ChatMessage): string {
     const parts: string[] = [];
     if (message.content) parts.push(message.content);
+    if (message.reasoning_content) parts.push(message.reasoning_content);
     if (message.tool_calls?.length) parts.push(JSON.stringify(message.tool_calls));
     if (message.tool_call_id) parts.push(message.tool_call_id);
     return parts.join('\n');
@@ -1290,8 +1306,10 @@ Provide only the generated text without any additional commentary.`;
               break;
             }
 
+            let streamError: AIError | null = null;
             try {
               const parsedChunk = JSON.parse(data) as ChatCompletionChunk;
+              streamError = streamChunkError(parsedChunk);
               const parsed = parser.parseChunk(parsedChunk, this.config.modelId);
               emitDeltas(parsed.contentDelta, parsed.reasoningDelta);
               const choice = parsedChunk.choices?.[0];
@@ -1306,6 +1324,7 @@ Provide only the generated text without any additional commentary.`;
               console.warn('[AIService] Failed to parse streaming chunk:', e);
               console.warn('[AIService] Problematic line:', line.slice(0, 200));
             }
+            if (streamError) throw streamError;
           }
         }
 

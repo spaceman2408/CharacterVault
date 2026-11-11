@@ -4,6 +4,7 @@ import {
   getBookRecursionStats,
 } from '../../../components/editor/lorebook/recursionGraph';
 import { estimateTokens } from '../../../services/AIService';
+import { recursiveScanningLabel } from './flags';
 import { findCycle } from './recursion';
 
 function entryLabel(entry: LorebookEntry): string {
@@ -56,7 +57,7 @@ export function formatBookAudit(book: CharacterBook): string {
     `Lorebook: ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} (${constants} constant, ${disabled} disabled, ${empty} empty)`,
     `Entry content: ~${contentTokens} tokens` +
       (book.token_budget != null ? ` / budget ${book.token_budget}` : ''),
-    `Recursion: ${stats.edgeCount} edges, ${stats.isolatedCount} isolated, cycle: ${findCycle(entries, graph) ?? 'none'}`,
+    `Recursion: ${stats.edgeCount} edges, ${stats.isolatedCount} isolated, cycle: ${findCycle(entries, graph) ?? 'none'}; recursive_scanning ${recursiveScanningLabel(book)}`,
   ];
 
   const duplicates = duplicateKeyLines(entries);

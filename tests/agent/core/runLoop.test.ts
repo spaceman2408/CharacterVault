@@ -294,6 +294,26 @@ Castle
     expect(followUp.some((message) => message.role === 'tool' && message.tool_call_id === 'call_keep')).toBe(true);
   });
 
+  it('echoes the turn reasoning on its native tool-call message only when there is some', async () => {
+    const { host } = fakeHost();
+    const call = (id: string) => ({
+      id,
+      name: 'add_entry',
+      arguments: `{"name":"${id}","keys":"k","content":"c"}`,
+    });
+    const complete = vi.fn(
+      scriptedComplete([
+        { content: '', reasoning: 'Plan the keep.', toolCalls: [call('a')] },
+        { content: '', toolCalls: [call('b')] },
+        'Stopped.',
+      ]),
+    );
+    await runLoop({ host, complete, userMessage: 'go' });
+    const assistants = complete.mock.calls[2][0].filter((message) => message.tool_calls?.length);
+    expect(assistants[0]?.reasoning_content).toBe('Plan the keep.');
+    expect(assistants[1]).not.toHaveProperty('reasoning_content');
+  });
+
   it('does not execute a native call cut off inside a string', async () => {
     const { host, calls } = fakeHost();
     const events: AgentEvent[] = [];

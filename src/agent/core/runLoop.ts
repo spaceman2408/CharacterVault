@@ -16,7 +16,7 @@ import type {
 } from './types';
 
 export const DEFAULT_MAX_TURNS = 32;
-export const DEFAULT_MAX_ACTIONS_PER_TURN = 12;
+export const DEFAULT_MAX_ACTIONS_PER_TURN = 24;
 export const AGENT_MAX_OUTPUT_TOKENS = 16384;
 
 export function isToolsUnsupportedError(error: unknown): boolean {
@@ -329,6 +329,7 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
         role: 'assistant',
         content: content || '',
         tool_calls: toolCalls,
+        ...(reasoning ? { reasoning_content: reasoning } : {}),
       });
       for (const call of toolCalls) {
         const result = nativeResultById.get(call.id);

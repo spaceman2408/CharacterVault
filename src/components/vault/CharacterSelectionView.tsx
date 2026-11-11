@@ -330,6 +330,7 @@ export function CharacterSelectionView({
               onDuplicate={(id, name) => setCopyConfirm({ id, name })}
               onDelete={(id, name) => setDeleteConfirm({ id, name })}
               onExport={io.handleCardExport}
+              onTagClick={library.setSearchQuery}
               exportingCardId={io.exportingCardId}
               onImportClick={io.openFilePicker}
             />

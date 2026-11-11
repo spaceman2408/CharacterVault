@@ -246,11 +246,12 @@ export function LorebookAgentChat({
         session.toolEventsByMessageId,
         LOREBOOK_LOOKUP_TOOLS,
         session.errorByMessageId,
-        keptEditsOptions(keepEdits, session.toolMode, samplerSettings),
+        keptEditsOptions(keepEdits, session.toolMode, samplerSettings, aiConfig.modelId),
       ),
       contextLength: samplerSettings.contextLength,
     });
   }, [
+    aiConfig.modelId,
     customContextCharLength,
     customContextIncluded,
     getBook,

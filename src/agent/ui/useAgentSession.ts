@@ -82,6 +82,7 @@ function toServiceMessages(messages: AgentMessage[]): ServiceChatMessage[] {
     role: message.role,
     content: message.content,
     tool_call_id: message.tool_call_id,
+    reasoning_content: message.reasoning_content,
     tool_calls: message.tool_calls?.map((call) => ({
       id: call.id,
       type: 'function' as const,
@@ -775,6 +776,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
             keepEditsInContextRef.current,
             resolveAgentToolMode(aiConfigRef.current),
             samplerSettingsRef.current,
+            aiConfigRef.current.modelId,
           ),
         );
 
@@ -857,7 +859,10 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
               if (!isCurrent() || abortedRef.current) {
                 throw new AIError('Request was cancelled', 'unknown');
               }
-              if (isMountedRef.current) setIsStreaming(streaming);
+              if (isMountedRef.current) {
+                setIsStreaming(streaming);
+                setBusyAction(null);
+              }
               clearStreamDraft();
               if (continues && onChunk) appendStreamChunk(continues);
               if (!isCurrent() || abortedRef.current) {

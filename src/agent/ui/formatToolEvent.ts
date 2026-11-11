@@ -1,15 +1,21 @@
 import type { AgentToolEvent } from './types';
 
+/** The notes after the name are written by `noteEntryState` / `noteUnknownFields` in hosts/lorebook/tools.ts. */
 function parseOkEntry(
   message: string,
-): { id: string; name: string; replaced?: number } | null {
-  const match = /^ok #(\d+)\s+(.+)$/.exec(message);
+): { id: string; name: string; replaced?: number; noChange?: boolean } | null {
+  const match = /^ok #(\d+)\s+(.+?)(?: — (now |no change|warning: |ignored unknown fields: ).*)?$/.exec(message);
   if (!match) return null;
   const replaced = /^(.*) — replaced (\d+)$/.exec(match[2]);
   if (replaced) {
     return { id: match[1], name: replaced[1], replaced: Number(replaced[2]) };
   }
-  return { id: match[1], name: match[2] };
+  return { id: match[1], name: match[2], noChange: match[3] === 'no change' };
+}
+
+/** A write whose result says it changed nothing (written by hosts/lorebook/tools.ts). */
+export function isNoChangeWrite(event: AgentToolEvent): boolean {
+  return event.ok && / — no change(?:,| —|$)/.test(event.message);
 }
 
 function parseOkField(
@@ -96,7 +102,7 @@ export function formatToolEvent(event: AgentToolEvent): string {
   }
 
   if (event.toolName === 'update_book_settings') {
-    return 'Updated book settings';
+    return isNoChangeWrite(event) ? 'No change to book settings' : 'Updated book settings';
   }
 
   if (event.toolName === 'move_greeting') {
@@ -117,6 +123,7 @@ export function formatToolEvent(event: AgentToolEvent): string {
           ? `Replaced ${parsed.replaced} in “${parsed.name}” (#${parsed.id})`
           : `Replaced in “${parsed.name}” (#${parsed.id})`;
       }
+      if (parsed.noChange) return `No change to “${parsed.name}” (#${parsed.id})`;
       const verb =
         event.toolName === 'update_entry'
           ? 'Updated'

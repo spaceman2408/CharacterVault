@@ -1,4 +1,5 @@
 import type { ActionResult, AgentToolSpec, ParsedAction } from '../../core/types';
+import { parseBoolText } from '../boolText';
 import { parseCommaList } from '../commaList';
 import { buildNameModel, inventName, type NameModel } from './inventNames';
 import { OVERUSED_NAMES } from './overused';
@@ -209,7 +210,7 @@ export async function suggestNames(action: ParsedAction, usedTexts: readonly str
     return fail('part must be first, last, or full');
   }
   const part: NamePart = partRaw;
-  const invented = (action.headers.invented ?? '').trim().toLowerCase() === 'true';
+  const invented = parseBoolText(action.headers.invented) === true;
   const parsedCount = Number.parseInt(action.headers.count ?? '', 10);
   const count = Number.isFinite(parsedCount)
     ? Math.min(Math.max(parsedCount, 1), MAX_NAME_COUNT)

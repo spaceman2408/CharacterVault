@@ -1,6 +1,7 @@
 import { DEFAULT_MAX_TURNS } from '../core/runLoop';
 import { stripFences } from '../core/stripFences';
 import type { ActionResult, ParsedAction } from '../core/types';
+import { isNoChangeWrite } from './formatToolEvent';
 import { parseToolTarget } from './toolTarget';
 import type { AgentToolEvent } from './types';
 
@@ -183,7 +184,7 @@ export function isSilentLookupTurn(
 }
 
 export function writeRecapLine(events: AgentToolEvent[], lost = false): string | null {
-  const n = events.filter((event) => event.ok).length;
+  const n = events.filter((event) => event.ok && !isNoChangeWrite(event)).length;
   if (n === 0) return null;
   if (lost) return 'Not saved';
   return n === 1 ? 'Applied 1 write' : `Applied ${n} writes`;

@@ -12,14 +12,20 @@ import {
 import { formatBookAudit } from './audit';
 import { formatEntryCatalog } from './catalog';
 import { formatKeyTest } from './keyTest';
-import { formatRecursionMap } from './recursion';
+import { entryLabel, formatRecursionMap, neverActivatesReason } from './recursion';
 import {
   applyEntryFlagPatch,
+  ENTRY_FLAG_KEYS,
   formatBookSettings,
   formatEntryFlagLines,
+  formatSentFields,
   hasAnyFlagHeader,
+  hasHeader,
   parseBookSettings,
+  parseBool,
   parseEntryFlags,
+  readToolFields,
+  recursiveScanningLabel,
 } from './flags';
 
 export const LOREBOOK_TOOL_NAMES = [
@@ -40,14 +46,70 @@ export const LOREBOOK_TOOL_NAMES = [
 export type LorebookToolName = (typeof LOREBOOK_TOOL_NAMES)[number];
 
 export const MAX_NEW_ENTRIES_PER_RUN = 50;
-export const MAX_UPDATES_PER_RUN = 50;
+export const MAX_UPDATES_PER_RUN = 150;
 export const MAX_DELETES_PER_RUN = 50;
+
+const ADD_ENTRY_FIELDS: readonly string[] = ['name', 'keys', 'constant', ...ENTRY_FLAG_KEYS];
+const UPDATE_ENTRY_FIELDS: readonly string[] = ['id', ...ADD_ENTRY_FIELDS];
+const BOOK_SETTING_FIELDS: readonly string[] = [
+  'name',
+  'description',
+  'scan_depth',
+  'token_budget',
+  'recursive_scanning',
+];
+const MAX_NOTE_ITEMS = 6;
+
+function formatNoteList(items: string[]): string {
+  const extra = items.length - MAX_NOTE_ITEMS;
+  return `${items.slice(0, MAX_NOTE_ITEMS).join(', ')}${extra > 0 ? `, …+${extra}` : ''}`;
+}
+
+/** `parseOkEntry` in ui/formatToolEvent.ts keeps these notes out of the chat row; keep their wording in step. */
+function noteEntryState(
+  result: ActionResult,
+  entry: LorebookEntry | undefined,
+  headers: Record<string, string>,
+  changed: boolean,
+  recursiveScanning: boolean,
+): ActionResult {
+  if (!result.ok || !entry) return result;
+  const sent = formatSentFields(entry, headers);
+  const notes = [changed ? (sent ? `now ${sent}` : '') : sent ? `no change, already ${sent}` : 'no change'];
+  const sentDelayField = ['excludeRecursion', 'delayUntilRecursion', 'constant'].some((key) => hasHeader(headers, key));
+  const never = sentDelayField ? neverActivatesReason(entry, recursiveScanning) : null;
+  if (never) notes.push(`warning: ${never}`);
+  const suffix = notes
+    .filter(Boolean)
+    .map((note) => ` — ${note}`)
+    .join('');
+  return suffix ? { ...result, message: `${result.message}${suffix}` } : result;
+}
+
+/** Turning recursive_scanning off strands delayed entries that only a recursive pass could reach. */
+function noteStrandedEntries(book: CharacterBook, headers: Record<string, string>): string {
+  if (!hasHeader(headers, 'recursive_scanning') || recursiveScanningLabel(book) === 'on') return '';
+  const stranded = (book.entries ?? []).filter(
+    (entry) => neverActivatesReason(entry, false) && !neverActivatesReason(entry, true),
+  );
+  if (stranded.length === 0) return '';
+  return ` — warning: delayUntilRecursion entries never activate while recursive_scanning is off: ${formatNoteList(
+    stranded.map(entryLabel),
+  )}`;
+}
+
+function noteUnknownFields(result: ActionResult, unknown: string[]): ActionResult {
+  if (unknown.length === 0) return result;
+  return { ...result, message: `${result.message} — ignored unknown fields: ${formatNoteList(unknown)}` };
+}
 
 export { parseCommaList };
 
-export function parseConstantFlag(raw: string | undefined): boolean {
-  if (!raw) return false;
-  return raw.trim().toLowerCase() === 'true';
+function parseConstant(
+  headers: Record<string, string>,
+  fallback: boolean,
+): { ok: true; value: boolean } | { ok: false; message: string } {
+  return hasHeader(headers, 'constant') ? parseBool(headers.constant, 'constant') : { ok: true, value: fallback };
 }
 
 export function nextAvailableEntryId(entries: LorebookEntry[], reservedIds: ReadonlySet<number> = new Set()): number {
@@ -158,6 +220,14 @@ function updateEntryError(
 }
 
 export function updateEntry(book: CharacterBook, action: ParsedAction): UpdateEntryResult {
+  const fields = readToolFields(action.headers, UPDATE_ENTRY_FIELDS);
+  const applied = applyUpdateEntry(book, { ...action, headers: fields.headers });
+  const scanning = recursiveScanningLabel(book) === 'on';
+  const result = noteEntryState(applied.result, applied.entry, fields.headers, applied.changed, scanning);
+  return { ...applied, result: noteUnknownFields(result, fields.unknown) };
+}
+
+function applyUpdateEntry(book: CharacterBook, action: ParsedAction): UpdateEntryResult {
   const id = parseEntryId(action.headers.id);
   if (id == null) {
     return updateEntryError(book, 'error: id must be a non-negative integer');
@@ -182,11 +252,15 @@ export function updateEntry(book: CharacterBook, action: ParsedAction): UpdateEn
   if ('error' in flags) {
     return updateEntryError(book, flags.error);
   }
+  const constantFlag = parseConstant(action.headers, Boolean(existing.constant));
+  if (!constantFlag.ok) {
+    return updateEntryError(book, constantFlag.message);
+  }
 
   const content = hasContent ? action.body.trim() : existing.content;
   const name = hasName ? (action.headers.name ?? '').trim() : existing.name;
   const keys = hasKeys ? parseCommaList(action.headers.keys) : existing.keys;
-  const constant = hasConstant ? parseConstantFlag(action.headers.constant) : Boolean(existing.constant);
+  const constant = constantFlag.value;
 
   if (!content) {
     return updateEntryError(book, 'error: content is empty');
@@ -340,14 +414,32 @@ export function addEntry(
   revisableIds: ReadonlySet<number> = new Set(),
   reservedIds: ReadonlySet<number> = new Set(),
 ): AddEntryResult {
+  const fields = readToolFields(action.headers, ADD_ENTRY_FIELDS);
+  const applied = applyAddEntry(book, { ...action, headers: fields.headers }, revisableIds, reservedIds);
+  const entry = applied.entryId != null ? findEntryById(applied.book.entries ?? [], applied.entryId) : undefined;
+  const scanning = recursiveScanningLabel(book) === 'on';
+  const result = noteEntryState(applied.result, entry, fields.headers, applied.changed, scanning);
+  return { ...applied, result: noteUnknownFields(result, fields.unknown) };
+}
+
+function applyAddEntry(
+  book: CharacterBook,
+  action: ParsedAction,
+  revisableIds: ReadonlySet<number>,
+  reservedIds: ReadonlySet<number>,
+): AddEntryResult {
   const content = action.body.trim();
-  const constant = parseConstantFlag(action.headers.constant);
   const keys = parseCommaList(action.headers.keys);
   const name = entryDisplayName(action);
   const flags = parseEntryFlags(action.headers);
   if ('error' in flags) {
     return addEntryError(book, flags.error);
   }
+  const constantFlag = parseConstant(action.headers, false);
+  if (!constantFlag.ok) {
+    return addEntryError(book, constantFlag.message);
+  }
+  const constant = constantFlag.value;
 
   if (!content) {
     return addEntryError(book, 'error: content is empty');
@@ -537,12 +629,16 @@ export function updateBookSettings(
   book: CharacterBook,
   action: ParsedAction,
 ): { book: CharacterBook; result: ActionResult; changed: boolean } {
-  const parsed = parseBookSettings(action.headers, action.body);
+  const fields = readToolFields(action.headers, BOOK_SETTING_FIELDS);
+  const parsed = parseBookSettings(fields.headers, action.body);
   if ('error' in parsed) {
     return {
       book,
       changed: false,
-      result: { ok: false, toolName: 'update_book_settings', message: parsed.error },
+      result: noteUnknownFields(
+        { ok: false, toolName: 'update_book_settings', message: parsed.error },
+        fields.unknown,
+      ),
     };
   }
   const next: CharacterBook = { ...book, ...parsed.patch };
@@ -551,14 +647,17 @@ export function updateBookSettings(
     next.description === book.description &&
     next.scan_depth === book.scan_depth &&
     next.token_budget === book.token_budget &&
-    next.recursive_scanning === book.recursive_scanning;
+    recursiveScanningLabel(next) === recursiveScanningLabel(book);
   return {
     book: next,
     changed: !unchanged,
-    result: {
-      ok: true,
-      toolName: 'update_book_settings',
-      message: `ok ${formatBookSettings(next)}`,
-    },
+    result: noteUnknownFields(
+      {
+        ok: true,
+        toolName: 'update_book_settings',
+        message: `ok ${formatBookSettings(next)}${unchanged ? ' — no change' : ''}${noteStrandedEntries(next, fields.headers)}`,
+      },
+      fields.unknown,
+    ),
   };
 }

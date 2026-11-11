@@ -1,4 +1,4 @@
-export type VaultSortMode = 'name' | 'recent';
+export type VaultSortMode = 'name' | 'recent' | 'created';
 export type CardExportFormat = 'png' | 'json';
 export type VaultTab = 'characters' | 'lorebooks';
 

@@ -71,6 +71,24 @@ const BOOK_SETTING_LABELS: Record<string, string> = {
   recursive_scanning: 'Recursive scanning',
 };
 
+/**
+ * What an unset on/off setting means, so one cleared by deleting it reads "off" (or "on"
+ * for enabled) instead of "—". Unset recursive_scanning is off, as in the editor's checkbox.
+ */
+const BOOLEAN_SETTING_DEFAULTS: Record<string, boolean> = {
+  enabled: true,
+  constant: false,
+  selective: false,
+  excludeRecursion: false,
+  preventRecursion: false,
+  delayUntilRecursion: false,
+  recursive_scanning: false,
+};
+
+export function settingValueOrDefault(key: string, value: unknown): unknown {
+  return value === undefined || value === null ? (BOOLEAN_SETTING_DEFAULTS[key] ?? value) : value;
+}
+
 /** Vault-only extension keys that are not part of the card. */
 const IGNORED_EXTENSION_KEYS: ReadonlySet<string> = new Set(['context_enabled']);
 
@@ -170,8 +188,10 @@ function settingChanges(
       }
       continue;
     }
-    if (snapshotValuesMatch(before[key], after[key])) continue;
-    changes.push(settingChange(labels[key] ?? key, formatSetting(key, before[key]), formatSetting(key, after[key])));
+    const beforeValue = settingValueOrDefault(key, before[key]);
+    const afterValue = settingValueOrDefault(key, after[key]);
+    if (snapshotValuesMatch(beforeValue, afterValue)) continue;
+    changes.push(settingChange(labels[key] ?? key, formatSetting(key, beforeValue), formatSetting(key, afterValue)));
   }
   return changes;
 }
@@ -275,6 +295,11 @@ function entryTitle(entry: LorebookEntry): string {
 
 const ENTRY_SKIP_KEYS: ReadonlySet<string> = new Set(['id', 'keys', 'content']);
 
+/** Every setting that differs between two versions of one entry, except its keys and content. */
+export function diffEntrySettings(before: LorebookEntry, after: LorebookEntry): SettingChange[] {
+  return settingChanges(asRecord(before), asRecord(after), ENTRY_SETTING_LABELS, ENTRY_SKIP_KEYS);
+}
+
 function entryChange(status: ChangeStatus, before: LorebookEntry | undefined, after: LorebookEntry | undefined): SnapshotChange {
   const entry = (after ?? before) as LorebookEntry;
   const beforeContent = toText(before?.content);
@@ -291,9 +316,7 @@ function entryChange(status: ChangeStatus, before: LorebookEntry | undefined, af
     beforeContent,
     afterContent,
     contentChanged: !snapshotValuesMatch(beforeContent, afterContent),
-    settings: before && after
-      ? settingChanges(asRecord(before), asRecord(after), ENTRY_SETTING_LABELS, ENTRY_SKIP_KEYS)
-      : [],
+    settings: before && after ? diffEntrySettings(before, after) : [],
   };
 }
 

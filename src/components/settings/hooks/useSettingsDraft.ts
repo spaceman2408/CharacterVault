@@ -49,7 +49,7 @@ import {
   notifyFavoritesChanged,
   setFavoriteTags,
 } from '../../../pages/ai-creation-studio/tags/tagData';
-import { normalizeBaseUrl } from '../config/aiBaseUrlPresets';
+import { normalizeBaseUrl, rememberModelForUrl } from '../config/aiBaseUrlPresets';
 import type { AddToast, SettingsDraft } from '../types';
 
 export function createDefaultDraft(): SettingsDraft {
@@ -122,12 +122,12 @@ function mergeLoadedAIConfig(config: AIConfig): AIConfig {
     };
   }
 
-  if (normalizedBaseUrl && merged.modelId) {
-    merged.modelIdsByBaseUrl = {
-      ...merged.modelIdsByBaseUrl,
-      [normalizedBaseUrl]: merged.modelId,
-    };
-  }
+  merged.modelIdsByBaseUrl = rememberModelForUrl(
+    merged.modelIdsByBaseUrl,
+    merged.customBaseUrlPresets,
+    normalizedBaseUrl,
+    merged.modelId,
+  );
 
   return merged;
 }
@@ -377,12 +377,12 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
               ? { [normalizedBaseUrl]: draft.ai.apiKey }
               : {}),
           },
-          modelIdsByBaseUrl: {
-            ...(draft.ai.modelIdsByBaseUrl ?? {}),
-            ...(normalizedBaseUrl && draft.ai.modelId
-              ? { [normalizedBaseUrl]: draft.ai.modelId }
-              : {}),
-          },
+          modelIdsByBaseUrl: rememberModelForUrl(
+            draft.ai.modelIdsByBaseUrl,
+            draft.ai.customBaseUrlPresets,
+            normalizedBaseUrl,
+            draft.ai.modelId,
+          ),
         },
         clampedSampler,
         draft.prompts,
@@ -452,12 +452,13 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
 
   const clearAISettings = useCallback(async () => {
     await characterSettingsService.clearAISettings();
-    const clearedAi: AIConfig = {
+    const clearedAi = (ai: AIConfig): AIConfig => ({
       ...DEFAULT_SETTINGS.ai,
       lastCustomBaseUrl: '',
-    };
-    setDraft((prev) => ({ ...prev, ai: clearedAi }));
-    setSavedDraft((prev) => (prev ? { ...prev, ai: clearedAi } : prev));
+      customBaseUrlPresets: ai.customBaseUrlPresets ?? [],
+    });
+    setDraft((prev) => ({ ...prev, ai: clearedAi(prev.ai) }));
+    setSavedDraft((prev) => (prev ? { ...prev, ai: clearedAi(prev.ai) } : prev));
   }, []);
 
   const isDirty = useMemo(

@@ -1,6 +1,7 @@
 import type { CharacterBook, LorebookEntry, LorebookPosition } from '../../../db/characterTypes';
 import { estimateTokens } from '../../../services/AIService';
 import { getEntryOrder } from '../../../services/LorebookConverter';
+import { parseBoolText } from '../boolText';
 import { parseCommaList } from '../commaList';
 
 export const ENTRY_FLAG_KEYS = [
@@ -46,11 +47,47 @@ export function hasAnyFlagHeader(headers: Record<string, string>): boolean {
   return ENTRY_FLAG_KEYS.some((key) => hasHeader(headers, key));
 }
 
-function parseBool(raw: string, field: string): { ok: true; value: boolean } | { ok: false; message: string } {
-  const trimmed = raw.trim().toLowerCase();
-  if (trimmed === 'true') return { ok: true, value: true };
-  if (trimmed === 'false') return { ok: true, value: false };
-  return { ok: false, message: `error: ${field} must be true or false` };
+/** Keyed by the name in lower case without `_` or `-`. */
+const RECURSION_FIELD_ALIASES: Record<string, string> = {
+  excluderecursion: 'excludeRecursion',
+  nonrecursable: 'excludeRecursion',
+  preventrecursion: 'preventRecursion',
+  preventfurtherrecursion: 'preventRecursion',
+  delayuntilrecursion: 'delayUntilRecursion',
+  recursivescanning: 'recursive_scanning',
+};
+
+/**
+ * Keeps the fields a tool knows. Other spellings of the recursion fields (snake_case,
+ * any case, SillyTavern's labels) are renamed to ours, and the exact spelling wins.
+ * Only those are matched loosely, so a body line like `Name: …` or `Depth: …` that the
+ * XML parser read as a header never becomes a field.
+ */
+export function readToolFields(
+  headers: Record<string, string>,
+  known: readonly string[],
+): { headers: Record<string, string>; unknown: string[] } {
+  const fields: Record<string, string> = {};
+  const unknown: string[] = [];
+  for (const [key, value] of Object.entries(headers)) {
+    if (known.includes(key)) {
+      fields[key] = value;
+      continue;
+    }
+    const alias = RECURSION_FIELD_ALIASES[key.toLowerCase().replace(/[_-]/g, '')];
+    if (!alias || !known.includes(alias)) unknown.push(key);
+    else if (!hasHeader(headers, alias)) fields[alias] = value;
+  }
+  return { headers: fields, unknown };
+}
+
+export function parseBool(
+  raw: string | undefined,
+  field: string,
+): { ok: true; value: boolean } | { ok: false; message: string } {
+  const value = parseBoolText(raw);
+  if (value == null) return { ok: false, message: `error: ${field} must be true or false` };
+  return { ok: true, value };
 }
 
 function parseIntValue(
@@ -169,9 +206,9 @@ function applyBoolFlag(
   key: 'excludeRecursion' | 'preventRecursion' | 'delayUntilRecursion',
   value: boolean | undefined,
 ): void {
-  if (value === undefined) return;
-  if (value) entry[key] = true;
-  else delete entry[key];
+  if (value === undefined || Boolean(entry[key]) === value) return;
+  // Off is stored as false, never deleted: normalizeCardBook refills a missing flag from the card's extensions.
+  entry[key] = value;
 }
 
 export function formatEntryFlagLines(entry: LorebookEntry): string[] {
@@ -201,6 +238,55 @@ export function formatEntryFlagLines(entry: LorebookEntry): string[] {
   return lines;
 }
 
+const ECHOED_FIELDS = [
+  'constant',
+  'enabled',
+  'position',
+  'depth',
+  'insertion_order',
+  'selective',
+  'probability',
+  'excludeRecursion',
+  'preventRecursion',
+  'delayUntilRecursion',
+] as const;
+type EchoedField = (typeof ECHOED_FIELDS)[number];
+
+function echoedValue(entry: LorebookEntry, field: EchoedField): string {
+  switch (field) {
+    case 'constant':
+      return String(entry.constant === true);
+    case 'enabled':
+      return String(entry.enabled !== false);
+    case 'position':
+      return entry.position ?? 'before_char';
+    case 'depth':
+      return String(entry.depth ?? 4);
+    case 'insertion_order':
+      return String(getEntryOrder(entry));
+    case 'selective':
+      return String(entry.selective === true);
+    case 'probability':
+      return String(entry.probability ?? 100);
+    default:
+      return String(entry[field] === true);
+  }
+}
+
+/**
+ * Stored values of the fields a write sent, plus the two it can set without being asked:
+ * depth when position becomes at_depth, and selective when secondary_keys is sent.
+ */
+export function formatSentFields(entry: LorebookEntry, headers: Record<string, string>): string {
+  const implied: Partial<Record<EchoedField, boolean>> = {
+    depth: hasHeader(headers, 'position') && entry.position === 'at_depth',
+    selective: hasHeader(headers, 'secondary_keys'),
+  };
+  return ECHOED_FIELDS.filter((field) => hasHeader(headers, field) || implied[field])
+    .map((field) => `${field}: ${echoedValue(entry, field)}`)
+    .join(', ');
+}
+
 export function formatEntryFlagSuffix(entry: LorebookEntry): string {
   const parts: string[] = [`${estimateTokens(entry.content ?? '')} tokens`];
   if (entry.enabled === false) parts.push('disabled');
@@ -220,10 +306,15 @@ export function formatEntryFlagSuffix(entry: LorebookEntry): string {
   if (entry.secondary_keys?.length) {
     parts.push(`filter: ${entry.secondary_keys.join(', ')}`);
   }
-  if (entry.excludeRecursion) parts.push('non-recursable');
-  if (entry.preventRecursion) parts.push('prevent');
-  if (entry.delayUntilRecursion) parts.push('delay');
+  if (entry.excludeRecursion) parts.push('excludeRecursion');
+  if (entry.preventRecursion) parts.push('preventRecursion');
+  if (entry.delayUntilRecursion) parts.push('delayUntilRecursion');
   return parts.join(', ');
+}
+
+/** Unset counts as off, as in the editor's checkbox and in test_keys. */
+export function recursiveScanningLabel(book: CharacterBook): 'on' | 'off' {
+  return book.recursive_scanning === true ? 'on' : 'off';
 }
 
 export function formatBookSettings(book: CharacterBook): string {
@@ -234,7 +325,7 @@ export function formatBookSettings(book: CharacterBook): string {
     description ? `description: ${estimateTokens(description)} tokens` : null,
     `scan_depth: ${book.scan_depth ?? '(default)'}`,
     `token_budget: ${book.token_budget ?? '(default)'}`,
-    `recursive_scanning: ${book.recursive_scanning ? 'on' : 'off'}`,
+    `recursive_scanning: ${recursiveScanningLabel(book)}`,
   ].filter((part): part is string => part != null);
   return `Book settings: ${parts.join('; ')}`;
 }

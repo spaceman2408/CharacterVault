@@ -91,9 +91,25 @@ describe('diffLorebook', () => {
     expect(change).toMatchObject({ kind: 'entry', status: 'edited', contentChanged: false, keysChanged: false });
     if (change.kind !== 'entry') throw new Error('expected an entry change');
     expect(change.settings.map((setting) => `${setting.label}: ${setting.before} -> ${setting.after}`)).toEqual([
-      'Constant:  -> on',
+      'Constant: off -> on',
       'Position:  -> At Depth',
     ]);
+  });
+
+  it('reads an unset on/off setting as its default', () => {
+    const [cleared] = diffLorebook(
+      book([entry(0, { constant: true, excludeRecursion: true })]),
+      book([entry(0, { constant: undefined, excludeRecursion: undefined })]),
+    );
+    if (cleared.kind !== 'entry') throw new Error('expected an entry change');
+    expect(cleared.settings.map((setting) => `${setting.label}: ${setting.before} -> ${setting.after}`)).toEqual([
+      'Constant: on -> off',
+      'Non-recursable: on -> off',
+    ]);
+
+    const [same] = diffLorebook(book([entry(0)]), book([entry(0, { constant: false, excludeRecursion: false })]));
+    if (same.kind !== 'entry') throw new Error('expected an entry change');
+    expect(same.settings).toEqual([]);
   });
 
   it('ignores the vault-only AI context pin', () => {

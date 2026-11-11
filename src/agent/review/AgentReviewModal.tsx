@@ -24,6 +24,7 @@ import {
   type DiffLabels,
   type TextPair,
 } from '../../components/diff';
+import { SettingList } from '../../components/history/SnapshotChangeList';
 import { countApproved, defaultDecisions, formatGreetingsForEdit, greetingsEditSeparator } from './diff';
 import type { AgentReviewChange, ReviewDecision, ReviewDecisions } from './types';
 
@@ -368,6 +369,7 @@ function ChangeRow({
             </div>
           ) : (
             <>
+              {change.kind === 'entry-updated' && <SettingList settings={change.settings} labels={REVIEW_LABELS} />}
               {lineDiff && <LineDiffView diff={lineDiff} labels={REVIEW_LABELS} />}
               {change.kind === 'greetings' && (
                 <GreetingsListView before={change.before} after={change.after} />
@@ -380,9 +382,6 @@ function ChangeRow({
                     </li>
                   ))}
                 </ul>
-              )}
-              {change.kind === 'entry-updated' && change.metaChanged && (
-                <p className="text-[11px] text-fg-subtle">Entry flags or metadata also changed.</p>
               )}
             </>
           )}
