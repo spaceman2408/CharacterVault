@@ -47,7 +47,7 @@ describe('PromptModelBindingSelect saved presets', () => {
     expect(screen.queryByRole('option', { name: `Custom: ${MINE}` })).toBeNull();
   });
 
-  it('lists each endpoint once, however many model presets it has', () => {
+  it('lists each endpoint once, and each model preset by name under Saved', () => {
     const MINE = 'https://my.host/v1';
     render(
       <PromptModelBindingSelect
@@ -68,8 +68,62 @@ describe('PromptModelBindingSelect saved presets', () => {
     );
     const labels = screen.getAllByRole('option').map((option) => option.textContent);
     expect(labels.filter((label) => label === 'OpenRouter')).toHaveLength(1);
-    expect(labels).not.toContain('OR Kimi');
     expect(labels.filter((label) => label === 'my.host')).toHaveLength(1);
+    const saved = screen.getByRole('group', { name: 'Saved' });
+    expect(
+      Array.from(saved.querySelectorAll('option')).map((option) => option.textContent)
+    ).toEqual(['OR Kimi', 'Mine · a', 'Mine · b']);
+  });
+
+  const KIMI = { label: 'OR Kimi', baseUrl: OPENROUTER, modelId: 'moonshotai/kimi-k3' };
+
+  function renderWithPresets(
+    binding: PromptModelBinding | undefined,
+    modelIdsByBaseUrl: Record<string, string> = {}
+  ) {
+    const onChange = vi.fn<(binding: PromptModelBinding | undefined) => void>();
+    const props = {
+      globalAi: { ...DEFAULT_SETTINGS.ai, modelIdsByBaseUrl, customBaseUrlPresets: [KIMI] },
+      modelsByBaseUrl: {},
+      onChange,
+      onFetch: async () => {},
+      isFetching: false,
+    };
+    const view = render(<PromptModelBindingSelect binding={binding} {...props} />);
+    const rerender = (next: PromptModelBinding | undefined) =>
+      view.rerender(<PromptModelBindingSelect binding={next} {...props} />);
+    return { onChange, rerender, select: () => screen.getAllByRole('combobox')[0] as HTMLSelectElement };
+  }
+
+  it('routes to a saved preset’s endpoint and model when picked', () => {
+    const { onChange, select } = renderWithPresets(undefined);
+    fireEvent.change(select(), { target: { value: 'saved:0' } });
+    expect(onChange).toHaveBeenCalledWith({ baseUrl: OPENROUTER, modelId: 'moonshotai/kimi-k3' });
+  });
+
+  it('shows a mapping that matches a saved preset as that preset', () => {
+    const { select } = renderWithPresets({ baseUrl: OPENROUTER, modelId: 'moonshotai/kimi-k3' });
+    expect(select().selectedOptions[0].textContent).toBe('OR Kimi');
+  });
+
+  it('keeps the plain provider selected when its remembered model is also a preset', () => {
+    const { onChange, rerender, select } = renderWithPresets(undefined, {
+      [OPENROUTER]: 'moonshotai/kimi-k3',
+    });
+    fireEvent.change(select(), { target: { value: OPENROUTER } });
+    const next = onChange.mock.calls[0][0];
+    expect(next).toEqual({ baseUrl: OPENROUTER, modelId: 'moonshotai/kimi-k3' });
+    rerender(next);
+    expect(select().selectedOptions[0].textContent).toBe('OpenRouter');
+  });
+
+  it('drops back to the provider once the model no longer matches the preset', () => {
+    const { onChange, rerender, select } = renderWithPresets(undefined);
+    fireEvent.change(select(), { target: { value: 'saved:0' } });
+    rerender(onChange.mock.calls[0][0]);
+    expect(select().selectedOptions[0].textContent).toBe('OR Kimi');
+    rerender({ baseUrl: OPENROUTER, modelId: 'openai/gpt-4o' });
+    expect(select().selectedOptions[0].textContent).toBe('OpenRouter');
   });
 });
 
