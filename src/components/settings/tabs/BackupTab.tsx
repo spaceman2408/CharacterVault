@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { AlertCircle, Check, Download, Loader2, Upload } from 'lucide-react';
 import { characterSettingsService } from '../../../services/CharacterSettingsService';
 import {
@@ -11,25 +11,25 @@ import {
 import { getFavoriteTags } from '../../../pages/ai-creation-studio/tags/tagData';
 import { SettingsCard } from '../components/SettingsCard';
 import { SettingsToggle } from '../components/SettingsToggle';
+import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import type { SettingsTabProps } from '../types';
 
-export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast, lastSavedAt }) => {
+type SettingsBackup = ReturnType<typeof parseSettingsBackup>;
+
+function describeBackupDate(backup: SettingsBackup): string {
+  return Number.isNaN(Date.parse(backup.exportedAt))
+    ? 'unknown date'
+    : new Date(backup.exportedAt).toLocaleString();
+}
+
+export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast }) => {
   const [includeKeys, setIncludeKeys] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [pendingNotice, setPendingNotice] = useState<string | null>(null);
+  const [pendingBackup, setPendingBackup] = useState<SettingsBackup | null>(null);
   const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const importedAtRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (lastSavedAt == null || importedAtRef.current == null) return;
-    if (lastSavedAt < importedAtRef.current) return;
-    importedAtRef.current = null;
-    setPendingNotice(null);
-    setAppliedNotice('Backup applied.');
-  }, [lastSavedAt]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -53,20 +53,9 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast, last
   const handleFile = async (file: File) => {
     setIsImporting(true);
     setImportError(null);
-    setPendingNotice(null);
     setAppliedNotice(null);
-    importedAtRef.current = null;
     try {
-      const backup = parseSettingsBackup(JSON.parse(await file.text()));
-      setDraft((prev) => applyBackupToDraft(prev, backup));
-      const when = Number.isNaN(Date.parse(backup.exportedAt))
-        ? 'unknown date'
-        : new Date(backup.exportedAt).toLocaleString();
-      setPendingNotice(
-        `Backup from ${when}${backup.includeKeys ? ' (contains API keys)' : ' (no API keys)'} is staged. Press Save Settings to apply it.`
-      );
-      importedAtRef.current = Date.now();
-      addToast?.('warning', 'Backup staged. Press Save Settings to apply it.');
+      setPendingBackup(parseSettingsBackup(JSON.parse(await file.text())));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not read that backup file.';
       setImportError(message);
@@ -75,6 +64,14 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast, last
       setIsImporting(false);
       if (fileRef.current) fileRef.current.value = '';
     }
+  };
+
+  const applyPendingBackup = () => {
+    if (!pendingBackup) return;
+    const backup = pendingBackup;
+    setPendingBackup(null);
+    setDraft((prev) => applyBackupToDraft(prev, backup));
+    setAppliedNotice(`Restored settings from the backup of ${describeBackupDate(backup)}.`);
   };
 
   return (
@@ -86,8 +83,7 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast, last
         </h3>
         <p className="text-xs text-fg-muted mb-4 leading-relaxed">
           Downloads AI config, sampler, prompts, studio, favorited studio tags, workspace,
-          and layout preferences as a JSON file. Export uses your saved settings. Save first
-          if you changed anything.
+          and layout preferences as a JSON file.
         </p>
         <SettingsToggle
           stacked
@@ -130,8 +126,8 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast, last
           Import settings
         </h3>
         <p className="text-xs text-fg-muted mb-4 leading-relaxed">
-          Loads a backup into the editing draft without overwriting anything yet. A backup
-          without keys keeps your current keys; review everything, then Save Settings.
+          Replaces your current settings with a backup. You will be asked to confirm first. A
+          backup without keys keeps your current keys.
         </p>
         <input
           ref={fileRef}
@@ -157,12 +153,6 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast, last
           )}
           Choose backup file
         </button>
-        {pendingNotice && (
-          <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-danger">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {pendingNotice}
-          </p>
-        )}
         {appliedNotice && (
           <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-success">
             <Check className="h-4 w-4 shrink-0" />
@@ -176,6 +166,21 @@ export const BackupTab: React.FC<SettingsTabProps> = ({ setDraft, addToast, last
           </p>
         )}
       </SettingsCard>
+      <ConfirmDialog
+        open={pendingBackup !== null}
+        title="Restore settings from backup?"
+        message={
+          pendingBackup
+            ? `Your current settings will be replaced with the backup from ${describeBackupDate(pendingBackup)}${
+                pendingBackup.includeKeys ? ', including its API keys' : ''
+              }. This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Restore"
+        variant="danger"
+        onConfirm={applyPendingBackup}
+        onCancel={() => setPendingBackup(null)}
+      />
     </div>
   );
 };

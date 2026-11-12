@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AlertCircle, Check, Plus } from 'lucide-react';
+import { insertTextUndoable } from './insertTextUndoable';
 
 export interface PromptVariable {
   key: string;
@@ -53,6 +54,7 @@ export const PromptVariableChips: React.FC<{
     const focused = !!el && document.activeElement === el;
     const start = focused ? el.selectionStart : value.length;
     const end = focused ? el.selectionEnd : value.length;
+    if (el && insertTextUndoable(el, token, start, end)) return;
     onChange(value.slice(0, start) + token + value.slice(end));
     requestAnimationFrame(() => {
       if (!el) return;

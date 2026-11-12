@@ -30,7 +30,7 @@ export interface ToastNotification {
   message: string;
 }
 
-/** Draft state edited in the panel; persisted on Save. */
+/** Draft state edited in the panel; autosaved by `useSettingsDraft`. */
 export interface SettingsDraft {
   ai: AIConfig;
   sampler: SamplerSettings;
@@ -108,7 +108,6 @@ export interface SettingsTabProps {
   setDraft: React.Dispatch<React.SetStateAction<SettingsDraft>>;
   helpers?: SettingsPanelHelpers;
   addToast?: AddToast;
-  lastSavedAt?: number | null;
 }
 
 export interface SettingsTabModule {

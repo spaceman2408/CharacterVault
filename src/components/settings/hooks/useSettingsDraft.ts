@@ -3,7 +3,7 @@
  * @module components/settings/hooks/useSettingsDraft
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type {
   AIConfig,
   PromptModelBinding,
@@ -203,23 +203,44 @@ export function validateAgentModel(agentModel: PromptModelBinding | undefined): 
   return agentModel ? bindingError('Agent', agentModel) : null;
 }
 
+export function validateDraft(draft: SettingsDraft): string | null {
+  return (
+    validatePrompts(draft.prompts) ??
+    validatePromptModels(draft.promptModels, draft.toolbar) ??
+    validateToolbarConfig(draft.toolbar) ??
+    validateAgentModel(draft.agentModel) ??
+    validateStudioPrompts(draft.studio.prompts)
+  );
+}
+
+const AUTOSAVE_DELAY_MS = 700;
+
 interface UseSettingsDraftOptions {
   isOpen: boolean;
   reloadSettings: () => Promise<void>;
   addToast: AddToast;
+  /** Textareas inside this element save on blur instead of on the debounce. */
+  panelRef: React.RefObject<HTMLElement | null>;
 }
 
-export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettingsDraftOptions) {
+export function useSettingsDraft({ isOpen, reloadSettings, addToast, panelRef }: UseSettingsDraftOptions) {
   const [draft, setDraft] = useState<SettingsDraft>(createDefaultDraft);
   const [isLoading, setIsLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [savedDraft, setSavedDraft] = useState<SettingsDraft | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  /** Tied to the draft it was raised for, so an edit hides it until the next save attempt. */
+  const [saveError, setSaveError] = useState<{ fingerprint: string; message: string } | null>(null);
+  const [isEditingText, setIsEditingText] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const mountedRef = useRef(true);
   const loadedContextRef = useRef<SettingsDraft['contextSectionIds']>([]);
   const loadedFavoritesRef = useRef<SettingsDraft['studioFavorites']>([]);
+  const draftRef = useRef(draft);
+  const savedDraftRef = useRef(savedDraft);
+  const readyRef = useRef(false);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     mountedRef.current = true;
@@ -227,6 +248,18 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
       mountedRef.current = false;
     };
   }, []);
+
+  useLayoutEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+
+  useLayoutEffect(() => {
+    savedDraftRef.current = savedDraft;
+  }, [savedDraft]);
+
+  useLayoutEffect(() => {
+    readyRef.current = !isLoading && !loadFailed;
+  }, [isLoading, loadFailed]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -293,6 +326,9 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
         };
         setDraft(loaded);
         setSavedDraft(loaded);
+        setSaveError(null);
+        setLastSavedAt(null);
+        setIsEditingText(false);
       } catch (err) {
         if (cancelled || !mountedRef.current) return;
         console.error('Failed to load settings:', err);
@@ -313,142 +349,136 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
 
   const retryLoad = useCallback(() => setLoadAttempt((n) => n + 1), []);
 
-  const save = useCallback(async () => {
-    // The draft is defaults or stale until a load succeeds; saving it would overwrite real settings.
-    if (isLoading || loadFailed) return;
-    setIsSaving(true);
+  const persist = useCallback(async (target: SettingsDraft, previous: SettingsDraft) => {
+    const clampedSampler: SamplerSettings = {
+      ...target.sampler,
+      contextLength: clampContextLength(target.sampler.contextLength),
+      maxTokens: Math.min(target.sampler.maxTokens, 8192),
+    };
 
-    const validationError = validatePrompts(draft.prompts);
-    if (validationError) {
-      addToast('error', validationError);
-      setIsSaving(false);
-      return;
-    }
+    const normalizedBaseUrl = normalizeBaseUrl(target.ai.baseUrl);
+    const toolbar = normalizeToolbarConfig(target.toolbar);
+    const promptModels = prunePromptModelsForToolbar(
+      normalizePromptModelMap(target.promptModels),
+      toolbar,
+    );
+    const agentModel = normalizeModelBinding(target.agentModel) ?? null;
 
-    const promptModelsError = validatePromptModels(draft.promptModels, draft.toolbar);
-    if (promptModelsError) {
-      addToast('error', promptModelsError);
-      setIsSaving(false);
-      return;
-    }
-
-    const toolbarError = validateToolbarConfig(draft.toolbar);
-    if (toolbarError) {
-      addToast('error', toolbarError);
-      setIsSaving(false);
-      return;
-    }
-
-    const agentModelError = validateAgentModel(draft.agentModel);
-    if (agentModelError) {
-      addToast('error', agentModelError);
-      setIsSaving(false);
-      return;
-    }
-
-    const studioPromptsError = validateStudioPrompts(draft.studio.prompts);
-    if (studioPromptsError) {
-      addToast('error', studioPromptsError);
-      setIsSaving(false);
-      return;
-    }
-
-    try {
-      const clampedSampler: SamplerSettings = {
-        ...draft.sampler,
-        contextLength: clampContextLength(draft.sampler.contextLength),
-        maxTokens: Math.min(draft.sampler.maxTokens, 8192),
-      };
-
-      const normalizedBaseUrl = normalizeBaseUrl(draft.ai.baseUrl);
-      const toolbar = normalizeToolbarConfig(draft.toolbar);
-      const promptModels = prunePromptModelsForToolbar(
-        normalizePromptModelMap(draft.promptModels),
-        toolbar,
-      );
-      const agentModel = normalizeModelBinding(draft.agentModel) ?? null;
-
-      await characterSettingsService.saveAllAISettings(
-        {
-          ...draft.ai,
-          apiKeysByBaseUrl: {
-            ...(draft.ai.apiKeysByBaseUrl ?? {}),
-            ...(normalizedBaseUrl && draft.ai.apiKey
-              ? { [normalizedBaseUrl]: draft.ai.apiKey }
-              : {}),
-          },
-          modelIdsByBaseUrl: rememberModelForUrl(
-            draft.ai.modelIdsByBaseUrl,
-            draft.ai.customBaseUrlPresets,
-            normalizedBaseUrl,
-            draft.ai.modelId,
-          ),
-        },
-        clampedSampler,
-        draft.prompts,
-        promptModels,
-        agentModel,
-        toolbar,
-      );
-
-      const currentSettings = await characterSettingsService.getSettings();
-      const contextChanged =
-        JSON.stringify(draft.contextSectionIds) !== JSON.stringify(loadedContextRef.current);
-      await characterSettingsService.saveRoleplayHighlight(draft.roleplayHighlight);
-      await characterSettingsService.saveMacroHighlight(draft.macroHighlight);
-      await characterSettingsService.saveSettings({
-        ...currentSettings,
-        ui: {
-          ...currentSettings.ui,
-          showLuckyVortex: draft.showLuckyVortex,
-          // The editor changes font size directly; only overwrite it when this draft changed it (backup import).
-          ...(draft.editorFontSize !== savedDraft?.editorFontSize
-            ? { editorFontSize: draft.editorFontSize }
+    await characterSettingsService.saveAllAISettings(
+      {
+        ...target.ai,
+        apiKeysByBaseUrl: {
+          ...(target.ai.apiKeysByBaseUrl ?? {}),
+          ...(normalizedBaseUrl && target.ai.apiKey
+            ? { [normalizedBaseUrl]: target.ai.apiKey }
             : {}),
-          markdownImageOpenLinks: draft.markdownImageOpenLinks,
-          defaultChatPanel: draft.defaultChatPanel,
-          requireAgentReview: draft.requireAgentReview,
-          agentKeepEdits: draft.agentKeepEdits,
-          creatorNotesRemoteWarning: draft.creatorNotesRemoteWarning,
-          roleplayHighlight: normalizeRoleplayHighlight(draft.roleplayHighlight),
-          macroHighlight: normalizeMacroHighlight(draft.macroHighlight),
-          macroAutoConvert: draft.macroAutoConvert,
         },
-        sectionOrder: draft.sectionOrder,
-        hiddenSections: draft.hiddenSections,
-        ...(contextChanged ? { contextSectionIds: draft.contextSectionIds } : {}),
-        studio: normalizeStudioSettings(draft.studio),
-      });
-      if (contextChanged) loadedContextRef.current = [...draft.contextSectionIds];
+        modelIdsByBaseUrl: rememberModelForUrl(
+          target.ai.modelIdsByBaseUrl,
+          target.ai.customBaseUrlPresets,
+          normalizedBaseUrl,
+          target.ai.modelId,
+        ),
+      },
+      clampedSampler,
+      target.prompts,
+      promptModels,
+      agentModel,
+      toolbar,
+    );
 
-      const favoritesChanged =
-        JSON.stringify(draft.studioFavorites) !== JSON.stringify(loadedFavoritesRef.current);
-      if (favoritesChanged) {
-        loadedFavoritesRef.current = setFavoriteTags(draft.studioFavorites);
-        notifyFavoritesChanged();
-      }
+    const currentSettings = await characterSettingsService.getSettings();
+    const contextChanged =
+      JSON.stringify(target.contextSectionIds) !== JSON.stringify(loadedContextRef.current);
+    await characterSettingsService.saveRoleplayHighlight(target.roleplayHighlight);
+    await characterSettingsService.saveMacroHighlight(target.macroHighlight);
+    await characterSettingsService.saveSettings({
+      ...currentSettings,
+      ui: {
+        ...currentSettings.ui,
+        showLuckyVortex: target.showLuckyVortex,
+        // The editor changes font size directly; only overwrite it when this draft changed it (backup import).
+        ...(target.editorFontSize !== previous.editorFontSize
+          ? { editorFontSize: target.editorFontSize }
+          : {}),
+        markdownImageOpenLinks: target.markdownImageOpenLinks,
+        defaultChatPanel: target.defaultChatPanel,
+        requireAgentReview: target.requireAgentReview,
+        agentKeepEdits: target.agentKeepEdits,
+        creatorNotesRemoteWarning: target.creatorNotesRemoteWarning,
+        roleplayHighlight: normalizeRoleplayHighlight(target.roleplayHighlight),
+        macroHighlight: normalizeMacroHighlight(target.macroHighlight),
+        macroAutoConvert: target.macroAutoConvert,
+      },
+      sectionOrder: target.sectionOrder,
+      hiddenSections: target.hiddenSections,
+      ...(contextChanged ? { contextSectionIds: target.contextSectionIds } : {}),
+      studio: normalizeStudioSettings(target.studio),
+    });
+    if (contextChanged) loadedContextRef.current = [...target.contextSectionIds];
 
-      const storedSpell = await characterSettingsService.getSpellcheckSettings();
-      await characterSettingsService.saveSpellcheckSettings({
-        enabled: draft.spellcheckEnabled,
-        language: draft.spellcheckLanguage,
-        ignoredWords: [...new Set([...storedSpell.ignoredWords, ...draft.spellcheckIgnoredWords])],
-        customWords: [...new Set([...storedSpell.customWords, ...draft.spellcheckCustomWords])],
-      });
+    const favoritesChanged =
+      JSON.stringify(target.studioFavorites) !== JSON.stringify(loadedFavoritesRef.current);
+    if (favoritesChanged) {
+      loadedFavoritesRef.current = setFavoriteTags(target.studioFavorites);
+      notifyFavoritesChanged();
+    }
 
+    const storedSpell = await characterSettingsService.getSpellcheckSettings();
+    await characterSettingsService.saveSpellcheckSettings({
+      enabled: target.spellcheckEnabled,
+      language: target.spellcheckLanguage,
+      ignoredWords: [...new Set([...storedSpell.ignoredWords, ...target.spellcheckIgnoredWords])],
+      customWords: [...new Set([...storedSpell.customWords, ...target.spellcheckCustomWords])],
+    });
+
+    await reloadSettings();
+  }, [reloadSettings]);
+
+  const runSave = useCallback(async () => {
+    const target = draftRef.current;
+    const previous = savedDraftRef.current;
+    // The draft is defaults or stale until a load succeeds; saving it would overwrite real settings.
+    if (!readyRef.current || !previous) return;
+    const fingerprint = draftFingerprint(target);
+    if (fingerprint === draftFingerprint(previous)) return;
+
+    const validationError = validateDraft(target);
+    if (validationError) {
+      if (mountedRef.current) setSaveError({ fingerprint, message: validationError });
+      return;
+    }
+
+    if (mountedRef.current) setIsSaving(true);
+    try {
+      await persist(target, previous);
+      savedDraftRef.current = target;
       if (!mountedRef.current) return;
-      setSavedDraft(draft);
-      await reloadSettings();
-      if (!mountedRef.current) return;
+      setSavedDraft(target);
+      setSaveError(null);
       setLastSavedAt(Date.now());
-      addToast('success', 'Settings saved successfully!');
-    } catch {
-      if (!mountedRef.current) return;
-      addToast('error', 'Failed to save settings');
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      if (mountedRef.current) {
+        setSaveError({ fingerprint, message: 'Could not save settings. Your next change will try again.' });
+      }
     } finally {
       if (mountedRef.current) setIsSaving(false);
     }
-  }, [draft, savedDraft, isLoading, loadFailed, reloadSettings, addToast]);
+  }, [persist]);
+
+  /** Queued so saves never overlap; each one reads the latest draft when it starts. */
+  const saveNow = useCallback((): Promise<void> => {
+    const next = saveQueueRef.current.then(runSave);
+    saveQueueRef.current = next;
+    return next;
+  }, [runSave]);
+
+  const isTextareaInPanel = useCallback(
+    (el: EventTarget | null): el is HTMLTextAreaElement =>
+      el instanceof HTMLTextAreaElement && !!panelRef.current?.contains(el),
+    [panelRef]
+  );
 
   const clearAISettings = useCallback(async () => {
     await characterSettingsService.clearAISettings();
@@ -461,14 +491,41 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     setSavedDraft((prev) => (prev ? { ...prev, ai: clearedAi(prev.ai) } : prev));
   }, []);
 
+  const currentFingerprint = useMemo(() => draftFingerprint(draft), [draft]);
   const isDirty = useMemo(
     () =>
       !isLoading &&
       !loadFailed &&
       savedDraft !== null &&
-      draftFingerprint(draft) !== draftFingerprint(savedDraft),
-    [draft, savedDraft, isLoading, loadFailed]
+      currentFingerprint !== draftFingerprint(savedDraft),
+    [currentFingerprint, savedDraft, isLoading, loadFailed]
   );
+
+  useEffect(() => {
+    if (!isOpen || !isDirty) return;
+    const timeoutId = window.setTimeout(() => {
+      // Prompts save on blur so half-typed text never reaches storage or flashes an error.
+      if (isTextareaInPanel(document.activeElement)) return;
+      void saveNow();
+    }, AUTOSAVE_DELAY_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [isOpen, isDirty, draft, saveNow, isTextareaInPanel]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleFocusIn = (e: FocusEvent) => setIsEditingText(isTextareaInPanel(e.target));
+    const handleFocusOut = (e: FocusEvent) => {
+      if (!isTextareaInPanel(e.target)) return;
+      setIsEditingText(false);
+      void saveNow();
+    };
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+    };
+  }, [isOpen, saveNow, isTextareaInPanel]);
 
   return {
     draft,
@@ -478,8 +535,10 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast }: UseSettin
     retryLoad,
     isDirty,
     isSaving,
+    isEditingText,
+    saveError: isDirty && saveError?.fingerprint === currentFingerprint ? saveError.message : null,
     lastSavedAt,
-    save,
+    flush: saveNow,
     clearAISettings,
   };
 }

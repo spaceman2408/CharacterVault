@@ -113,4 +113,4 @@ Do not treat a change as done if lint or build fails. Fix the errors you introdu
 - Chat UI: `src/components/ai/`
 - Settings UI and persistence path: see `src/components/settings/AGENTS.md`
 
-Settings draft is not written to IndexedDB until save; do not persist from tab components directly.
+Settings are autosaved from the draft by `useSettingsDraft`; do not persist from tab components directly.
