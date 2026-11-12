@@ -69,8 +69,7 @@ To use the AI toolbar, Orion, or the Agent, you must configure an AI provider:
 2. Go to the **AI Config** tab
 3. Pick a preset. For NanoGPT you can use **Sign in with NanoGPT** instead of pasting a key
 4. Paste your API key
-5. Click **Fetch models** and pick a model
-6. Click **Save Settings**
+5. Click **Fetch models** and pick a model. Settings save automatically
 
 For step-by-step instructions, see [AI Setup](/configuration/ai-setup). Local servers (LM Studio, KoboldCpp, Ollama) need CORS enabled; see [AI Setup → Local backends](/configuration/ai-setup#local-backends).
 :::

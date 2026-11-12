@@ -24,7 +24,7 @@ When a run finishes, changes land in this card or book — unless [review](#revi
 
 You can switch back to Orion at any time with the chat bubble icon next to it. The two chats do not share a thread. Each one is saved on that character or lorebook and comes back when you reopen Ask AI.
 
-To open Agent by default, set **Settings → Character Workspace → Chat panel → Default chat** to **Agent**, then **Save Settings**. That applies the next time you open a character or lorebook. The header switch still works for the current session.
+To open Agent by default, set **Settings → Character Workspace → Chat panel → Default chat** to **Agent**, and close Settings. That applies the next time you open a character or lorebook. The header switch still works for the current session.
 
 ## Quick start
 
@@ -128,7 +128,7 @@ The Agent remembers earlier requests in the same chat. Each past run carries a s
 
 ### Remember earlier edits {#remember-earlier-edits}
 
-To let the Agent see exactly what it wrote in earlier runs, turn on **Settings → Character Workspace → Agent edits → Remember earlier edits in the chat** (off by default) and save. Each earlier run's edits then go back to the Agent as the calls it made, so *reword the second sentence you just wrote* works without a search.
+To let the Agent see exactly what it wrote in earlier runs, turn on **Settings → Character Workspace → Agent edits → Remember earlier edits in the chat** (off by default). Each earlier run's edits then go back to the Agent as the calls it made, so *reword the second sentence you just wrote* works without a search.
 
 - The character and lorebook Agent share this setting. It also covers runs from before you turned it on.
 - Interrupted runs, runs saved before 1.8.5, and runs larger than a quarter of the input budget still get the short note.
@@ -183,8 +183,9 @@ On **Settings → Prompts**, the **Agent** card at the top uses the same picker 
 
 - **Default (AI Config)** to keep the global model
 - Or pick an endpoint you already configured and a model id
+- Or pick a [saved preset](/configuration/ai-setup#saved-presets) under **Saved**, which sets both
 
-Keys stay on **AI Config**. Save Settings before the mapping applies. Character Agent and lorebook Agent share this one mapping.
+Keys stay on **AI Config**. The mapping applies as soon as it saves. Character Agent and lorebook Agent share this one mapping.
 
 The Agent is **not** Orion with extra buttons. It has to emit valid tool calls, often several in a row. A model that chats well can still fail here.
 
@@ -218,8 +219,7 @@ Duplicate lorebook **names** in one run revise the new entry instead of adding a
 By default the Agent applies writes when the run finishes. To inspect them first:
 
 1. Open **Settings → Character Workspace**.
-2. Enable **Review agent edits before applying**.
-3. Save Settings.
+2. Enable **Review agent edits before applying**. It saves automatically.
 
 A shield icon in the chat header shows while this is on. Character Agent and lorebook Agent share the same preference.
 
@@ -284,7 +284,7 @@ Do **not** use for Agent:
 - Older lines: **Llama 3.x** chat, **Qwen2.5**, **Qwen3** 8B/14B as your daily Agent, **DeepSeek V3 / V3.1 / V3.2**, **GLM-4.x**, **Gemma 3**
 - Cheap **mini / nano / flash** SKUs sold for one-shot chat, unless the provider lists tools **and** a real Agent pass works
 
-Orion can stay on a weaker model. Map **Settings → Prompts → Agent** to one of the families above, save, and run again.
+Orion can stay on a weaker model. Map **Settings → Prompts → Agent** to one of the families above and run again.
 
 ### Local models {#local-models}
 

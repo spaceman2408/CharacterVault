@@ -114,5 +114,4 @@ Higher effort does **not** always improve creative prose. For roleplay flavor an
 1. Open **Settings** (gear in the library or workspace header).  
 2. **Settings** → **AI Config** → **Advanced Options**.  
 3. Turn on **Enable reasoning**.  
-4. Choose **Reasoning Effort**.  
-5. Click **Save Settings**.
+4. Choose **Reasoning Effort**. It saves automatically.

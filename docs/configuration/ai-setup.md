@@ -8,7 +8,7 @@ Character Vault's AI features (Orion, the Agent, the AI toolbar, and AI Creation
 2. On **AI Config**, pick a preset or **Custom URL**. Nano-GPT is selected by default.
 3. Paste your API key (leave it blank for a local server).
 4. Click **Fetch models** and pick a model. The model can't be typed in on this tab; if Fetch models fails, fix the URL, key, or [CORS](#local-backends) first.
-5. Click **Save Settings**.
+5. Close the panel. Settings save automatically as you change them.
 
 Orion and the Agent won't run until a model is set.
 
@@ -26,15 +26,17 @@ CharacterVault calls your AI server directly from the browser, so a local server
 
 1. Click the gear (**Settings**) in the library header, or **Settings** in the character workspace header (icon only on small screens; on phones in the library it is under **More**).
 3. The settings modal opens with seven tabs: **AI Config**, **Sampler**, **Prompts**, **Character Workspace**, **Creation Studio**, **Sections**, and **Backup**.
-4. Click **Save Settings** at the bottom when you're done. Changes don't take effect until you save.
+4. Changes save automatically, a moment after you make them. Prompt text saves when you click out of the box. The footer shows **Saving…**, **Saved**, or **Not saved** with the reason, for example a prompt missing `${text}`.
 
-Close the panel with **Cancel** or `Escape`. If you have unsaved changes, it asks first: **Keep editing** or **Discard**. If settings fail to load, **Save Settings** stays off and **Try again** reloads them, so nothing is overwritten.
+Close the panel with **Close** or `Escape`. Anything still waiting is saved first. A change that can't be saved (the footer says why) is dropped when you close. If settings fail to load, saving stays off and **Try again** reloads them, so nothing is overwritten.
+
+To undo a change, change it back. In a prompt box, `Ctrl+Z` / `⌘+Z` also undoes **Reset to default** and inserted variables while you are still on that tab.
 
 ## AI Config Tab
 
 ### Security Notice
 
-At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to reset all AI configuration to defaults — your characters are not affected. A confirmation step prevents accidental clears. The clear happens immediately (no Save needed) and removes saved keys for **every** provider, not just the current one, along with remembered models, the NanoGPT and OpenRouter options, and the streaming/reasoning toggles. [Saved presets](#saved-presets) stay in the dropdown, but without their keys. Prompt templates, **per-prompt model mappings**, and the **Agent** model mapping on the Prompts tab are kept (they do not store secrets).
+At the top of the AI Config tab, a security banner reminds you that your API key is stored locally in your browser. Click **Clear AI Settings** to reset all AI configuration to defaults — your characters are not affected. A confirmation step prevents accidental clears. The clear happens immediately and removes saved keys for **every** provider, not just the current one, along with remembered models, the NanoGPT and OpenRouter options, and the streaming/reasoning toggles. [Saved presets](#saved-presets) stay in the dropdown, but without their keys. Prompt templates, **per-prompt model mappings**, and the **Agent** model mapping on the Prompts tab are kept (they do not store secrets).
 
 ### API Base URL
 
@@ -65,9 +67,9 @@ A saved preset remembers an endpoint and the model you picked, under a name of y
 
 It appears under **Saved** in the dropdown. Picking it switches to that endpoint and model. Presets on the same endpoint share its key, so you enter an OpenRouter key once for all your OpenRouter presets. A custom endpoint saved before you pick a model uses whichever model you last chose for it. If you change the model while a saved preset is selected, the dropdown goes back to the plain provider (or **Custom URL**), and **Save as preset** saves the new pair.
 
-The Prompts tab's endpoint list shows saved custom endpoints by name. Choose the model there as usual.
+Saved presets also appear under **Saved** in the endpoint lists on the Prompts tab, for toolbar prompts and the Agent. Picking one there sets both its endpoint and its model. See [Per-prompt model routing](#per-prompt-model-routing).
 
-To remove one, pick it and click **Remove preset**, then confirm. Only the preset goes away: the URL, key and model stay as they are. Saving and removing take effect when you click **Save Settings**.
+To remove one, pick it and click **Remove preset**, then confirm. Only the preset goes away: the URL, key and model stay as they are.
 
 Next to **Get your key**, the Nano-GPT and Synthetic presets also show **New? Sign up (referral)**. That's a referral link: signing up through it supports CharacterVault, and you get a perk too. On NanoGPT you get 5% off usage. On Synthetic you get $10 in subscription credit when you subscribe (it doesn't stack with other offers). Use the provider's plain site if you prefer.
 
@@ -75,7 +77,7 @@ The helper text below the URL field changes based on the selected preset. For cu
 
 ### API Key
 
-Enter your API key in the masked field. It looks like a password, but it is a normal text field so browsers do not treat **Save Settings** as a login. The key is saved per base URL — if you switch providers and come back, your key is restored.
+Enter your API key in the masked field. It looks like a password, but it is a normal text field so browsers do not treat the settings panel as a login form. The key is saved per base URL — if you switch providers and come back, your key is restored.
 
 Some presets include a link to the provider's key management page — click **Get your key ↗** next to the API Key label.
 
@@ -250,6 +252,7 @@ The **Agent** card at the top of the tab uses the same endpoint and model picker
 
 - **Default (AI Config)** keeps the global model.
 - Or choose a preset (or custom URL) you already saved a key for, then pick or type a model ID.
+- Or pick one of your [saved presets](#saved-presets) under **Saved**, which sets the model too.
 
 Character Agent and lorebook Agent share this mapping. Sampler, streaming, and reasoning stay global. See [AI Agent](/features/ai-agent#model-for-agent).
 
@@ -269,7 +272,7 @@ Under each expanded prompt, **Model for this prompt** controls which API endpoin
 
 | Control | What it does |
 | :--- | :--- |
-| **Endpoint** | **Default (AI Config)** uses your global base URL + model. Or pick Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio / localhost, or a custom URL you already configured. |
+| **Endpoint** | **Default (AI Config)** uses your global base URL + model. Or pick Nano-GPT, Synthetic, OpenRouter, Minimax, LM Studio / localhost, or a custom URL you already configured. Your [saved presets](#saved-presets) are listed by name under **Saved**; picking one sets its model as well. |
 | **Model** | When not on Default: open the same style of model sheet as AI Config, **Fetch models** for that endpoint, or type a model ID manually. |
 
 **Examples**
@@ -281,7 +284,7 @@ Under each expanded prompt, **Model for this prompt** controls which API endpoin
 **Requirements**
 
 - API keys are still managed on the **AI Config** tab (including per–base URL memory). The Prompts tab only **selects** among endpoints that already have a key (or local endpoints that do not need one).
-- A mapped prompt must have both an endpoint and a non-empty model ID, or Save is blocked.
+- A mapped prompt must have both an endpoint and a non-empty model ID. Until it does, settings don't save and the footer names the prompt.
 - Collapsed prompt headers show `→ {modelId}` when a mapping is set.
 
 **What uses which model**
@@ -330,15 +333,14 @@ Export or import **settings only** (no character cards or lorebooks). For a ZIP 
 
 Downloads AI config, sampler, prompts (including per-prompt and Agent model mappings), studio preferences and favorite tags, workspace UI, and section layout as a JSON file.
 
-- Export uses your **saved** settings. Save first if you changed anything in this session.
+- Export uses your **saved** settings, so a change the footer shows as **Not saved** is left out.
 - **Include API keys** is off by default. Turn it on only to move your own setup between browsers. That file contains live keys.
 
 ### Import settings
 
-Choosing a backup file loads it into the settings **draft**. Nothing is overwritten until you click **Save Settings**.
+Choosing a backup file asks **Restore settings from backup?** first. **Restore** replaces your current settings and can't be undone, so export your own backup first if you might want them back. **Cancel** changes nothing.
 
 - A backup **without** keys keeps the API keys already on this device.
-- After import, a notice stays until you save. Saving clears it.
 
 ## Missing /v1 Detection
 
