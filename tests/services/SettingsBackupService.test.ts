@@ -58,6 +58,7 @@ function makeDraft(): BackupDraftTarget {
     defaultChatPanel: 'orion',
     requireAgentReview: false,
     agentKeepEdits: false,
+    agentSkills: [],
     creatorNotesRemoteWarning: true,
     roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
     macroHighlight: { ...DEFAULT_MACRO_HIGHLIGHT_SETTINGS },

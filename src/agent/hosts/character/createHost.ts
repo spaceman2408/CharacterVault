@@ -1,4 +1,4 @@
-import type { CharacterBook, CharacterSpec } from '../../../db/characterTypes';
+import type { AgentSkill, CharacterBook, CharacterSpec } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
 import type { ActionResult, AgentHost, AgentToolMode, ParsedAction } from '../../core/types';
 import type { CharacterReviewPayload } from '../../review/types';
@@ -7,6 +7,7 @@ import { LOREBOOK_TOOL_SPECS } from '../lorebook/schemas';
 import { LOREBOOK_TOOL_NAMES } from '../lorebook/tools';
 import { suggestNames } from '../names/suggestNames';
 import { collectBookTargets, MAX_REPLACE_ACROSS_PER_RUN } from '../search';
+import { READ_SKILL_TOOL, READ_SKILL_TOOL_SPEC, readSkill, usableSkills } from '../skills';
 import { formatFieldCatalog, formatFieldRead, formatGreetingRead } from './catalog';
 import { cloneSpec, isCharacterAgentFieldId, parseGreetingIndex } from './fields';
 import { buildCharacterAgentSystemPrompt } from './prompt';
@@ -52,6 +53,7 @@ export interface CharacterHostIO {
   getBook: () => CharacterBook;
   persist: (update: CharacterHostPersist) => Promise<void>;
   getCustomContext: () => Promise<string | null>;
+  skills?: readonly AgentSkill[];
   takeSnapshot?: () => Promise<void>;
   maxFieldUpdates?: number;
   maxGreetingMutations?: number;
@@ -75,6 +77,7 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
   const greetingReadCache = new Map<number, string>();
   let snapshotTaken = false;
   let cachedCustomChunk: string | null | undefined;
+  const skills = usableSkills(io.skills);
 
   const loreHost = createLorebookHost({
     getBook: () => io.getBook(),
@@ -99,11 +102,19 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
   };
 
   return {
-    toolNames: [...CHARACTER_TOOL_NAMES, ...COMPOSED_LOREBOOK_NAMES],
-    tools: [...CHARACTER_TOOL_SPECS, ...COMPOSED_LOREBOOK_SPECS],
+    toolNames: [
+      ...CHARACTER_TOOL_NAMES,
+      ...COMPOSED_LOREBOOK_NAMES,
+      ...(skills.length > 0 ? [READ_SKILL_TOOL] : []),
+    ],
+    tools: [
+      ...CHARACTER_TOOL_SPECS,
+      ...COMPOSED_LOREBOOK_SPECS,
+      ...(skills.length > 0 ? [READ_SKILL_TOOL_SPEC] : []),
+    ],
 
     buildSystemPrompt(input: { extraChunks: string[]; toolMode?: AgentToolMode }): string {
-      return buildCharacterAgentSystemPrompt(input.extraChunks, input.toolMode ?? 'native');
+      return buildCharacterAgentSystemPrompt(input.extraChunks, input.toolMode ?? 'native', skills);
     },
 
     async extraContextChunks(): Promise<string[]> {
@@ -124,6 +135,9 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
       }
       if (action.name === 'audit_card') {
         return auditCard(spec, loreHost.peekBook());
+      }
+      if (action.name === READ_SKILL_TOOL && skills.length > 0) {
+        return readSkill(skills, action);
       }
       if (action.name === 'suggest_names') {
         const targets = [...collectCharacterTargets(spec), ...collectBookTargets(loreHost.peekBook())];

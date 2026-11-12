@@ -1,7 +1,9 @@
+import type { AgentSkill } from '../../../db/characterTypes';
 import { buildSystemPrompt } from '../../../services/PromptBuilder';
 import { formatAgentToolGuide } from '../../core/prompts';
 import type { AgentToolMode } from '../../core/types';
 import { SUGGEST_NAMES_TOOL_DOC } from '../names/suggestNames';
+import { formatSkillsSection, READ_SKILL_TOOL_DOC } from '../skills';
 
 export const LOREBOOK_AGENT_PERSONA = `You are a lorebook authoring agent for CharacterVault. You write SillyTavern-compatible world-info entries into the user's open lorebook.
 Use attached Custom Context as source material when present. Do not invent contradictions. Prefer several focused entries over one giant dump.
@@ -31,7 +33,10 @@ ${SUGGEST_NAMES_TOOL_DOC}`;
 export function buildLorebookAgentSystemPrompt(
   extraChunks: string[],
   toolMode: AgentToolMode = 'native',
+  skills: readonly AgentSkill[] = [],
 ): string {
-  const persona = `${LOREBOOK_AGENT_PERSONA}\n\n${formatAgentToolGuide(toolMode, LOREBOOK_TOOL_LIST)}`;
+  const toolList = skills.length > 0 ? `${LOREBOOK_TOOL_LIST}\n${READ_SKILL_TOOL_DOC}` : LOREBOOK_TOOL_LIST;
+  const skillsSection = skills.length > 0 ? `\n\n${formatSkillsSection(skills)}` : '';
+  const persona = `${LOREBOOK_AGENT_PERSONA}\n\n${formatAgentToolGuide(toolMode, toolList)}${skillsSection}`;
   return buildSystemPrompt(persona, extraChunks);
 }

@@ -34,6 +34,12 @@ import {
   normalizeDefaultChatPanel,
 } from '../../../db/characterTypes';
 import {
+  cloneDefaultAgentSkills,
+  isDefaultAgentSkills,
+  resolveAgentSkills,
+  validateAgentSkills,
+} from '../../../services/agentSkills';
+import {
   characterSettingsService,
   persistableAIConfig,
 } from '../../../services/CharacterSettingsService';
@@ -69,6 +75,7 @@ export function createDefaultDraft(): SettingsDraft {
     defaultChatPanel: DEFAULT_CHAT_PANEL,
     requireAgentReview: DEFAULT_REQUIRE_AGENT_REVIEW,
     agentKeepEdits: DEFAULT_AGENT_KEEP_EDITS,
+    agentSkills: cloneDefaultAgentSkills(),
     creatorNotesRemoteWarning: DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
     roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
     macroHighlight: { ...DEFAULT_MACRO_HIGHLIGHT_SETTINGS },
@@ -209,6 +216,7 @@ export function validateDraft(draft: SettingsDraft): string | null {
     validatePromptModels(draft.promptModels, draft.toolbar) ??
     validateToolbarConfig(draft.toolbar) ??
     validateAgentModel(draft.agentModel) ??
+    validateAgentSkills(draft.agentSkills) ??
     validateStudioPrompts(draft.studio.prompts)
   );
 }
@@ -309,6 +317,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast, panelRef }:
           requireAgentReview:
             fullSettings.ui?.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
           agentKeepEdits: fullSettings.ui?.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
+          agentSkills: resolveAgentSkills(fullSettings.agentSkills),
           creatorNotesRemoteWarning:
             fullSettings.ui?.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
           roleplayHighlight: normalizeRoleplayHighlight(roleplayHighlight),
@@ -414,6 +423,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast, panelRef }:
       hiddenSections: target.hiddenSections,
       ...(contextChanged ? { contextSectionIds: target.contextSectionIds } : {}),
       studio: normalizeStudioSettings(target.studio),
+      agentSkills: isDefaultAgentSkills(target.agentSkills) ? undefined : target.agentSkills,
     });
     if (contextChanged) loadedContextRef.current = [...target.contextSectionIds];
 

@@ -935,6 +935,7 @@ function CharacterWorkspaceInner({
     defaultChatPanel,
     requireAgentReview,
     agentKeepEdits,
+    agentSkills,
   } = useCharacterEditorContext();
 
   const [agentMode, setAgentMode] = useChatPanelMode(
@@ -1267,6 +1268,7 @@ function CharacterWorkspaceInner({
                   onOpenTarget={openAgentTarget}
                   requireReview={requireAgentReview}
                   keepEdits={agentKeepEdits}
+                  skills={agentSkills}
                   chatOwnerType="character"
                   chatOwnerId={currentCharacter?.id ?? ''}
                 />

@@ -1,9 +1,10 @@
-import type { CharacterBook } from '../../../db/characterTypes';
+import type { AgentSkill, CharacterBook } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
 import type { ActionResult, AgentHost, AgentToolMode, ParsedAction } from '../../core/types';
 import type { LorebookReviewPayload } from '../../review/types';
 import { suggestNames } from '../names/suggestNames';
 import { collectBookTargets, MAX_REPLACE_ACROSS_PER_RUN } from '../search';
+import { READ_SKILL_TOOL, READ_SKILL_TOOL_SPEC, readSkill, usableSkills } from '../skills';
 import { formatEntryCatalog } from './catalog';
 import { buildLorebookAgentSystemPrompt } from './prompt';
 import { LOREBOOK_TOOL_SPECS } from './schemas';
@@ -40,6 +41,7 @@ export interface LorebookHostIO {
   getBook: () => CharacterBook;
   setBook: (book: CharacterBook) => Promise<void>;
   getCustomContext: () => Promise<string | null>;
+  skills?: readonly AgentSkill[];
   takeSnapshot?: () => Promise<void>;
   maxNewEntries?: number;
   /** When true, flush() stages edits for review instead of persisting them. */
@@ -61,6 +63,7 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
   const entryReadCache = new Map<number, string>();
   let snapshotTaken = false;
   let cachedCustomChunk: string | null | undefined;
+  const skills = usableSkills(io.skills);
 
   const cacheEntryRead = (id: number, formatted: string): void => {
     entryReadCache.set(id, formatted);
@@ -72,11 +75,11 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
   };
 
   return {
-    toolNames: LOREBOOK_TOOL_NAMES,
-    tools: LOREBOOK_TOOL_SPECS,
+    toolNames: skills.length > 0 ? [...LOREBOOK_TOOL_NAMES, READ_SKILL_TOOL] : LOREBOOK_TOOL_NAMES,
+    tools: skills.length > 0 ? [...LOREBOOK_TOOL_SPECS, READ_SKILL_TOOL_SPEC] : LOREBOOK_TOOL_SPECS,
 
     buildSystemPrompt(input: { extraChunks: string[]; toolMode?: AgentToolMode }): string {
-      return buildLorebookAgentSystemPrompt(input.extraChunks, input.toolMode ?? 'native');
+      return buildLorebookAgentSystemPrompt(input.extraChunks, input.toolMode ?? 'native', skills);
     },
 
     async extraContextChunks(): Promise<string[]> {
@@ -171,6 +174,9 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
       }
       if (action.name === 'suggest_names') {
         return suggestNames(action, collectBookTargets(book).map((target) => target.text));
+      }
+      if (action.name === READ_SKILL_TOOL && skills.length > 0) {
+        return readSkill(skills, action);
       }
       if (action.name === 'read_recursion') {
         return readRecursion(book, action);

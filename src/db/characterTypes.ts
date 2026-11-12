@@ -528,6 +528,8 @@ export interface CharacterVaultSettings {
   toolbar?: ToolbarConfig;
   /** Per-agent endpoint + model override. Missing = use global AIConfig */
   agentModel?: PromptModelBinding;
+  /** Instructions the Agent loads on demand with read_skill. Missing = DEFAULT_AGENT_SKILLS. */
+  agentSkills?: AgentSkill[];
   studio?: StudioSettings;
   contextSectionIds?: CharacterSection[];
   /** Undefined = default order */
@@ -627,6 +629,16 @@ export const DEFAULT_CHAT_PANEL: DefaultChatPanel = 'orion';
 export const DEFAULT_REQUIRE_AGENT_REVIEW = false;
 
 export const DEFAULT_AGENT_KEEP_EDITS = false;
+
+export interface AgentSkill {
+  id: string;
+  name: string;
+  /** The Agent sees only this line until it loads the skill, so it should say when to use it. */
+  description: string;
+  content: string;
+}
+
+export { DEFAULT_AGENT_SKILLS } from './defaultAgentSkills';
 
 export const DEFAULT_CREATOR_NOTES_REMOTE_WARNING = true;
 

@@ -1,4 +1,5 @@
 import type {
+  AgentSkill,
   AIConfig,
   CharacterSection,
   CharacterVaultSettings,
@@ -36,6 +37,7 @@ import {
   normalizeCustomBaseUrlPresets,
 } from '../utils/aiBaseUrl';
 import { MAX_FONT_SIZE, MIN_FONT_SIZE } from '../editor/extensions/fontSizeControl';
+import { normalizeAgentSkills, resolveAgentSkills } from './agentSkills';
 import { persistableAIConfig } from './CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from './resolveOperationConfig';
 import { prunePromptModelsForToolbar } from './toolbarConfig';
@@ -61,6 +63,8 @@ export interface SettingsBackupData {
   sectionOrder: CharacterSection[];
   hiddenSections: CharacterSection[];
   contextSectionIds: CharacterSection[];
+  /** Missing in backups made before skills existed; restoring one keeps the current skills. */
+  agentSkills?: AgentSkill[];
 }
 
 export interface SettingsBackupFile {
@@ -282,6 +286,7 @@ export function normalizeBackupData(value: unknown): SettingsBackupData {
     sectionOrder: normalizeSectionOrder(raw.sectionOrder),
     hiddenSections: normalizeSectionList(raw.hiddenSections),
     contextSectionIds: normalizeSectionList(raw.contextSectionIds),
+    agentSkills: normalizeAgentSkills(raw.agentSkills),
   };
 }
 
@@ -306,6 +311,7 @@ export function buildSettingsBackup(
     sectionOrder: saved.sectionOrder,
     hiddenSections: saved.hiddenSections,
     contextSectionIds: saved.contextSectionIds,
+    agentSkills: resolveAgentSkills(saved.agentSkills),
   });
   data.ai.availableModels = [];
   return {
@@ -368,6 +374,7 @@ export interface BackupDraftTarget {
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
   agentKeepEdits: boolean;
+  agentSkills: AgentSkill[];
   creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
@@ -414,6 +421,9 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
     defaultChatPanel: normalizeDefaultChatPanel(settings.ui.defaultChatPanel),
     requireAgentReview: settings.ui.requireAgentReview ?? false,
     agentKeepEdits: settings.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
+    agentSkills: settings.agentSkills
+      ? settings.agentSkills.map((skill) => ({ ...skill }))
+      : prev.agentSkills,
     creatorNotesRemoteWarning:
       settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
     roleplayHighlight: normalizeRoleplayHighlight(settings.ui.roleplayHighlight),

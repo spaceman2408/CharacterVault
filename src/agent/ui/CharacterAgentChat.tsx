@@ -4,6 +4,7 @@ import { AIChatView } from '../../components/ai/AIChatView';
 import { useEditLastMessage } from '../../components/ai/hooks/useEditLastMessage';
 import type { ChatMessage } from '../../components/ai/types';
 import type {
+  AgentSkill,
   AIConfig,
   CharacterBook,
   CharacterSpec,
@@ -33,7 +34,7 @@ import {
   writeRecapLine,
 } from './notices';
 import { contextMeterHistory, keptEditsOptions } from './loopHistory';
-import { characterMentions } from './mentions';
+import { characterMentions, skillMentions } from './mentions';
 import { characterSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
 import { useCharacterAgent, type PersistAgentCard } from './useCharacterAgent';
@@ -58,6 +59,7 @@ export interface CharacterAgentChatProps {
   onOpenTarget?: (target: AgentToolTarget) => void;
   requireReview?: boolean;
   keepEdits?: boolean;
+  skills?: readonly AgentSkill[];
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
 }
@@ -81,6 +83,7 @@ export function CharacterAgentChat({
   onOpenTarget,
   requireReview = false,
   keepEdits = false,
+  skills,
   chatOwnerType,
   chatOwnerId,
 }: CharacterAgentChatProps): React.ReactElement {
@@ -113,6 +116,7 @@ export function CharacterAgentChat({
     chatOwnerType,
     chatOwnerId,
     keepEditsInContext: keepEdits,
+    skills,
   });
   const { noteReviewOutcome, holdRunForReview, noteRenumberedEntries } = session;
   useEffect(() => {
@@ -247,6 +251,7 @@ export function CharacterAgentChat({
         keptEditsOptions(keepEdits, session.toolMode, samplerSettings, aiConfig.modelId),
       ),
       contextLength: samplerSettings.contextLength,
+      skills,
     });
   }, [
     aiConfig.modelId,
@@ -256,6 +261,7 @@ export function CharacterAgentChat({
     getSpec,
     keepEdits,
     samplerSettings,
+    skills,
     session.chatHistory,
     session.errorByMessageId,
     session.livePromptTokens,
@@ -389,7 +395,7 @@ export function CharacterAgentChat({
       onLoadOlder={session.handleLoadOlder}
       onClose={onClose}
       emptySuggestions={characterSuggestions(getSpec(), getBook(), customContextIncluded)}
-      mentionOptions={() => characterMentions(getSpec(), getBook())}
+      mentionOptions={() => [...characterMentions(getSpec(), getBook()), ...skillMentions(skills)]}
       renderMessage={renderMessage}
       processingIndicator={
         <div className="py-1 text-fg-muted">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type {
+  AgentSkill,
   AIConfig,
   CharacterBook,
   CharacterSpec,
@@ -36,6 +37,7 @@ export interface UseCharacterAgentOptions {
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
   keepEditsInContext?: boolean;
+  skills?: readonly AgentSkill[];
 }
 
 export type UseCharacterAgentReturn = UseAgentSessionReturn;
@@ -57,6 +59,7 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
     chatOwnerType,
     chatOwnerId,
     keepEditsInContext,
+    skills,
   } = options;
 
   const checkShouldReview = useCallback(() => shouldReview?.() ?? false, [shouldReview]);
@@ -87,11 +90,12 @@ export function useCharacterAgent(options: UseCharacterAgentOptions): UseCharact
         noteRenumberedRef.current(renumbered);
       },
       getCustomContext,
+      skills,
       takeSnapshot,
       shouldReview: checkShouldReview,
       onPendingReview: forwardPendingReview,
     });
-  }, [getBook, getCustomContext, getSpec, persist, takeSnapshot, checkShouldReview, forwardPendingReview]);
+  }, [getBook, getCustomContext, getSpec, persist, takeSnapshot, checkShouldReview, forwardPendingReview, skills]);
 
   const session = useAgentSession({
     aiConfig,

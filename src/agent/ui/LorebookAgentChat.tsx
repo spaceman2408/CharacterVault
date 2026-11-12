@@ -4,6 +4,7 @@ import { AIChatView } from '../../components/ai/AIChatView';
 import { useEditLastMessage } from '../../components/ai/hooks/useEditLastMessage';
 import type { ChatMessage } from '../../components/ai/types';
 import type {
+  AgentSkill,
   AIConfig,
   CharacterBook,
   ChatOwnerType,
@@ -31,7 +32,7 @@ import {
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
-import { lorebookMentions } from './mentions';
+import { lorebookMentions, skillMentions } from './mentions';
 import { lorebookSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
 import { useLeaveWarning } from './useLeaveWarning';
@@ -55,6 +56,7 @@ export interface LorebookAgentChatProps {
   onOpenTarget?: (target: AgentToolTarget) => void;
   requireReview?: boolean;
   keepEdits?: boolean;
+  skills?: readonly AgentSkill[];
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
   title?: string;
@@ -85,6 +87,7 @@ export function LorebookAgentChat({
   onOpenTarget,
   requireReview = false,
   keepEdits = false,
+  skills,
   chatOwnerType,
   chatOwnerId,
 }: LorebookAgentChatProps): React.ReactElement {
@@ -116,6 +119,7 @@ export function LorebookAgentChat({
     chatOwnerType,
     chatOwnerId,
     keepEditsInContext: keepEdits,
+    skills,
   });
   const { noteReviewOutcome, holdRunForReview, noteRenumberedEntries } = session;
   useEffect(() => {
@@ -249,6 +253,7 @@ export function LorebookAgentChat({
         keptEditsOptions(keepEdits, session.toolMode, samplerSettings, aiConfig.modelId),
       ),
       contextLength: samplerSettings.contextLength,
+      skills,
     });
   }, [
     aiConfig.modelId,
@@ -257,6 +262,7 @@ export function LorebookAgentChat({
     getBook,
     keepEdits,
     samplerSettings,
+    skills,
     session.chatHistory,
     session.errorByMessageId,
     session.livePromptTokens,
@@ -390,7 +396,7 @@ export function LorebookAgentChat({
       onLoadOlder={session.handleLoadOlder}
       onClose={onClose}
       emptySuggestions={lorebookSuggestions(getBook(), customContextIncluded)}
-      mentionOptions={() => lorebookMentions(getBook())}
+      mentionOptions={() => [...lorebookMentions(getBook()), ...skillMentions(skills)]}
       renderMessage={renderMessage}
       processingIndicator={
         <div className="py-1 text-fg-muted">

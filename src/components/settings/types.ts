@@ -5,6 +5,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import type {
+  AgentSkill,
   AIConfig,
   AIModelInfo,
   CustomBaseUrlPreset,
@@ -22,7 +23,7 @@ import type {
 import type { ModelProvider } from '../../services/providers';
 import type { StudioFavoriteRef } from '../../services/SettingsBackupService';
 
-export type SettingsTabId = 'ai' | 'sampler' | 'prompts' | 'studio' | 'workspace' | 'sections' | 'backup';
+export type SettingsTabId = 'ai' | 'sampler' | 'prompts' | 'studio' | 'workspace' | 'skills' | 'sections' | 'backup';
 
 export interface ToastNotification {
   id: string;
@@ -44,6 +45,7 @@ export interface SettingsDraft {
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
   agentKeepEdits: boolean;
+  agentSkills: AgentSkill[];
   creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
