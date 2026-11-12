@@ -29,6 +29,7 @@ import {
   LOREBOOK_LOOKUP_TOOLS,
   messageNotices,
   shouldRenderAgentMessage,
+  skillsUsed,
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
@@ -280,6 +281,7 @@ export function LorebookAgentChat({
       const events = session.toolEventsByMessageId[message.id] ?? [];
       const notices = messageNotices(session.errorByMessageId[message.id], events);
       const toolEvents = visibleToolEvents(events);
+      const skills = skillsUsed(events);
       const writesLost = lostMessageIds.has(message.id);
       const speech = message.role === 'assistant' ? stripFences(message.content) : message.content;
       const recapLine = speech ? null : writeRecapLine(toolEvents, writesLost);
@@ -291,6 +293,7 @@ export function LorebookAgentChat({
           toolEvents,
           notices,
           showReasoning ? message.reasoning ?? '' : '',
+          skills,
         )
       ) {
         return null;
@@ -305,6 +308,7 @@ export function LorebookAgentChat({
           showRegenerate
           notices={notices}
           toolEvents={toolEvents}
+          skillsUsed={skills}
           writesLost={writesLost}
           recapLine={recapLine}
           onRegenerate={handleRegenerateGuarded}

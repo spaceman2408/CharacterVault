@@ -161,3 +161,24 @@ describe('AgentChatMessage lost writes', () => {
     expect(screen.getByTitle('Not saved').className).toContain('line-through');
   });
 });
+
+describe('AgentChatMessage skills', () => {
+  it('shows the skills the turn used', () => {
+    render(
+      <AgentChatMessage
+        message={message}
+        messageIndex={0}
+        chatHistoryLength={1}
+        isProcessing={false}
+        showReasoning={false}
+        showRegenerate={false}
+        notices={[]}
+        toolEvents={[]}
+        skillsUsed={['Greeting Writer']}
+        onRegenerate={() => undefined}
+        onDelete={() => undefined}
+      />,
+    );
+    expect(screen.getByText('Used skill “Greeting Writer”')).toBeTruthy();
+  });
+});

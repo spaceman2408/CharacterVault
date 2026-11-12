@@ -10,6 +10,7 @@ import {
   REVIEW_NOTE_TOOL,
   RUN_INTERRUPTED_TOOL,
   shouldRenderAgentMessage,
+  skillsUsed,
   toAgentToolEvent,
   visibleToolEvents,
   writeRecapLine,
@@ -333,5 +334,39 @@ describe('toAgentToolEvent', () => {
       CHARACTER_LOOKUP_TOOLS,
     );
     expect(event.call).toBeUndefined();
+  });
+});
+
+describe('skillsUsed', () => {
+  const read = (name: string, ok = true): AgentToolEvent =>
+    toAgentToolEvent(
+      { ok, toolName: 'read_skill', message: ok ? `Skill: ${name}
+
+Follow these steps.` : `error: no skill named "${name}"` },
+      { name: 'read_skill', headers: { name }, body: '' },
+      CHARACTER_LOOKUP_TOOLS,
+    );
+
+  it('names each skill a turn loaded once, from the compacted header', () => {
+    expect(read('Greeting Writer').message).toBe('Skill: Greeting Writer');
+    expect(skillsUsed([read('Greeting Writer'), okList, read('Cut AI Slop'), read('Greeting Writer')])).toEqual([
+      'Greeting Writer',
+      'Cut AI Slop',
+    ]);
+  });
+
+  it('ignores failed reads, which show as error rows instead', () => {
+    const failed = read('Nope', false);
+    expect(skillsUsed([failed])).toEqual([]);
+    expect(visibleToolEvents([failed], CHARACTER_LOOKUP_TOOLS)).toEqual([failed]);
+  });
+
+  it('keeps a skill turn visible without counting it as a write', () => {
+    const events = [read('Greeting Writer')];
+    expect(isSilentLookupTurn({ content: '' }, events, CHARACTER_LOOKUP_TOOLS)).toBe(false);
+    expect(visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS)).toEqual([]);
+    expect(writeRecapLine(visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS))).toBeNull();
+    expect(events[0].call).toBeUndefined();
+    expect(shouldRenderAgentMessage('assistant', '', [], [], '', skillsUsed(events))).toBe(true);
   });
 });

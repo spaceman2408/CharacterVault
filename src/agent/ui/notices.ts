@@ -130,14 +130,27 @@ export function shouldRenderAgentMessage(
   visible: AgentToolEvent[],
   notices: string[],
   reasoning = '',
+  skills: string[] = [],
 ): boolean {
   if (role !== 'assistant') return true;
   return (
     speech.trim().length > 0 ||
     reasoning.trim().length > 0 ||
     visible.length > 0 ||
-    notices.length > 0
+    notices.length > 0 ||
+    skills.length > 0
   );
+}
+
+/** Names of the skills a turn loaded, from the kept `Skill: <name>` header of each read_skill result. */
+export function skillsUsed(events: AgentToolEvent[]): string[] {
+  const names: string[] = [];
+  for (const event of events) {
+    if (!event.ok || event.toolName !== 'read_skill') continue;
+    const name = /^Skill: (.+)$/.exec(event.message)?.[1]?.trim();
+    if (name && !names.includes(name)) names.push(name);
+  }
+  return names;
 }
 
 export function compactToolResultMessage(
@@ -182,6 +195,7 @@ export function isSilentLookupTurn(
   lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
 ): boolean {
   if (stripFences(message.content).trim() || message.reasoning?.trim()) return false;
+  if (skillsUsed(events).length > 0) return false;
   return isLookupOnlyTurn(events, lookupTools);
 }
 

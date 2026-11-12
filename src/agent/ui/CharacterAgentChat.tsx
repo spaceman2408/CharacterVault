@@ -30,6 +30,7 @@ import {
   interruptedRunMessageIds,
   messageNotices,
   shouldRenderAgentMessage,
+  skillsUsed,
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
@@ -279,6 +280,7 @@ export function CharacterAgentChat({
       const events = session.toolEventsByMessageId[message.id] ?? [];
       const notices = messageNotices(session.errorByMessageId[message.id], events);
       const toolEvents = visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS);
+      const skills = skillsUsed(events);
       const writesLost = lostMessageIds.has(message.id);
       const speech = message.role === 'assistant' ? stripFences(message.content) : message.content;
       const recapLine = speech ? null : writeRecapLine(toolEvents, writesLost);
@@ -290,6 +292,7 @@ export function CharacterAgentChat({
           toolEvents,
           notices,
           showReasoning ? message.reasoning ?? '' : '',
+          skills,
         )
       ) {
         return null;
@@ -304,6 +307,7 @@ export function CharacterAgentChat({
           showRegenerate
           notices={notices}
           toolEvents={toolEvents}
+          skillsUsed={skills}
           writesLost={writesLost}
           recapLine={recapLine}
           onRegenerate={handleRegenerateGuarded}
