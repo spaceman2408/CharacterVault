@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CHARACTER_LOOKUP_TOOLS,
   compactToolResultMessage,
+  foldToolRows,
   interruptedRunMessageIds,
   interruptedRunNotice,
   messageNotices,
@@ -9,6 +10,7 @@ import {
   RUN_INTERRUPTED_TOOL,
   shouldRenderAgentMessage,
   shownToolEvents,
+  silentTurnBlocks,
   toAgentToolEvent,
   visibleToolEvents,
   writeRecapLine,
@@ -164,6 +166,62 @@ describe('compactToolResultMessage', () => {
 
   it('keeps only the read_entry header so the body is not stored in chat state', () => {
     expect(compactToolResultMessage('read_entry', okRead.message)).toBe('#4 The Red Keep');
+  });
+});
+
+describe('foldToolRows', () => {
+  it('shows identical rows once with a count, in order of first appearance', () => {
+    const replaced: AgentToolEvent = {
+      toolName: 'replace_in_field',
+      ok: true,
+      message: 'ok mes_example (Examples) — replaced 1',
+      target: { type: 'field', id: 'mes_example' },
+    };
+    const read: AgentToolEvent = {
+      toolName: 'read_field',
+      ok: true,
+      message: 'mes_example (Examples) — 40 tokens',
+      target: { type: 'field', id: 'mes_example' },
+    };
+    const rows = foldToolRows([read, replaced, { ...read, message: 'mes_example (Examples) — 41 tokens' }, replaced, okAdd]);
+    expect(rows.map((row) => [row.event.toolName, row.count])).toEqual([
+      ['read_field', 2],
+      ['replace_in_field', 2],
+      ['add_entry', 1],
+    ]);
+  });
+
+  it('keeps rows with different text or links apart', () => {
+    const rows = foldToolRows([okUpdate, { ...okUpdate, message: 'ok #5 Harbor' }, failed, failed]);
+    expect(rows.map((row) => row.count)).toEqual([1, 1, 2]);
+  });
+});
+
+describe('silentTurnBlocks', () => {
+  const turn = (id: string, content = '', role = 'assistant', reasoning?: string) => ({ id, role, content, reasoning });
+
+  it('groups back-to-back tool-only turns onto the first one', () => {
+    const history = [turn('u', 'Fix it', 'user'), turn('a'), turn('b'), turn('c'), turn('d', 'Done.')];
+    const blocks = silentTurnBlocks(history, {}, {}, true);
+    expect(blocks.get('a')).toEqual({ ids: ['a', 'b', 'c'], lastIndex: 3 });
+    expect(blocks.get('b')).toBeNull();
+    expect(blocks.get('c')).toBeNull();
+    expect(blocks.has('d')).toBe(false);
+    expect(blocks.has('u')).toBe(false);
+  });
+
+  it('keeps turns with shown thinking apart, and groups them when thinking is hidden', () => {
+    const history = [turn('a', '', 'assistant', 'hmm'), turn('b'), turn('c')];
+    expect(silentTurnBlocks(history, {}, {}, true).get('b')).toEqual({ ids: ['b', 'c'], lastIndex: 2 });
+    expect(silentTurnBlocks(history, {}, {}, false).get('a')).toEqual({ ids: ['a', 'b', 'c'], lastIndex: 2 });
+  });
+
+  it('closes a block on a turn with a notice and never crosses a user message', () => {
+    const history = [turn('a'), turn('b'), turn('c'), turn('u', 'Continue', 'user'), turn('d'), turn('e')];
+    const blocks = silentTurnBlocks(history, {}, { b: 'Stopped' }, true);
+    expect(blocks.get('a')).toEqual({ ids: ['a', 'b'], lastIndex: 1 });
+    expect(blocks.has('c')).toBe(false);
+    expect(blocks.get('d')).toEqual({ ids: ['d', 'e'], lastIndex: 5 });
   });
 });
 

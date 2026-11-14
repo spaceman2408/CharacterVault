@@ -194,4 +194,29 @@ describe('AgentChatMessage lookups', () => {
     expect(onOpenTarget).toHaveBeenCalledWith({ type: 'field', id: 'description' });
     expect(screen.queryByTitle('Not saved')).toBeNull();
   });
+
+  it('folds repeated rows into one with a count', () => {
+    const replaced = {
+      toolName: 'replace_in_field',
+      ok: true,
+      message: 'ok mes_example (Examples) — replaced 1',
+      target: { type: 'field' as const, id: 'mes_example' },
+    };
+    render(
+      <AgentChatMessage
+        message={message}
+        messageIndex={0}
+        chatHistoryLength={1}
+        isProcessing={false}
+        showReasoning={false}
+        showRegenerate={false}
+        notices={[]}
+        toolEvents={[replaced, replaced, replaced]}
+        onRegenerate={() => undefined}
+        onDelete={() => undefined}
+      />,
+    );
+    expect(screen.getAllByText('Replaced 1 in Examples')).toHaveLength(1);
+    expect(screen.getByText('×3')).toBeTruthy();
+  });
 });

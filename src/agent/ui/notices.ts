@@ -1,6 +1,7 @@
 import { DEFAULT_MAX_TURNS } from '../core/runLoop';
 import type { ActionResult, ParsedAction } from '../core/types';
-import { isNoChangeWrite } from './formatToolEvent';
+import { stripFences } from '../core/stripFences';
+import { formatToolEvent, isNoChangeWrite } from './formatToolEvent';
 import { parseToolTarget } from './toolTarget';
 import type { AgentToolEvent } from './types';
 
@@ -114,6 +115,74 @@ function toolRows(
   }
 
   return visible;
+}
+
+export interface ToolRow {
+  event: AgentToolEvent;
+  count: number;
+}
+
+/** Identical rows (same tool, text, outcome, and link) shown once with a count, in order of first appearance. */
+export function foldToolRows(events: AgentToolEvent[]): ToolRow[] {
+  const rows: ToolRow[] = [];
+  const byKey = new Map<string, ToolRow>();
+  for (const event of events) {
+    const key = JSON.stringify([event.toolName, event.ok, formatToolEvent(event), event.target ?? null]);
+    const row = byKey.get(key);
+    if (row) {
+      row.count += 1;
+      continue;
+    }
+    const next = { event, count: 1 };
+    byKey.set(key, next);
+    rows.push(next);
+  }
+  return rows;
+}
+
+export interface TurnBlock {
+  /** Every turn in the block, in order; the first one renders it. */
+  ids: string[];
+  /** History index of the block's last turn. */
+  lastIndex: number;
+}
+
+/**
+ * Back-to-back agent turns that only ran tools (no speech, no shown thinking) render as one block on
+ * their first turn. A turn with a notice closes its block. Turns folded into an earlier one map to null;
+ * turns on their own have no entry.
+ */
+export function silentTurnBlocks(
+  history: { id: string; role: string; content: string; reasoning?: string }[],
+  toolEventsByMessageId: Record<string, AgentToolEvent[]>,
+  errorByMessageId: Record<string, string>,
+  showReasoning: boolean,
+): Map<string, TurnBlock | null> {
+  const blocks = new Map<string, TurnBlock | null>();
+  let start = -1;
+  const close = (end: number) => {
+    if (start >= 0 && end > start) {
+      const ids = history.slice(start, end + 1).map((message) => message.id);
+      blocks.set(ids[0], { ids, lastIndex: end });
+      for (const id of ids.slice(1)) blocks.set(id, null);
+    }
+    start = -1;
+  };
+  history.forEach((message, index) => {
+    const silent =
+      message.role === 'assistant' &&
+      !stripFences(message.content).trim() &&
+      !(showReasoning && message.reasoning?.trim());
+    if (!silent) {
+      close(index - 1);
+      return;
+    }
+    if (start < 0) start = index;
+    const events = toolEventsByMessageId[message.id] ?? [];
+    if (messageNotices(errorByMessageId[message.id], events).length > 0) close(index);
+  });
+  close(history.length - 1);
+  return blocks;
 }
 
 export function messageNotices(runError: string | undefined, events: AgentToolEvent[] = []): string[] {

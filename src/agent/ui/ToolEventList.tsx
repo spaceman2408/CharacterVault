@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, Eye, ScrollText, X } from 'lucide-react';
 import { formatToolEvent } from './formatToolEvent';
-import { isLookupEvent } from './notices';
+import { foldToolRows, isLookupEvent } from './notices';
 import type { AgentToolEvent, AgentToolTarget } from './types';
 
 export function ToolEventList({
@@ -17,7 +17,7 @@ export function ToolEventList({
   if (events.length === 0) return null;
   return (
     <ul className="space-y-1">
-      {events.map((event, index) => {
+      {foldToolRows(events).map(({ event, count }, index) => {
         const ok = event.ok;
         const lookup = isLookupEvent(event);
         const notSaved = ok && lost && !lookup;
@@ -30,12 +30,17 @@ export function ToolEventList({
               ? 'bg-success-soft text-success-soft-fg'
               : 'bg-danger-soft text-danger-soft-fg'
         } ${clickable ? 'hover:opacity-90 cursor-pointer' : ''}`;
+        const times = count > 1 ? <span className="ml-auto shrink-0 pl-2 tabular-nums opacity-70">×{count}</span> : null;
         const inner = notSaved ? (
-          <span className="line-through" title="Not saved">{formatToolEvent(event)}</span>
+          <>
+            <span className="line-through" title="Not saved">{formatToolEvent(event)}</span>
+            {times}
+          </>
         ) : (
           <>
             <Icon className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
             <span>{formatToolEvent(event)}</span>
+            {times}
           </>
         );
         return (

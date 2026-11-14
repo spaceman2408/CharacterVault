@@ -30,6 +30,7 @@ import {
   messageNotices,
   shouldRenderAgentMessage,
   shownToolEvents,
+  silentTurnBlocks,
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
@@ -276,16 +277,31 @@ export function LorebookAgentChat({
     [session.chatHistory, session.toolEventsByMessageId],
   );
 
+  const showReasoning = aiConfig.showReasoning ?? true;
+  const turnBlocks = useMemo(
+    () =>
+      silentTurnBlocks(
+        session.chatHistory,
+        session.toolEventsByMessageId,
+        session.errorByMessageId,
+        showReasoning,
+      ),
+    [session.chatHistory, session.errorByMessageId, session.toolEventsByMessageId, showReasoning],
+  );
+
   const renderMessage = useCallback(
     (message: ChatMessage, index: number, setComposerText: (text: string) => void) => {
-      const events = session.toolEventsByMessageId[message.id] ?? [];
-      const notices = messageNotices(session.errorByMessageId[message.id], events);
+      const block = turnBlocks.get(message.id);
+      if (block === null) return null;
+      const lastIndex = block?.lastIndex ?? index;
+      const last = session.chatHistory[lastIndex] ?? message;
+      const events = (block?.ids ?? [message.id]).flatMap((id) => session.toolEventsByMessageId[id] ?? []);
+      const notices = messageNotices(session.errorByMessageId[last.id], events);
       const toolEvents = shownToolEvents(events);
       const writes = visibleToolEvents(events);
       const writesLost = lostMessageIds.has(message.id);
       const speech = message.role === 'assistant' ? stripFences(message.content) : message.content;
       const recapLine = speech ? null : writeRecapLine(writes, writesLost);
-      const showReasoning = aiConfig.showReasoning ?? true;
       if (
         !shouldRenderAgentMessage(
           message.role,
@@ -299,8 +315,8 @@ export function LorebookAgentChat({
       }
       return (
         <AgentChatMessage
-          message={message}
-          messageIndex={index}
+          message={block ? { ...message, timestamp: last.timestamp, stats: last.stats } : message}
+          messageIndex={lastIndex}
           chatHistoryLength={session.chatHistory.length}
           isProcessing={session.isProcessing}
           showReasoning={showReasoning}
@@ -313,7 +329,7 @@ export function LorebookAgentChat({
           onDelete={handleDeleteGuarded}
           onOpenTarget={onOpenTarget}
           onContinue={
-            index === session.chatHistory.length - 1 && !session.isProcessing
+            lastIndex === session.chatHistory.length - 1 && !session.isProcessing
               ? handleContinue
               : undefined
           }
@@ -329,7 +345,6 @@ export function LorebookAgentChat({
       );
     },
     [
-      aiConfig.showReasoning,
       cancelEdit,
       editingId,
       handleContinue,
@@ -339,10 +354,12 @@ export function LorebookAgentChat({
       lastUserIndex,
       lostMessageIds,
       onOpenTarget,
-      session.chatHistory.length,
       session.errorByMessageId,
       session.isProcessing,
       session.toolEventsByMessageId,
+      session.chatHistory,
+      showReasoning,
+      turnBlocks,
     ],
   );
 

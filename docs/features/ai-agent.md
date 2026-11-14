@@ -170,6 +170,7 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings �
 ### What you see in chat
 
 - **Tool lines:** each reply lists what the Agent did. Writes are green, failures red, and what it looked at is grey, such as **Read Description**, **Read “Harbor” (#4)**, **Searched “harbor” (3 matches)**, or **Checked the card**. Click a write or a read to open that field, greeting, or lorebook entry. A lorebook write that changed nothing reads **No change to …**.
+- **Grouped steps:** back-to-back steps where the Agent only ran tools, with nothing to say and no shown thinking, appear as one block with one time. A row that repeats shows once with a count, such as **Read Examples ×3**.
 - **Write recap:** speech from a turn that also called tools stays on the message. If there was no speech, **Applied N writes** sits above the tool list. Writes that changed nothing are not counted.
 - **Used skill:** a reply that loaded a [skill](#skills) lists **Used skill “Name”**, and the spinner reads *Reading skill “Name”* while it loads.
 - **Status line:** while a tool runs, the spinner names what it is working on, such as *Updating Description*, *Reading entry “Harbor”*, or *Searching “harbor”*. An entry added earlier in the same run shows by id (*entry #4*).
