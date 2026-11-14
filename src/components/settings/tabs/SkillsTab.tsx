@@ -9,6 +9,7 @@ import {
 } from '../../../services/agentSkills';
 import { estimateTokens } from '../../../services/AIService';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { AgentToolGlossary } from '../components/AgentToolGlossary';
 import { SettingsCard } from '../components/SettingsCard';
 import type { SettingsTabProps } from '../types';
 
@@ -336,6 +337,8 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
           )}
         </div>
       </SettingsCard>
+
+      <AgentToolGlossary />
 
       {pendingDelete && (
         <ConfirmDialog

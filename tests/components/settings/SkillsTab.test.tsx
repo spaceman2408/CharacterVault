@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useEffect, useState } from 'react';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SkillsTab } from '../../../src/components/settings/tabs/SkillsTab';
 import { createDefaultDraft } from '../../../src/components/settings/hooks/useSettingsDraft';
 import type { SettingsDraft } from '../../../src/components/settings/types';
@@ -123,5 +123,31 @@ describe('SkillsTab', () => {
     render(<Harness initial={(draft) => ({ ...draft, agentSkills: [] })} />);
     expect(screen.getByText(/No skills\./)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add back 3 default skills' })).toBeTruthy();
+  });
+
+  it('opens the agent tools glossary on demand', () => {
+    render(<Harness />);
+    const toggle = screen.getByRole('button', { name: 'Agent tools' });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByText('read_field')).toBeNull();
+
+    fireEvent.click(toggle);
+    const fields = screen.getByRole('region', { name: 'Card fields' });
+    expect(within(fields).getByText('read_field')).toBeTruthy();
+    const checks = screen.getByRole('region', { name: 'Search and checks' });
+    expect(within(checks).getByText('audit_book').closest('div')?.textContent).toContain('Lorebook only');
+  });
+
+  it('copies a tool name when clicked', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(<Harness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Agent tools' }));
+    const button = screen.getByRole('button', { name: 'Copy read_field' });
+    expect(button.textContent).toBe('read_field');
+
+    fireEvent.click(button);
+    expect(writeText).toHaveBeenCalledWith('read_field');
+    await waitFor(() => expect(button.querySelector('.lucide-check')).not.toBeNull());
   });
 });
