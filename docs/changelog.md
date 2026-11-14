@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.9.1 (2026-11-14)
+
+CharacterVault 1.9.1 gives the Agent skills: named instructions it loads when your request matches, with three that ship and your own in a new Agent Skills settings tab. Settings now save automatically, saved presets show up in the Prompts tab model pickers, and the Agent chat highlights @mentions, plus a fix for settings changes not reaching the lorebook Agent until a reload. Full notes: [v1.9.1 release notes](/releases/v1.9.1).
+
+### Highlights
+
+- **Agent skills** — the Agent loads a skill's instructions when your request matches its **when to use** line and shows **Used skill** on its reply; three ship (Greeting Writer, Lorebook Entries, Cut AI Slop), and **Settings → Agent Skills** adds your own, switches them off, and lists the tools a skill can name
+- **Autosaved settings** — changes save a moment after you make them, prompt text saves when you click out, and the footer shows **Saving…**, **Saved**, or **Not saved** with the reason
+- **Saved presets in model routing** — every endpoint picker on **Settings → Prompts** lists saved presets under **Saved**, and picking one sets its model too
+- @mentions in the Agent chat box are highlighted when they match
+- Fix for settings changes not reaching the lorebook Agent until a page reload
+
+Details: [AI Agent](/features/ai-agent#skills) · [What's New](/whats-new)
+
+---
+
 ## 1.9.0 (2026-11-09)
 
 CharacterVault 1.9.0 lets you save an endpoint and model as a named preset and switch between them from the AI Config dropdown, adds Moonshot (Kimi), Z.ai (GLM), Z.ai Coding Plan, and DeepSeek presets, and makes the library quicker to search and sort with clickable tag chips, search shortcuts, and a Created sort, plus bigger Agent batches, Agent recursion flag edits that stick and explain themselves, and fixes for thinking and reasoning models. Full notes: [v1.9.0 release notes](/releases/v1.9.0).

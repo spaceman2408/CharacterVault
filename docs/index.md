@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.9.0
-Save endpoint and model pairs as named presets, use new Kimi, GLM, and DeepSeek presets, and search and sort the library faster.
+::: tip CharacterVault 1.9.1
+Give the Agent skills it loads when your request matches, write your own, and let settings save automatically.
 
-[Try it](https://vault.charactervault.app) · [Saved presets](/configuration/ai-setup#saved-presets) · [Library search](/features/vault-organization#search)
+[Try it](https://vault.charactervault.app) · [Agent skills](/features/ai-agent#skills) · [Agent Skills tab](/configuration/ai-setup#agent-skills-tab)
 :::
 
 # CharacterVault

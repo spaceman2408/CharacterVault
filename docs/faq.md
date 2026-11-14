@@ -134,6 +134,12 @@ It can use a separate model on **Settings → Prompts → Agent**. Set **Setting
 Optional: enable **Settings → Character Workspace → Review agent edits before applying**. Writes then open in a word-level diff so you can approve, edit, or deny them before they land. See [AI Agent](/features/ai-agent).
 :::
 
+::: details What are Agent skills?
+Skills are instructions the Agent loads for one kind of task, such as writing greetings or tightening prose. It picks one when your request matches the skill's **when to use** line and shows **Used skill** on its reply. Type `@` in the Agent chat to pick one yourself.
+
+Three ship with the app. Add your own, edit them, or switch them off on **Settings → Agent Skills**. See [AI Agent → Skills](/features/ai-agent#skills).
+:::
+
 ::: details What is AI Creation Studio?
 A full-screen flow that generates a new character from a written concept or from tags. Name and description always run; you can skip first message and examples. Prompts, tag categories, favorites, and custom tags live under **Settings → Creation Studio**.
 
