@@ -17,12 +17,27 @@ export function isDefaultAgentSkills(skills: readonly AgentSkill[]): boolean {
     skills.every((skill, index) => {
       const builtin = DEFAULT_AGENT_SKILLS[index];
       return (
+        skill.enabled !== false &&
         skill.id === builtin.id &&
         skill.name === builtin.name &&
         skill.description === builtin.description &&
         skill.content === builtin.content
       );
     })
+  );
+}
+
+export function findDefaultAgentSkill(id: string): AgentSkill | undefined {
+  return DEFAULT_AGENT_SKILLS.find((skill) => skill.id === id);
+}
+
+export function isEditedDefaultSkill(skill: AgentSkill): boolean {
+  const builtin = findDefaultAgentSkill(skill.id);
+  return (
+    !!builtin &&
+    (skill.name !== builtin.name ||
+      skill.description !== builtin.description ||
+      skill.content !== builtin.content)
   );
 }
 
@@ -46,6 +61,7 @@ export function normalizeAgentSkills(value: unknown): AgentSkill[] | undefined {
       name: typeof record.name === 'string' ? record.name : '',
       description: typeof record.description === 'string' ? record.description : '',
       content: typeof record.content === 'string' ? record.content : '',
+      ...(record.enabled === false ? { enabled: false } : {}),
     });
   }
   return out;

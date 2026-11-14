@@ -636,6 +636,8 @@ export interface AgentSkill {
   /** The Agent sees only this line until it loads the skill, so it should say when to use it. */
   description: string;
   content: string;
+  /** Missing = on. An off skill stays saved but the Agent and the @ list never see it. */
+  enabled?: boolean;
 }
 
 export { DEFAULT_AGENT_SKILLS } from './defaultAgentSkills';

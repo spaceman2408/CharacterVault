@@ -3,6 +3,7 @@ import { DEFAULT_AGENT_SKILLS } from '../../src/db/characterTypes';
 import {
   cloneDefaultAgentSkills,
   isDefaultAgentSkills,
+  isEditedDefaultSkill,
   normalizeAgentSkills,
   resolveAgentSkills,
   validateAgentSkills,
@@ -83,5 +84,33 @@ describe('agent skills in settings backups', () => {
     delete file.settings.agentSkills;
     const draft = { ...createDefaultDraft(), agentSkills: [{ id: 'y', name: 'Keep', description: '', content: 'k' }] };
     expect(applyBackupToDraft(draft, parseSettingsBackup(file)).agentSkills).toEqual(draft.agentSkills);
+  });
+});
+
+describe('agent skill on/off and defaults', () => {
+  it('stores a turned-off default list, since it is no longer the defaults', () => {
+    const skills = cloneDefaultAgentSkills();
+    skills[2] = { ...skills[2], enabled: false };
+    expect(isDefaultAgentSkills(skills)).toBe(false);
+  });
+
+  it('keeps only enabled: false when normalizing', () => {
+    const [off, on, junk] =
+      normalizeAgentSkills([
+        { id: 'a', name: 'A', content: 'x', enabled: false },
+        { id: 'b', name: 'B', content: 'x', enabled: true },
+        { id: 'c', name: 'C', content: 'x', enabled: 'no' },
+      ]) ?? [];
+    expect(off.enabled).toBe(false);
+    expect('enabled' in on).toBe(false);
+    expect('enabled' in junk).toBe(false);
+  });
+
+  it('flags a default only when its text differs from the shipped one', () => {
+    const [builtin] = cloneDefaultAgentSkills();
+    expect(isEditedDefaultSkill(builtin)).toBe(false);
+    expect(isEditedDefaultSkill({ ...builtin, enabled: false })).toBe(false);
+    expect(isEditedDefaultSkill({ ...builtin, content: 'Mine.' })).toBe(true);
+    expect(isEditedDefaultSkill({ id: 'skill-x', name: 'X', description: '', content: 'x' })).toBe(false);
   });
 });

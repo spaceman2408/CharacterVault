@@ -52,6 +52,13 @@ describe('skills', () => {
     expect(usableSkills(undefined)).toEqual([]);
   });
 
+  it('drops skills that are turned off, from the prompt, tool, and mentions', () => {
+    const off = [{ ...SKILLS[0], enabled: false }];
+    expect(usableSkills(off)).toEqual([]);
+    expect(skillMentions(off)).toEqual([]);
+    expect(characterHost(off).toolNames).not.toContain('read_skill');
+  });
+
   it('lists names and when-to-use lines, not instructions', () => {
     const section = formatSkillsSection(usableSkills(SKILLS));
     expect(section).toContain('- Greeting Writer — Use for greetings.');

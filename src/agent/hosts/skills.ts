@@ -20,7 +20,9 @@ export const READ_SKILL_TOOL_DOC =
   "- read_skill — name. Returns that skill's full instructions. Read it before a task the skill covers, then follow it.";
 
 export function usableSkills(skills: readonly AgentSkill[] | undefined): AgentSkill[] {
-  return (skills ?? []).filter((skill) => skill.name.trim() && skill.content.trim());
+  return (skills ?? []).filter(
+    (skill) => skill.enabled !== false && skill.name.trim() && skill.content.trim(),
+  );
 }
 
 export function formatSkillsSection(skills: readonly AgentSkill[]): string {
