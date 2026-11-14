@@ -25,7 +25,7 @@ CharacterVault calls your AI server directly from the browser, so a local server
 ## Opening Settings
 
 1. Click the gear (**Settings**) in the library header, or **Settings** in the character workspace header (icon only on small screens; on phones in the library it is under **More**).
-3. The settings modal opens with seven tabs: **AI Config**, **Sampler**, **Prompts**, **Character Workspace**, **Creation Studio**, **Sections**, and **Backup**.
+3. The settings modal opens with eight tabs: **AI Config**, **Sampler**, **Prompts**, **Character Workspace**, **Agent Skills**, **Creation Studio**, **Sections**, and **Backup**.
 4. Changes save automatically, a moment after you make them. Prompt text saves when you click out of the box. The footer shows **Saving…**, **Saved**, or **Not saved** with the reason, for example a prompt missing `${text}`.
 
 Close the panel with **Close** or `Escape`. Anything still waiting is saved first. A change that can't be saved (the footer says why) is dropped when you close. If settings fail to load, saving stays off and **Try again** reloads them, so nothing is overwritten.
@@ -312,6 +312,10 @@ Workspace UI preferences (this used to share a **Studio** tab with Creation Stud
 - **Creator Notes:** **Warn about remote content in Creator Notes preview** (on by default) says when the notes load images, fonts, or styles from another site. See [Creator Notes → Sandboxed Rendering](/features/creator-notes#sandboxed-rendering).
 - **Editor links** and **Spellcheck:** covered under [Editor](/features/editor).
 
+## Agent Skills Tab
+
+Instructions the [Agent](/features/ai-agent) loads for a kind of task, such as writing greetings. Turn skills on or off, edit the three that come with the app, or add your own. **Agent tools** at the bottom lists every tool the Agent can call; click a name to copy it into a skill. See [AI Agent → Skills](/features/ai-agent#skills).
+
 ## Creation Studio Tab
 
 Preferences for [AI Creation Studio](/features/ai-creation-studio):
@@ -331,7 +335,7 @@ Export or import **settings only** (no character cards or lorebooks). For a ZIP 
 
 ### Export settings
 
-Downloads AI config, sampler, prompts (including per-prompt and Agent model mappings), studio preferences and favorite tags, workspace UI, and section layout as a JSON file.
+Downloads AI config, sampler, prompts (including per-prompt and Agent model mappings), Agent skills, studio preferences and favorite tags, workspace UI, and section layout as a JSON file.
 
 - Export uses your **saved** settings, so a change the footer shows as **Not saved** is left out.
 - **Include API keys** is off by default. Turn it on only to move your own setup between browsers. That file contains live keys.

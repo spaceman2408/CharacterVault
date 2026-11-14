@@ -107,6 +107,38 @@ The Agent prefers filling empty fields and staying consistent with those notes. 
 
 Details: [AI Context → Custom Context](/features/ai-context#custom-context).
 
+## Skills {#skills}
+
+A skill is a set of instructions for one kind of task, such as writing greetings or tightening prose. Each skill has a name, a **when to use** line, and the instructions.
+
+The Agent sees only each skill's name and when-to-use line. When your request matches one, it loads that skill's instructions and follows them, and its reply shows **Used skill “Name”**. To pick a skill yourself, type `@` and choose it, for example `@Cut AI Slop`.
+
+Three skills come with the app:
+
+| Skill | When to use |
+| :--- | :--- |
+| **Greeting Writer** | Writing or revising the first message or alternate greetings |
+| **Lorebook Entries** | Adding lorebook entries or revising their keys or bodies |
+| **Cut AI Slop** | Cleaning up, de-slopping, or tightening prose in the card or book |
+
+Skills are settings, not part of a card. Both Agents share them, they stay in this browser, and they are included in a [settings backup](/configuration/ai-setup#backup-tab).
+
+### Managing skills
+
+Open **Settings → Agent Skills**.
+
+- **Use skills** at the top turns all skills off or on. Each skill keeps its own switch and text while they are off.
+- The switch on a row turns that one skill off without deleting it.
+- Click a row to edit its name, when-to-use line, and instructions. The token count is what the instructions cost when the Agent loads them.
+- **New** adds a skill at the top. A new skill you close without typing anything is dropped.
+- An edited default skill gets **Reset to default**. If you delete a default, **Add back** restores it.
+
+### Writing a skill
+
+- The **when to use** line decides when the Agent loads the skill, so make it specific: *Use when writing or revising alternate greetings* works better than *Greetings*.
+- Write the instructions as steps and rules, with a short example if it helps. Keep them to one task.
+- You can tell the Agent which tool to use, for example *read_field description before writing*. **Agent tools**, under the skill list, lists every tool the Agent can call with a one-line summary. Click a name to copy it. Tools marked **Card only** or **Lorebook only** exist in just one of the two Agents.
+
 ## How a run works
 
 1. You send a request.
@@ -139,6 +171,7 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings �
 
 - **Tool lines:** color-coded list / read / write results, including lorebook entry ids. Click a successful write to open that field, greeting, or lorebook entry. A lorebook write that changed nothing reads **No change to …**.
 - **Write recap:** speech from a turn that also called tools stays on the message. If there was no speech, **Applied N writes** sits above the tool list. Writes that changed nothing are not counted.
+- **Used skill:** a reply that loaded a [skill](#skills) shows **Used skill “Name”**, and the spinner reads *Reading skill “Name”* while it loads.
 - **Status line:** while a tool runs, the spinner names what it is working on, such as *Updating Description*, *Reading entry “Harbor”*, or *Searching “harbor”*. An entry added earlier in the same run shows by id (*entry #4*).
 - **Turn limit:** a run that stops at the [loop-turn cap](#limits-per-run) says so on its last message, with a **Continue** button that sends “Continue where you left off.”
 - **Starter suggestions:** an empty chat offers a few first requests based on what the card or book is missing, such as *Write a description*, *Write 2 alternate greetings*, or *Build a lorebook from my custom context*. It never suggests Appearance, Personality, Scenario, System prompt, or Post-history. A finished card gets the usual *Audit this card* style chips.
@@ -159,7 +192,7 @@ The thread is stored in the browser with the vault. Long threads keep a small wi
 - While a review is pending, the composer is disabled. Apply or discard the proposal first.
 - **Edit** (the pencil on your last message) puts its text back in the box. Nothing is removed until you send; then that message and the replies after it are replaced. The **×** cancels and keeps the chat as it was.
 - Delete a message to trim from that point; you cannot edit or delete while a run is in progress.
-- **@-mentions:** type `@` to pick a field, alternate greeting, or lorebook entry. It inserts plain text such as `@Description`, `@Greeting 2`, or `@“Harbor” (#4)`, and the Agent reads it as that item. **↑** / **↓** move, **Enter** or **Tab** picks, **Esc** closes the list.
+- **@-mentions:** type `@` to pick a field, alternate greeting, lorebook entry, or [skill](#skills). It inserts plain text such as `@Description`, `@Greeting 2`, `@“Harbor” (#4)`, or `@Cut AI Slop`, highlighted in the message box, and the Agent reads it as that item. **↑** / **↓** move, **Enter** or **Tab** picks, **Esc** closes the list.
 
 If you Stop while it is still thinking, Send is available again so you can retry or type a new ask.
 

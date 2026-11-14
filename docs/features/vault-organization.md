@@ -93,7 +93,7 @@ Click **Backup** in the header to download a ZIP of every character, standalone 
 
 ## Settings from the vault
 
-The vault header includes **Settings** (also under **More** on a narrow screen). The same panel as in the workspace: AI Config, Sampler, Prompts, Character Workspace, Creation Studio, Sections, and Backup.
+The vault header includes **Settings** (also under **More** on a narrow screen). The same panel as in the workspace: AI Config, Sampler, Prompts, Character Workspace, Agent Skills, Creation Studio, Sections, and Backup.
 
 ## Pagination
 
