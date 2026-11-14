@@ -137,7 +137,7 @@ Open **Settings → Agent Skills**.
 
 - The **when to use** line decides when the Agent loads the skill, so make it specific: *Use when writing or revising alternate greetings* works better than *Greetings*.
 - Write the instructions as steps and rules, with a short example if it helps. Keep them to one task.
-- You can tell the Agent which tool to use, for example *read_field description before writing*. **Agent tools**, under the skill list, lists every tool the Agent can call with a one-line summary. Click a name to copy it. Tools marked **Card only** or **Lorebook only** exist in just one of the two Agents.
+- You can tell the Agent which tool to use, for example *read_field description before writing*. **Agent tools glossary**, under the skill list, lists every tool the Agent can call with a one-line summary. Click a name to copy it. Tools marked **Card only** or **Lorebook only** exist in just one of the two Agents.
 
 ## How a run works
 

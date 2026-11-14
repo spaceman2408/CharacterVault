@@ -127,7 +127,7 @@ describe('SkillsTab', () => {
 
   it('opens the agent tools glossary on demand', () => {
     render(<Harness />);
-    const toggle = screen.getByRole('button', { name: 'Agent tools' });
+    const toggle = screen.getByRole('button', { name: 'Agent tools glossary' });
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText('read_field')).toBeNull();
 
@@ -142,7 +142,7 @@ describe('SkillsTab', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     render(<Harness />);
-    fireEvent.click(screen.getByRole('button', { name: 'Agent tools' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agent tools glossary' }));
     const button = screen.getByRole('button', { name: 'Copy read_field' });
     expect(button.textContent).toBe('read_field');
 

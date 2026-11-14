@@ -314,7 +314,7 @@ Workspace UI preferences (this used to share a **Studio** tab with Creation Stud
 
 ## Agent Skills Tab
 
-Instructions the [Agent](/features/ai-agent) loads for a kind of task, such as writing greetings. Turn skills on or off, edit the three that come with the app, or add your own. **Agent tools** at the bottom lists every tool the Agent can call; click a name to copy it into a skill. See [AI Agent → Skills](/features/ai-agent#skills).
+Instructions the [Agent](/features/ai-agent) loads for a kind of task, such as writing greetings. Turn skills on or off, edit the three that come with the app, or add your own. **Agent tools glossary** at the bottom lists every tool the Agent can call; click a name to copy it into a skill. See [AI Agent → Skills](/features/ai-agent#skills).
 
 ## Creation Studio Tab
 

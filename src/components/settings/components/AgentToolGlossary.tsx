@@ -86,7 +86,7 @@ export function AgentToolGlossary() {
         className="flex w-full items-center gap-2 text-left"
       >
         <Wrench className="h-4 w-4 text-fg-muted" aria-hidden />
-        <span className="flex-1 text-sm font-semibold text-fg">Agent tools</span>
+        <span className="flex-1 text-sm font-semibold text-fg">Agent tools glossary</span>
         <ChevronDown
           className={`h-4 w-4 text-fg-subtle transition-transform ${open ? 'rotate-180' : ''}`}
           aria-hidden
