@@ -7,6 +7,7 @@ import {
   isEditedDefaultSkill,
   normalizeAgentSkills,
   resolveAgentSkills,
+  storableAgentSkills,
   validateAgentSkills,
 } from '../../src/services/agentSkills';
 import {
@@ -139,5 +140,16 @@ describe('activeAgentSkills', () => {
     expect(applyBackupToDraft(createDefaultDraft(), file).agentSkillsEnabled).toBe(false);
     const legacy = parseSettingsBackup({ ...file, settings: { ...file.settings, ui: { theme: 'system' } } });
     expect(applyBackupToDraft(createDefaultDraft(), legacy).agentSkillsEnabled).toBe(true);
+  });
+});
+
+describe('storableAgentSkills', () => {
+  it('stores nothing for the defaults and drops skills left completely blank', () => {
+    expect(storableAgentSkills(cloneDefaultAgentSkills())).toBeUndefined();
+    const blank = { id: 'b', name: ' ', description: '', content: '' };
+    const named = { id: 'n', name: 'Tone', description: '', content: '' };
+    expect(storableAgentSkills([blank, ...cloneDefaultAgentSkills()])).toEqual(DEFAULT_AGENT_SKILLS);
+    expect(storableAgentSkills([blank, named])).toEqual([named]);
+    expect(storableAgentSkills([blank])).toEqual([]);
   });
 });

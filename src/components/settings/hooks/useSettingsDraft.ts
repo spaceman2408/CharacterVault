@@ -36,8 +36,8 @@ import {
 } from '../../../db/characterTypes';
 import {
   cloneDefaultAgentSkills,
-  isDefaultAgentSkills,
   resolveAgentSkills,
+  storableAgentSkills,
   validateAgentSkills,
 } from '../../../services/agentSkills';
 import {
@@ -427,7 +427,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast, panelRef }:
       hiddenSections: target.hiddenSections,
       ...(contextChanged ? { contextSectionIds: target.contextSectionIds } : {}),
       studio: normalizeStudioSettings(target.studio),
-      agentSkills: isDefaultAgentSkills(target.agentSkills) ? undefined : target.agentSkills,
+      agentSkills: storableAgentSkills(target.agentSkills),
     });
     if (contextChanged) loadedContextRef.current = [...target.contextSectionIds];
 

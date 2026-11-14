@@ -37,6 +37,12 @@ export function isDefaultAgentSkills(skills: readonly AgentSkill[]): boolean {
   );
 }
 
+/** What settings store: nothing for the unedited defaults, and never a skill left completely blank. */
+export function storableAgentSkills(skills: readonly AgentSkill[]): AgentSkill[] | undefined {
+  if (isDefaultAgentSkills(skills)) return undefined;
+  return skills.filter((skill) => skill.name.trim() || skill.description.trim() || skill.content.trim());
+}
+
 export function findDefaultAgentSkill(id: string): AgentSkill | undefined {
   return DEFAULT_AGENT_SKILLS.find((skill) => skill.id === id);
 }
