@@ -5,11 +5,11 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, Loader2, Settings2, X } from 'lucide-react';
-import { CharacterEditorContext } from '../../context';
 import { SaveStatus } from './components/SaveStatus';
 import { ToastContainer } from './components/ToastContainer';
 import { useModelCatalog } from './hooks/useModelCatalog';
 import { useNanoGPTSignIn } from './hooks/useNanoGPTSignIn';
+import { useReloadSettings } from './hooks/useReloadSettings';
 import { useSettingsDraft } from './hooks/useSettingsDraft';
 import { SETTINGS_TABS } from './registry';
 import type {
@@ -24,9 +24,7 @@ export function CharacterSettingsPanel({
   onClose,
   reloadSettings: propReloadSettings,
 }: CharacterSettingsPanelProps): React.ReactElement | null {
-  const editorContext = React.useContext(CharacterEditorContext);
-  const reloadSettings =
-    propReloadSettings ?? editorContext?.reloadSettings ?? (async () => {});
+  const reloadSettings = useReloadSettings(propReloadSettings);
 
   const [isVisible, setIsVisible] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
