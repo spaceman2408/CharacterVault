@@ -158,14 +158,70 @@ export function formatToolEvent(event: AgentToolEvent): string {
     }
   }
 
-  if (event.toolName === 'list_entries') {
-    const match = /^(\d+)\s/.exec(event.message);
-    if (match) {
-      const count = match[1];
-      return `Listed ${count} ${count === '1' ? 'entry' : 'entries'}`;
-    }
-    return 'Listed entries';
-  }
+  return lookupLabel(event.toolName, event.message) ?? event.message;
+}
 
-  return event.message;
+function plural(count: string, one: string, many: string): string {
+  return `${count} ${count === '1' ? one : many}`;
+}
+
+function searchLabel(message: string): string {
+  const match = /^(\d+) match(?:es)?(?: in \d+ places?)? for (".*")$/.exec(message);
+  if (!match) return 'Searched';
+  let query: string;
+  try {
+    query = JSON.parse(match[2]) as string;
+  } catch {
+    return 'Searched';
+  }
+  const hits = match[1] === '0' ? 'no matches' : plural(match[1], 'match', 'matches');
+  return `Searched “${query}” (${hits})`;
+}
+
+/** Lookup headers are the first line of each tool's result, as kept by `compactToolResultMessage`. */
+function lookupLabel(toolName: string, message: string): string | null {
+  switch (toolName) {
+    case 'list_fields':
+      return 'Listed fields';
+    case 'read_field': {
+      const match = /^\S+ \((.+?)\) — /.exec(message);
+      return match ? `Read ${match[1]}` : 'Read a field';
+    }
+    case 'list_greetings': {
+      const match = /^Alternate greetings \((\d+)\)/.exec(message);
+      return match ? `Listed ${plural(match[1], 'alternate greeting', 'alternate greetings')}` : 'Listed alternate greetings';
+    }
+    case 'read_greeting': {
+      const parsed = /^greeting (\d+)\/(\d+)/.exec(message);
+      return parsed ? `Read ${greetingSlot(Number(parsed[1]), Number(parsed[2]))}` : 'Read a greeting';
+    }
+    case 'list_entries': {
+      const match = /^(\d+)\s/.exec(message);
+      return match ? `Listed ${plural(match[1], 'entry', 'entries')}` : 'Listed entries';
+    }
+    case 'read_entry': {
+      const match = /^#(\d+)\s+(.+)$/.exec(message);
+      return match ? `Read “${match[2]}” (#${match[1]})` : 'Read an entry';
+    }
+    case 'search':
+      return searchLabel(message);
+    case 'audit_card':
+      return 'Checked the card';
+    case 'audit_book':
+      return 'Checked the book';
+    case 'read_recursion':
+      return 'Read the recursion map';
+    case 'test_keys':
+      return 'Tested keys';
+    case 'suggest_names': {
+      const match = /^suggest_names: (\d+) /.exec(message);
+      return match ? `Suggested ${plural(match[1], 'name', 'names')}` : 'Suggested names';
+    }
+    case 'read_skill': {
+      const match = /^Skill: (.+)$/.exec(message);
+      return match ? `Used skill “${match[1].trim()}”` : 'Used a skill';
+    }
+    default:
+      return null;
+  }
 }

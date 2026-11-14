@@ -169,9 +169,9 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings �
 
 ### What you see in chat
 
-- **Tool lines:** color-coded list / read / write results, including lorebook entry ids. Click a successful write to open that field, greeting, or lorebook entry. A lorebook write that changed nothing reads **No change to …**.
+- **Tool lines:** each reply lists what the Agent did. Writes are green, failures red, and what it looked at is grey, such as **Read Description**, **Read “Harbor” (#4)**, **Searched “harbor” (3 matches)**, or **Checked the card**. Click a write or a read to open that field, greeting, or lorebook entry. A lorebook write that changed nothing reads **No change to …**.
 - **Write recap:** speech from a turn that also called tools stays on the message. If there was no speech, **Applied N writes** sits above the tool list. Writes that changed nothing are not counted.
-- **Used skill:** a reply that loaded a [skill](#skills) shows **Used skill “Name”**, and the spinner reads *Reading skill “Name”* while it loads.
+- **Used skill:** a reply that loaded a [skill](#skills) lists **Used skill “Name”**, and the spinner reads *Reading skill “Name”* while it loads.
 - **Status line:** while a tool runs, the spinner names what it is working on, such as *Updating Description*, *Reading entry “Harbor”*, or *Searching “harbor”*. An entry added earlier in the same run shows by id (*entry #4*).
 - **Turn limit:** a run that stops at the [loop-turn cap](#limits-per-run) says so on its last message, with a **Continue** button that sends “Continue where you left off.”
 - **Starter suggestions:** an empty chat offers a few first requests based on what the card or book is missing, such as *Write a description*, *Write 2 alternate greetings*, or *Build a lorebook from my custom context*. It never suggests Appearance, Personality, Scenario, System prompt, or Post-history. A finished card gets the usual *Audit this card* style chips.
@@ -180,7 +180,7 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings �
 - **Thinking:** streams in an expanded **Thinking** fold while it is live; after the reply it collapses
 - **Live token count:** catalogs, custom context, and the current prompt (including tool results)
 - **TTFT / t/s:** on the assistant message info tooltip when the reply finishes, same as Orion
-- Lookup-only reads do not add extra assistant turns; those bodies count in the live meter, then drop out of the transcript
+- Reads keep only their one-line summary in the chat; the full field or entry text counts in the live meter, then drops out of the transcript
 
 The thread is stored in the browser with the vault. Long threads keep a small window on screen; **Load earlier messages** pages older turns back in. Oldest rows drop past **500** saved messages per panel.
 

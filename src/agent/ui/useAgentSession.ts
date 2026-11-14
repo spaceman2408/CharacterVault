@@ -47,7 +47,6 @@ import { noteRunFinished } from './finishNotice';
 import { keptEditsOptions, toLoopHistory } from './loopHistory';
 import {
   interruptedRunNotice,
-  isSilentLookupTurn,
   REVIEW_NOTE_TOOL,
   RUN_INTERRUPTED_TOOL,
   toAgentToolEvent,
@@ -365,36 +364,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
     if (!acc) return undefined;
     return toResponseStats(acc);
-  }, []);
-
-  const dropLookupOnlyMessage = useCallback((messageId: string | null) => {
-    if (!messageId) return;
-    const events = toolEventsRef.current[messageId] ?? [];
-    const row = chatHistoryRef.current.find((message) => message.id === messageId);
-    const shown = {
-      content: row?.content ?? '',
-      reasoning: (aiConfigRef.current.showReasoning ?? true) ? row?.reasoning : undefined,
-    };
-    if (!isSilentLookupTurn(shown, events, lookupToolNamesRef.current)) return;
-    if (errorByMessageIdRef.current[messageId]) return;
-
-    const nextHistory = chatHistoryRef.current.filter((message) => message.id !== messageId);
-    chatHistoryRef.current = nextHistory;
-    setChatHistory(nextHistory);
-    void chatHistoryService.deleteById(threadRef(), messageId);
-    seqByIdRef.current.delete(messageId);
-
-    const nextEvents = { ...toolEventsRef.current };
-    delete nextEvents[messageId];
-    toolEventsRef.current = nextEvents;
-    setToolEventsByMessageId(nextEvents);
-
-    setErrorByMessageId((prev) => {
-      if (!(messageId in prev)) return prev;
-      const next = { ...prev };
-      delete next[messageId];
-      return next;
-    });
   }, []);
 
   const clearError = useCallback(() => {
@@ -805,7 +774,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         let runService: AIService | null = null;
         // Stop and a failed turn keep what the user already watched stream in.
         const commitStreamedPartial = () => {
-          dropLookupOnlyMessage(lastAssistantIdRef.current);
           const speech = stripFences(streamContentRef.current.toString());
           const reasoning = streamReasoningRef.current.toString();
           if (!speech && !reasoning) return;
@@ -917,7 +885,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 return;
               }
               if (event.type === 'assistant_text') {
-                dropLookupOnlyMessage(lastAssistantIdRef.current);
                 clearStreamDraft();
                 setBusyAction(null);
                 if (isMountedRef.current) setIsStreaming(false);
@@ -987,7 +954,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         } finally {
           clearRunMarker(runThread, { keepReview: true });
           if (requestId === requestIdRef.current) {
-            dropLookupOnlyMessage(lastAssistantIdRef.current);
             if (aiServiceRef.current === runService) {
               aiServiceRef.current = null;
             }
@@ -1014,7 +980,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       );
       await run;
     },
-    [appendStreamChunk, attachError, clearStreamDraft, commitMessage, consumeAssistantStats, dropLookupOnlyMessage, isAIConfigured, persistMessage],
+    [appendStreamChunk, attachError, clearStreamDraft, commitMessage, consumeAssistantStats, isAIConfigured, persistMessage],
   );
 
   const handleRegenerate = useCallback(async () => {

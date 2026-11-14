@@ -162,8 +162,9 @@ describe('AgentChatMessage lost writes', () => {
   });
 });
 
-describe('AgentChatMessage skills', () => {
-  it('shows the skills the turn used', () => {
+describe('AgentChatMessage lookups', () => {
+  it('shows what the turn looked at, muted, and opens what it read', () => {
+    const onOpenTarget = vi.fn();
     render(
       <AgentChatMessage
         message={message}
@@ -173,12 +174,24 @@ describe('AgentChatMessage skills', () => {
         showReasoning={false}
         showRegenerate={false}
         notices={[]}
-        toolEvents={[]}
-        skillsUsed={['Greeting Writer']}
+        toolEvents={[
+          { toolName: 'read_skill', ok: true, message: 'Skill: Greeting Writer' },
+          {
+            toolName: 'read_field',
+            ok: true,
+            message: 'description (Description) — 7 tokens',
+            target: { type: 'field', id: 'description' },
+          },
+        ]}
+        writesLost
         onRegenerate={() => undefined}
         onDelete={() => undefined}
+        onOpenTarget={onOpenTarget}
       />,
     );
     expect(screen.getByText('Used skill “Greeting Writer”')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Read Description' }));
+    expect(onOpenTarget).toHaveBeenCalledWith({ type: 'field', id: 'description' });
+    expect(screen.queryByTitle('Not saved')).toBeNull();
   });
 });

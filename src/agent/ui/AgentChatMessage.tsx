@@ -1,5 +1,4 @@
 import React, { memo, useCallback } from 'react';
-import { ScrollText } from 'lucide-react';
 import { stripFences } from '../core/stripFences';
 import { CopyButton } from '../../components/ai/components/CopyButton';
 import { DeleteMessageButton } from '../../components/ai/components/DeleteMessageButton';
@@ -23,7 +22,6 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   showRegenerate,
   notices,
   toolEvents,
-  skillsUsed = [],
   writesLost = false,
   recapLine,
   onRegenerate,
@@ -41,8 +39,6 @@ export const AgentChatMessage = memo(function AgentChatMessage({
   showRegenerate: boolean;
   notices: string[];
   toolEvents: AgentToolEvent[];
-  /** Skills the turn loaded with read_skill. */
-  skillsUsed?: string[];
   /** The run was cut off before its writes were saved. */
   writesLost?: boolean;
   recapLine?: string | null;
@@ -98,20 +94,6 @@ export const AgentChatMessage = memo(function AgentChatMessage({
         <FoldedText label="Thinking">
           {reasoning}
         </FoldedText>
-      ) : null}
-
-      {skillsUsed.length > 0 ? (
-        <ul className="space-y-1">
-          {skillsUsed.map((name) => (
-            <li
-              key={name}
-              className="flex items-start gap-1.5 rounded-md border border-border bg-surface px-2 py-1 text-xs leading-5 text-fg-muted"
-            >
-              <ScrollText className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-              <span>Used skill “{name}”</span>
-            </li>
-          ))}
-        </ul>
       ) : null}
 
       {speech ? (

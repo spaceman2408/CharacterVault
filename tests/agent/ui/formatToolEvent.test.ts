@@ -11,6 +11,25 @@ function event(
 }
 
 describe('formatToolEvent', () => {
+  it('names what each lookup looked at, from its kept header', () => {
+    const lines: [string, string, string][] = [
+      ['list_fields', 'Current card fields (id, token size; bodies omitted):', 'Listed fields'],
+      ['read_field', 'description (Description) — 7 tokens', 'Read Description'],
+      ['list_greetings', 'Alternate greetings (1):', 'Listed 1 alternate greeting'],
+      ['read_greeting', 'greeting 2/3', 'Read greeting 2 of 3'],
+      ['read_entry', '#4 The Red Keep', 'Read “The Red Keep” (#4)'],
+      ['search', '4 matches in 3 places for "harbor"', 'Searched “harbor” (4 matches)'],
+      ['search', '0 matches for "\\"dock\\""', 'Searched “"dock"” (no matches)'],
+      ['audit_card', 'Card audit — 2/4 required filled', 'Checked the card'],
+      ['audit_book', 'Book audit — 3 entries', 'Checked the book'],
+      ['read_recursion', 'Recursion map — 1 entry, 0 edges', 'Read the recursion map'],
+      ['test_keys', 'Key test — 1 of 1 entry activate', 'Tested keys'],
+      ['suggest_names', 'suggest_names: 8 first names, any, british', 'Suggested 8 names'],
+      ['read_skill', 'Skill: Greeting Writer', 'Used skill “Greeting Writer”'],
+    ];
+    for (const [tool, message, label] of lines) expect(formatToolEvent(event(tool, message))).toBe(label);
+  });
+
   it('turns field replacements into a readable line without the full field size', () => {
     expect(
       formatToolEvent(

@@ -1,5 +1,4 @@
 import { DEFAULT_MAX_TURNS } from '../core/runLoop';
-import { stripFences } from '../core/stripFences';
 import type { ActionResult, ParsedAction } from '../core/types';
 import { isNoChangeWrite } from './formatToolEvent';
 import { parseToolTarget } from './toolTarget';
@@ -66,16 +65,43 @@ function writeEntryId(
   return match?.[1] ?? null;
 }
 
+/** Successful lookups (reads, searches, checks) as opposed to writes, in either Agent. */
+export function isLookupEvent(event: AgentToolEvent): boolean {
+  return event.ok && (CHARACTER_LOOKUP_TOOLS.has(event.toolName) || LOREBOOK_LOOKUP_TOOLS.has(event.toolName));
+}
+
+/** Writes and failed calls of a turn, with an entry's later writes folded into its first row. */
 export function visibleToolEvents(
   events: AgentToolEvent[],
   lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
   writeTools: ReadonlySet<string> = LOREBOOK_WRITE_TOOLS,
 ): AgentToolEvent[] {
+  return toolRows(events, lookupTools, writeTools, false);
+}
+
+/** The rows a turn shows in chat: its writes and failed calls plus the lookups it made, in order. */
+export function shownToolEvents(
+  events: AgentToolEvent[],
+  lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
+  writeTools: ReadonlySet<string> = LOREBOOK_WRITE_TOOLS,
+): AgentToolEvent[] {
+  return toolRows(events, lookupTools, writeTools, true);
+}
+
+function toolRows(
+  events: AgentToolEvent[],
+  lookupTools: ReadonlySet<string>,
+  writeTools: ReadonlySet<string>,
+  withLookups: boolean,
+): AgentToolEvent[] {
   const visible: AgentToolEvent[] = [];
   const addIndexById = new Map<string, number>();
 
   for (const event of events) {
-    if (event.ok && lookupTools.has(event.toolName)) continue;
+    if (event.ok && lookupTools.has(event.toolName)) {
+      if (withLookups) visible.push(event);
+      continue;
+    }
     if (event.toolName === REVIEW_NOTE_TOOL || event.toolName === RUN_INTERRUPTED_TOOL) continue;
 
     const id = writeEntryId(event, writeTools);
@@ -130,27 +156,14 @@ export function shouldRenderAgentMessage(
   visible: AgentToolEvent[],
   notices: string[],
   reasoning = '',
-  skills: string[] = [],
 ): boolean {
   if (role !== 'assistant') return true;
   return (
     speech.trim().length > 0 ||
     reasoning.trim().length > 0 ||
     visible.length > 0 ||
-    notices.length > 0 ||
-    skills.length > 0
+    notices.length > 0
   );
-}
-
-/** Names of the skills a turn loaded, from the kept `Skill: <name>` header of each read_skill result. */
-export function skillsUsed(events: AgentToolEvent[]): string[] {
-  const names: string[] = [];
-  for (const event of events) {
-    if (!event.ok || event.toolName !== 'read_skill') continue;
-    const name = /^Skill: (.+)$/.exec(event.message)?.[1]?.trim();
-    if (name && !names.includes(name)) names.push(name);
-  }
-  return names;
 }
 
 export function compactToolResultMessage(
@@ -179,24 +192,6 @@ export function toAgentToolEvent(
     event.call = { headers: { ...action.headers }, body: action.body };
   }
   return event;
-}
-
-export function isLookupOnlyTurn(
-  events: AgentToolEvent[],
-  lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
-): boolean {
-  return events.length > 0 && events.every((event) => event.ok && lookupTools.has(event.toolName));
-}
-
-/** A turn that only looked things up and said nothing. Speech or thinking keeps the turn, like on write turns. */
-export function isSilentLookupTurn(
-  message: { content: string; reasoning?: string },
-  events: AgentToolEvent[],
-  lookupTools: ReadonlySet<string> = LOREBOOK_LOOKUP_TOOLS,
-): boolean {
-  if (stripFences(message.content).trim() || message.reasoning?.trim()) return false;
-  if (skillsUsed(events).length > 0) return false;
-  return isLookupOnlyTurn(events, lookupTools);
 }
 
 export function writeRecapLine(events: AgentToolEvent[], lost = false): string | null {

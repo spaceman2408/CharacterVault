@@ -4,13 +4,11 @@ import {
   compactToolResultMessage,
   interruptedRunMessageIds,
   interruptedRunNotice,
-  isLookupOnlyTurn,
-  isSilentLookupTurn,
   messageNotices,
   REVIEW_NOTE_TOOL,
   RUN_INTERRUPTED_TOOL,
   shouldRenderAgentMessage,
-  skillsUsed,
+  shownToolEvents,
   toAgentToolEvent,
   visibleToolEvents,
   writeRecapLine,
@@ -169,61 +167,14 @@ describe('compactToolResultMessage', () => {
   });
 });
 
-describe('isLookupOnlyTurn', () => {
-  it('is true when every event is a successful lookup', () => {
-    expect(isLookupOnlyTurn([okList])).toBe(true);
-    expect(isLookupOnlyTurn([okRead])).toBe(true);
-    expect(isLookupOnlyTurn([okList, okRead])).toBe(true);
-    expect(isLookupOnlyTurn([okList, okAdd])).toBe(false);
-    expect(isLookupOnlyTurn([])).toBe(false);
+describe('shownToolEvents', () => {
+  it('keeps lookups in order with the writes and failed rows', () => {
+    expect(shownToolEvents([okList, okRead, failed, okAdd])).toEqual([okList, okRead, failed, okAdd]);
   });
 
-  it('uses the lookup set so character field reads are silent', () => {
-    const okReadField: AgentToolEvent = {
-      toolName: 'read_field',
-      ok: true,
-      message: 'description (Description) — 3 tokens\n---\nSECRET',
-    };
-    expect(isLookupOnlyTurn([okReadField], CHARACTER_LOOKUP_TOOLS)).toBe(true);
-    expect(isLookupOnlyTurn([okList], CHARACTER_LOOKUP_TOOLS)).toBe(true);
-    expect(isLookupOnlyTurn([okReadField])).toBe(false);
-    const okSearch: AgentToolEvent = {
-      toolName: 'search',
-      ok: true,
-      message: '2 matches in 2 places for "harbor"\ndescription (1): …harbor…',
-    };
-    expect(isLookupOnlyTurn([okSearch], CHARACTER_LOOKUP_TOOLS)).toBe(true);
-    const okAudit: AgentToolEvent = {
-      toolName: 'audit_card',
-      ok: true,
-      message: 'Card audit — 3/14 fields filled, 0 greetings, 0 entries, ~10 active / ~10 total tokens',
-    };
-    expect(isLookupOnlyTurn([okAudit], CHARACTER_LOOKUP_TOOLS)).toBe(true);
-    const okRecursion: AgentToolEvent = {
-      toolName: 'read_recursion',
-      ok: true,
-      message: 'Recursion map — 2 entries, 1 edge, 0 isolated, cycle: none; recursive_scanning on',
-    };
-    expect(isLookupOnlyTurn([okRecursion], CHARACTER_LOOKUP_TOOLS)).toBe(true);
-  });
-});
-
-describe('isSilentLookupTurn', () => {
-  it('drops a lookup turn only when it said nothing', () => {
-    expect(isSilentLookupTurn({ content: '' }, [okList])).toBe(true);
-    expect(isSilentLookupTurn({ content: '  ' }, [okRead])).toBe(true);
-    expect(isSilentLookupTurn({ content: 'Let me check the harbor first.' }, [okList])).toBe(false);
-    expect(isSilentLookupTurn({ content: '' }, [okList, okAdd])).toBe(false);
-    expect(isSilentLookupTurn({ content: '' }, [])).toBe(false);
-  });
-
-  it('keeps a lookup turn that only has thinking', () => {
-    expect(isSilentLookupTurn({ content: '', reasoning: 'Check the harbor entry first.' }, [okList])).toBe(false);
-    expect(isSilentLookupTurn({ content: '', reasoning: '  ' }, [okList])).toBe(true);
-  });
-
-  it('treats speech that is only tool markup as silent', () => {
-    expect(isSilentLookupTurn({ content: '<tool_call>list_entries</tool_call>' }, [okList])).toBe(true);
+  it('uses the lookup set for character field reads, and still folds repeat entry writes', () => {
+    const okReadField: AgentToolEvent = { toolName: 'read_field', ok: true, message: 'description (Description) — 3 tokens' };
+    expect(shownToolEvents([okReadField, okAdd, okAddAgain], CHARACTER_LOOKUP_TOOLS)).toEqual([okReadField, okAddAgain]);
   });
 });
 
@@ -323,7 +274,7 @@ describe('toAgentToolEvent', () => {
       toolName: 'read_field',
       ok: true,
       message: 'description (Description)',
-      target: undefined,
+      target: { type: 'field', id: 'description' },
     });
   });
 
@@ -337,7 +288,7 @@ describe('toAgentToolEvent', () => {
   });
 });
 
-describe('skillsUsed', () => {
+describe('read_skill rows', () => {
   const read = (name: string, ok = true): AgentToolEvent =>
     toAgentToolEvent(
       { ok, toolName: 'read_skill', message: ok ? `Skill: ${name}
@@ -347,26 +298,16 @@ Follow these steps.` : `error: no skill named "${name}"` },
       CHARACTER_LOOKUP_TOOLS,
     );
 
-  it('names each skill a turn loaded once, from the compacted header', () => {
-    expect(read('Greeting Writer').message).toBe('Skill: Greeting Writer');
-    expect(skillsUsed([read('Greeting Writer'), okList, read('Cut AI Slop'), read('Greeting Writer')])).toEqual([
-      'Greeting Writer',
-      'Cut AI Slop',
-    ]);
-  });
-
-  it('ignores failed reads, which show as error rows instead', () => {
-    const failed = read('Nope', false);
-    expect(skillsUsed([failed])).toEqual([]);
-    expect(visibleToolEvents([failed], CHARACTER_LOOKUP_TOOLS)).toEqual([failed]);
-  });
-
-  it('keeps a skill turn visible without counting it as a write', () => {
+  it('keeps only the skill header and shows it without counting it as a write', () => {
     const events = [read('Greeting Writer')];
-    expect(isSilentLookupTurn({ content: '' }, events, CHARACTER_LOOKUP_TOOLS)).toBe(false);
-    expect(visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS)).toEqual([]);
-    expect(writeRecapLine(visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS))).toBeNull();
+    expect(events[0].message).toBe('Skill: Greeting Writer');
     expect(events[0].call).toBeUndefined();
-    expect(shouldRenderAgentMessage('assistant', '', [], [], '', skillsUsed(events))).toBe(true);
+    expect(shownToolEvents(events, CHARACTER_LOOKUP_TOOLS)).toEqual(events);
+    expect(writeRecapLine(visibleToolEvents(events, CHARACTER_LOOKUP_TOOLS))).toBeNull();
+  });
+
+  it('keeps a failed read as an error row', () => {
+    const failed = read('Nope', false);
+    expect(visibleToolEvents([failed], CHARACTER_LOOKUP_TOOLS)).toEqual([failed]);
   });
 });
