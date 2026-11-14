@@ -2,13 +2,14 @@
 
 ## 1.9.1 (2026-11-14)
 
-CharacterVault 1.9.1 gives the Agent skills: named instructions it loads when your request matches, with three that ship and your own in a new Agent Skills settings tab. Settings now save automatically, saved presets show up in the Prompts tab model pickers, and the Agent chat highlights @mentions, plus a fix for settings changes not reaching the lorebook Agent until a reload. Full notes: [v1.9.1 release notes](/releases/v1.9.1).
+CharacterVault 1.9.1 gives the Agent skills: named instructions it loads when your request matches, with three that ship and your own in a new Agent Skills settings tab. Settings now save automatically, saved presets show up in the Prompts tab model pickers, and the Agent chat shows what the Agent read, searched, and checked and highlights @mentions, plus a fix for settings changes not reaching the lorebook Agent until a reload. Full notes: [v1.9.1 release notes](/releases/v1.9.1).
 
 ### Highlights
 
 - **Agent skills** — the Agent loads a skill's instructions when your request matches its **when to use** line and shows **Used skill** on its reply; three ship (Greeting Writer, Lorebook Entries, Cut AI Slop), and **Settings → Agent Skills** adds your own, switches them off, and lists the tools a skill can name
 - **Autosaved settings** — changes save a moment after you make them, prompt text saves when you click out, and the footer shows **Saving…**, **Saved**, or **Not saved** with the reason
 - **Saved presets in model routing** — every endpoint picker on **Settings → Prompts** lists saved presets under **Saved**, and picking one sets its model too
+- **What the Agent looked at** — each Agent reply lists what it read, searched, or checked, and a read opens what it read
 - @mentions in the Agent chat box are highlighted when they match
 - Fix for settings changes not reaching the lorebook Agent until a page reload
 
