@@ -252,6 +252,7 @@ export class VaultRestoreService {
         defaultChatPanel: data.ui.defaultChatPanel ?? 'orion',
         requireAgentReview: data.ui.requireAgentReview ?? false,
         agentKeepEdits: data.ui.agentKeepEdits ?? false,
+        agentSkillsEnabled: data.ui.agentSkillsEnabled ?? true,
         creatorNotesRemoteWarning: data.ui.creatorNotesRemoteWarning ?? true,
         roleplayHighlight: normalizeRoleplayHighlight(data.ui.roleplayHighlight),
         macroHighlight: normalizeMacroHighlight(data.ui.macroHighlight),

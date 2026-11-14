@@ -35,7 +35,6 @@ import type {
 import {
   createEmptyCharacterBook,
   DEFAULT_AGENT_KEEP_EDITS,
-  DEFAULT_AGENT_SKILLS,
   DEFAULT_MACRO_AUTO_CONVERT,
   DEFAULT_SETTINGS,
   EMPTY_CUSTOM_CONTEXT_META,
@@ -48,6 +47,7 @@ import { setMacroAutoConvert } from '../../editor/extensions/characterMacroHelpe
 import { DEFAULT_FONT_SIZE } from '../../editor/extensions/fontSizeControl';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { useSaveEditorFontSize } from '../../hooks/useSaveEditorFontSize';
+import { activeAgentSkills } from '../../services/agentSkills';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { applyModelBinding } from '../../services/resolveOperationConfig';
 import {
@@ -217,7 +217,7 @@ export function LorebookWorkspace(): React.ReactElement {
   }, [macroAutoConvert]);
   const requireAgentReview = settings?.ui?.requireAgentReview ?? false;
   const agentKeepEdits = settings?.ui?.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS;
-  const agentSkills = settings?.agentSkills ?? DEFAULT_AGENT_SKILLS;
+  const agentSkills = activeAgentSkills(settings);
 
   const entryCount = currentLorebook?.book?.entries?.length ?? 0;
   const totalTokens = useMemo(() => {

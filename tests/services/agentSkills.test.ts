@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_AGENT_SKILLS } from '../../src/db/characterTypes';
 import {
+  activeAgentSkills,
   cloneDefaultAgentSkills,
   isDefaultAgentSkills,
   isEditedDefaultSkill,
@@ -112,5 +113,31 @@ describe('agent skill on/off and defaults', () => {
     expect(isEditedDefaultSkill({ ...builtin, enabled: false })).toBe(false);
     expect(isEditedDefaultSkill({ ...builtin, content: 'Mine.' })).toBe(true);
     expect(isEditedDefaultSkill({ id: 'skill-x', name: 'X', description: '', content: 'x' })).toBe(false);
+  });
+});
+
+describe('activeAgentSkills', () => {
+  const mine = [{ id: 'm', name: 'Mine', description: '', content: 'x' }];
+  const ui = { theme: 'system' as const, editorFontSize: 16, sidebarWidth: 280 };
+
+  it('gives the stored skills, or the defaults when none are stored', () => {
+    expect(activeAgentSkills({ ui, agentSkills: mine })).toBe(mine);
+    expect(activeAgentSkills({ ui })).toBe(DEFAULT_AGENT_SKILLS);
+    expect(activeAgentSkills(undefined)).toBe(DEFAULT_AGENT_SKILLS);
+  });
+
+  it('gives no skills while skills are switched off, the same array each time', () => {
+    const off = { ui: { ...ui, agentSkillsEnabled: false }, agentSkills: mine };
+    expect(activeAgentSkills(off)).toEqual([]);
+    expect(activeAgentSkills(off)).toBe(activeAgentSkills({ ui: { ...ui, agentSkillsEnabled: false } }));
+  });
+
+  it('round-trips the switch through a settings backup', () => {
+    const saved = { id: 'app-settings' as const, ui: { ...ui, agentSkillsEnabled: false }, version: 1 };
+    const file = parseSettingsBackup(JSON.parse(JSON.stringify(buildSettingsBackup(saved, false))));
+    expect(file.settings.ui.agentSkillsEnabled).toBe(false);
+    expect(applyBackupToDraft(createDefaultDraft(), file).agentSkillsEnabled).toBe(false);
+    const legacy = parseSettingsBackup({ ...file, settings: { ...file.settings, ui: { theme: 'system' } } });
+    expect(applyBackupToDraft(createDefaultDraft(), legacy).agentSkillsEnabled).toBe(true);
   });
 });

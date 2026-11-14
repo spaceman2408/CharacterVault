@@ -21,6 +21,7 @@ import {
   DEFAULT_CHAT_PANEL,
   DEFAULT_REQUIRE_AGENT_REVIEW,
   DEFAULT_AGENT_KEEP_EDITS,
+  DEFAULT_AGENT_SKILLS_ENABLED,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   DEFAULT_MACRO_AUTO_CONVERT,
   DEFAULT_MACRO_HIGHLIGHT_SETTINGS,
@@ -75,6 +76,7 @@ export function createDefaultDraft(): SettingsDraft {
     defaultChatPanel: DEFAULT_CHAT_PANEL,
     requireAgentReview: DEFAULT_REQUIRE_AGENT_REVIEW,
     agentKeepEdits: DEFAULT_AGENT_KEEP_EDITS,
+    agentSkillsEnabled: DEFAULT_AGENT_SKILLS_ENABLED,
     agentSkills: cloneDefaultAgentSkills(),
     creatorNotesRemoteWarning: DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
     roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
@@ -317,6 +319,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast, panelRef }:
           requireAgentReview:
             fullSettings.ui?.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW,
           agentKeepEdits: fullSettings.ui?.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
+          agentSkillsEnabled: fullSettings.ui?.agentSkillsEnabled ?? DEFAULT_AGENT_SKILLS_ENABLED,
           agentSkills: resolveAgentSkills(fullSettings.agentSkills),
           creatorNotesRemoteWarning:
             fullSettings.ui?.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
@@ -414,6 +417,7 @@ export function useSettingsDraft({ isOpen, reloadSettings, addToast, panelRef }:
         defaultChatPanel: target.defaultChatPanel,
         requireAgentReview: target.requireAgentReview,
         agentKeepEdits: target.agentKeepEdits,
+        agentSkillsEnabled: target.agentSkillsEnabled,
         creatorNotesRemoteWarning: target.creatorNotesRemoteWarning,
         roleplayHighlight: normalizeRoleplayHighlight(target.roleplayHighlight),
         macroHighlight: normalizeMacroHighlight(target.macroHighlight),

@@ -35,11 +35,25 @@ describe('SkillsTab', () => {
     const toggle = screen.getByRole('switch', { name: 'Use Cut AI Slop' });
     fireEvent.click(toggle);
     expect(latest().agentSkills.find((skill) => skill.name === 'Cut AI Slop')?.enabled).toBe(false);
-    expect(screen.getByText('Off · hidden from the Agent and @')).toBeTruthy();
+    expect(screen.getByText(DEFAULT_AGENT_SKILLS[2].description)).toBeTruthy();
 
     fireEvent.click(toggle);
     const back = latest().agentSkills.find((skill) => skill.name === 'Cut AI Slop');
     expect(back).toEqual(DEFAULT_AGENT_SKILLS.find((skill) => skill.name === 'Cut AI Slop'));
+  });
+
+  it('switches all skills off and on from the top, keeping each skill as it was', () => {
+    render(<Harness />);
+    const master = screen.getByRole('switch', { name: 'Use skills' });
+    expect(master.getAttribute('aria-checked')).toBe('true');
+
+    fireEvent.click(master);
+    expect(latest().agentSkillsEnabled).toBe(false);
+    expect(latest().agentSkills).toEqual(DEFAULT_AGENT_SKILLS);
+    expect(master.getAttribute('aria-checked')).toBe('false');
+
+    fireEvent.click(master);
+    expect(latest().agentSkillsEnabled).toBe(true);
   });
 
   it('keeps one skill open at a time, with the name edited in the row', () => {

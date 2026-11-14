@@ -510,6 +510,8 @@ export interface CharacterVaultSettings {
     requireAgentReview?: boolean;
     /** When true, later Agent runs are sent the exact edits of earlier runs. Missing = off. */
     agentKeepEdits?: boolean;
+    /** When false, the Agent gets no skills at all; each skill keeps its own on/off. Missing = on. */
+    agentSkillsEnabled?: boolean;
     /** Warn when a Creator Notes preview loads remote resources. Missing = on. */
     creatorNotesRemoteWarning?: boolean;
     spellcheck?: SpellcheckSettings;
@@ -629,6 +631,8 @@ export const DEFAULT_CHAT_PANEL: DefaultChatPanel = 'orion';
 export const DEFAULT_REQUIRE_AGENT_REVIEW = false;
 
 export const DEFAULT_AGENT_KEEP_EDITS = false;
+
+export const DEFAULT_AGENT_SKILLS_ENABLED = true;
 
 export interface AgentSkill {
   id: string;

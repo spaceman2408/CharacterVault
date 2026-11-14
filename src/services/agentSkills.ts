@@ -1,5 +1,15 @@
-import type { AgentSkill } from '../db/characterTypes';
+import type { AgentSkill, CharacterVaultSettings } from '../db/characterTypes';
 import { DEFAULT_AGENT_SKILLS } from '../db/characterTypes';
+
+const NO_SKILLS: readonly AgentSkill[] = [];
+
+/** The skills the Agent gets: none while skills are switched off, else the stored list or the defaults. */
+export function activeAgentSkills(
+  settings: Pick<CharacterVaultSettings, 'agentSkills' | 'ui'> | null | undefined,
+): readonly AgentSkill[] {
+  if (settings?.ui?.agentSkillsEnabled === false) return NO_SKILLS;
+  return settings?.agentSkills ?? DEFAULT_AGENT_SKILLS;
+}
 
 export function cloneDefaultAgentSkills(): AgentSkill[] {
   return DEFAULT_AGENT_SKILLS.map((skill) => ({ ...skill }));

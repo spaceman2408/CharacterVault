@@ -17,6 +17,7 @@ import type {
 import {
   CHARACTER_SECTIONS,
   DEFAULT_AGENT_KEEP_EDITS,
+  DEFAULT_AGENT_SKILLS_ENABLED,
   DEFAULT_CHARACTER_VAULT_SETTINGS,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   DEFAULT_MACRO_AUTO_CONVERT,
@@ -243,6 +244,7 @@ function normalizeBackupUi(value: unknown): CharacterVaultSettings['ui'] {
     defaultChatPanel: normalizeDefaultChatPanel(raw.defaultChatPanel),
     requireAgentReview: asBoolean(raw.requireAgentReview, false),
     agentKeepEdits: asBoolean(raw.agentKeepEdits, DEFAULT_AGENT_KEEP_EDITS),
+    agentSkillsEnabled: asBoolean(raw.agentSkillsEnabled, DEFAULT_AGENT_SKILLS_ENABLED),
     creatorNotesRemoteWarning: asBoolean(
       raw.creatorNotesRemoteWarning,
       DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
@@ -374,6 +376,7 @@ export interface BackupDraftTarget {
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
   agentKeepEdits: boolean;
+  agentSkillsEnabled: boolean;
   agentSkills: AgentSkill[];
   creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
@@ -421,6 +424,7 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
     defaultChatPanel: normalizeDefaultChatPanel(settings.ui.defaultChatPanel),
     requireAgentReview: settings.ui.requireAgentReview ?? false,
     agentKeepEdits: settings.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
+    agentSkillsEnabled: settings.ui.agentSkillsEnabled ?? DEFAULT_AGENT_SKILLS_ENABLED,
     agentSkills: settings.agentSkills
       ? settings.agentSkills.map((skill) => ({ ...skill }))
       : prev.agentSkills,

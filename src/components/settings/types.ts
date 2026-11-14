@@ -45,6 +45,7 @@ export interface SettingsDraft {
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
   agentKeepEdits: boolean;
+  agentSkillsEnabled: boolean;
   agentSkills: AgentSkill[];
   creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;

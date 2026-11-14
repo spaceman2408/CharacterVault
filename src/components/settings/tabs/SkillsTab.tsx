@@ -28,7 +28,6 @@ function SkillSwitch({ on, label, onToggle }: { on: boolean; label: string; onTo
       role="switch"
       aria-checked={on}
       aria-label={label}
-      title={on ? 'On: the Agent can use this skill' : 'Off: hidden from the Agent and the @ list'}
       onClick={onToggle}
       className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${on ? 'bg-accent' : 'bg-border-strong'}`}
     >
@@ -105,6 +104,7 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingResetId, setPendingResetId] = useState<string | null>(null);
   const skills = draft.agentSkills;
+  const skillsOn = draft.agentSkillsEnabled;
 
   /** Switches the open editor, dropping the one being left if nothing was typed into it. */
   const openSkill = (id: string | null) => {
@@ -183,6 +183,11 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
         <div className="mb-1 flex items-center gap-2">
           <ScrollText className="h-4 w-4 text-fg-muted" aria-hidden />
           <h3 className="flex-1 text-sm font-semibold text-fg">Agent skills</h3>
+          <SkillSwitch
+            on={skillsOn}
+            label="Use skills"
+            onToggle={() => setDraft((prev) => ({ ...prev, agentSkillsEnabled: !prev.agentSkillsEnabled }))}
+          />
           <button
             type="button"
             onClick={addSkill}
@@ -197,137 +202,139 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
           and a skill name in the Agent chat to use one directly.
         </p>
 
-        {skills.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-fg-muted">
-            No skills. Add one to give the Agent instructions for a kind of task.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {skills.map((skill) => {
-              const on = skill.enabled !== false;
-              const isOpen = openId === skill.id;
-              const tokens = estimateTokens(skill.content);
-              const builtin = findDefaultAgentSkill(skill.id);
-              const edited = isEditedDefaultSkill(skill);
-              const toggleOpen = () => openSkill(isOpen ? null : skill.id);
+        <div className={skillsOn ? '' : 'opacity-50'}>
+          {skills.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-fg-muted">
+              No skills. Add one to give the Agent instructions for a kind of task.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {skills.map((skill) => {
+                const on = skill.enabled !== false;
+                const isOpen = openId === skill.id;
+                const tokens = estimateTokens(skill.content);
+                const builtin = findDefaultAgentSkill(skill.id);
+                const edited = isEditedDefaultSkill(skill);
+                const toggleOpen = () => openSkill(isOpen ? null : skill.id);
 
-              if (!isOpen) {
-                return (
-                  <li key={skill.id} className="flex items-center gap-3 px-3 py-2.5">
-                    <SkillSwitch on={on} label={`Use ${skillLabel(skill)}`} onToggle={() => toggleSkill(skill)} />
-                    <button
-                      type="button"
-                      onClick={toggleOpen}
-                      aria-expanded={false}
-                      className="group flex min-w-0 flex-1 items-center gap-2 text-left"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span
-                          className={`block truncate text-sm font-medium group-hover:text-fg ${
-                            on ? 'text-fg' : 'text-fg-muted'
-                          }`}
-                        >
-                          {skillLabel(skill)}
-                        </span>
-                        <span className="block truncate text-xs text-fg-subtle">
-                          {on ? skill.description.trim() || 'No "when to use" line' : 'Off · hidden from the Agent and @'}
-                        </span>
-                      </span>
-                      {tokens > 0 && (
-                        <span className="shrink-0 text-[11px] text-fg-subtle">~{tokens} tok</span>
-                      )}
-                      <ChevronDown className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden />
-                    </button>
-                  </li>
-                );
-              }
-
-              return (
-                <li key={skill.id} className="bg-muted/40">
-                  <div className="flex items-center gap-3 px-3 pt-2.5 pb-2">
-                    <SkillSwitch on={on} label={`Use ${skillLabel(skill)}`} onToggle={() => toggleSkill(skill)} />
-                    <input
-                      value={skill.name}
-                      onChange={(e) => patchSkill(skill.id, { name: e.target.value })}
-                      maxLength={60}
-                      placeholder="Skill name"
-                      aria-label="Skill name"
-                      autoFocus={!skill.name}
-                      className={`${INPUT_CLASS} py-1.5 font-medium`}
-                    />
-                    <button
-                      type="button"
-                      onClick={toggleOpen}
-                      aria-expanded
-                      aria-label="Close skill"
-                      title="Close"
-                      className="shrink-0 rounded-md p-1 text-fg-subtle hover:bg-hover hover:text-fg"
-                    >
-                      <ChevronUp className="h-4 w-4" aria-hidden />
-                    </button>
-                  </div>
-                  <div className="space-y-3 px-3 pb-3">
-                    <label className="flex flex-col gap-1">
-                      <span className={LABEL_CLASS}>When to use</span>
-                      <input
-                        value={skill.description}
-                        onChange={(e) => patchSkill(skill.id, { description: e.target.value })}
-                        maxLength={200}
-                        placeholder="Use when writing or revising greetings."
-                        className={INPUT_CLASS}
-                      />
-                    </label>
-                    <div className="flex flex-col gap-1">
-                      <span className={LABEL_CLASS}>
-                        Instructions{tokens > 0 ? ` · ~${tokens} tokens when loaded` : ''}
-                      </span>
-                      <GrowingTextarea
-                        value={skill.content}
-                        onChange={(content) => patchSkill(skill.id, { content })}
-                        placeholder="Steps, rules, and examples the Agent should follow for this task."
-                        ariaLabel="Instructions"
-                      />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="flex-1 text-xs text-fg-subtle">
-                        {builtin ? (edited ? 'Default skill · edited' : 'Default skill') : ''}
-                      </span>
-                      {edited && (
-                        <button
-                          type="button"
-                          onClick={() => setPendingResetId(skill.id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-                          Reset to default
-                        </button>
-                      )}
+                if (!isOpen) {
+                  return (
+                    <li key={skill.id} className="flex items-center gap-3 px-3 py-2.5">
+                      <SkillSwitch on={on} label={`Use ${skillLabel(skill)}`} onToggle={() => toggleSkill(skill)} />
                       <button
                         type="button"
-                        onClick={() => setPendingDeleteId(skill.id)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-danger transition-colors hover:bg-danger-soft"
+                        onClick={toggleOpen}
+                        aria-expanded={false}
+                        className="group flex min-w-0 flex-1 items-center gap-2 text-left"
                       >
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                        Delete
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={`block truncate text-sm font-medium group-hover:text-fg ${
+                              on ? 'text-fg' : 'text-fg-muted'
+                            }`}
+                          >
+                            {skillLabel(skill)}
+                          </span>
+                          <span className="block truncate text-xs text-fg-subtle">
+                            {skill.description.trim() || 'No "when to use" line'}
+                          </span>
+                        </span>
+                        {tokens > 0 && (
+                          <span className="shrink-0 text-[11px] text-fg-subtle">~{tokens} tok</span>
+                        )}
+                        <ChevronDown className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden />
+                      </button>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li key={skill.id} className="bg-muted/40">
+                    <div className="flex items-center gap-3 px-3 pt-2.5 pb-2">
+                      <SkillSwitch on={on} label={`Use ${skillLabel(skill)}`} onToggle={() => toggleSkill(skill)} />
+                      <input
+                        value={skill.name}
+                        onChange={(e) => patchSkill(skill.id, { name: e.target.value })}
+                        maxLength={60}
+                        placeholder="Skill name"
+                        aria-label="Skill name"
+                        autoFocus={!skill.name}
+                        className={`${INPUT_CLASS} py-1.5 font-medium`}
+                      />
+                      <button
+                        type="button"
+                        onClick={toggleOpen}
+                        aria-expanded
+                        aria-label="Close skill"
+                        title="Close"
+                        className="shrink-0 rounded-md p-1 text-fg-subtle hover:bg-hover hover:text-fg"
+                      >
+                        <ChevronUp className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    <div className="space-y-3 px-3 pb-3">
+                      <label className="flex flex-col gap-1">
+                        <span className={LABEL_CLASS}>When to use</span>
+                        <input
+                          value={skill.description}
+                          onChange={(e) => patchSkill(skill.id, { description: e.target.value })}
+                          maxLength={200}
+                          placeholder="Use when writing or revising greetings."
+                          className={INPUT_CLASS}
+                        />
+                      </label>
+                      <div className="flex flex-col gap-1">
+                        <span className={LABEL_CLASS}>
+                          Instructions{tokens > 0 ? ` · ~${tokens} tokens when loaded` : ''}
+                        </span>
+                        <GrowingTextarea
+                          value={skill.content}
+                          onChange={(content) => patchSkill(skill.id, { content })}
+                          placeholder="Steps, rules, and examples the Agent should follow for this task."
+                          ariaLabel="Instructions"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="flex-1 text-xs text-fg-subtle">
+                          {builtin ? (edited ? 'Default skill · edited' : 'Default skill') : ''}
+                        </span>
+                        {edited && (
+                          <button
+                            type="button"
+                            onClick={() => setPendingResetId(skill.id)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                            Reset to default
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setPendingDeleteId(skill.id)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-danger transition-colors hover:bg-danger-soft"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-        {missingDefaults.length > 0 && (
-          <button
-            type="button"
-            onClick={restoreDefaults}
-            className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-fg-muted hover:text-fg"
-          >
-            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-            Add back {missingDefaults.length === 1 ? '1 default skill' : `${missingDefaults.length} default skills`}
-          </button>
-        )}
+          {missingDefaults.length > 0 && (
+            <button
+              type="button"
+              onClick={restoreDefaults}
+              className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-fg-muted hover:text-fg"
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+              Add back {missingDefaults.length === 1 ? '1 default skill' : `${missingDefaults.length} default skills`}
+            </button>
+          )}
+        </div>
       </SettingsCard>
 
       {pendingDelete && (
@@ -336,8 +343,8 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
           title={`Delete "${skillLabel(pendingDelete)}"?`}
           message={
             findDefaultAgentSkill(pendingDelete.id)
-              ? 'You can add the default skills back from this tab. To keep it but stop the Agent using it, turn it off instead.'
-              : 'The skill and its instructions will be removed. This cannot be undone. To keep it but stop the Agent using it, turn it off instead.'
+              ? 'You can add the default skills back from this tab.'
+              : 'The skill and its instructions will be removed. This cannot be undone.'
           }
           confirmLabel="Delete"
           variant="danger"

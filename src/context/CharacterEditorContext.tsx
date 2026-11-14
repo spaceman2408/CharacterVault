@@ -25,7 +25,6 @@ import {
   DEFAULT_MARKDOWN_IMAGE_OPEN_LINKS,
   DEFAULT_REQUIRE_AGENT_REVIEW,
   DEFAULT_AGENT_KEEP_EDITS,
-  DEFAULT_AGENT_SKILLS,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   DEFAULT_MACRO_AUTO_CONVERT,
   EMPTY_CUSTOM_CONTEXT_META,
@@ -33,6 +32,7 @@ import {
   normalizeMacroHighlight,
   normalizeRoleplayHighlight,
 } from '../db/characterTypes';
+import { activeAgentSkills } from '../services/agentSkills';
 import { applyModelBinding, normalizePromptModelMap } from '../services/resolveOperationConfig';
 import { applyMacroHighlightColors } from '../editor/extensions/macroHighlight';
 import { setMacroAutoConvert } from '../editor/extensions/characterMacroHelper';
@@ -100,7 +100,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     () => settings?.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
   );
   const [agentSkills, setAgentSkills] = useState<readonly AgentSkill[]>(
-    () => settings?.agentSkills ?? DEFAULT_AGENT_SKILLS,
+    () => activeAgentSkills(settings),
   );
   const [creatorNotesRemoteWarning, setCreatorNotesRemoteWarning] = useState(
     () => settings?.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
@@ -459,7 +459,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setDefaultChatPanel(normalizeDefaultChatPanel(settings.ui.defaultChatPanel));
       setRequireAgentReview(settings.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW);
       setAgentKeepEdits(settings.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS);
-      setAgentSkills(settings.agentSkills ?? DEFAULT_AGENT_SKILLS);
+      setAgentSkills(activeAgentSkills(settings));
       setCreatorNotesRemoteWarning(
         settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
       );
