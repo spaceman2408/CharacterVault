@@ -47,6 +47,7 @@ nav: [
         text: 'Configuration',
         items: [
           { text: 'AI Setup', link: '/configuration/ai-setup' },
+          { text: 'API Key Safety', link: '/configuration/api-key-safety' },
           { text: 'Reasoning Effort', link: '/configuration/reasoning-effort' },
           { text: 'Sampler Settings', link: '/configuration/sampler-settings' },
           { text: 'Section Layout', link: '/configuration/section-layout' },

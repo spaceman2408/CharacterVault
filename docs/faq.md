@@ -167,6 +167,8 @@ Also be aware that:
 - Anyone with physical access to your unlocked computer could access it
 
 You can clear your AI settings at any time from the AI Config tab by clicking **Clear AI Settings**. See [AI Setup → Security Notice](/configuration/ai-setup#security-notice).
+
+For why keys aren't encrypted, and how to limit the damage from a leaked key, see [API Key Safety](/configuration/api-key-safety).
 :::
 
 :::: details What is the NanoGPT sign-in button?
