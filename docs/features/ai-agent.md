@@ -181,6 +181,7 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings �
 - **Thinking:** streams in an expanded **Thinking** fold while it is live; after the reply it collapses
 - **Live token count:** catalogs, custom context, and the current prompt (including tool results)
 - **TTFT / t/s:** on the assistant message info tooltip when the reply finishes, same as Orion
+- **Cached tokens:** the same tooltip shows **Cached: N% of M input tokens** when the host reports prompt cache hits, see [Prompt caching](#prompt-caching)
 - Reads keep only their one-line summary in the chat; the full field or entry text counts in the live meter, then drops out of the transcript
 
 The thread is stored in the browser with the vault. Long threads keep a small window on screen; **Load earlier messages** pages older turns back in. Oldest rows drop past **500** saved messages per panel.
@@ -209,7 +210,21 @@ The Agent chat shows estimated tokens for catalogs, custom context, and the live
 
 Idle, the meter is catalogs + custom context + what is still in the chat. Raise **Settings → Sampler → Context Length** if large books run close to the limit.
 
+The estimate counts the tool definitions the Agent sends. The Agent runs with a context length of at least 64,000 tokens even when the sampler is set lower, so a small window no longer leaves the Agent no room for its own reads. See [Prompt caching](#prompt-caching).
+
 The sampler **Max Tokens** slider does not cap Agent output the same way. Agent completions use a larger output budget so tool calls are less likely to cut off.
+
+## Prompt caching {#prompt-caching}
+
+An Agent run resends the same prompt on every turn, so the provider can read most of it back from its prompt cache instead of billing it twice. There is no setting for this: it is on for every Agent run.
+
+- **Claude on OpenRouter**: every Agent request for a Claude model is marked cacheable. NanoGPT caches Claude on its own, so no marker is sent there.
+- **One prefix per run**: when a run outgrows its input budget, the oldest exchanges are dropped down to 75% of it and that cut is kept, so the next turn appends to the same prefix instead of moving it every turn.
+- **Measured hit rate**: the info button on an Agent reply shows **Cached: 84% of 12,300 input tokens** when the host reports its counts. A host that does not report them shows nothing.
+- **Tools count**: the tool definitions are part of the token estimate, so the [context meter](#context-meter) and the trimming behind it match what is actually sent.
+- **64K floor**: the Agent runs with a context length of at least 64,000 tokens, even when **Settings → Sampler → Context Length** is lower. Below that, the system prompt and the tools alone eat the budget and the Agent forgets what it already read.
+
+On OpenRouter, **Always use Exacto for the Agent** can switch hosts partway through a run, which loses cache hits. Pin a host or set **Host priority** to **Cheapest** when cache hits matter more. See [AI Setup → Exacto and the Agent](/configuration/ai-setup#exacto-and-the-agent).
 
 ## Model for Agent
 

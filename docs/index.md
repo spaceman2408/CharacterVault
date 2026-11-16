@@ -1,7 +1,7 @@
 ::: tip CharacterVault 1.9.1
-Give the Agent skills it loads when your request matches, write your own, and let settings save automatically.
+Give the Agent skills it loads when your request matches, write your own, and cache your Claude runs so they cost less.
 
-[Try it](https://vault.charactervault.app) · [Agent skills](/features/ai-agent#skills) · [Agent Skills tab](/configuration/ai-setup#agent-skills-tab)
+[Try it](https://vault.charactervault.app) · [Prompt caching](/features/ai-agent#prompt-caching) · [Agent skills](/features/ai-agent#skills)
 :::
 
 # CharacterVault
@@ -17,6 +17,7 @@ CharacterVault is a browser-based tool for building character cards with the V2/
 - **Manage standalone lorebooks** in a second vault library (SillyTavern World Info), with snapshots and optional linking to characters (linked books stay in sync)
 - **Map recursion** between lorebook entries and bulk-edit recursion flags without leaving the editor
 - **Use AI to help you write** with Orion (chat that does not change the card), an **Agent** that can fill and revise the open character or lorebook (optional review diff before writes land), and an AI toolbar that can enhance, rephrase, shorten, and fix text with an in-editor ghost preview, plus search, resize text, and normalize HTML entities
+- **Give the Agent skills** — named instructions it loads on demand when your request matches, so asks like writing greetings or tightening prose follow your own rules
 - **Save snapshots** at any point and roll back to them later, section by section
 - **Import and export** PNG cards with embedded data and JSON files, compatible with SillyTavern, TavernAI, and other tools
 - **Back up the vault** as a ZIP of cards, lorebooks, and settings, and restore it later without wiping what you already have

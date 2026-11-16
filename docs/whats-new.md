@@ -8,15 +8,16 @@ Quick overview of recent updates to CharacterVault.
 
 ### 1.9.1
 
-CharacterVault 1.9.1 gives the Agent skills: named instructions it loads when your request matches, with three that ship and your own in a new Agent Skills settings tab. Settings now save automatically, saved presets show up in the Prompts tab model pickers, and the Agent chat shows what the Agent read, searched, and checked and highlights @mentions, plus a fix for settings changes not reaching the lorebook Agent until a reload.
+CharacterVault 1.9.1 gives the Agent skills: named instructions it loads when your request matches, with three that ship and your own in a new Agent Skills settings tab. Claude runs in the Agent now hit the provider's prompt cache and the reply tooltip shows the measured hit rate. Settings save automatically, saved presets show up in the Prompts tab model pickers, and the Agent chat shows what the Agent read, searched, and checked and highlights @mentions, plus a fix for settings changes not reaching the lorebook Agent until a reload.
 
+- **Claude runs hit the prompt cache**: Claude models on OpenRouter are marked cacheable on every Agent request, a run keeps one cut of older turns instead of moving it every turn, and the info button on a reply shows **Cached: N% of M input tokens**
 - **Agent skills**: the Agent loads a skill when your request matches and shows **Used skill** on its reply; three ship, and **Settings → Agent Skills** adds your own and lists the tools a skill can name
 - **Autosaved settings**: no more **Save Settings** button; changes save on their own and **Close** saves anything still waiting
 - **Saved presets in model routing**: pick a saved preset in any endpoint list on **Settings → Prompts** to set its endpoint and model
 - **What the Agent looked at**: each Agent reply lists what it read, searched, or checked; click a read to open it
 - **@mention highlights**: matching @mentions are tinted in the Agent chat box
 
-[Release 1.9.1 →](/releases/v1.9.1) · [AI Agent →](/features/ai-agent#skills) · [AI Setup →](/configuration/ai-setup#agent-skills-tab)
+[Release 1.9.1 →](/releases/v1.9.1) · [Prompt caching →](/features/ai-agent#prompt-caching) · [AI Agent →](/features/ai-agent#skills)
 
 ### 1.9.0
 

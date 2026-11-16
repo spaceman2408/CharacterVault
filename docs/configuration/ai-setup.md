@@ -205,7 +205,7 @@ OpenRouter's **Auto Exacto** runs by default on every request that includes tool
 **Always use Exacto for the Agent** keeps it for the Agent anyway. Agent requests that call tools use the model's `:exacto` variant and leave out the host priority, while Orion and the AI toolbar still follow it. A pinned host still comes first, and model IDs that already have a variant (such as `:free`) are left as they are.
 
 ::: tip Prompt caching
-Exacto can switch hosts partway through an Agent run, which loses prompt-cache hits. If cache hits matter more to you, leave this off and set **Host priority** to **Cheapest**, or pin a host, so the Agent stays on one host.
+Agent runs for Claude models on OpenRouter are marked cacheable, so the provider can read the prompt back from its cache. Exacto can switch hosts partway through an Agent run, which loses prompt-cache hits. If cache hits matter more to you, leave this off and set **Host priority** to **Cheapest**, or pin a host, so the Agent stays on one host. See [AI Agent → Prompt caching](/features/ai-agent#prompt-caching).
 :::
 
 ### NanoGPT Options
