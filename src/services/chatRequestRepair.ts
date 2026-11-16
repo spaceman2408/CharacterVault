@@ -25,9 +25,13 @@ export const NON_STANDARD_PARAMS = [
 
 export type NonStandardParam = (typeof NON_STANDARD_PARAMS)[number];
 
+/** Prompt-cache markers and stream usage reporting. Dropping them never changes the reply. */
+const CACHE_EXTRA_PARAMS = ['cache_control', 'stream_options'] as const;
+
 /** Strip candidates checked longest-first so `reasoning` does not match `reasoning_effort`. */
 const STRIPPABLE_PARAMS = [
   ...[...NON_STANDARD_PARAMS].sort((a, b) => b.length - a.length),
+  ...CACHE_EXTRA_PARAMS,
   'logit_bias',
   'temperature',
   'top_p',
@@ -372,7 +376,7 @@ export function stripAllNonStandardParams(request: ChatRequestLike): RepairResul
   const cleaned = cloneRequest(request);
   const removed: string[] = [];
 
-  for (const param of NON_STANDARD_PARAMS) {
+  for (const param of [...NON_STANDARD_PARAMS, ...CACHE_EXTRA_PARAMS]) {
     if (cleaned[param] !== undefined) {
       delete cleaned[param];
       removed.push(param);

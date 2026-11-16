@@ -1,6 +1,6 @@
 import type { AgentSkill, CharacterBook, CharacterSpec } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
-import type { ActionResult, AgentHost, AgentToolMode, ParsedAction } from '../../core/types';
+import type { ActionResult, AgentHost, AgentToolMode, AgentToolSpec, ParsedAction } from '../../core/types';
 import type { CharacterReviewPayload } from '../../review/types';
 import { createLorebookHost } from '../lorebook/createHost';
 import { LOREBOOK_TOOL_SPECS } from '../lorebook/schemas';
@@ -62,6 +62,15 @@ export interface CharacterHostIO {
   onPendingReview?: (pending: CharacterReviewPayload) => void;
 }
 
+/** Native tools the character agent sends, given its usable skills. */
+export function characterAgentToolSpecs(skills: readonly AgentSkill[]): readonly AgentToolSpec[] {
+  return [
+    ...CHARACTER_TOOL_SPECS,
+    ...COMPOSED_LOREBOOK_SPECS,
+    ...(skills.length > 0 ? [READ_SKILL_TOOL_SPEC] : []),
+  ];
+}
+
 export function createCharacterHost(io: CharacterHostIO): AgentHost {
   const maxFieldUpdates = io.maxFieldUpdates ?? MAX_FIELD_UPDATES_PER_RUN;
   const maxGreetingMutations = io.maxGreetingMutations ?? MAX_GREETING_MUTATIONS_PER_RUN;
@@ -107,11 +116,7 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
       ...COMPOSED_LOREBOOK_NAMES,
       ...(skills.length > 0 ? [READ_SKILL_TOOL] : []),
     ],
-    tools: [
-      ...CHARACTER_TOOL_SPECS,
-      ...COMPOSED_LOREBOOK_SPECS,
-      ...(skills.length > 0 ? [READ_SKILL_TOOL_SPEC] : []),
-    ],
+    tools: characterAgentToolSpecs(skills),
 
     buildSystemPrompt(input: { extraChunks: string[]; toolMode?: AgentToolMode }): string {
       return buildCharacterAgentSystemPrompt(input.extraChunks, input.toolMode ?? 'native', skills);

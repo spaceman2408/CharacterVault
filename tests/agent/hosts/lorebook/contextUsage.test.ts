@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createEmptyCharacterBook } from '../../../../src/db/characterTypes';
 import { computeAgentContextUsage } from '../../../../src/agent/hosts/lorebook/contextUsage';
+import { formatEntryCatalog } from '../../../../src/agent/hosts/lorebook/catalog';
+import { buildLorebookAgentSystemPrompt } from '../../../../src/agent/hosts/lorebook/prompt';
+import { LOREBOOK_TOOL_SPECS } from '../../../../src/agent/hosts/lorebook/schemas';
+import { estimateToolTokens } from '../../../../src/agent/hosts/toolTokens';
+import { estimateTokens } from '../../../../src/services/AIService';
 
 describe('computeAgentContextUsage', () => {
   it('uses sampler contextLength as the 100% limit', () => {
@@ -9,9 +14,9 @@ describe('computeAgentContextUsage', () => {
       customContextCharLength: 0,
       customContextIncluded: false,
       history: [],
-      contextLength: 8192,
+      contextLength: 32768,
     });
-    expect(usage.limit).toBe(8192);
+    expect(usage.limit).toBe(32768);
     expect(usage.tokens).toBeGreaterThan(0);
     expect(usage.percentage).toBeGreaterThan(0);
     expect(usage.percentage).toBeLessThan(50);
@@ -34,6 +39,26 @@ describe('computeAgentContextUsage', () => {
       contextLength: 8192,
     });
     expect(withNotes.tokens).toBeGreaterThan(without.tokens);
+  });
+
+  it('counts the tool definitions in native mode only', () => {
+    const base = {
+      book: createEmptyCharacterBook('World'),
+      customContextCharLength: 0,
+      customContextIncluded: false,
+      history: [],
+      contextLength: 32768,
+    };
+    const native = computeAgentContextUsage({ ...base, toolMode: 'native' });
+    const xml = computeAgentContextUsage({ ...base, toolMode: 'xml' });
+    const xmlPrompt = estimateTokens(
+      buildLorebookAgentSystemPrompt([formatEntryCatalog(base.book)], 'xml'),
+    );
+    expect(xml.tokens).toBe(xmlPrompt);
+    const nativePrompt = estimateTokens(
+      buildLorebookAgentSystemPrompt([formatEntryCatalog(base.book)], 'native'),
+    );
+    expect(native.tokens).toBe(nativePrompt + estimateToolTokens(LOREBOOK_TOOL_SPECS));
   });
 
   it('marks danger when usage is over 80% of the window', () => {

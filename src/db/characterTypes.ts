@@ -258,6 +258,8 @@ export interface StoredChatResponseStats {
   tokensPerSecond?: number;
   modelId?: string;
   providerId?: string;
+  promptTokens?: number;
+  cachedTokens?: number;
 }
 
 /** Vault-local Orion/Agent transcript row. Not part of card export. */

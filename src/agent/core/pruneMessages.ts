@@ -18,9 +18,17 @@ export const TRUNCATION_SUFFIX = '\n… [truncated to fit context]';
 
 export type PromptMeasure = (messages: readonly AgentMessage[]) => number;
 
+/**
+ * Share of the budget runLoop drops older exchanges down to once a prompt overflows. The slack lets
+ * the following turns append to the same prefix, so the provider's prompt cache keeps hitting.
+ */
+export const PRUNE_HOLD_SHARE = 0.75;
+
 export interface PruneMessagesOptions {
   maxHogTokens?: number;
   hogFraction?: number;
+  /** Keep dropping older exchanges down to this size. Trimming the newest exchange still only fits `budget`. */
+  dropTo?: number;
 }
 
 function messageTokens(message: AgentMessage, measure: PromptMeasure): number {
@@ -95,7 +103,7 @@ function groupMiddle(messages: AgentMessage[], last: number): AgentMessage[][] {
 /**
  * Shrink a prompt to `budget` tokens in three phases: (1) dynamic hog-guard
  * caps each older tool-result body at `min(maxHogTokens, budget*hogFraction)`;
- * (2) oldest exchange groups are dropped while over budget; (3) if the pinned
+ * (2) oldest exchange groups are dropped while over budget (or over `dropTo`); (3) if the pinned
  * minimum itself is over budget, the newest exchange's tool bodies (with the
  * trailing tool result or result blob mid-run) are trimmed just enough to
  * fit. Pinned throughout: the system message, the
@@ -117,6 +125,7 @@ export function pruneMessagesToBudget(
 
   const { maxHogTokens = DEFAULT_MAX_HOG_TOKENS, hogFraction = DEFAULT_HOG_FRACTION } = options;
   const hogCap = Math.min(maxHogTokens, Math.floor(budget * hogFraction));
+  const dropTarget = Math.min(budget, options.dropTo ?? budget);
 
   const pinnedFirst = messages[0];
   const pinnedLast = messages[messages.length - 1];
@@ -149,7 +158,7 @@ export function pruneMessagesToBudget(
   const assemble = (list: AgentMessage[][]): AgentMessage[] => [pinnedFirst, ...list.flat(), pinnedLast];
 
   groups = capHogs(groups, hogCap, true);
-  while (measure(assemble(groups)) > budget) {
+  while (measure(assemble(groups)) > dropTarget) {
     const oldest = groups.findIndex(
       (group, index) => index < groups.length - 1 && group[0] !== pinnedRequest,
     );

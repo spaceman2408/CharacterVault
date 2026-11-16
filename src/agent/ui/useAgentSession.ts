@@ -41,6 +41,7 @@ import type { AgentHost, AgentMessage, AgentToolMode } from '../core/types';
 import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
+import { agentSamplerSettings } from './agentSampler';
 import { liveAgentSpeech } from './speechDraft';
 import { renumberEntryEvents } from './toolTarget';
 import { noteRunFinished } from './finishNotice';
@@ -53,6 +54,7 @@ import {
   TURN_LIMIT_NOTICE,
   visibleToolEvents,
 } from './notices';
+import { estimateToolTokens } from '../hosts/toolTokens';
 import { estimatePromptTokens } from './promptUsage';
 import { clearRunMarker, readRunMarker, writeRunMarker } from './runMarker';
 import type { AgentBusyAction, AgentToolEvent } from './types';
@@ -221,7 +223,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const lookupToolNamesRef = useRef(lookupToolNames);
   const onRunningChangeRef = useRef(onRunningChange);
   const aiConfigRef = useRef(aiConfig);
-  const samplerSettingsRef = useRef(samplerSettings);
+  const samplerSettingsRef = useRef(agentSamplerSettings(samplerSettings));
   const promptSettingsRef = useRef(promptSettings);
   const keepEditsInContextRef = useRef(keepEditsInContext);
 
@@ -230,7 +232,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   lookupToolNamesRef.current = lookupToolNames;
   onRunningChangeRef.current = onRunningChange;
   aiConfigRef.current = aiConfig;
-  samplerSettingsRef.current = samplerSettings;
+  samplerSettingsRef.current = agentSamplerSettings(samplerSettings);
   promptSettingsRef.current = promptSettings;
   keepEditsInContextRef.current = keepEditsInContext;
   errorByMessageIdRef.current = errorByMessageId;
@@ -813,9 +815,10 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
             isAborted: () => abortedRef.current || !isCurrent(),
             maxInputTokens: AIService.inputTokenBudget(samplerSettingsRef.current),
             measurePrompt: estimatePromptTokens,
-            onPrompt: (prompt) => {
+            toolTokens: estimateToolTokens(host.tools),
+            onPrompt: (prompt, toolTokens) => {
               if (!isCurrent() || abortedRef.current) return;
-              setLivePromptTokens(estimatePromptTokens(prompt));
+              setLivePromptTokens(estimatePromptTokens(prompt) + toolTokens);
             },
             onChunk: streaming
               ? (chunk) => {
@@ -854,6 +857,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 wrappedChunk,
                 {
                   maxTokens: AGENT_MAX_OUTPUT_TOKENS,
+                  cachePrompt: true,
                   tools:
                     isNativeToolsRejected(normalizeBaseUrl(config.baseUrl), config.modelId) ||
                     !host.tools
@@ -872,6 +876,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 reasoning: completion.reasoning,
                 modelId: config.modelId,
                 providerId: getProviderSelectionId(config, completion.provider),
+                usage: completion.usage,
               });
               callTimingRef.current = null;
               return completion;

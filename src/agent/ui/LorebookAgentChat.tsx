@@ -22,6 +22,7 @@ import { AgentToolModeChip } from './AgentToolModeChip';
 import { formatAgentBusyLabel } from './busyLabel';
 import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
+import { agentSamplerSettings } from './agentSampler';
 import { contextMeterHistory, keptEditsOptions } from './loopHistory';
 import {
   CONTINUE_MESSAGE,
@@ -230,11 +231,13 @@ export function LorebookAgentChat({
     return labels;
   }, [customContextIncluded]);
 
+  const agentSampler = useMemo(() => agentSamplerSettings(samplerSettings), [samplerSettings]);
+
   // While a live prompt count is pinned, the idle estimate is never shown — skip
   // the catalog rebuild + full-history encode that would otherwise run per commit.
   const contextUsage = useMemo(() => {
     if (session.livePromptTokens != null) {
-      const limit = Math.max(1, samplerSettings.contextLength || 0);
+      const limit = Math.max(1, agentSampler.contextLength || 0);
       const percentage = Math.min(100, (session.livePromptTokens / limit) * 100);
       return {
         tokens: session.livePromptTokens,
@@ -252,10 +255,11 @@ export function LorebookAgentChat({
         session.toolEventsByMessageId,
         LOREBOOK_LOOKUP_TOOLS,
         session.errorByMessageId,
-        keptEditsOptions(keepEdits, session.toolMode, samplerSettings, aiConfig.modelId),
+        keptEditsOptions(keepEdits, session.toolMode, agentSampler, aiConfig.modelId),
       ),
-      contextLength: samplerSettings.contextLength,
+      contextLength: agentSampler.contextLength,
       skills,
+      toolMode: session.toolMode,
     });
   }, [
     aiConfig.modelId,
@@ -263,7 +267,7 @@ export function LorebookAgentChat({
     customContextIncluded,
     getBook,
     keepEdits,
-    samplerSettings,
+    agentSampler,
     skills,
     session.chatHistory,
     session.errorByMessageId,

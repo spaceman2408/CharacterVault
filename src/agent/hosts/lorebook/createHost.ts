@@ -1,6 +1,6 @@
 import type { AgentSkill, CharacterBook } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
-import type { ActionResult, AgentHost, AgentToolMode, ParsedAction } from '../../core/types';
+import type { ActionResult, AgentHost, AgentToolMode, AgentToolSpec, ParsedAction } from '../../core/types';
 import type { LorebookReviewPayload } from '../../review/types';
 import { suggestNames } from '../names/suggestNames';
 import { collectBookTargets, MAX_REPLACE_ACROSS_PER_RUN } from '../search';
@@ -49,6 +49,11 @@ export interface LorebookHostIO {
   onPendingReview?: (pending: LorebookReviewPayload) => void;
 }
 
+/** Native tools the lorebook agent sends, given its usable skills. */
+export function lorebookAgentToolSpecs(skills: readonly AgentSkill[]): readonly AgentToolSpec[] {
+  return skills.length > 0 ? [...LOREBOOK_TOOL_SPECS, READ_SKILL_TOOL_SPEC] : LOREBOOK_TOOL_SPECS;
+}
+
 export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
   const maxNewEntries = io.maxNewEntries ?? MAX_NEW_ENTRIES_PER_RUN;
   const originalBook = structuredClone(io.getBook());
@@ -76,7 +81,7 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
 
   return {
     toolNames: skills.length > 0 ? [...LOREBOOK_TOOL_NAMES, READ_SKILL_TOOL] : LOREBOOK_TOOL_NAMES,
-    tools: skills.length > 0 ? [...LOREBOOK_TOOL_SPECS, READ_SKILL_TOOL_SPEC] : LOREBOOK_TOOL_SPECS,
+    tools: lorebookAgentToolSpecs(skills),
 
     buildSystemPrompt(input: { extraChunks: string[]; toolMode?: AgentToolMode }): string {
       return buildLorebookAgentSystemPrompt(input.extraChunks, input.toolMode ?? 'native', skills);

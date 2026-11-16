@@ -108,6 +108,13 @@ export function StatsInfoButton({ stats }: { stats: ResponseStats }): React.Reac
           {typeof stats.tokensPerSecond === 'number' && (
             <div>Speed: {stats.tokensPerSecond.toFixed(2)} t/s</div>
           )}
+          {typeof stats.cachedTokens === 'number' && !!stats.promptTokens && (
+            <div>
+              <span className="text-fg-muted">Cached: </span>
+              {Math.round((stats.cachedTokens / stats.promptTokens) * 100)}% of{' '}
+              {stats.promptTokens.toLocaleString()} input tokens
+            </div>
+          )}
           {stats.modelId && (
             <div className="break-all">
               <span className="text-fg-muted">Model: </span>
