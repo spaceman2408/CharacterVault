@@ -3,7 +3,7 @@
  * @module components/ai/utils
  */
 
-import { estimateTokens } from '../../../services/AIService';
+import { estimateTokens, type PromptUsage } from '../../../services/AIService';
 import type { ResponseStats } from '../types';
 
 /**
@@ -76,6 +76,7 @@ export interface ResponseTiming {
   reasoning?: string;
   modelId: string;
   providerId?: string;
+  usage?: PromptUsage;
 }
 
 export interface AccumulatedResponseStats {
@@ -84,6 +85,12 @@ export interface AccumulatedResponseStats {
   generationMs: number;
   modelId: string;
   providerId?: string;
+  promptTokens?: number;
+  cachedTokens?: number;
+}
+
+function addCount(a: number | undefined, b: number | undefined): number | undefined {
+  return a === undefined && b === undefined ? undefined : (a ?? 0) + (b ?? 0);
 }
 
 export function accumulateResponseStats(
@@ -108,6 +115,8 @@ export function accumulateResponseStats(
       generationMs,
       modelId: timing.modelId,
       providerId: timing.providerId,
+      promptTokens: timing.usage?.promptTokens,
+      cachedTokens: timing.usage?.cachedTokens,
     };
   }
 
@@ -117,6 +126,8 @@ export function accumulateResponseStats(
     generationMs: pending.generationMs + generationMs,
     modelId: pending.modelId,
     providerId: pending.providerId,
+    promptTokens: addCount(pending.promptTokens, timing.usage?.promptTokens),
+    cachedTokens: addCount(pending.cachedTokens, timing.usage?.cachedTokens),
   };
 }
 
@@ -129,6 +140,8 @@ export function toResponseStats(
     modelId: accumulated.modelId,
     providerId: accumulated.providerId,
   };
+  if (accumulated.promptTokens !== undefined) stats.promptTokens = accumulated.promptTokens;
+  if (accumulated.cachedTokens !== undefined) stats.cachedTokens = accumulated.cachedTokens;
   if (options?.includeTokensPerSecond !== false && accumulated.generationMs > 0) {
     stats.tokensPerSecond = accumulated.tokens / (accumulated.generationMs / 1000);
   }

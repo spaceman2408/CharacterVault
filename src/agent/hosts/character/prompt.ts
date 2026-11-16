@@ -1,7 +1,9 @@
+import type { AgentSkill } from '../../../db/characterTypes';
 import { buildSystemPrompt } from '../../../services/PromptBuilder';
 import { formatAgentToolGuide } from '../../core/prompts';
 import type { AgentToolMode } from '../../core/types';
 import { SUGGEST_NAMES_TOOL_DOC } from '../names/suggestNames';
+import { formatSkillsSection, READ_SKILL_TOOL_DOC } from '../skills';
 
 export const CHARACTER_ACTION_SYNTAX = `Use XML:
 <tool_call>
@@ -61,7 +63,11 @@ ${SUGGEST_NAMES_TOOL_DOC}
 export function buildCharacterAgentSystemPrompt(
   extraChunks: string[],
   toolMode: AgentToolMode = 'native',
+  skills: readonly AgentSkill[] = [],
 ): string {
-  const persona = `${CHARACTER_AGENT_PERSONA}\n\n${formatAgentToolGuide(toolMode, CHARACTER_TOOL_LIST, CHARACTER_ACTION_SYNTAX)}`;
+  const toolList = skills.length > 0 ? `${CHARACTER_TOOL_LIST}\n${READ_SKILL_TOOL_DOC}` : CHARACTER_TOOL_LIST;
+  const guide = formatAgentToolGuide(toolMode, toolList, CHARACTER_ACTION_SYNTAX);
+  const skillsSection = skills.length > 0 ? `\n\n${formatSkillsSection(skills)}` : '';
+  const persona = `${CHARACTER_AGENT_PERSONA}\n\n${guide}${skillsSection}`;
   return buildSystemPrompt(persona, extraChunks);
 }

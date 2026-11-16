@@ -1,5 +1,5 @@
 import { isValidToolName, parseActions } from './parseActions';
-import { CONTINUE_NUDGE, pruneMessagesToBudget } from './pruneMessages';
+import { CONTINUE_NUDGE, PRUNE_HOLD_SHARE, pruneMessagesToBudget } from './pruneMessages';
 import { stripFences } from './stripFences';
 import { mapNativeToolCalls } from './toolCalls';
 import { formatToolResults, hasNativeToolTurns, nativeToXmlMessages } from './xmlHistory';
@@ -130,17 +130,22 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
     toolMode: initialToolMode,
     maxInputTokens,
     measurePrompt,
+    toolTokens = 0,
   } = options;
 
   const emit = onEvent ?? (() => undefined);
 
-  const budgeted = (prompt: AgentMessage[]): AgentMessage[] => {
-    if (maxInputTokens == null || !measurePrompt) return prompt;
-    return pruneMessagesToBudget(prompt, maxInputTokens, measurePrompt);
-  };
-
   let toolMode: AgentToolMode =
     initialToolMode ?? (host.tools && host.tools.length > 0 ? 'native' : 'xml');
+
+  const sentToolTokens = () => (toolMode === 'native' && host.tools?.length ? toolTokens : 0);
+  // At least 1: a budget of 0 or less turns pruning off instead of cutting to the minimum.
+  const messageBudget = (limit: number) => Math.max(1, limit - sentToolTokens());
+
+  const budgeted = (prompt: AgentMessage[]): AgentMessage[] => {
+    if (maxInputTokens == null || !measurePrompt) return prompt;
+    return pruneMessagesToBudget(prompt, messageBudget(maxInputTokens), measurePrompt);
+  };
   const extra = await host.extraContextChunks();
   const priorTurns = history.filter((message) => message.role !== 'system');
   const messages: AgentMessage[] = [
@@ -150,8 +155,17 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
       : priorTurns),
     { role: 'user', content: userMessage },
   ];
+  // Re-pruning from the full list every turn would move the cut each time and miss the prompt cache.
+  const holdBudget = () => {
+    if (maxInputTokens == null || !measurePrompt) return;
+    const budget = messageBudget(maxInputTokens);
+    const pruned = pruneMessagesToBudget(messages, budget, measurePrompt, {
+      dropTo: Math.floor(budget * PRUNE_HOLD_SHARE),
+    });
+    if (pruned !== messages) messages.splice(0, messages.length, ...pruned);
+  };
   const notifyPrompt = (prompt: AgentMessage[] = messages) => {
-    onPrompt?.(prompt);
+    onPrompt?.(prompt, sentToolTokens());
   };
 
   const finish = async (reason: RunLoopResult['reason']): Promise<RunLoopResult> => {
@@ -170,9 +184,9 @@ export async function runLoop(options: RunLoopOptions): Promise<RunLoopResult> {
     let finishReason: string | null | undefined;
     let toolCalls: NativeToolCall[] = [];
     try {
-      const requestMessages = budgeted(messages);
-      notifyPrompt(requestMessages);
-      const result = await complete(requestMessages, onChunk);
+      holdBudget();
+      notifyPrompt();
+      const result = await complete(messages, onChunk);
       content = result.content ?? '';
       reasoning = result.reasoning;
       finishReason = result.finishReason;

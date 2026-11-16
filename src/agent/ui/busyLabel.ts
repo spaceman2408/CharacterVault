@@ -88,6 +88,9 @@ export function formatAgentBusyLabel(action: AgentBusyAction, entries: LorebookE
   if (toolName === 'search' && headers.query?.trim()) {
     return `Searching ${quoted(headers.query)}`;
   }
+  if (toolName === 'read_skill') {
+    return headers.name?.trim() ? `Reading skill ${quoted(headers.name)}` : 'Reading skill';
+  }
 
   return BUSY_LABELS[toolName] ?? toolName.replace(/_/g, ' ');
 }

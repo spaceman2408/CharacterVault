@@ -13,6 +13,7 @@ import type {
   PromptModelMap,
   MacroHighlightSettings,
   RoleplayHighlightSettings,
+  AgentSkill,
   SpellcheckSettings,
   ToolbarConfig,
 } from '../db/characterTypes';
@@ -31,6 +32,7 @@ import {
   normalizeMacroHighlight,
   normalizeRoleplayHighlight,
 } from '../db/characterTypes';
+import { activeAgentSkills } from '../services/agentSkills';
 import { applyModelBinding, normalizePromptModelMap } from '../services/resolveOperationConfig';
 import { applyMacroHighlightColors } from '../editor/extensions/macroHighlight';
 import { setMacroAutoConvert } from '../editor/extensions/characterMacroHelper';
@@ -96,6 +98,9 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   );
   const [agentKeepEdits, setAgentKeepEdits] = useState(
     () => settings?.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
+  );
+  const [agentSkills, setAgentSkills] = useState<readonly AgentSkill[]>(
+    () => activeAgentSkills(settings),
   );
   const [creatorNotesRemoteWarning, setCreatorNotesRemoteWarning] = useState(
     () => settings?.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
@@ -454,6 +459,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
       setDefaultChatPanel(normalizeDefaultChatPanel(settings.ui.defaultChatPanel));
       setRequireAgentReview(settings.ui.requireAgentReview ?? DEFAULT_REQUIRE_AGENT_REVIEW);
       setAgentKeepEdits(settings.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS);
+      setAgentSkills(activeAgentSkills(settings));
       setCreatorNotesRemoteWarning(
         settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
       );
@@ -1278,6 +1284,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     defaultChatPanel,
     requireAgentReview,
     agentKeepEdits,
+    agentSkills,
     creatorNotesRemoteWarning,
     roleplayHighlight,
     macroHighlight,

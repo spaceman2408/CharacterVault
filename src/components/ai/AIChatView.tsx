@@ -16,7 +16,8 @@ import type { ChatMessage } from './types';
 import { ChatMessage as ChatMessageComponent, FoldedText } from './components';
 import { useAutoScroll } from './hooks';
 import { canRetryEmptySend } from './utils';
-import { useComposerMentions, type ComposerMention } from './composerMentions';
+import { findMentionRanges, useComposerMentions, type ComposerMention } from './composerMentions';
+import { MentionHighlights } from './MentionHighlights';
 import { CHAT_UI_HARD_WINDOW } from '../../services/ChatHistoryService';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { isImeComposing } from '../../utils/imeComposing';
@@ -160,6 +161,10 @@ export function AIChatView({
     inputRef,
     composerDisabled ? undefined : mentionOptions,
   );
+  const mentionRanges =
+    mentionOptions && !composerDisabled && askQuestion.includes('@')
+      ? findMentionRanges(askQuestion, mentionOptions())
+      : [];
 
   useLayoutEffect(() => {
     const input = inputRef.current;
@@ -464,41 +469,44 @@ export function AIChatView({
               ))}
             </ul>
           )}
-          <textarea
-            ref={inputRef}
-            value={askQuestion}
-            onChange={(e) => {
-              setAskQuestion(e.target.value);
-              mentions.onInputChange(e.target);
-            }}
-            onSelect={(e) => mentions.trackCaret(e.currentTarget)}
-            placeholder={effectivePlaceholder}
-            rows={1}
-            disabled={composerDisabled}
-            aria-disabled={composerDisabled}
-            title={composerDisabled ? effectiveHint : undefined}
-            className="flex-1 px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-40 transition-all disabled:cursor-not-allowed disabled:opacity-60"
-            onKeyDown={(e) => {
-              if (isImeComposing(e)) return;
-              if (mentions.handleKeyDown(e)) return;
-              if (e.key === 'Escape' && isProcessing) {
-                e.preventDefault();
-                handleAbort();
-                return;
-              }
-              if (
-                e.key === 'Enter'
-                && !e.shiftKey
-                && !isProcessing
-                && !composerDisabled
-                && (askQuestion.trim() || canRetry)
-              ) {
-                e.preventDefault();
-                void handleSubmit();
-              }
-            }}
-            onInput={onComposerInput}
-          />
+          <div className="relative flex min-w-0 flex-1">
+            <textarea
+              ref={inputRef}
+              value={askQuestion}
+              onChange={(e) => {
+                setAskQuestion(e.target.value);
+                mentions.onInputChange(e.target);
+              }}
+              onSelect={(e) => mentions.trackCaret(e.currentTarget)}
+              placeholder={effectivePlaceholder}
+              rows={1}
+              disabled={composerDisabled}
+              aria-disabled={composerDisabled}
+              title={composerDisabled ? effectiveHint : undefined}
+              className="w-full px-3 py-2 text-sm border border-border-strong rounded-xl bg-surface text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-accent/50 resize-none overflow-y-auto min-h-10 max-h-40 transition-all disabled:cursor-not-allowed disabled:opacity-60"
+              onKeyDown={(e) => {
+                if (isImeComposing(e)) return;
+                if (mentions.handleKeyDown(e)) return;
+                if (e.key === 'Escape' && isProcessing) {
+                  e.preventDefault();
+                  handleAbort();
+                  return;
+                }
+                if (
+                  e.key === 'Enter'
+                  && !e.shiftKey
+                  && !isProcessing
+                  && !composerDisabled
+                  && (askQuestion.trim() || canRetry)
+                ) {
+                  e.preventDefault();
+                  void handleSubmit();
+                }
+              }}
+              onInput={onComposerInput}
+            />
+            <MentionHighlights inputRef={inputRef} text={askQuestion} ranges={mentionRanges} />
+          </div>
           <button
             type="button"
             onClick={() => {

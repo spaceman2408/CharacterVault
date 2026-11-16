@@ -11,9 +11,9 @@ Your tab layout is stored locally in IndexedDB. It's not synced anywhere — it 
 1. Open a character in the workspace.
 2. Click **Settings** in the workspace header.
 3. Click the **Sections** tab.
-4. Make your changes, then click **Save Settings**.
+4. Make your changes. They save automatically.
 
-The tab strip updates as soon as you save. On mobile, the dropdown also reflects the new order and hides the same sections.
+The tab strip updates a moment after each change. On mobile, the dropdown also reflects the new order and hides the same sections.
 
 ## Showing and Hiding Tabs
 
@@ -35,7 +35,7 @@ Disabled arrow buttons (at 25% opacity) tell you when you're at the top or botto
 
 ## Reset to Defaults
 
-Click **Reset to Defaults** at the top of the tab to restore the original section order and show every section. This is a local change — it only takes effect after you click **Save Settings**.
+Click **Reset to Defaults** at the top of the tab to restore the original section order and show every section. It saves like any other change.
 
 ## New Sections
 

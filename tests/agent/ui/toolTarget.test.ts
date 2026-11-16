@@ -37,6 +37,15 @@ describe('parseToolTarget', () => {
     ).toEqual({ type: 'entry', id: 13 });
   });
 
+  it('points reads at what they read', () => {
+    expect(parseToolTarget('read_field', true, 'description (Description) — 7 tokens')).toEqual({
+      type: 'field',
+      id: 'description',
+    });
+    expect(parseToolTarget('read_greeting', true, 'greeting 2/3')).toEqual({ type: 'greeting', index: 2 });
+    expect(parseToolTarget('read_entry', true, '#4 The Red Keep')).toEqual({ type: 'entry', id: 4 });
+  });
+
   it('skips failures and untargeted tools', () => {
     expect(parseToolTarget('update_field', false, 'error: unknown field')).toBeUndefined();
     expect(parseToolTarget('search', true, 'ok 3 matches')).toBeUndefined();
@@ -50,12 +59,14 @@ describe('renumberEntryEvents', () => {
       { toolName: 'add_entry', ok: true, message: 'ok #3 Harbor', target: { type: 'entry', id: 3 }, call: { headers: { name: 'Harbor' }, body: 'A.' } },
       { toolName: 'update_entry', ok: true, message: 'ok #3 Harbor', target: { type: 'entry', id: 3 }, call: { headers: { id: '3' }, body: 'B.' } },
       { toolName: 'update_entry', ok: true, message: 'ok #1 Guild', target: { type: 'entry', id: 1 }, call: { headers: { id: '1' }, body: 'C.' } },
+      { toolName: 'read_entry', ok: true, message: '#3 Harbor', target: { type: 'entry', id: 3 } },
     ];
     const renumbered = renumberEntryEvents(events, new Map([[3, 4]]));
     expect(renumbered.map((event) => [event.message, event.target, event.call?.headers.id])).toEqual([
       ['ok #4 Harbor', { type: 'entry', id: 4 }, undefined],
       ['ok #4 Harbor', { type: 'entry', id: 4 }, '4'],
       ['ok #1 Guild', { type: 'entry', id: 1 }, '1'],
+      ['#4 Harbor', { type: 'entry', id: 4 }, undefined],
     ]);
     expect(renumbered[2]).toBe(events[2]);
   });

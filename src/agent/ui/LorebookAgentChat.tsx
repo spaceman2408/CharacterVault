@@ -4,6 +4,7 @@ import { AIChatView } from '../../components/ai/AIChatView';
 import { useEditLastMessage } from '../../components/ai/hooks/useEditLastMessage';
 import type { ChatMessage } from '../../components/ai/types';
 import type {
+  AgentSkill,
   AIConfig,
   CharacterBook,
   ChatOwnerType,
@@ -21,6 +22,7 @@ import { AgentToolModeChip } from './AgentToolModeChip';
 import { formatAgentBusyLabel } from './busyLabel';
 import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
+import { agentSamplerSettings } from './agentSampler';
 import { contextMeterHistory, keptEditsOptions } from './loopHistory';
 import {
   CONTINUE_MESSAGE,
@@ -28,10 +30,12 @@ import {
   LOREBOOK_LOOKUP_TOOLS,
   messageNotices,
   shouldRenderAgentMessage,
+  shownToolEvents,
+  silentTurnBlocks,
   visibleToolEvents,
   writeRecapLine,
 } from './notices';
-import { lorebookMentions } from './mentions';
+import { lorebookMentions, skillMentions } from './mentions';
 import { lorebookSuggestions } from './suggestions';
 import type { AgentToolTarget } from './types';
 import { useLeaveWarning } from './useLeaveWarning';
@@ -55,6 +59,7 @@ export interface LorebookAgentChatProps {
   onOpenTarget?: (target: AgentToolTarget) => void;
   requireReview?: boolean;
   keepEdits?: boolean;
+  skills?: readonly AgentSkill[];
   chatOwnerType: ChatOwnerType;
   chatOwnerId: string;
   title?: string;
@@ -85,6 +90,7 @@ export function LorebookAgentChat({
   onOpenTarget,
   requireReview = false,
   keepEdits = false,
+  skills,
   chatOwnerType,
   chatOwnerId,
 }: LorebookAgentChatProps): React.ReactElement {
@@ -116,6 +122,7 @@ export function LorebookAgentChat({
     chatOwnerType,
     chatOwnerId,
     keepEditsInContext: keepEdits,
+    skills,
   });
   const { noteReviewOutcome, holdRunForReview, noteRenumberedEntries } = session;
   useEffect(() => {
@@ -224,11 +231,13 @@ export function LorebookAgentChat({
     return labels;
   }, [customContextIncluded]);
 
+  const agentSampler = useMemo(() => agentSamplerSettings(samplerSettings), [samplerSettings]);
+
   // While a live prompt count is pinned, the idle estimate is never shown — skip
   // the catalog rebuild + full-history encode that would otherwise run per commit.
   const contextUsage = useMemo(() => {
     if (session.livePromptTokens != null) {
-      const limit = Math.max(1, samplerSettings.contextLength || 0);
+      const limit = Math.max(1, agentSampler.contextLength || 0);
       const percentage = Math.min(100, (session.livePromptTokens / limit) * 100);
       return {
         tokens: session.livePromptTokens,
@@ -246,9 +255,11 @@ export function LorebookAgentChat({
         session.toolEventsByMessageId,
         LOREBOOK_LOOKUP_TOOLS,
         session.errorByMessageId,
-        keptEditsOptions(keepEdits, session.toolMode, samplerSettings, aiConfig.modelId),
+        keptEditsOptions(keepEdits, session.toolMode, agentSampler, aiConfig.modelId),
       ),
-      contextLength: samplerSettings.contextLength,
+      contextLength: agentSampler.contextLength,
+      skills,
+      toolMode: session.toolMode,
     });
   }, [
     aiConfig.modelId,
@@ -256,7 +267,8 @@ export function LorebookAgentChat({
     customContextIncluded,
     getBook,
     keepEdits,
-    samplerSettings,
+    agentSampler,
+    skills,
     session.chatHistory,
     session.errorByMessageId,
     session.livePromptTokens,
@@ -269,15 +281,31 @@ export function LorebookAgentChat({
     [session.chatHistory, session.toolEventsByMessageId],
   );
 
+  const showReasoning = aiConfig.showReasoning ?? true;
+  const turnBlocks = useMemo(
+    () =>
+      silentTurnBlocks(
+        session.chatHistory,
+        session.toolEventsByMessageId,
+        session.errorByMessageId,
+        showReasoning,
+      ),
+    [session.chatHistory, session.errorByMessageId, session.toolEventsByMessageId, showReasoning],
+  );
+
   const renderMessage = useCallback(
     (message: ChatMessage, index: number, setComposerText: (text: string) => void) => {
-      const events = session.toolEventsByMessageId[message.id] ?? [];
-      const notices = messageNotices(session.errorByMessageId[message.id], events);
-      const toolEvents = visibleToolEvents(events);
+      const block = turnBlocks.get(message.id);
+      if (block === null) return null;
+      const lastIndex = block?.lastIndex ?? index;
+      const last = session.chatHistory[lastIndex] ?? message;
+      const events = (block?.ids ?? [message.id]).flatMap((id) => session.toolEventsByMessageId[id] ?? []);
+      const notices = messageNotices(session.errorByMessageId[last.id], events);
+      const toolEvents = shownToolEvents(events);
+      const writes = visibleToolEvents(events);
       const writesLost = lostMessageIds.has(message.id);
       const speech = message.role === 'assistant' ? stripFences(message.content) : message.content;
-      const recapLine = speech ? null : writeRecapLine(toolEvents, writesLost);
-      const showReasoning = aiConfig.showReasoning ?? true;
+      const recapLine = speech ? null : writeRecapLine(writes, writesLost);
       if (
         !shouldRenderAgentMessage(
           message.role,
@@ -291,8 +319,8 @@ export function LorebookAgentChat({
       }
       return (
         <AgentChatMessage
-          message={message}
-          messageIndex={index}
+          message={block ? { ...message, timestamp: last.timestamp, stats: last.stats } : message}
+          messageIndex={lastIndex}
           chatHistoryLength={session.chatHistory.length}
           isProcessing={session.isProcessing}
           showReasoning={showReasoning}
@@ -305,7 +333,7 @@ export function LorebookAgentChat({
           onDelete={handleDeleteGuarded}
           onOpenTarget={onOpenTarget}
           onContinue={
-            index === session.chatHistory.length - 1 && !session.isProcessing
+            lastIndex === session.chatHistory.length - 1 && !session.isProcessing
               ? handleContinue
               : undefined
           }
@@ -321,7 +349,6 @@ export function LorebookAgentChat({
       );
     },
     [
-      aiConfig.showReasoning,
       cancelEdit,
       editingId,
       handleContinue,
@@ -331,10 +358,12 @@ export function LorebookAgentChat({
       lastUserIndex,
       lostMessageIds,
       onOpenTarget,
-      session.chatHistory.length,
       session.errorByMessageId,
       session.isProcessing,
       session.toolEventsByMessageId,
+      session.chatHistory,
+      showReasoning,
+      turnBlocks,
     ],
   );
 
@@ -390,7 +419,7 @@ export function LorebookAgentChat({
       onLoadOlder={session.handleLoadOlder}
       onClose={onClose}
       emptySuggestions={lorebookSuggestions(getBook(), customContextIncluded)}
-      mentionOptions={() => lorebookMentions(getBook())}
+      mentionOptions={() => [...lorebookMentions(getBook()), ...skillMentions(skills)]}
       renderMessage={renderMessage}
       processingIndicator={
         <div className="py-1 text-fg-muted">

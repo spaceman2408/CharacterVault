@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   filterMentions,
   findMentionQuery,
+  findMentionRanges,
   insertMention,
 } from '../../../src/components/ai/composerMentions';
 
@@ -55,5 +56,31 @@ describe('insertMention', () => {
       text: 'Tighten @Description please',
       caret: 21,
     });
+  });
+});
+
+describe('findMentionRanges', () => {
+  const options = [
+    { label: 'Greeting 1' },
+    { label: 'Greeting 10' },
+    { label: 'Greeting Writer' },
+    { label: '“Harbor” (#4)' },
+  ];
+  const spans = (text: string) =>
+    findMentionRanges(text, options).map(({ start, end }) => text.slice(start, end));
+
+  it('marks known mentions, ignoring case', () => {
+    expect(spans('Use @Greeting Writer on @greeting 1.')).toEqual(['@Greeting Writer', '@greeting 1']);
+    expect(spans('@“Harbor” (#4) needs keys')).toEqual(['@“Harbor” (#4)']);
+  });
+
+  it('prefers the longest label and needs a word boundary after it', () => {
+    expect(spans('fix @Greeting 10')).toEqual(['@Greeting 10']);
+    expect(spans('fix @Greeting 1x')).toEqual([]);
+  });
+
+  it('skips unknown names and @ inside a word', () => {
+    expect(spans('mail me@Greeting 1 or @Nobody')).toEqual([]);
+    expect(findMentionRanges('no mentions', options)).toEqual([]);
   });
 });

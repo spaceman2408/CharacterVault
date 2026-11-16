@@ -75,3 +75,20 @@ describe('AIChatView mentions', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
   });
 });
+
+describe('AIChatView mention highlights', () => {
+  it('tints known mentions in the composer and nothing else', () => {
+    const { composer } = renderView(OPTIONS);
+    type(composer, 'Tighten @Description and @Nobody');
+    const marks = [...document.querySelectorAll('mark')].map((mark) => mark.textContent);
+    expect(marks).toEqual(['@Description']);
+    type(composer, 'Tighten the description');
+    expect(document.querySelectorAll('mark')).toHaveLength(0);
+  });
+
+  it('draws no highlights without mention options', () => {
+    const { composer } = renderView();
+    type(composer, '@Description');
+    expect(document.querySelectorAll('mark')).toHaveLength(0);
+  });
+});

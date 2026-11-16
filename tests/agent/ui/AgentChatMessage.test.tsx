@@ -161,3 +161,62 @@ describe('AgentChatMessage lost writes', () => {
     expect(screen.getByTitle('Not saved').className).toContain('line-through');
   });
 });
+
+describe('AgentChatMessage lookups', () => {
+  it('shows what the turn looked at, muted, and opens what it read', () => {
+    const onOpenTarget = vi.fn();
+    render(
+      <AgentChatMessage
+        message={message}
+        messageIndex={0}
+        chatHistoryLength={1}
+        isProcessing={false}
+        showReasoning={false}
+        showRegenerate={false}
+        notices={[]}
+        toolEvents={[
+          { toolName: 'read_skill', ok: true, message: 'Skill: Greeting Writer' },
+          {
+            toolName: 'read_field',
+            ok: true,
+            message: 'description (Description) — 7 tokens',
+            target: { type: 'field', id: 'description' },
+          },
+        ]}
+        writesLost
+        onRegenerate={() => undefined}
+        onDelete={() => undefined}
+        onOpenTarget={onOpenTarget}
+      />,
+    );
+    expect(screen.getByText('Used skill “Greeting Writer”')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Read Description' }));
+    expect(onOpenTarget).toHaveBeenCalledWith({ type: 'field', id: 'description' });
+    expect(screen.queryByTitle('Not saved')).toBeNull();
+  });
+
+  it('folds repeated rows into one with a count', () => {
+    const replaced = {
+      toolName: 'replace_in_field',
+      ok: true,
+      message: 'ok mes_example (Examples) — replaced 1',
+      target: { type: 'field' as const, id: 'mes_example' },
+    };
+    render(
+      <AgentChatMessage
+        message={message}
+        messageIndex={0}
+        chatHistoryLength={1}
+        isProcessing={false}
+        showReasoning={false}
+        showRegenerate={false}
+        notices={[]}
+        toolEvents={[replaced, replaced, replaced]}
+        onRegenerate={() => undefined}
+        onDelete={() => undefined}
+      />,
+    );
+    expect(screen.getAllByText('Replaced 1 in Examples')).toHaveLength(1);
+    expect(screen.getByText('×3')).toBeTruthy();
+  });
+});

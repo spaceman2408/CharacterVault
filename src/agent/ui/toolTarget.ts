@@ -14,6 +14,19 @@ const ENTRY_TOOLS = new Set(['add_entry', 'update_entry', 'replace_in_entry', 'd
 export function parseToolTarget(toolName: string, ok: boolean, message: string): AgentToolTarget | undefined {
   if (!ok) return undefined;
 
+  if (toolName === 'read_field') {
+    const id = /^(\S+) \(/.exec(message)?.[1];
+    return id && isCharacterAgentFieldId(id) ? { type: 'field', id } : undefined;
+  }
+  if (toolName === 'read_greeting') {
+    const index = /^greeting (\d+)\//.exec(message)?.[1];
+    return index ? { type: 'greeting', index: Number(index) } : undefined;
+  }
+  if (toolName === 'read_entry') {
+    const id = /^#(\d+)\s/.exec(message)?.[1];
+    return id ? { type: 'entry', id: Number(id) } : undefined;
+  }
+
   if (FIELD_TOOLS.has(toolName)) {
     const match = /^ok (\S+) \(/.exec(message);
     const id = match?.[1];
@@ -54,7 +67,8 @@ export function renumberEntryEvents(
     const call = event.call?.headers.id === String(from)
       ? { ...event.call, headers: { ...event.call.headers, id: String(id) } }
       : event.call;
-    return { ...event, message: event.message.replace(/^ok #\d+/, `ok #${id}`), target: { type: 'entry' as const, id }, call };
+    const message = event.message.replace(/^(ok )?#\d+/, (_match, ok = '') => `${ok}#${id}`);
+    return { ...event, message, target: { type: 'entry' as const, id }, call };
   });
   return changed ? next : events;
 }

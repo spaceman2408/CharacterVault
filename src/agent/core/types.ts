@@ -90,8 +90,11 @@ export interface RunLoopOptions {
   toolMode?: AgentToolMode;
   onEvent?: (event: AgentEvent) => void;
   onChunk?: (chunk: CompleterChunk) => void;
-  /** Live prompt for the next (or just-updated) completion. Do not retain the array. */
-  onPrompt?: (messages: readonly AgentMessage[]) => void;
+  /**
+   * Live prompt for the next (or just-updated) completion. Do not retain the array.
+   * `toolTokens` is the `toolTokens` option while the run sends native tools, else 0.
+   */
+  onPrompt?: (messages: readonly AgentMessage[], toolTokens: number) => void;
   isAborted?: () => boolean;
   maxTurns?: number;
   maxActionsPerTurn?: number;
@@ -99,6 +102,8 @@ export interface RunLoopOptions {
   maxInputTokens?: number;
   /** Token estimator for budget pruning (e.g. estimatePromptTokens). */
   measurePrompt?: (messages: readonly AgentMessage[]) => number;
+  /** Estimated size of the `tools` payload. Taken off `maxInputTokens` while the run sends native tools. */
+  toolTokens?: number;
 }
 
 export interface RunLoopResult {

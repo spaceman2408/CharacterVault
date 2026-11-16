@@ -69,8 +69,7 @@ To use the AI toolbar, Orion, or the Agent, you must configure an AI provider:
 2. Go to the **AI Config** tab
 3. Pick a preset. For NanoGPT you can use **Sign in with NanoGPT** instead of pasting a key
 4. Paste your API key
-5. Click **Fetch models** and pick a model
-6. Click **Save Settings**
+5. Click **Fetch models** and pick a model. Settings save automatically
 
 For step-by-step instructions, see [AI Setup](/configuration/ai-setup). Local servers (LM Studio, KoboldCpp, Ollama) need CORS enabled; see [AI Setup → Local backends](/configuration/ai-setup#local-backends).
 :::
@@ -135,6 +134,12 @@ It can use a separate model on **Settings → Prompts → Agent**. Set **Setting
 Optional: enable **Settings → Character Workspace → Review agent edits before applying**. Writes then open in a word-level diff so you can approve, edit, or deny them before they land. See [AI Agent](/features/ai-agent).
 :::
 
+::: details What are Agent skills?
+Skills are instructions the Agent loads for one kind of task, such as writing greetings or tightening prose. It picks one when your request matches the skill's **when to use** line and shows **Used skill** on its reply. Type `@` in the Agent chat to pick one yourself.
+
+Three ship with the app. Add your own, edit them, or switch them off on **Settings → Agent Skills**. See [AI Agent → Skills](/features/ai-agent#skills).
+:::
+
 ::: details What is AI Creation Studio?
 A full-screen flow that generates a new character from a written concept or from tags. Name and description always run; you can skip first message and examples. Prompts, tag categories, favorites, and custom tags live under **Settings → Creation Studio**.
 
@@ -162,6 +167,8 @@ Also be aware that:
 - Anyone with physical access to your unlocked computer could access it
 
 You can clear your AI settings at any time from the AI Config tab by clicking **Clear AI Settings**. See [AI Setup → Security Notice](/configuration/ai-setup#security-notice).
+
+For why keys aren't encrypted, and how to limit the damage from a leaked key, see [API Key Safety](/configuration/api-key-safety).
 :::
 
 :::: details What is the NanoGPT sign-in button?

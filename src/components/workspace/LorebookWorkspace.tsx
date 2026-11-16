@@ -47,6 +47,7 @@ import { setMacroAutoConvert } from '../../editor/extensions/characterMacroHelpe
 import { DEFAULT_FONT_SIZE } from '../../editor/extensions/fontSizeControl';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { useSaveEditorFontSize } from '../../hooks/useSaveEditorFontSize';
+import { activeAgentSkills } from '../../services/agentSkills';
 import { characterSettingsService } from '../../services/CharacterSettingsService';
 import { applyModelBinding } from '../../services/resolveOperationConfig';
 import {
@@ -216,6 +217,7 @@ export function LorebookWorkspace(): React.ReactElement {
   }, [macroAutoConvert]);
   const requireAgentReview = settings?.ui?.requireAgentReview ?? false;
   const agentKeepEdits = settings?.ui?.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS;
+  const agentSkills = activeAgentSkills(settings);
 
   const entryCount = currentLorebook?.book?.entries?.length ?? 0;
   const totalTokens = useMemo(() => {
@@ -730,6 +732,7 @@ export function LorebookWorkspace(): React.ReactElement {
                   onOpenTarget={openAgentTarget}
                   requireReview={requireAgentReview}
                   keepEdits={agentKeepEdits}
+                  skills={agentSkills}
                 />
               ) : (
                 <AIChatPanel

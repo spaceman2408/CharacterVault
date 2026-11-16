@@ -1,8 +1,12 @@
-import type { CharacterBook } from '../../../db/characterTypes';
+import type { AgentSkill, CharacterBook } from '../../../db/characterTypes';
 import { estimateTokens } from '../../../services/AIService';
 import { estimateCustomContextTokensFromCharLength } from '../../../services/CustomContextService';
 import { formatEntryCatalog } from './catalog';
 import { buildLorebookAgentSystemPrompt } from './prompt';
+import type { AgentToolMode } from '../../core/types';
+import { usableSkills } from '../skills';
+import { estimateToolTokens } from '../toolTokens';
+import { lorebookAgentToolSpecs } from './createHost';
 
 const MESSAGE_OVERHEAD_TOKENS = 6;
 
@@ -27,10 +31,15 @@ export function computeAgentContextUsage(input: {
   customContextIncluded: boolean;
   history: Array<{ content: string }>;
   contextLength: number;
+  skills?: readonly AgentSkill[];
+  toolMode?: AgentToolMode;
 }): AgentContextUsage {
   const limit = Math.max(1, input.contextLength || 0);
+  const toolMode = input.toolMode ?? 'native';
+  const skills = usableSkills(input.skills);
   const catalog = formatEntryCatalog(input.book);
-  let tokens = estimateTokens(buildLorebookAgentSystemPrompt([catalog]));
+  let tokens = estimateTokens(buildLorebookAgentSystemPrompt([catalog], toolMode, skills));
+  if (toolMode === 'native') tokens += estimateToolTokens(lorebookAgentToolSpecs(skills));
   if (input.customContextIncluded && input.customContextCharLength > 0) {
     tokens += estimateCustomContextTokensFromCharLength(input.customContextCharLength);
   }

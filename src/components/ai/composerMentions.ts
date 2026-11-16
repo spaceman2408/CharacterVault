@@ -31,6 +31,32 @@ export function filterMentions(options: ComposerMention[], query: string): Compo
   return [...prefix, ...inner].slice(0, MAX_MENTION_RESULTS);
 }
 
+export interface MentionRange {
+  start: number;
+  end: number;
+}
+
+/** Spans of `@Label` for known labels (case-insensitive, longest label wins, must end at a word boundary). */
+export function findMentionRanges(text: string, options: ComposerMention[]): MentionRange[] {
+  if (!text.includes('@') || options.length === 0) return [];
+  const labels = [...new Set(options.map((option) => option.label.toLowerCase()))].sort(
+    (a, b) => b.length - a.length,
+  );
+  const ranges: MentionRange[] = [];
+  for (let at = text.indexOf('@'); at !== -1; at = text.indexOf('@', at + 1)) {
+    if (at > 0 && !/\s/.test(text[at - 1])) continue;
+    const label = labels.find((candidate) => {
+      if (text.slice(at + 1, at + 1 + candidate.length).toLowerCase() !== candidate) return false;
+      const next = text[at + 1 + candidate.length];
+      return next === undefined || !/[\p{L}\p{N}_]/u.test(next);
+    });
+    if (!label) continue;
+    ranges.push({ start: at, end: at + 1 + label.length });
+    at += label.length;
+  }
+  return ranges;
+}
+
 export function insertMention(
   text: string,
   query: MentionQuery,

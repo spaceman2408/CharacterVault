@@ -4,12 +4,12 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertCircle, Loader2, Save, Settings2, X } from 'lucide-react';
-import { CharacterEditorContext } from '../../context';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { AlertCircle, Loader2, Settings2, X } from 'lucide-react';
+import { SaveStatus } from './components/SaveStatus';
 import { ToastContainer } from './components/ToastContainer';
 import { useModelCatalog } from './hooks/useModelCatalog';
 import { useNanoGPTSignIn } from './hooks/useNanoGPTSignIn';
+import { useReloadSettings } from './hooks/useReloadSettings';
 import { useSettingsDraft } from './hooks/useSettingsDraft';
 import { SETTINGS_TABS } from './registry';
 import type {
@@ -24,9 +24,7 @@ export function CharacterSettingsPanel({
   onClose,
   reloadSettings: propReloadSettings,
 }: CharacterSettingsPanelProps): React.ReactElement | null {
-  const editorContext = React.useContext(CharacterEditorContext);
-  const reloadSettings =
-    propReloadSettings ?? editorContext?.reloadSettings ?? (async () => {});
+  const reloadSettings = useReloadSettings(propReloadSettings);
 
   const [isVisible, setIsVisible] = useState(false);
   const [isRendered, setIsRendered] = useState(false);
@@ -34,8 +32,8 @@ export function CharacterSettingsPanel({
   const [activeTab, setActiveTab] = useState<SettingsTabId>('ai');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const closingRef = useRef(false);
   const toastTimeoutsRef = useRef<Map<string, number>>(new Map());
 
   const addToast = useCallback((type: ToastNotification['type'], message: string) => {
@@ -65,13 +63,16 @@ export function CharacterSettingsPanel({
     retryLoad,
     isDirty,
     isSaving,
+    isEditingText,
+    saveError,
     lastSavedAt,
-    save,
+    flush,
     clearAISettings,
   } = useSettingsDraft({
       isOpen,
       reloadSettings,
       addToast,
+      panelRef,
     });
 
   const modelCatalog = useModelCatalog({
@@ -90,15 +91,21 @@ export function CharacterSettingsPanel({
     addToast,
   });
 
-  const requestClose = useCallback(() => {
-    if (isDirty) setConfirmDiscard(true);
-    else onClose();
-  }, [isDirty, onClose]);
+  // A draft that fails validation is dropped on close; the footer already said it was not saved.
+  const requestClose = useCallback(async () => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    try {
+      await flush();
+    } finally {
+      closingRef.current = false;
+    }
+    onClose();
+  }, [flush, onClose]);
 
   // Reset toasts when panel closes
   useEffect(() => {
     if (isOpen) return;
-    setConfirmDiscard(false);
     setToasts([]);
     toastTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
     toastTimeoutsRef.current.clear();
@@ -118,7 +125,7 @@ export function CharacterSettingsPanel({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        requestClose();
+        void requestClose();
       }
 
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -156,7 +163,7 @@ export function CharacterSettingsPanel({
     if (!isOpen || !isRendered || !panelRef.current) return;
 
     const panel = panelRef.current;
-    // Re-query on each Tab: tab content and the Save button's disabled state change while open.
+    // Re-query on each Tab: tab content changes while open.
     const getFocusable = () =>
       Array.from(
         panel.querySelectorAll<HTMLElement>(
@@ -300,7 +307,7 @@ export function CharacterSettingsPanel({
             </div>
             <button
               type="button"
-              onClick={requestClose}
+              onClick={() => void requestClose()}
               className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong"
               aria-label="Close settings panel"
             >
@@ -343,7 +350,7 @@ export function CharacterSettingsPanel({
             })}
           </div>
 
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-bg p-4 sm:space-y-6 sm:p-6">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-bg p-4 [scrollbar-gutter:stable] sm:space-y-6 sm:p-6">
             {isLoading && (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-3">
@@ -375,44 +382,32 @@ export function CharacterSettingsPanel({
                 setDraft={setDraft}
                 helpers={helpers}
                 addToast={addToast}
-                lastSavedAt={lastSavedAt}
               />
             )}
           </div>
 
-          <div className="flex shrink-0 items-center justify-stretch gap-2 border-t border-border bg-surface px-4 py-3 sm:justify-end sm:gap-3 sm:px-6 sm:py-4">
+          <div className="flex shrink-0 items-center gap-3 border-t border-border bg-surface px-4 py-2 sm:px-6 sm:py-2.5">
+            {!isLoading && !loadFailed ? (
+              <SaveStatus
+                isDirty={isDirty}
+                isSaving={isSaving}
+                isEditingText={isEditingText}
+                saveError={saveError}
+                lastSavedAt={lastSavedAt}
+              />
+            ) : (
+              <div className="flex-1" />
+            )}
             <button
               type="button"
-              onClick={requestClose}
-              className="min-h-11 flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-fg-muted transition-colors hover:bg-muted hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-border-strong sm:flex-none"
+              onClick={() => void requestClose()}
+              className="min-h-11 shrink-0 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 sm:min-h-9 sm:px-4 sm:py-1.5"
             >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => void save()}
-              disabled={isSaving || isLoading || loadFailed}
-              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
-            >
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Settings
+              Close
             </button>
           </div>
         </div>
       </div>
-      <ConfirmDialog
-        open={confirmDiscard}
-        title="Discard unsaved changes?"
-        message="Your changes to settings have not been saved. Closing now will lose them."
-        confirmLabel="Discard"
-        cancelLabel="Keep editing"
-        variant="danger"
-        onConfirm={() => {
-          setConfirmDiscard(false);
-          onClose();
-        }}
-        onCancel={() => setConfirmDiscard(false)}
-      />
     </>
   );
 }

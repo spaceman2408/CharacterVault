@@ -41,19 +41,20 @@ import type { AgentHost, AgentMessage, AgentToolMode } from '../core/types';
 import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
+import { agentSamplerSettings } from './agentSampler';
 import { liveAgentSpeech } from './speechDraft';
 import { renumberEntryEvents } from './toolTarget';
 import { noteRunFinished } from './finishNotice';
 import { keptEditsOptions, toLoopHistory } from './loopHistory';
 import {
   interruptedRunNotice,
-  isSilentLookupTurn,
   REVIEW_NOTE_TOOL,
   RUN_INTERRUPTED_TOOL,
   toAgentToolEvent,
   TURN_LIMIT_NOTICE,
   visibleToolEvents,
 } from './notices';
+import { estimateToolTokens } from '../hosts/toolTokens';
 import { estimatePromptTokens } from './promptUsage';
 import { clearRunMarker, readRunMarker, writeRunMarker } from './runMarker';
 import type { AgentBusyAction, AgentToolEvent } from './types';
@@ -222,7 +223,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const lookupToolNamesRef = useRef(lookupToolNames);
   const onRunningChangeRef = useRef(onRunningChange);
   const aiConfigRef = useRef(aiConfig);
-  const samplerSettingsRef = useRef(samplerSettings);
+  const samplerSettingsRef = useRef(agentSamplerSettings(samplerSettings));
   const promptSettingsRef = useRef(promptSettings);
   const keepEditsInContextRef = useRef(keepEditsInContext);
 
@@ -231,7 +232,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   lookupToolNamesRef.current = lookupToolNames;
   onRunningChangeRef.current = onRunningChange;
   aiConfigRef.current = aiConfig;
-  samplerSettingsRef.current = samplerSettings;
+  samplerSettingsRef.current = agentSamplerSettings(samplerSettings);
   promptSettingsRef.current = promptSettings;
   keepEditsInContextRef.current = keepEditsInContext;
   errorByMessageIdRef.current = errorByMessageId;
@@ -365,36 +366,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
 
     if (!acc) return undefined;
     return toResponseStats(acc);
-  }, []);
-
-  const dropLookupOnlyMessage = useCallback((messageId: string | null) => {
-    if (!messageId) return;
-    const events = toolEventsRef.current[messageId] ?? [];
-    const row = chatHistoryRef.current.find((message) => message.id === messageId);
-    const shown = {
-      content: row?.content ?? '',
-      reasoning: (aiConfigRef.current.showReasoning ?? true) ? row?.reasoning : undefined,
-    };
-    if (!isSilentLookupTurn(shown, events, lookupToolNamesRef.current)) return;
-    if (errorByMessageIdRef.current[messageId]) return;
-
-    const nextHistory = chatHistoryRef.current.filter((message) => message.id !== messageId);
-    chatHistoryRef.current = nextHistory;
-    setChatHistory(nextHistory);
-    void chatHistoryService.deleteById(threadRef(), messageId);
-    seqByIdRef.current.delete(messageId);
-
-    const nextEvents = { ...toolEventsRef.current };
-    delete nextEvents[messageId];
-    toolEventsRef.current = nextEvents;
-    setToolEventsByMessageId(nextEvents);
-
-    setErrorByMessageId((prev) => {
-      if (!(messageId in prev)) return prev;
-      const next = { ...prev };
-      delete next[messageId];
-      return next;
-    });
   }, []);
 
   const clearError = useCallback(() => {
@@ -805,7 +776,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         let runService: AIService | null = null;
         // Stop and a failed turn keep what the user already watched stream in.
         const commitStreamedPartial = () => {
-          dropLookupOnlyMessage(lastAssistantIdRef.current);
           const speech = stripFences(streamContentRef.current.toString());
           const reasoning = streamReasoningRef.current.toString();
           if (!speech && !reasoning) return;
@@ -845,9 +815,10 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
             isAborted: () => abortedRef.current || !isCurrent(),
             maxInputTokens: AIService.inputTokenBudget(samplerSettingsRef.current),
             measurePrompt: estimatePromptTokens,
-            onPrompt: (prompt) => {
+            toolTokens: estimateToolTokens(host.tools),
+            onPrompt: (prompt, toolTokens) => {
               if (!isCurrent() || abortedRef.current) return;
-              setLivePromptTokens(estimatePromptTokens(prompt));
+              setLivePromptTokens(estimatePromptTokens(prompt) + toolTokens);
             },
             onChunk: streaming
               ? (chunk) => {
@@ -886,6 +857,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 wrappedChunk,
                 {
                   maxTokens: AGENT_MAX_OUTPUT_TOKENS,
+                  cachePrompt: true,
                   tools:
                     isNativeToolsRejected(normalizeBaseUrl(config.baseUrl), config.modelId) ||
                     !host.tools
@@ -904,6 +876,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 reasoning: completion.reasoning,
                 modelId: config.modelId,
                 providerId: getProviderSelectionId(config, completion.provider),
+                usage: completion.usage,
               });
               callTimingRef.current = null;
               return completion;
@@ -917,7 +890,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 return;
               }
               if (event.type === 'assistant_text') {
-                dropLookupOnlyMessage(lastAssistantIdRef.current);
                 clearStreamDraft();
                 setBusyAction(null);
                 if (isMountedRef.current) setIsStreaming(false);
@@ -987,7 +959,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
         } finally {
           clearRunMarker(runThread, { keepReview: true });
           if (requestId === requestIdRef.current) {
-            dropLookupOnlyMessage(lastAssistantIdRef.current);
             if (aiServiceRef.current === runService) {
               aiServiceRef.current = null;
             }
@@ -1014,7 +985,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
       );
       await run;
     },
-    [appendStreamChunk, attachError, clearStreamDraft, commitMessage, consumeAssistantStats, dropLookupOnlyMessage, isAIConfigured, persistMessage],
+    [appendStreamChunk, attachError, clearStreamDraft, commitMessage, consumeAssistantStats, isAIConfigured, persistMessage],
   );
 
   const handleRegenerate = useCallback(async () => {

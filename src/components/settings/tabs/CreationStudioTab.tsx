@@ -99,7 +99,14 @@ const StudioPromptEditor: React.FC<{
           {(hint || edited) && (
             <div className="mt-2 flex items-start justify-between gap-2">
               {hint && <p className="text-xs text-fg-muted">{hint}</p>}
-              {edited && <ResetPromptButton label={label} onReset={() => onChange(defaultValue)} />}
+              {edited && (
+                <ResetPromptButton
+                  label={label}
+                  defaultValue={defaultValue}
+                  textareaRef={textareaRef}
+                  onReset={() => onChange(defaultValue)}
+                />
+              )}
             </div>
           )}
         </div>

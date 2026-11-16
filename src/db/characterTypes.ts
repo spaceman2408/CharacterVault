@@ -258,6 +258,8 @@ export interface StoredChatResponseStats {
   tokensPerSecond?: number;
   modelId?: string;
   providerId?: string;
+  promptTokens?: number;
+  cachedTokens?: number;
 }
 
 /** Vault-local Orion/Agent transcript row. Not part of card export. */
@@ -510,6 +512,8 @@ export interface CharacterVaultSettings {
     requireAgentReview?: boolean;
     /** When true, later Agent runs are sent the exact edits of earlier runs. Missing = off. */
     agentKeepEdits?: boolean;
+    /** When false, the Agent gets no skills at all; each skill keeps its own on/off. Missing = on. */
+    agentSkillsEnabled?: boolean;
     /** Warn when a Creator Notes preview loads remote resources. Missing = on. */
     creatorNotesRemoteWarning?: boolean;
     spellcheck?: SpellcheckSettings;
@@ -528,6 +532,8 @@ export interface CharacterVaultSettings {
   toolbar?: ToolbarConfig;
   /** Per-agent endpoint + model override. Missing = use global AIConfig */
   agentModel?: PromptModelBinding;
+  /** Instructions the Agent loads on demand with read_skill. Missing = DEFAULT_AGENT_SKILLS. */
+  agentSkills?: AgentSkill[];
   studio?: StudioSettings;
   contextSectionIds?: CharacterSection[];
   /** Undefined = default order */
@@ -627,6 +633,20 @@ export const DEFAULT_CHAT_PANEL: DefaultChatPanel = 'orion';
 export const DEFAULT_REQUIRE_AGENT_REVIEW = false;
 
 export const DEFAULT_AGENT_KEEP_EDITS = false;
+
+export const DEFAULT_AGENT_SKILLS_ENABLED = true;
+
+export interface AgentSkill {
+  id: string;
+  name: string;
+  /** The Agent sees only this line until it loads the skill, so it should say when to use it. */
+  description: string;
+  content: string;
+  /** Missing = on. An off skill stays saved but the Agent and the @ list never see it. */
+  enabled?: boolean;
+}
+
+export { DEFAULT_AGENT_SKILLS } from './defaultAgentSkills';
 
 export const DEFAULT_CREATOR_NOTES_REMOTE_WARNING = true;
 

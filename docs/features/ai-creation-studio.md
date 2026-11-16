@@ -153,7 +153,7 @@ You can save with only a name. Missing fields are empty in the editor.
 
 ## Creation Studio settings
 
-Open **Settings** from the studio header (or the vault / workspace header) and choose **Creation Studio**. Click **Save Settings** for changes to apply.
+Open **Settings** from the studio header (or the vault / workspace header) and choose **Creation Studio**. Changes save automatically.
 
 ### Generation Fields
 

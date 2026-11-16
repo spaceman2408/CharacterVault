@@ -409,6 +409,86 @@ Castle
     expect(seenJson[2]).not.toContain('Castle');
   });
 
+  it('takes the tool definitions off the message budget while sending native tools', async () => {
+    const big = 'x'.repeat(2000);
+    const { host: base } = fakeHost(async () => ({ ok: true, toolName: 'add_entry', message: `ok ${big}` }));
+    const host: AgentHost = { ...base, tools: [{ name: 'add_entry', description: 'Add', parameters: {} }] };
+    const measure = (messages: readonly AgentMessage[]) =>
+      messages.reduce((total, message) => total + (message.content?.length ?? 0), 0);
+    const sizes: number[] = [];
+    const prompted: number[] = [];
+    const inner = scriptedComplete([
+      { content: '', toolCalls: [{ id: 'c1', name: 'add_entry', arguments: '{"name":"Keep","keys":"keep","content":"Castle"}' }] },
+      { content: '', toolCalls: [{ id: 'c2', name: 'add_entry', arguments: '{"name":"Dock","keys":"dock","content":"Pier"}' }] },
+      'All set.',
+    ]);
+    const complete = vi.fn(async (messages: AgentMessage[]) => {
+      sizes.push(measure(messages));
+      return inner(messages);
+    });
+    await runLoop({
+      host,
+      complete,
+      userMessage: 'go',
+      toolMode: 'native',
+      maxInputTokens: 4000,
+      toolTokens: 1500,
+      measurePrompt: measure,
+      onPrompt: (_messages, toolTokens) => prompted.push(toolTokens),
+    });
+    expect(sizes).toHaveLength(3);
+    for (const size of sizes) expect(size).toBeLessThanOrEqual(2500);
+    expect(new Set(prompted)).toEqual(new Set([1500]));
+  });
+
+  it('does not count tool definitions in XML mode', async () => {
+    const { host: base } = fakeHost();
+    const host: AgentHost = { ...base, tools: [{ name: 'add_entry', description: 'Add', parameters: {} }] };
+    const prompted: number[] = [];
+    await runLoop({
+      host,
+      complete: scriptedComplete(['Nothing to do.']),
+      userMessage: 'go',
+      toolMode: 'xml',
+      maxInputTokens: 4000,
+      toolTokens: 1500,
+      measurePrompt: () => 10,
+      onPrompt: (_messages, toolTokens) => prompted.push(toolTokens),
+    });
+    expect(prompted).toEqual([0]);
+  });
+
+  it('holds a pruned prefix across turns instead of moving the cut every turn', async () => {
+    const { host } = fakeHost(async () => ({
+      ok: true,
+      toolName: 'add_entry',
+      message: `ok ${'x'.repeat(400)}`,
+    }));
+    const measure = (messages: readonly AgentMessage[]) =>
+      messages.reduce((total, message) => total + (message.content?.length ?? 0), 0);
+    const requests: string[][] = [];
+    const replies = Array.from(
+      { length: 11 },
+      (_, index) => `<<<add_entry\nname: Entry${index}\nkeys: k${index}\n---\nBody\n>>>`,
+    );
+    const inner = scriptedComplete([...replies, 'All set.']);
+    const complete = vi.fn(async (messages: AgentMessage[]) => {
+      requests.push(messages.map((message) => JSON.stringify(message)));
+      return inner(messages);
+    });
+    await runLoop({ host, complete, userMessage: 'go', maxInputTokens: 3000, measurePrompt: measure });
+
+    expect(requests).toHaveLength(12);
+    let moved = 0;
+    for (let index = 1; index < requests.length; index += 1) {
+      const previous = requests[index - 1];
+      const keptPrefix = previous.every((message, at) => requests[index][at] === message);
+      if (!keptPrefix) moved += 1;
+    }
+    expect(moved).toBeGreaterThanOrEqual(1);
+    expect(moved).toBeLessThanOrEqual(3);
+  });
+
   it('does not parse XML from the body in native mode', async () => {
     const { host, calls } = fakeHost();
     const result = await runLoop({

@@ -6,7 +6,7 @@
 |------|------|
 | `registry.ts` | Tab list. New tab = file + one entry here. |
 | `types.ts` | `SettingsDraft`, tab contract, helpers. |
-| `hooks/useSettingsDraft.ts` | Load, validate, save. All persist goes through here. |
+| `hooks/useSettingsDraft.ts` | Load, validate, autosave. All persist goes through here. |
 | `hooks/useModelCatalog.ts` | Model fetch/cache (AI tab only). |
 | `hooks/useNanoGPTSignIn.ts` | NanoGPT OAuth (AI tab only). |
 | `tabs/*.tsx` | One file per tab. UI only. |
@@ -35,7 +35,8 @@ Consumers (unchanged API): `CharacterWorkspace`, `AICreationStudio` — `isOpen`
 
 ## Rules
 
-- Draft state only until Save. Do not write IndexedDB from tabs.
+- Tabs only change the draft; `useSettingsDraft` autosaves it (debounced; textareas save on blur, and closing the panel flushes). Do not write IndexedDB from tabs.
+- A draft that fails validation is not saved; the footer shows why. Bulk replacements (e.g. backup import) confirm first, since there is no Save step to back out of.
 - Secret fields (API keys) use `SecretInput` — never `type="password"`.
 - AI-only side effects (models, OAuth, clear) live in helpers / AI hooks — not in other tabs.
 - Defaults: `DEFAULT_SETTINGS` / `DEFAULT_*` in `characterTypes` — no duplicate hardcodes.

@@ -5,6 +5,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import type {
+  AgentSkill,
   AIConfig,
   AIModelInfo,
   CustomBaseUrlPreset,
@@ -22,7 +23,7 @@ import type {
 import type { ModelProvider } from '../../services/providers';
 import type { StudioFavoriteRef } from '../../services/SettingsBackupService';
 
-export type SettingsTabId = 'ai' | 'sampler' | 'prompts' | 'studio' | 'workspace' | 'sections' | 'backup';
+export type SettingsTabId = 'ai' | 'sampler' | 'prompts' | 'studio' | 'workspace' | 'skills' | 'sections' | 'backup';
 
 export interface ToastNotification {
   id: string;
@@ -30,7 +31,7 @@ export interface ToastNotification {
   message: string;
 }
 
-/** Draft state edited in the panel; persisted on Save. */
+/** Draft state edited in the panel; autosaved by `useSettingsDraft`. */
 export interface SettingsDraft {
   ai: AIConfig;
   sampler: SamplerSettings;
@@ -44,6 +45,8 @@ export interface SettingsDraft {
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
   agentKeepEdits: boolean;
+  agentSkillsEnabled: boolean;
+  agentSkills: AgentSkill[];
   creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
@@ -108,7 +111,6 @@ export interface SettingsTabProps {
   setDraft: React.Dispatch<React.SetStateAction<SettingsDraft>>;
   helpers?: SettingsPanelHelpers;
   addToast?: AddToast;
-  lastSavedAt?: number | null;
 }
 
 export interface SettingsTabModule {

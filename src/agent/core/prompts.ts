@@ -33,8 +33,6 @@ export function formatAgentToolGuide(
   if (mode === 'native') {
     return `${NATIVE_TOOL_INTRO}
 
-${toolList}
-
 You may emit up to ${DEFAULT_MAX_ACTIONS_PER_TURN} actions per reply, then wait for tool results. Finish each call with complete JSON arguments before starting the next.
 
 ${HISTORY_NOTES_GUIDE}

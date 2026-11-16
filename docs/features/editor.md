@@ -39,7 +39,7 @@ Custom works without a selection, but then it writes new text at the cursor inst
 
 ### Customizing the Toolbar
 
-Open **Settings** in the workspace header, then the **Prompts** tab. The **Toolbar Buttons** card at the top controls which buttons appear and in what order. Remember to **Save Settings** when done.
+Open **Settings** in the workspace header, then the **Prompts** tab. The **Toolbar Buttons** card at the top controls which buttons appear and in what order. Changes save automatically.
 
 - **Reorder** — Use the ↑ ↓ arrows on a button to move it left or right.
 - **Remove** — Use the trash can to take a built-in button off the toolbar. Removed built-ins wait under **Add buttons** and can be put back at any time.
@@ -284,8 +284,7 @@ All built-in toolbar operation prompts are customizable, and each one can option
 
 1. Open **Settings** in the workspace header.
 2. Go to the **Prompts** tab.
-3. Expand an operation, edit the template, and (optionally) set **Model for this prompt**.
-4. Click **Save Settings**.
+3. Expand an operation, edit the template, and (optionally) set **Model for this prompt**. The template saves when you click out of the box.
 
 ### Required Placeholders
 
@@ -344,9 +343,8 @@ The no-selection prompt is currently hardcoded and cannot be edited in the Promp
 By default every toolbar op uses the model from **Settings → AI Config**. You can override that per prompt:
 
 1. Expand a prompt (e.g. **Fix**).
-2. Under **Model for this prompt**, change **Endpoint** from **Default (AI Config)** to a provider preset (Nano-GPT, OpenRouter, DeepSeek, and the rest), **LM Studio / localhost**, a saved custom endpoint (listed by its preset name), or a custom URL that already has a key on AI Config.
-3. Choose a model from the sheet, **Fetch models** for that endpoint, or type a model ID.
-4. Save settings.
+2. Under **Model for this prompt**, change **Endpoint** from **Default (AI Config)** to a provider preset (Nano-GPT, OpenRouter, DeepSeek, and the rest), **LM Studio / localhost**, or a custom URL that already has a key on AI Config. Or pick one of your [saved presets](/configuration/ai-setup#saved-presets) under **Saved**, which sets the model too.
+3. Choose a model from the sheet, **Fetch models** for that endpoint, or type a model ID. The mapping saves automatically.
 
 Collapsed headers show `→ model-id` when a mapping is active.
 

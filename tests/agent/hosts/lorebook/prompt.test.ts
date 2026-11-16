@@ -28,6 +28,8 @@ describe('buildLorebookAgentSystemPrompt', () => {
     expect(prompt).not.toContain('<tool_call>');
     expect(prompt).not.toContain('</tool_call>');
     expect(prompt).not.toContain('Prefer those over XML');
+    expect(prompt).not.toContain(LOREBOOK_TOOL_LIST);
+    expect(prompt).not.toContain('- list_entries —');
     for (const name of TOOL_NAMES) {
       expect(prompt).toContain(name);
     }
@@ -43,6 +45,7 @@ describe('buildLorebookAgentSystemPrompt', () => {
     expect(prompt).toContain('<tool_call>');
     expect(prompt).toContain('</tool_call>');
     expect(prompt).not.toContain('provided functions');
+    expect(prompt).toContain(LOREBOOK_TOOL_LIST);
     for (const name of TOOL_NAMES) {
       expect(prompt).toContain(name);
     }

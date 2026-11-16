@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
+import { insertTextUndoable } from './insertTextUndoable';
 
 export const EditedBadge: React.FC = () => (
   <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-accent-soft text-accent text-[11px] font-medium normal-case">
@@ -8,7 +9,13 @@ export const EditedBadge: React.FC = () => (
   </span>
 );
 
-export const ResetPromptButton: React.FC<{ label: string; onReset: () => void }> = ({ label, onReset }) => {
+export const ResetPromptButton: React.FC<{
+  label: string;
+  defaultValue: string;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  /** Fallback when the browser can't route the reset through the textarea's undo stack. */
+  onReset: () => void;
+}> = ({ label, defaultValue, textareaRef, onReset }) => {
   const [confirming, setConfirming] = useState(false);
 
   return (
@@ -28,6 +35,8 @@ export const ResetPromptButton: React.FC<{ label: string; onReset: () => void }>
         confirmLabel="Reset"
         onConfirm={() => {
           setConfirming(false);
+          const el = textareaRef.current;
+          if (el && insertTextUndoable(el, defaultValue)) return;
           onReset();
         }}
         onCancel={() => setConfirming(false)}

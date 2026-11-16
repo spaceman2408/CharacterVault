@@ -62,8 +62,8 @@ describe('useAgentSession lookup turns', () => {
     ]);
   });
 
-  it('drops a lookup turn whose only content is hidden thinking', async () => {
+  it('keeps a lookup turn whose thinking is hidden, so its lookups still show', async () => {
     const history = await runLookupWithThinking(false);
-    expect(history.map((message) => message.content)).toEqual(['Check Harbor', 'Done.']);
+    expect(history.map((message) => message.content)).toEqual(['Check Harbor', '', 'Done.']);
   });
 });

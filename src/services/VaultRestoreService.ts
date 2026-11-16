@@ -9,6 +9,7 @@ import {
   type SettingsBackupFile,
 } from './SettingsBackupService';
 import { normalizeMacroHighlight, normalizeRoleplayHighlight } from '../db/characterTypes';
+import { isDefaultAgentSkills } from './agentSkills';
 import { notifyFavoritesChanged, setFavoriteTags } from '../pages/ai-creation-studio/tags/tagData';
 
 export interface RestorePreview {
@@ -251,6 +252,7 @@ export class VaultRestoreService {
         defaultChatPanel: data.ui.defaultChatPanel ?? 'orion',
         requireAgentReview: data.ui.requireAgentReview ?? false,
         agentKeepEdits: data.ui.agentKeepEdits ?? false,
+        agentSkillsEnabled: data.ui.agentSkillsEnabled ?? true,
         creatorNotesRemoteWarning: data.ui.creatorNotesRemoteWarning ?? true,
         roleplayHighlight: normalizeRoleplayHighlight(data.ui.roleplayHighlight),
         macroHighlight: normalizeMacroHighlight(data.ui.macroHighlight),
@@ -260,6 +262,9 @@ export class VaultRestoreService {
       hiddenSections: data.hiddenSections,
       contextSectionIds: data.contextSectionIds,
       studio: data.studio,
+      ...(data.agentSkills
+        ? { agentSkills: isDefaultAgentSkills(data.agentSkills) ? undefined : data.agentSkills }
+        : {}),
     });
 
     const storedSpell = await characterSettingsService.getSpellcheckSettings();

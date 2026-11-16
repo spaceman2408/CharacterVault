@@ -35,6 +35,7 @@ import {
   recordSupportedEfforts,
   repairChatRequest,
   sanitizeSamplerParams,
+  shouldOmitNonStandardSamplers,
   stripAllNonStandardParams,
   type ChatRequestLike,
 } from './chatRequestRepair';
@@ -341,6 +342,41 @@ export interface ChatCompletionOptions {
   tools?: ChatToolDefinition[];
   /** Sets request max_tokens without changing input-budget math. */
   maxTokens?: number;
+  /**
+   * For multi-request runs that resend a growing prompt: mark it cacheable on hosts that need a
+   * marker (Claude), and ask for token usage on streams where the host only sends it on request.
+   */
+  cachePrompt?: boolean;
+}
+
+/** Input tokens the host billed for one request, and how many of them it read from its prompt cache. */
+export interface PromptUsage {
+  promptTokens: number;
+  /** Unset when the host does not report cache reads. */
+  cachedTokens?: number;
+}
+
+function tokenCount(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+export function parsePromptUsage(raw: unknown): PromptUsage | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const usage = raw as Record<string, unknown>;
+  const promptTokens = tokenCount(usage.prompt_tokens);
+  if (promptTokens === undefined) return undefined;
+  const details = usage.prompt_tokens_details as Record<string, unknown> | null | undefined;
+  const cachedTokens =
+    tokenCount(usage.cache_read_input_tokens) ??
+    tokenCount(details?.cached_tokens) ??
+    tokenCount(usage.prompt_cache_hit_tokens);
+  if (cachedTokens === undefined) return { promptTokens };
+  // Anthropic-style counts leave cache reads and writes out of prompt_tokens.
+  if (cachedTokens > promptTokens) {
+    const written = tokenCount(usage.cache_creation_input_tokens) ?? 0;
+    return { promptTokens: promptTokens + cachedTokens + written, cachedTokens };
+  }
+  return { promptTokens, cachedTokens };
 }
 
 /**
@@ -403,11 +439,7 @@ interface ChatCompletionResponse {
     message: ChatMessage;
     finish_reason: string;
   }>;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
+  usage?: unknown;
 }
 
 /**
@@ -420,6 +452,7 @@ interface AIResponse {
   toolCalls?: NativeToolCall[];
   /** Upstream host the gateway reports as having served the request (OpenRouter's `provider`). */
   provider?: string;
+  usage?: PromptUsage;
 }
 
 /**
@@ -457,6 +490,7 @@ interface ChatCompletionChunk {
     };
   }>;
   error?: { message?: string; code?: number | string } | string;
+  usage?: unknown;
 }
 
 /** After a 200, gateways like OpenRouter report failures in-band; the partial reply is not a success. */
@@ -869,14 +903,22 @@ Provide only the generated text without any additional commentary.`;
 
     const sendsTools = !!options?.tools?.length && !cache.rejectedParams.has('tools');
     const providerAdapter = resolveProvider(baseUrl);
-    if (this.config.enableCacheProviderRouting && providerAdapter instanceof NanoGPTProvider) {
-      request.caching = true;
+    // Distills such as "Qwen3.5-27B-Claude-4.6-Opus" are not Claude, so the name must start a path segment.
+    const marksClaudeCache = !!options?.cachePrompt && /(?:^|\/)~?claude/i.test(this.config.modelId);
+    if (providerAdapter instanceof NanoGPTProvider) {
+      // NanoGPT caches Claude prompts with no marker; its explicit controls would only move billing to pay-as-you-go.
+      if (this.config.enableCacheProviderRouting) request.caching = true;
+      if (stream && options?.cachePrompt) request.stream_options = { include_usage: true };
     }
     if (providerAdapter instanceof OpenRouterProvider) {
       const exactoModel = sendsTools ? openRouterExactoModelId(this.config) : undefined;
       if (exactoModel) request.model = exactoModel;
       const providerPrefs = buildOpenRouterProviderPrefs(this.config, { exacto: !!exactoModel });
       if (providerPrefs) request.provider = providerPrefs;
+      if (marksClaudeCache) request.cache_control = { type: 'ephemeral' };
+    }
+    if (stream && options?.cachePrompt && shouldOmitNonStandardSamplers(baseUrl)) {
+      request.stream_options = { include_usage: true };
     }
 
     if (sendsTools && options?.tools) {
@@ -1212,6 +1254,7 @@ Provide only the generated text without any additional commentary.`;
       finishReason: choice.finish_reason ?? null,
       toolCalls: normalizeMessageToolCalls(message.tool_calls),
       provider: typeof data.provider === 'string' ? data.provider : undefined,
+      usage: parsePromptUsage(data.usage),
     };
   }
 
@@ -1252,6 +1295,7 @@ Provide only the generated text without any additional commentary.`;
     const toolCallAcc: AccumulatingToolCall[] = [];
     let finishReason: string | null = null;
     let provider: string | undefined;
+    let usage: PromptUsage | undefined;
     let doneSentinel = false;
     let pendingLine = '';
     let bytesRead = 0;
@@ -1310,6 +1354,7 @@ Provide only the generated text without any additional commentary.`;
             try {
               const parsedChunk = JSON.parse(data) as ChatCompletionChunk;
               streamError = streamChunkError(parsedChunk);
+              usage = parsePromptUsage(parsedChunk.usage) ?? usage;
               const parsed = parser.parseChunk(parsedChunk, this.config.modelId);
               emitDeltas(parsed.contentDelta, parsed.reasoningDelta);
               const choice = parsedChunk.choices?.[0];
@@ -1342,6 +1387,7 @@ Provide only the generated text without any additional commentary.`;
         finishReason,
         toolCalls: finalizeToolCalls(toolCallAcc),
         provider,
+        usage,
       };
     } catch (error) {
       if (this.isAborted() || (error instanceof Error && error.name === 'AbortError')) {

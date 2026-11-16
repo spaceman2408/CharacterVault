@@ -17,6 +17,10 @@ export interface ResponseStats {
   tokensPerSecond?: number;
   modelId?: string;
   providerId?: string;
+  /** Input tokens the host reported for the request(s) behind this message. */
+  promptTokens?: number;
+  /** How many of those the host read from its prompt cache. Unset when the host does not say. */
+  cachedTokens?: number;
 }
 
 export interface ChatMessage {

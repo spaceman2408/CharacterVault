@@ -24,7 +24,7 @@ When a run finishes, changes land in this card or book — unless [review](#revi
 
 You can switch back to Orion at any time with the chat bubble icon next to it. The two chats do not share a thread. Each one is saved on that character or lorebook and comes back when you reopen Ask AI.
 
-To open Agent by default, set **Settings → Character Workspace → Chat panel → Default chat** to **Agent**, then **Save Settings**. That applies the next time you open a character or lorebook. The header switch still works for the current session.
+To open Agent by default, set **Settings → Character Workspace → Chat panel → Default chat** to **Agent**, and close Settings. That applies the next time you open a character or lorebook. The header switch still works for the current session.
 
 ## Quick start
 
@@ -107,6 +107,38 @@ The Agent prefers filling empty fields and staying consistent with those notes. 
 
 Details: [AI Context → Custom Context](/features/ai-context#custom-context).
 
+## Skills {#skills}
+
+A skill is a set of instructions for one kind of task, such as writing greetings or tightening prose. Each skill has a name, a **when to use** line, and the instructions.
+
+The Agent sees only each skill's name and when-to-use line. When your request matches one, it loads that skill's instructions and follows them, and its reply shows **Used skill “Name”**. To pick a skill yourself, type `@` and choose it, for example `@Cut AI Slop`.
+
+Three skills come with the app:
+
+| Skill | When to use |
+| :--- | :--- |
+| **Greeting Writer** | Writing or revising the first message or alternate greetings |
+| **Lorebook Entries** | Adding lorebook entries or revising their keys or bodies |
+| **Cut AI Slop** | Cleaning up, de-slopping, or tightening prose in the card or book |
+
+Skills are settings, not part of a card. Both Agents share them, they stay in this browser, and they are included in a [settings backup](/configuration/ai-setup#backup-tab).
+
+### Managing skills
+
+Open **Settings → Agent Skills**.
+
+- **Use skills** at the top turns all skills off or on. Each skill keeps its own switch and text while they are off.
+- The switch on a row turns that one skill off without deleting it.
+- Click a row to edit its name, when-to-use line, and instructions. The token count is what the instructions cost when the Agent loads them.
+- **New** adds a skill at the top. A new skill you close without typing anything is dropped.
+- An edited default skill gets **Reset to default**. If you delete a default, **Add back** restores it.
+
+### Writing a skill
+
+- The **when to use** line decides when the Agent loads the skill, so make it specific: *Use when writing or revising alternate greetings* works better than *Greetings*.
+- Write the instructions as steps and rules, with a short example if it helps. Keep them to one task.
+- You can tell the Agent which tool to use, for example *read_field description before writing*. **Agent tools glossary**, under the skill list, lists every tool the Agent can call with a one-line summary. Click a name to copy it. Tools marked **Card only** or **Lorebook only** exist in just one of the two Agents.
+
 ## How a run works
 
 1. You send a request.
@@ -128,7 +160,7 @@ The Agent remembers earlier requests in the same chat. Each past run carries a s
 
 ### Remember earlier edits {#remember-earlier-edits}
 
-To let the Agent see exactly what it wrote in earlier runs, turn on **Settings → Character Workspace → Agent edits → Remember earlier edits in the chat** (off by default) and save. Each earlier run's edits then go back to the Agent as the calls it made, so *reword the second sentence you just wrote* works without a search.
+To let the Agent see exactly what it wrote in earlier runs, turn on **Settings → Character Workspace → Agent edits → Remember earlier edits in the chat** (off by default). Each earlier run's edits then go back to the Agent as the calls it made, so *reword the second sentence you just wrote* works without a search.
 
 - The character and lorebook Agent share this setting. It also covers runs from before you turned it on.
 - Interrupted runs, runs saved before 1.8.5, and runs larger than a quarter of the input budget still get the short note.
@@ -137,8 +169,10 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings �
 
 ### What you see in chat
 
-- **Tool lines:** color-coded list / read / write results, including lorebook entry ids. Click a successful write to open that field, greeting, or lorebook entry. A lorebook write that changed nothing reads **No change to …**.
+- **Tool lines:** each reply lists what the Agent did. Writes are green, failures red, and what it looked at is grey, such as **Read Description**, **Read “Harbor” (#4)**, **Searched “harbor” (3 matches)**, or **Checked the card**. Click a write or a read to open that field, greeting, or lorebook entry. A lorebook write that changed nothing reads **No change to …**.
+- **Grouped steps:** back-to-back steps where the Agent only ran tools, with nothing to say and no shown thinking, appear as one block with one time. A row that repeats shows once with a count, such as **Read Examples ×3**.
 - **Write recap:** speech from a turn that also called tools stays on the message. If there was no speech, **Applied N writes** sits above the tool list. Writes that changed nothing are not counted.
+- **Used skill:** a reply that loaded a [skill](#skills) lists **Used skill “Name”**, and the spinner reads *Reading skill “Name”* while it loads.
 - **Status line:** while a tool runs, the spinner names what it is working on, such as *Updating Description*, *Reading entry “Harbor”*, or *Searching “harbor”*. An entry added earlier in the same run shows by id (*entry #4*).
 - **Turn limit:** a run that stops at the [loop-turn cap](#limits-per-run) says so on its last message, with a **Continue** button that sends “Continue where you left off.”
 - **Starter suggestions:** an empty chat offers a few first requests based on what the card or book is missing, such as *Write a description*, *Write 2 alternate greetings*, or *Build a lorebook from my custom context*. It never suggests Appearance, Personality, Scenario, System prompt, or Post-history. A finished card gets the usual *Audit this card* style chips.
@@ -147,7 +181,8 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings �
 - **Thinking:** streams in an expanded **Thinking** fold while it is live; after the reply it collapses
 - **Live token count:** catalogs, custom context, and the current prompt (including tool results)
 - **TTFT / t/s:** on the assistant message info tooltip when the reply finishes, same as Orion
-- Lookup-only reads do not add extra assistant turns; those bodies count in the live meter, then drop out of the transcript
+- **Cached tokens:** the same tooltip shows **Cached: N% of M input tokens** when the host reports prompt cache hits, see [Prompt caching](#prompt-caching)
+- Reads keep only their one-line summary in the chat; the full field or entry text counts in the live meter, then drops out of the transcript
 
 The thread is stored in the browser with the vault. Long threads keep a small window on screen; **Load earlier messages** pages older turns back in. Oldest rows drop past **500** saved messages per panel.
 
@@ -159,7 +194,7 @@ The thread is stored in the browser with the vault. Long threads keep a small wi
 - While a review is pending, the composer is disabled. Apply or discard the proposal first.
 - **Edit** (the pencil on your last message) puts its text back in the box. Nothing is removed until you send; then that message and the replies after it are replaced. The **×** cancels and keeps the chat as it was.
 - Delete a message to trim from that point; you cannot edit or delete while a run is in progress.
-- **@-mentions:** type `@` to pick a field, alternate greeting, or lorebook entry. It inserts plain text such as `@Description`, `@Greeting 2`, or `@“Harbor” (#4)`, and the Agent reads it as that item. **↑** / **↓** move, **Enter** or **Tab** picks, **Esc** closes the list.
+- **@-mentions:** type `@` to pick a field, alternate greeting, lorebook entry, or [skill](#skills). It inserts plain text such as `@Description`, `@Greeting 2`, `@“Harbor” (#4)`, or `@Cut AI Slop`, highlighted in the message box, and the Agent reads it as that item. **↑** / **↓** move, **Enter** or **Tab** picks, **Esc** closes the list.
 
 If you Stop while it is still thinking, Send is available again so you can retry or type a new ask.
 
@@ -175,7 +210,21 @@ The Agent chat shows estimated tokens for catalogs, custom context, and the live
 
 Idle, the meter is catalogs + custom context + what is still in the chat. Raise **Settings → Sampler → Context Length** if large books run close to the limit.
 
+The estimate counts the tool definitions the Agent sends. The Agent runs with a context length of at least 64,000 tokens even when the sampler is set lower, so a small window no longer leaves the Agent no room for its own reads. See [Prompt caching](#prompt-caching).
+
 The sampler **Max Tokens** slider does not cap Agent output the same way. Agent completions use a larger output budget so tool calls are less likely to cut off.
+
+## Prompt caching {#prompt-caching}
+
+An Agent run resends the same prompt on every turn, so the provider can read most of it back from its prompt cache instead of billing it twice. There is no setting for this: it is on for every Agent run.
+
+- **Claude on OpenRouter**: every Agent request for a Claude model is marked cacheable. NanoGPT caches Claude on its own, so no marker is sent there.
+- **One prefix per run**: when a run outgrows its input budget, the oldest exchanges are dropped down to 75% of it and that cut is kept, so the next turn appends to the same prefix instead of moving it every turn.
+- **Measured hit rate**: the info button on an Agent reply shows **Cached: 84% of 12,300 input tokens** when the host reports its counts. A host that does not report them shows nothing.
+- **Tools count**: the tool definitions are part of the token estimate, so the [context meter](#context-meter) and the trimming behind it match what is actually sent.
+- **64K floor**: the Agent runs with a context length of at least 64,000 tokens, even when **Settings → Sampler → Context Length** is lower. Below that, the system prompt and the tools alone eat the budget and the Agent forgets what it already read.
+
+On OpenRouter, **Always use Exacto for the Agent** can switch hosts partway through a run, which loses cache hits. Pin a host or set **Host priority** to **Cheapest** when cache hits matter more. See [AI Setup → Exacto and the Agent](/configuration/ai-setup#exacto-and-the-agent).
 
 ## Model for Agent
 
@@ -183,8 +232,9 @@ On **Settings → Prompts**, the **Agent** card at the top uses the same picker 
 
 - **Default (AI Config)** to keep the global model
 - Or pick an endpoint you already configured and a model id
+- Or pick a [saved preset](/configuration/ai-setup#saved-presets) under **Saved**, which sets both
 
-Keys stay on **AI Config**. Save Settings before the mapping applies. Character Agent and lorebook Agent share this one mapping.
+Keys stay on **AI Config**. The mapping applies as soon as it saves. Character Agent and lorebook Agent share this one mapping.
 
 The Agent is **not** Orion with extra buttons. It has to emit valid tool calls, often several in a row. A model that chats well can still fail here.
 
@@ -218,8 +268,7 @@ Duplicate lorebook **names** in one run revise the new entry instead of adding a
 By default the Agent applies writes when the run finishes. To inspect them first:
 
 1. Open **Settings → Character Workspace**.
-2. Enable **Review agent edits before applying**.
-3. Save Settings.
+2. Enable **Review agent edits before applying**. It saves automatically.
 
 A shield icon in the chat header shows while this is on. Character Agent and lorebook Agent share the same preference.
 
@@ -284,7 +333,7 @@ Do **not** use for Agent:
 - Older lines: **Llama 3.x** chat, **Qwen2.5**, **Qwen3** 8B/14B as your daily Agent, **DeepSeek V3 / V3.1 / V3.2**, **GLM-4.x**, **Gemma 3**
 - Cheap **mini / nano / flash** SKUs sold for one-shot chat, unless the provider lists tools **and** a real Agent pass works
 
-Orion can stay on a weaker model. Map **Settings → Prompts → Agent** to one of the families above, save, and run again.
+Orion can stay on a weaker model. Map **Settings → Prompts → Agent** to one of the families above and run again.
 
 ### Local models {#local-models}
 

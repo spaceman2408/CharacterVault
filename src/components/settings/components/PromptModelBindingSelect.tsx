@@ -15,9 +15,15 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import type { AIConfig, AIModelInfo, PromptModelBinding } from '../../../db/characterTypes';
+import type {
+  AIConfig,
+  AIModelInfo,
+  CustomBaseUrlPreset,
+  PromptModelBinding,
+} from '../../../db/characterTypes';
 import {
   AI_BASE_URL_PRESETS,
+  SAVED_PRESET_PREFIX,
   builtinPresetForUrl,
   defaultPresetLabel,
   findSavedPreset,
@@ -50,6 +56,15 @@ function endpointLabel(baseUrl: string, ai: AIConfig): string {
   return findSavedPreset(saved, baseUrl)?.label ?? defaultPresetLabel(baseUrl);
 }
 
+function savedPresetMatches(
+  preset: CustomBaseUrlPreset | undefined,
+  binding: PromptModelBinding | undefined
+): boolean {
+  if (!preset || !binding) return false;
+  if (normalizeBaseUrl(preset.baseUrl) !== normalizeBaseUrl(binding.baseUrl)) return false;
+  return !preset.modelId || preset.modelId === binding.modelId;
+}
+
 function isLocalEndpoint(baseUrl: string): boolean {
   const normalized = normalizeBaseUrl(baseUrl).toLowerCase();
   return (
@@ -76,6 +91,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
   bare = false,
 }) => {
   const [isModelOpen, setIsModelOpen] = useState(false);
+  const [pickedOption, setPickedOption] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const titleId = useId();
@@ -102,8 +118,9 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
         .map((preset) => normalizeBaseUrl(preset.baseUrl))
         .filter((url) => !builtinPresetForUrl(url))
     );
+    // Endpoints by host; the presets themselves are listed by name under Saved.
     for (const url of savedUrls) {
-      options.push({ value: url, label: endpointLabel(url, globalAi) });
+      options.push({ value: url, label: defaultPresetLabel(url) });
     }
 
     const extraUrls = new Set<string>();
@@ -139,6 +156,32 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
     return options;
   }, [globalAi, selectedEndpoint]);
 
+  const savedPresets = useMemo(
+    () => globalAi.customBaseUrlPresets ?? [],
+    [globalAi.customBaseUrlPresets]
+  );
+
+  const savedPresetFor = (value: string): CustomBaseUrlPreset | undefined =>
+    value.startsWith(SAVED_PRESET_PREFIX)
+      ? savedPresets[Number(value.slice(SAVED_PRESET_PREFIX.length))]
+      : undefined;
+
+  const matchingSaved =
+    binding && selectedEndpoint !== DEFAULT_ENDPOINT
+      ? findSavedPreset(savedPresets, selectedEndpoint, binding.modelId)
+      : undefined;
+  const derivedOption = matchingSaved
+    ? `${SAVED_PRESET_PREFIX}${savedPresets.indexOf(matchingSaved)}`
+    : selectedEndpoint;
+  // Keep showing what the user picked while it still describes the binding, so picking a
+  // provider whose remembered model is also a saved preset doesn't jump to that preset.
+  const pickedStillMatches =
+    pickedOption !== null &&
+    (pickedOption.startsWith(SAVED_PRESET_PREFIX)
+      ? savedPresetMatches(savedPresetFor(pickedOption), binding)
+      : pickedOption === selectedEndpoint);
+  const selectValue = pickedStillMatches ? pickedOption : derivedOption;
+
   const models = useMemo(() => {
     if (selectedEndpoint === DEFAULT_ENDPOINT) return [];
     return modelsByBaseUrl[selectedEndpoint] ?? [];
@@ -170,9 +213,19 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
   useFocusOnOpen(isModelOpen, searchInputRef);
 
   const handleEndpointChange = (value: string) => {
+    setPickedOption(value);
     if (value === DEFAULT_ENDPOINT) {
       onChange(undefined);
       closeModelPicker();
+      return;
+    }
+    const preset = savedPresetFor(value);
+    if (preset) {
+      const baseUrl = normalizeBaseUrl(preset.baseUrl);
+      onChange({
+        baseUrl,
+        modelId: preset.modelId ?? globalAi.modelIdsByBaseUrl?.[baseUrl] ?? '',
+      });
       return;
     }
     const baseUrl = normalizeBaseUrl(value);
@@ -345,7 +398,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
           Endpoint
         </label>
         <select
-          value={selectedEndpoint}
+          value={selectValue}
           onChange={(e) => handleEndpointChange(e.target.value)}
           className={fieldClass}
         >
@@ -354,6 +407,19 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
               {opt.label}
             </option>
           ))}
+          {savedPresets.length > 0 && (
+            <optgroup label="Saved">
+              {savedPresets.map((preset, index) => (
+                <option
+                  key={`${preset.baseUrl}
+${preset.modelId ?? ''}`}
+                  value={`${SAVED_PRESET_PREFIX}${index}`}
+                >
+                  {preset.label}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
         {selectedEndpoint === DEFAULT_ENDPOINT && (
           <p className="text-xs text-fg-muted break-words">

@@ -15,14 +15,17 @@ import { characterSettingsService } from '../../../src/services/CharacterSetting
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
+  document.body.innerHTML = '';
 });
 
-function setup() {
+function setup(panel: HTMLElement | null = null) {
   const addToast = vi.fn();
   const reloadSettings = vi.fn(async () => {});
-  const hook = renderHook(() => useSettingsDraft({ isOpen: true, reloadSettings, addToast }));
-  return { hook, addToast };
+  const panelRef = { current: panel };
+  const hook = renderHook(() => useSettingsDraft({ isOpen: true, reloadSettings, addToast, panelRef }));
+  return { hook, addToast, reloadSettings };
 }
 
 describe('useSettingsDraft', () => {
@@ -40,7 +43,7 @@ describe('useSettingsDraft', () => {
     expect(addToast).toHaveBeenCalledWith('error', 'Failed to load settings');
 
     await act(async () => {
-      await hook.result.current.save();
+      await hook.result.current.flush();
     });
     expect(saveAll).not.toHaveBeenCalled();
 
@@ -102,8 +105,9 @@ describe('useSettingsDraft', () => {
     await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
     expect(hook.result.current.draft.ai.modelIdsByBaseUrl).toEqual({ [OPENROUTER]: 'deepseek' });
 
+    act(() => hook.result.current.setDraft((prev) => ({ ...prev, showLuckyVortex: !prev.showLuckyVortex })));
     await act(async () => {
-      await hook.result.current.save();
+      await hook.result.current.flush();
     });
     expect(saveAll.mock.calls[0]?.[0].modelIdsByBaseUrl).toEqual({ [OPENROUTER]: 'deepseek' });
   });
@@ -161,7 +165,7 @@ describe('useSettingsDraft', () => {
       act(() => hook.result.current.setDraft((prev) => ({ ...prev, agentKeepEdits: true })));
       expect(hook.result.current.isDirty).toBe(true);
       await act(async () => {
-        await hook.result.current.save();
+        await hook.result.current.flush();
       });
       expect(characterSettingsService.saveSettings).toHaveBeenCalledWith(
         expect.objectContaining({ ui: expect.objectContaining({ agentKeepEdits: true }) }),
@@ -187,9 +191,104 @@ describe('useSettingsDraft', () => {
         hook.result.current.setDraft((prev) => ({ ...prev, requireAgentReview: !prev.requireAgentReview }))
       );
       await act(async () => {
-        await hook.result.current.save();
+        await hook.result.current.flush();
       });
       expect(hook.result.current.isDirty).toBe(false);
+    });
+  });
+
+  describe('autosave', () => {
+    function mockStorage() {
+      vi.spyOn(characterSettingsService, 'getSettings').mockResolvedValue({
+        ...DEFAULT_CHARACTER_VAULT_SETTINGS,
+        id: 'app-settings',
+      });
+      vi.spyOn(characterSettingsService, 'saveRoleplayHighlight').mockResolvedValue();
+      vi.spyOn(characterSettingsService, 'saveMacroHighlight').mockResolvedValue();
+      vi.spyOn(characterSettingsService, 'saveSettings').mockResolvedValue();
+      vi.spyOn(characterSettingsService, 'saveSpellcheckSettings').mockResolvedValue();
+      return vi.spyOn(characterSettingsService, 'saveAllAISettings').mockResolvedValue();
+    }
+
+    it('saves an edit on its own after a short delay', async () => {
+      const saveAll = mockStorage();
+      const { hook, reloadSettings } = setup();
+      await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+      act(() => hook.result.current.setDraft((prev) => ({ ...prev, showLuckyVortex: !prev.showLuckyVortex })));
+      expect(saveAll).not.toHaveBeenCalled();
+      await waitFor(() => expect(hook.result.current.isDirty).toBe(false), { timeout: 2000 });
+      expect(saveAll).toHaveBeenCalledTimes(1);
+      expect(reloadSettings).toHaveBeenCalledTimes(1);
+      expect(hook.result.current.lastSavedAt).not.toBeNull();
+    });
+
+    it('holds an invalid draft back and says why, without a toast', async () => {
+      const saveAll = mockStorage();
+      const { hook, addToast } = setup();
+      await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+      act(() =>
+        hook.result.current.setDraft((prev) => ({ ...prev, prompts: { ...prev.prompts, expand: 'no variable' } }))
+      );
+      await act(async () => {
+        await hook.result.current.flush();
+      });
+      expect(saveAll).not.toHaveBeenCalled();
+      expect(hook.result.current.saveError).toContain('Expand prompt must contain ${text}');
+      expect(addToast).not.toHaveBeenCalled();
+
+      act(() =>
+        hook.result.current.setDraft((prev) => ({ ...prev, prompts: { ...prev.prompts, expand: 'still typing' } }))
+      );
+      expect(hook.result.current.saveError).toBeNull();
+
+      act(() =>
+        hook.result.current.setDraft((prev) => ({ ...prev, prompts: { ...prev.prompts, expand: 'fixed ${text}' } }))
+      );
+      await act(async () => {
+        await hook.result.current.flush();
+      });
+      expect(saveAll).toHaveBeenCalledTimes(1);
+      expect(hook.result.current.saveError).toBeNull();
+    });
+
+    it('never overlaps saves and skips ones that have nothing new', async () => {
+      const saveAll = mockStorage();
+      const { hook } = setup();
+      await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+      act(() => hook.result.current.setDraft((prev) => ({ ...prev, showLuckyVortex: !prev.showLuckyVortex })));
+      await act(async () => {
+        await Promise.all([hook.result.current.flush(), hook.result.current.flush()]);
+      });
+      expect(saveAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits for a focused prompt to lose focus', async () => {
+      const saveAll = mockStorage();
+      const panel = document.createElement('div');
+      const textarea = document.createElement('textarea');
+      panel.appendChild(textarea);
+      document.body.appendChild(panel);
+      const { hook } = setup(panel);
+      await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+
+      act(() => textarea.focus());
+      expect(hook.result.current.isEditingText).toBe(true);
+      vi.useFakeTimers();
+      act(() =>
+        hook.result.current.setDraft((prev) => ({ ...prev, prompts: { ...prev.prompts, expand: 'half typed' } }))
+      );
+      act(() => vi.advanceTimersByTime(2000));
+      vi.useRealTimers();
+      expect(saveAll).not.toHaveBeenCalled();
+      expect(hook.result.current.saveError).toBeNull();
+
+      act(() =>
+        hook.result.current.setDraft((prev) => ({ ...prev, prompts: { ...prev.prompts, expand: 'done ${text}' } }))
+      );
+      act(() => textarea.blur());
+      expect(hook.result.current.isEditingText).toBe(false);
+      await waitFor(() => expect(saveAll).toHaveBeenCalledTimes(1));
+      expect(saveAll.mock.calls[0][2].expand).toBe('done ${text}');
     });
   });
 });
@@ -249,8 +348,9 @@ describe('editor font size on save', () => {
   it('keeps a size the editor changed while the panel was open', async () => {
     const { hook, saveSettings, changeStored } = await loadedAt(16);
     changeStored(18);
+    act(() => hook.result.current.setDraft((prev) => ({ ...prev, showLuckyVortex: !prev.showLuckyVortex })));
     await act(async () => {
-      await hook.result.current.save();
+      await hook.result.current.flush();
     });
     expect(saveSettings.mock.calls[0][0].ui.editorFontSize).toBe(18);
   });
@@ -260,7 +360,7 @@ describe('editor font size on save', () => {
     changeStored(18);
     act(() => hook.result.current.setDraft((prev) => ({ ...prev, editorFontSize: 20 })));
     await act(async () => {
-      await hook.result.current.save();
+      await hook.result.current.flush();
     });
     expect(saveSettings.mock.calls[0][0].ui.editorFontSize).toBe(20);
   });

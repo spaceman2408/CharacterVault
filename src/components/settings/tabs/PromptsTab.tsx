@@ -149,7 +149,12 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
           />
           {edited && (
             <div className="mt-2 flex justify-end">
-              <ResetPromptButton label={promptLabel(promptType)} onReset={() => onChange(defaultValue)} />
+              <ResetPromptButton
+                label={promptLabel(promptType)}
+                defaultValue={defaultValue}
+                textareaRef={textareaRef}
+                onReset={() => onChange(defaultValue)}
+              />
             </div>
           )}
 

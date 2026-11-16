@@ -11,6 +11,7 @@ import type {
   SnapshotMetadata,
   SnapshotDiffEntry,
   CustomContextMeta,
+  AgentSkill,
 } from '../db/characterTypes';
 import type {
   SamplerSettings,
@@ -111,6 +112,8 @@ export interface CharacterEditorContextValue {
   requireAgentReview: boolean;
   /** Agent: send earlier runs' exact edits with each new message. */
   agentKeepEdits: boolean;
+  /** Agent skills from Settings (defaults when never edited). */
+  agentSkills: readonly AgentSkill[];
   /** Warn when the Creator Notes preview loads remote resources. */
   creatorNotesRemoteWarning: boolean;
   /** Prose color coding for "dialogue", narration, and *actions*. */

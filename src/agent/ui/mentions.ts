@@ -1,6 +1,7 @@
 import type { ComposerMention } from '../../components/ai/composerMentions';
-import type { CharacterBook, CharacterSpec } from '../../db/characterTypes';
+import type { AgentSkill, CharacterBook, CharacterSpec } from '../../db/characterTypes';
 import { CHARACTER_AGENT_FIELD_IDS, fieldLabel, greetingNumber } from '../hosts/character/fields';
+import { usableSkills } from '../hosts/skills';
 
 const SNIPPET_MAX = 40;
 
@@ -28,4 +29,8 @@ export function characterMentions(spec: CharacterSpec, book: CharacterBook): Com
     })),
     ...lorebookMentions(book),
   ];
+}
+
+export function skillMentions(skills: readonly AgentSkill[] | undefined): ComposerMention[] {
+  return usableSkills(skills).map((skill) => ({ label: skill.name.trim(), detail: 'Skill' }));
 }

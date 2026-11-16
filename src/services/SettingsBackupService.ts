@@ -1,4 +1,5 @@
 import type {
+  AgentSkill,
   AIConfig,
   CharacterSection,
   CharacterVaultSettings,
@@ -16,6 +17,7 @@ import type {
 import {
   CHARACTER_SECTIONS,
   DEFAULT_AGENT_KEEP_EDITS,
+  DEFAULT_AGENT_SKILLS_ENABLED,
   DEFAULT_CHARACTER_VAULT_SETTINGS,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
   DEFAULT_MACRO_AUTO_CONVERT,
@@ -36,6 +38,7 @@ import {
   normalizeCustomBaseUrlPresets,
 } from '../utils/aiBaseUrl';
 import { MAX_FONT_SIZE, MIN_FONT_SIZE } from '../editor/extensions/fontSizeControl';
+import { normalizeAgentSkills, resolveAgentSkills } from './agentSkills';
 import { persistableAIConfig } from './CharacterSettingsService';
 import { normalizeModelBinding, normalizePromptModelMap } from './resolveOperationConfig';
 import { prunePromptModelsForToolbar } from './toolbarConfig';
@@ -61,6 +64,8 @@ export interface SettingsBackupData {
   sectionOrder: CharacterSection[];
   hiddenSections: CharacterSection[];
   contextSectionIds: CharacterSection[];
+  /** Missing in backups made before skills existed; restoring one keeps the current skills. */
+  agentSkills?: AgentSkill[];
 }
 
 export interface SettingsBackupFile {
@@ -239,6 +244,7 @@ function normalizeBackupUi(value: unknown): CharacterVaultSettings['ui'] {
     defaultChatPanel: normalizeDefaultChatPanel(raw.defaultChatPanel),
     requireAgentReview: asBoolean(raw.requireAgentReview, false),
     agentKeepEdits: asBoolean(raw.agentKeepEdits, DEFAULT_AGENT_KEEP_EDITS),
+    agentSkillsEnabled: asBoolean(raw.agentSkillsEnabled, DEFAULT_AGENT_SKILLS_ENABLED),
     creatorNotesRemoteWarning: asBoolean(
       raw.creatorNotesRemoteWarning,
       DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
@@ -282,6 +288,7 @@ export function normalizeBackupData(value: unknown): SettingsBackupData {
     sectionOrder: normalizeSectionOrder(raw.sectionOrder),
     hiddenSections: normalizeSectionList(raw.hiddenSections),
     contextSectionIds: normalizeSectionList(raw.contextSectionIds),
+    agentSkills: normalizeAgentSkills(raw.agentSkills),
   };
 }
 
@@ -306,6 +313,7 @@ export function buildSettingsBackup(
     sectionOrder: saved.sectionOrder,
     hiddenSections: saved.hiddenSections,
     contextSectionIds: saved.contextSectionIds,
+    agentSkills: resolveAgentSkills(saved.agentSkills),
   });
   data.ai.availableModels = [];
   return {
@@ -368,6 +376,8 @@ export interface BackupDraftTarget {
   defaultChatPanel: DefaultChatPanel;
   requireAgentReview: boolean;
   agentKeepEdits: boolean;
+  agentSkillsEnabled: boolean;
+  agentSkills: AgentSkill[];
   creatorNotesRemoteWarning: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
@@ -414,6 +424,10 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
     defaultChatPanel: normalizeDefaultChatPanel(settings.ui.defaultChatPanel),
     requireAgentReview: settings.ui.requireAgentReview ?? false,
     agentKeepEdits: settings.ui.agentKeepEdits ?? DEFAULT_AGENT_KEEP_EDITS,
+    agentSkillsEnabled: settings.ui.agentSkillsEnabled ?? DEFAULT_AGENT_SKILLS_ENABLED,
+    agentSkills: settings.agentSkills
+      ? settings.agentSkills.map((skill) => ({ ...skill }))
+      : prev.agentSkills,
     creatorNotesRemoteWarning:
       settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
     roleplayHighlight: normalizeRoleplayHighlight(settings.ui.roleplayHighlight),
