@@ -106,7 +106,8 @@ describe.each([
     for (const toolMode of ['native', 'xml'] as const) {
       const prompt = host.buildSystemPrompt({ extraChunks: [], toolMode });
       expect(prompt).toContain('## Skills');
-      expect(prompt).toContain('- read_skill — name.');
+      expect(prompt).toContain('call read_skill with its name');
+      expect(prompt.includes('- read_skill — name.')).toBe(toolMode === 'xml');
       expect(prompt).not.toContain('Blank');
     }
   });

@@ -41,6 +41,8 @@ describe('buildCharacterAgentSystemPrompt', () => {
     expect(prompt).toContain('provided functions');
     expect(prompt).not.toContain('<tool_call>');
     expect(prompt).not.toContain('Prefer those over XML');
+    expect(prompt).not.toContain(CHARACTER_TOOL_LIST);
+    expect(prompt).not.toContain('- list_fields —');
     for (const snippet of SHARED_EXPECTATIONS) {
       expect(prompt).toContain(snippet);
     }
@@ -56,6 +58,7 @@ describe('buildCharacterAgentSystemPrompt', () => {
     expect(prompt).toContain('<tool_call>');
     expect(prompt).toContain('</tool_call>');
     expect(prompt).not.toContain('provided functions');
+    expect(prompt).toContain(CHARACTER_TOOL_LIST);
     for (const snippet of SHARED_EXPECTATIONS) {
       expect(prompt).toContain(snippet);
     }

@@ -31,7 +31,7 @@ Do not export the parser, loop, or host from the barrel. Tests import those file
 
 1. Handle it in `hosts/lorebook/tools.ts`.
 2. Add the name to `LOREBOOK_TOOL_NAMES`.
-3. Add an OpenAI function schema in `hosts/lorebook/schemas.ts` and document the tool in `hosts/lorebook/prompt.ts`. Native `tools` / `tool_calls` are the primary control plane. XML `<tool_call>` is a separate mode (never in the same system prompt). A 400 that rejects `tools` is cached per base URL + model; the run rebuilds an XML-only prompt and retries. Later runs for that model start in XML. The parser still accepts `<<<>>>` fences; do not teach that format.
+3. Add an OpenAI function schema in `hosts/lorebook/schemas.ts` and document the tool in `hosts/lorebook/prompt.ts`. Native `tools` / `tool_calls` are the primary control plane: the native prompt leaves the tool list out, so the schema descriptions must carry everything the model needs, and the prompt list is sent in XML mode only. XML `<tool_call>` is a separate mode (never in the same system prompt). A 400 that rejects `tools` is cached per base URL + model; the run rebuilds an XML-only prompt and retries. Later runs for that model start in XML. The parser still accepts `<<<>>>` fences; do not teach that format.
 4. Tests under `tests/agent/hosts/lorebook/`.
 
 Do not mention the tool in `core/`.
