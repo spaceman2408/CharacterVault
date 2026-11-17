@@ -851,7 +851,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
               );
               pendingStatsRef.current = accumulateResponseStats(pendingStatsRef.current, {
                 requestStartTime,
-                firstTokenTime,
+                firstTokenTime: firstTokenTime ?? completion.firstOutputAt ?? null,
                 content: completion.content ?? '',
                 reasoning: completion.reasoning,
                 modelId: config.modelId,

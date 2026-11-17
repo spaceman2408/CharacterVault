@@ -456,6 +456,8 @@ interface AIResponse {
   /** Upstream host the gateway reports as having served the request (OpenRouter's `provider`). */
   provider?: string;
   usage?: PromptUsage;
+  /** When a stream's first text, reasoning, or tool-call piece arrived (ms). Tool-call pieces never reach onChunk. */
+  firstOutputAt?: number;
 }
 
 /**
@@ -1301,9 +1303,11 @@ Provide only the generated text without any additional commentary.`;
     let doneSentinel = false;
     let pendingLine = '';
     let bytesRead = 0;
+    let firstOutputAt: number | undefined;
 
     const emitDeltas = (contentDelta?: string, reasoningDelta?: string) => {
       if (contentDelta || reasoningDelta) {
+        firstOutputAt ??= Date.now();
         onChunk({
           content: contentDelta || undefined,
           reasoning: reasoningDelta || undefined,
@@ -1361,6 +1365,7 @@ Provide only the generated text without any additional commentary.`;
               emitDeltas(parsed.contentDelta, parsed.reasoningDelta);
               const choice = parsedChunk.choices?.[0];
               if (choice?.delta?.tool_calls?.length) {
+                firstOutputAt ??= Date.now();
                 applyToolCallDeltas(toolCallAcc, choice.delta.tool_calls);
               }
               if (choice?.finish_reason) finishReason = choice.finish_reason;
@@ -1390,6 +1395,7 @@ Provide only the generated text without any additional commentary.`;
         toolCalls: finalizeToolCalls(toolCallAcc),
         provider,
         usage,
+        firstOutputAt,
       };
     } catch (error) {
       if (this.isAborted() || (error instanceof Error && error.name === 'AbortError')) {

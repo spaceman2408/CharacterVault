@@ -106,6 +106,7 @@ export function accumulateResponseStats(
     timing.firstTokenTime !== null
       ? timing.firstTokenTime - timing.requestStartTime
       : generationMs;
+  // Tool call arguments are left out: hosts often buffer them and send them in one burst, which times as thousands of t/s.
   const tokens = estimateTokens(timing.content) + estimateTokens(timing.reasoning ?? '');
 
   if (!pending) {
@@ -131,6 +132,9 @@ export function accumulateResponseStats(
   };
 }
 
+/** A short reply often lands in one burst, so its first-to-last chunk time is near zero and t/s comes out absurd. */
+export const MIN_SPEED_TOKENS = 20;
+
 export function toResponseStats(
   accumulated: AccumulatedResponseStats,
   options?: { includeTokensPerSecond?: boolean },
@@ -142,7 +146,11 @@ export function toResponseStats(
   };
   if (accumulated.promptTokens !== undefined) stats.promptTokens = accumulated.promptTokens;
   if (accumulated.cachedTokens !== undefined) stats.cachedTokens = accumulated.cachedTokens;
-  if (options?.includeTokensPerSecond !== false && accumulated.generationMs > 0) {
+  if (
+    options?.includeTokensPerSecond !== false &&
+    accumulated.generationMs > 0 &&
+    accumulated.tokens >= MIN_SPEED_TOKENS
+  ) {
     stats.tokensPerSecond = accumulated.tokens / (accumulated.generationMs / 1000);
   }
   return stats;
