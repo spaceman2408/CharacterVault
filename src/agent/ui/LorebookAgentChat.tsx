@@ -18,7 +18,6 @@ import { applyLorebookReview, diffLorebookReview, formatReviewOutcome } from '..
 import type { LorebookReviewPayload, ReviewDecisions } from '../review/types';
 import { AgentChatMessage } from './AgentChatMessage';
 import { AgentReviewStatus } from './AgentReviewStatus';
-import { AgentToolModeChip } from './AgentToolModeChip';
 import { formatAgentBusyLabel } from './busyLabel';
 import { LiveSpeech } from './LiveSpeech';
 import { LiveThinking } from './LiveThinking';
@@ -255,11 +254,10 @@ export function LorebookAgentChat({
         session.toolEventsByMessageId,
         LOREBOOK_LOOKUP_TOOLS,
         session.errorByMessageId,
-        keptEditsOptions(keepEdits, session.toolMode, agentSampler, aiConfig.modelId),
+        keptEditsOptions(keepEdits, agentSampler, aiConfig.modelId),
       ),
       contextLength: agentSampler.contextLength,
       skills,
-      toolMode: session.toolMode,
     });
   }, [
     aiConfig.modelId,
@@ -273,7 +271,6 @@ export function LorebookAgentChat({
     session.errorByMessageId,
     session.livePromptTokens,
     session.toolEventsByMessageId,
-    session.toolMode,
   ]);
 
   const lostMessageIds = useMemo(
@@ -389,7 +386,6 @@ export function LorebookAgentChat({
       headerLeading={headerLeading}
       headerActions={
         <>
-          <AgentToolModeChip mode={session.toolMode} />
           <AgentReviewStatus
             requireReview={requireReview}
             pendingCount={review && !reviewOpen ? reviewChanges.length : null}

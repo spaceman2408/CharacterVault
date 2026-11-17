@@ -1,12 +1,5 @@
 import type { AgentMessage } from './types';
 
-/** Prefix runLoop uses for XML-mode tool-result blobs. */
-export const TOOL_RESULTS_PREFIX = 'Tool results:\n';
-
-/** User message runLoop appends to ask for the rest of a cut-off XML tool call. */
-export const CONTINUE_NUDGE =
-  'Your last tool_call was cut off (output length). Continue exactly from the cutoff and close </tool_call>. Do not repeat completed calls.';
-
 /** Absolute ceiling for one retained tool-result body (tokens). */
 export const DEFAULT_MAX_HOG_TOKENS = 32000;
 /** One older message may keep at most this share of the total budget. */
@@ -35,17 +28,9 @@ function messageTokens(message: AgentMessage, measure: PromptMeasure): number {
   return measure([message]);
 }
 
-function isResultBlob(message: AgentMessage): boolean {
-  return (
-    message.role === 'user' &&
-    typeof message.content === 'string' &&
-    message.content.startsWith(TOOL_RESULTS_PREFIX)
-  );
-}
-
-/** Bodies safe to shrink: native tool results and XML result blobs. */
+/** Bodies safe to shrink: tool results. */
 function isTruncatable(message: AgentMessage): boolean {
-  return message.role === 'tool' || isResultBlob(message);
+  return message.role === 'tool';
 }
 
 function withTruncatedBody(
@@ -75,7 +60,7 @@ function withTruncatedBody(
 /**
  * Group the middle (everything between the pinned system message and the
  * pinned trailing message) into atomic units: an `assistant` message plus its
- * following `tool` replies (native) or result blob (XML). Lone messages form
+ * following `tool` replies. Lone messages form
  * singleton groups. Whole groups are dropped oldest-first so a surviving
  * `assistant(tool_calls)` never loses its `tool` replies.
  */
@@ -87,7 +72,7 @@ function groupMiddle(messages: AgentMessage[], last: number): AgentMessage[][] {
     if (message.role === 'assistant') {
       const group = [message];
       i += 1;
-      while (i < last && (messages[i].role === 'tool' || isResultBlob(messages[i]))) {
+      while (i < last && messages[i].role === 'tool') {
         group.push(messages[i]);
         i += 1;
       }
@@ -105,10 +90,10 @@ function groupMiddle(messages: AgentMessage[], last: number): AgentMessage[][] {
  * caps each older tool-result body at `min(maxHogTokens, budget*hogFraction)`;
  * (2) oldest exchange groups are dropped while over budget (or over `dropTo`); (3) if the pinned
  * minimum itself is over budget, the newest exchange's tool bodies (with the
- * trailing tool result or result blob mid-run) are trimmed just enough to
+ * trailing tool result mid-run) are trimmed just enough to
  * fit. Pinned throughout: the system message, the
- * latest user request before the trailing message (never a result blob or
- * continue nudge; earlier runs' requests come before it; at run start, when
+ * latest user request before the trailing message (earlier runs' requests
+ * come before it; at run start, when
  * the trailing message is the request, it is dropped last instead of kept),
  * the trailing message, and at least the newest exchange group.
  * Messages keep their order.
@@ -129,8 +114,7 @@ export function pruneMessagesToBudget(
 
   const pinnedFirst = messages[0];
   const pinnedLast = messages[messages.length - 1];
-  const isRequest = (message: AgentMessage) =>
-    message.role === 'user' && !isResultBlob(message) && message.content !== CONTINUE_NUDGE;
+  const isRequest = (message: AgentMessage) => message.role === 'user';
   const requestIsLast = isRequest(pinnedLast);
   let pinnedRequest: AgentMessage | null = null;
   for (let i = messages.length - 2; i >= 1; i -= 1) {

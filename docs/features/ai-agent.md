@@ -152,7 +152,7 @@ You can keep editing while it runs. The write only covers what the Agent changed
 
 Snippet edits match a unique stretch of existing text instead of rewriting the whole field or entry. Matching tolerates quote styles and multi-section spans. If the snippet is not unique, ask it to re-read and copy a longer stretch.
 
-Providers that accept OpenAI-style `tools` use native function calling. If a provider returns 400 on `tools`, CharacterVault remembers that model, retries the turn with XML tool calls in the message, and later runs for that model skip native tools. You do not turn this on separately. The chat header shows a **Native** or **XML** chip for the current model (hover for the same explanation).
+The Agent needs a model with tool calling (OpenAI-style `tools`). If the provider rejects tools for the selected model, the run stops with an error asking you to pick a model that supports them.
 
 Catalogs in the prompt are built at the **start** of the run. After names or keys change, the Agent can list again in that same run. The **next** Send rebuilds catalogs from the saved card.
 

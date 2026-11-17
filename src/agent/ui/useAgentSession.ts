@@ -30,14 +30,12 @@ import {
   storedToAgentThread,
 } from '../../services/chatHistoryMap';
 import { AIError, AIService } from '../../services/AIService';
-import { isNativeToolsRejected } from '../../services/chatRequestRepair';
 import { getProviderSelectionId } from '../../services/providers';
-import { normalizeBaseUrl } from '../../utils/aiBaseUrl';
 import type { ChatMessage as ServiceChatMessage } from '../../services/AIService';
 import { AGENT_MAX_OUTPUT_TOKENS, runLoop } from '../core/runLoop';
 import { withTransientRetry } from '../core/retry';
 import { stripFences } from '../core/stripFences';
-import type { AgentHost, AgentMessage, AgentToolMode } from '../core/types';
+import type { AgentHost, AgentMessage } from '../core/types';
 import { ChunkString } from '../../utils/chunkString';
 import { registerChatSessionFlush } from '../../utils/chatSessionFlush';
 import { LIVE_REASONING_FLUSH_MS, LIVE_REASONING_MAX_CHARS } from './liveReasoning';
@@ -72,10 +70,6 @@ export interface UseAgentSessionOptions {
   chatPanel?: ChatPanel;
   /** Send earlier runs' write calls in full instead of one-line summaries. */
   keepEditsInContext?: boolean;
-}
-
-function resolveAgentToolMode(config: AIConfig): AgentToolMode {
-  return isNativeToolsRejected(normalizeBaseUrl(config.baseUrl), config.modelId) ? 'xml' : 'native';
 }
 
 function toServiceMessages(messages: AgentMessage[]): ServiceChatMessage[] {
@@ -138,7 +132,6 @@ export interface UseAgentSessionReturn {
   streamingContent: string;
   streamingReasoning: string;
   livePromptTokens: number | null;
-  toolMode: AgentToolMode;
   handleAsk: (question: string) => Promise<void>;
   handleRegenerate: () => Promise<void>;
   handleNewChat: () => void;
@@ -261,11 +254,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
   const isAIConfigured = useMemo(() => {
     return typeof aiConfig.modelId === 'string' && aiConfig.modelId.trim().length > 0;
   }, [aiConfig.modelId]);
-
-  const toolMode = useMemo(
-    () => resolveAgentToolMode(aiConfig),
-    [aiConfig],
-  );
 
   const cancelStreamFlush = useCallback(() => {
     if (streamFlushTimerRef.current != null) {
@@ -745,7 +733,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
           errorByMessageIdRef.current,
           keptEditsOptions(
             keepEditsInContextRef.current,
-            resolveAgentToolMode(aiConfigRef.current),
             samplerSettingsRef.current,
             aiConfigRef.current.modelId,
           ),
@@ -805,13 +792,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
           aiServiceRef.current = aiService;
 
           const host = createHostRef.current();
-          const toolMode = resolveAgentToolMode(config);
 
           const result = await runLoop({
             host,
             userMessage: question,
             history: historyForLoop,
-            toolMode,
             isAborted: () => abortedRef.current || !isCurrent(),
             maxInputTokens: AIService.inputTokenBudget(samplerSettingsRef.current),
             measurePrompt: estimatePromptTokens,
@@ -826,7 +811,7 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                   appendStreamChunk(chunk);
                 }
               : undefined,
-            complete: withTransientRetry(async (messages, onChunk, continues) => {
+            complete: withTransientRetry(async (messages, onChunk) => {
               if (!isCurrent() || abortedRef.current) {
                 throw new AIError('Request was cancelled', 'unknown');
               }
@@ -835,7 +820,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 setBusyAction(null);
               }
               clearStreamDraft();
-              if (continues && onChunk) appendStreamChunk(continues);
               if (!isCurrent() || abortedRef.current) {
                 throw new AIError('Request was cancelled', 'unknown');
               }
@@ -858,15 +842,11 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
                 {
                   maxTokens: AGENT_MAX_OUTPUT_TOKENS,
                   cachePrompt: true,
-                  tools:
-                    isNativeToolsRejected(normalizeBaseUrl(config.baseUrl), config.modelId) ||
-                    !host.tools
-                      ? undefined
-                      : host.tools.map((tool) => ({
-                          name: tool.name,
-                          description: tool.description,
-                          parameters: tool.parameters,
-                        })),
+                  tools: host.tools.map((tool) => ({
+                    name: tool.name,
+                    description: tool.description,
+                    parameters: tool.parameters,
+                  })),
                 },
               );
               pendingStatsRef.current = accumulateResponseStats(pendingStatsRef.current, {
@@ -1073,7 +1053,6 @@ export function useAgentSession(options: UseAgentSessionOptions): UseAgentSessio
     streamingContent,
     streamingReasoning,
     livePromptTokens,
-    toolMode,
     handleAsk,
     handleRegenerate,
     handleNewChat,

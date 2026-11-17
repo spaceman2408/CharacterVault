@@ -323,6 +323,9 @@ export class AIError extends Error {
   }
 }
 
+export const TOOLS_UNSUPPORTED_MESSAGE =
+  "This model doesn't support tool calling, which the agent needs. Pick a model that does.";
+
 export interface ChatToolCall {
   id: string;
   type?: 'function';
@@ -1044,8 +1047,11 @@ Provide only the generated text without any additional commentary.`;
     options?: ChatCompletionOptions
   ): Promise<AIResponse> {
     const useStreaming = this.config.enableStreaming && onChunk;
-    const request = this.buildChatCompletionBody(messages, customSampler, !!useStreaming, options);
     const cache = getCapabilityCache(this.getBaseUrl(), this.config.modelId);
+    if (options?.tools?.length && cache.rejectedParams.has('tools')) {
+      throw new AIError(TOOLS_UNSUPPORTED_MESSAGE, 'tools_unsupported', 400);
+    }
+    const request = this.buildChatCompletionBody(messages, customSampler, !!useStreaming, options);
 
     this.abortController = new AbortController();
     const { signal } = this.abortController;
@@ -1090,11 +1096,7 @@ Provide only the generated text without any additional commentary.`;
           recordRepairInCache(cache, repaired);
 
           if (repaired.removed.includes('tools')) {
-            throw new AIError(
-              'This model does not support native function calling',
-              'tools_unsupported',
-              400,
-            );
+            throw new AIError(TOOLS_UNSUPPORTED_MESSAGE, 'tools_unsupported', 400);
           }
 
           const remapParts = Object.entries(repaired.remapped).map(

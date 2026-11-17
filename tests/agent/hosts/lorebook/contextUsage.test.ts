@@ -41,7 +41,7 @@ describe('computeAgentContextUsage', () => {
     expect(withNotes.tokens).toBeGreaterThan(without.tokens);
   });
 
-  it('counts the tool definitions in native mode only', () => {
+  it('counts the tool definitions', () => {
     const base = {
       book: createEmptyCharacterBook('World'),
       customContextCharLength: 0,
@@ -49,16 +49,9 @@ describe('computeAgentContextUsage', () => {
       history: [],
       contextLength: 32768,
     };
-    const native = computeAgentContextUsage({ ...base, toolMode: 'native' });
-    const xml = computeAgentContextUsage({ ...base, toolMode: 'xml' });
-    const xmlPrompt = estimateTokens(
-      buildLorebookAgentSystemPrompt([formatEntryCatalog(base.book)], 'xml'),
-    );
-    expect(xml.tokens).toBe(xmlPrompt);
-    const nativePrompt = estimateTokens(
-      buildLorebookAgentSystemPrompt([formatEntryCatalog(base.book)], 'native'),
-    );
-    expect(native.tokens).toBe(nativePrompt + estimateToolTokens(LOREBOOK_TOOL_SPECS));
+    const usage = computeAgentContextUsage(base);
+    const prompt = estimateTokens(buildLorebookAgentSystemPrompt([formatEntryCatalog(base.book)]));
+    expect(usage.tokens).toBe(prompt + estimateToolTokens(LOREBOOK_TOOL_SPECS));
   });
 
   it('marks danger when usage is over 80% of the window', () => {

@@ -60,8 +60,7 @@ const RECURSION_FIELD_ALIASES: Record<string, string> = {
 /**
  * Keeps the fields a tool knows. Other spellings of the recursion fields (snake_case,
  * any case, SillyTavern's labels) are renamed to ours, and the exact spelling wins.
- * Only those are matched loosely, so a body line like `Name: …` or `Depth: …` that the
- * XML parser read as a header never becomes a field.
+ * Only those are matched loosely, so a stray `Name` or `Depth` key never becomes a field.
  */
 export function readToolFields(
   headers: Record<string, string>,

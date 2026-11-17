@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { pruneMessagesToBudget } from '../../../src/agent/core/pruneMessages';
-import { parseActions } from '../../../src/agent/core/parseActions';
 import {
   contextMeterHistory,
   KEPT_RUN_EMPTY_REPLY,
@@ -253,43 +252,6 @@ describe('toLoopHistory with keepEdits', () => {
     expect(replayed.reasoning_content?.endsWith('END')).toBe(true);
   });
 
-  it('replays a run as XML calls the parser reads back to the same arguments', () => {
-    const history = [message('u1', 'user', 'Go'), message('a1', 'assistant', 'Done.')];
-    const replay = toLoopHistory(
-      history,
-      { a1: [replaceTone, addHarborCall] },
-      CHARACTER_LOOKUP_TOOLS,
-      {},
-      { keepEdits: true, toolMode: 'xml' },
-    );
-    expect(replay.map((row) => row.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
-    expect(replay[1].tool_calls).toBeUndefined();
-    expect(parseActions(replay[1].content ?? '').actions).toEqual([
-      { name: 'replace_in_field', headers: { id: 'description', old: 'grim', new: 'wry' }, body: '' },
-      { name: 'add_entry', headers: { name: 'Harbor', keys: 'harbor, docks' }, body: 'Fog rolls in.\nShips wait.' },
-    ]);
-    expect(replay[2].content).toBe(
-      'Tool results:\n[replace_in_field] ok description (Description) — replaced 1\n[add_entry] ok #4 Harbor',
-    );
-    expect(replay[3].content).toBe('Done.');
-  });
-
-  it('folds newlines in XML header values, which replace matching folds too', () => {
-    const multiline: AgentToolEvent = {
-      ...replaceTone,
-      call: { headers: { id: 'description', old: 'grim\nand cold', new: 'wry' }, body: '' },
-    };
-    const history = [message('u1', 'user', 'Go'), message('a1', 'assistant', 'Done.')];
-    const [, calls] = toLoopHistory(
-      history,
-      { a1: [multiline] },
-      CHARACTER_LOOKUP_TOOLS,
-      {},
-      { keepEdits: true, toolMode: 'xml' },
-    );
-    expect(parseActions(calls.content ?? '').actions[0].headers.old).toBe('grim and cold');
-  });
-
   it('puts the review and turn-limit notes on the last result, never in the reply', () => {
     const review: AgentToolEvent = {
       toolName: REVIEW_NOTE_TOOL,
@@ -454,9 +416,8 @@ describe('toLoopHistory with keepEdits', () => {
 
   it('caps one replayed run at a quarter of the input budget', () => {
     const sampler = { contextLength: 16384, maxTokens: 2048 };
-    const options = keptEditsOptions(true, 'xml', sampler);
+    const options = keptEditsOptions(true, sampler);
     expect(options.keepEdits).toBe(true);
-    expect(options.toolMode).toBe('xml');
     expect(options.maxKeptRunTokens).toBe(Math.floor(AIService.inputTokenBudget(sampler) * 0.25));
   });
 

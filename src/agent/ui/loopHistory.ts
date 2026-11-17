@@ -2,8 +2,7 @@ import type { ChatMessage } from '../../components/ai/types';
 import type { SamplerSettings } from '../../db/characterTypes';
 import { AIService } from '../../services/AIService';
 import { stripFences } from '../core/stripFences';
-import type { AgentMessage, AgentToolMode, NativeToolCall } from '../core/types';
-import { formatToolResults, renderXmlCall } from '../core/xmlHistory';
+import type { AgentMessage, NativeToolCall } from '../core/types';
 import { formatToolEvent } from './formatToolEvent';
 import {
   REVIEW_NOTE_TOOL,
@@ -18,8 +17,6 @@ import type { AgentToolEvent } from './types';
 export interface LoopHistoryOptions {
   /** Replay each earlier write as the tool call the model made, not a one-line summary. */
   keepEdits?: boolean;
-  /** How replayed calls are written. Defaults to native. */
-  toolMode?: AgentToolMode;
   /** A run whose replay would take more than this many tokens is sent as summary notes instead. */
   maxKeptRunTokens?: number;
   /** Replayed calls carry a run's thinking only when this model wrote it; strict hosts reject the field. */
@@ -37,13 +34,11 @@ export const KEPT_RUN_REASONING_CHARS = 2000;
 
 export function keptEditsOptions(
   keepEdits: boolean,
-  toolMode: AgentToolMode,
   sampler: Pick<SamplerSettings, 'contextLength' | 'maxTokens'>,
   modelId?: string,
 ): LoopHistoryOptions {
   return {
     keepEdits,
-    toolMode,
     maxKeptRunTokens: Math.floor(AIService.inputTokenBudget(sampler) * KEPT_RUN_BUDGET_SHARE),
     modelId,
   };
@@ -79,24 +74,12 @@ function replayRun(
   notes: string[],
   speech: string,
   reasoning: string,
-  toolMode: AgentToolMode,
   nextId: () => string,
 ): AgentMessage[] {
   const results = writes.map((event) => ({ toolName: event.toolName, message: event.message }));
   const last = results[results.length - 1];
   if (notes.length > 0) last.message = `${last.message}\n${notes.join('\n')}`;
   const reply: AgentMessage = { role: 'assistant', content: speech || KEPT_RUN_EMPTY_REPLY };
-
-  if (toolMode === 'xml') {
-    const calls = writes.map((event) =>
-      renderXmlCall({ name: event.toolName, headers: event.call!.headers, body: event.call!.body }),
-    );
-    return [
-      { role: 'assistant', content: calls.join('\n\n') },
-      { role: 'user', content: formatToolResults(results) },
-      reply,
-    ];
-  }
 
   const calls: NativeToolCall[] = writes.map((event) => ({
     id: nextId(),
@@ -167,7 +150,6 @@ export function toLoopHistory(
         notes,
         speech.join('\n\n'),
         reasoning.join('\n\n'),
-        options.toolMode ?? 'native',
         nextId,
       );
       if (options.maxKeptRunTokens == null || estimatePromptTokens(replay) <= options.maxKeptRunTokens) {

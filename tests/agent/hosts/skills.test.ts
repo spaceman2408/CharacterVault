@@ -103,13 +103,10 @@ describe.each([
     const host = makeHost(SKILLS);
     expect(host.toolNames).toContain('read_skill');
     expect(host.tools?.some((tool) => tool.name === 'read_skill')).toBe(true);
-    for (const toolMode of ['native', 'xml'] as const) {
-      const prompt = host.buildSystemPrompt({ extraChunks: [], toolMode });
-      expect(prompt).toContain('## Skills');
-      expect(prompt).toContain('call read_skill with its name');
-      expect(prompt.includes('- read_skill — name.')).toBe(toolMode === 'xml');
-      expect(prompt).not.toContain('Blank');
-    }
+    const prompt = host.buildSystemPrompt({ extraChunks: [] });
+    expect(prompt).toContain('## Skills');
+    expect(prompt).toContain('call read_skill with its name');
+    expect(prompt).not.toContain('Blank');
   });
 
   it('executes read_skill', async () => {

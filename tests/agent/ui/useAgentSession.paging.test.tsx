@@ -18,6 +18,7 @@ function stored(seq: number, role: 'user' | 'assistant'): StoredChatMessage {
 
 const host = (): AgentHost => ({
   toolNames: [],
+  tools: [],
   buildSystemPrompt: () => 'sys',
   extraContextChunks: async () => [],
   execute: async (action) => ({ ok: false, toolName: action.name, message: 'unused' }),

@@ -26,6 +26,11 @@ list_entries
     ).toBe('');
   });
 
+  it('hides an unclosed tool call and legacy fences', () => {
+    expect(liveAgentSpeech('Writing.\n<tool_call>\nupdate_entry\nid: 4\n---\nHalf')).toBe('Writing.');
+    expect(liveAgentSpeech('Working.\n<<<list_entries\n>>>\nDone.')).toBe('Working.\n\nDone.');
+  });
+
   it('keeps the tail of a long reply so the live DOM stays bounded', () => {
     const text = 'a'.repeat(LIVE_SPEECH_MAX_CHARS + 50);
     const clipped = liveAgentSpeech(text);

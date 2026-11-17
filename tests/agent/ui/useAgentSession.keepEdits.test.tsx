@@ -5,7 +5,6 @@ import type { AgentHost, CompleterResult } from '../../../src/agent/core/types';
 import { useAgentSession } from '../../../src/agent/ui/useAgentSession';
 import { DEFAULT_SETTINGS } from '../../../src/db/characterTypes';
 import { AIService, type ChatMessage } from '../../../src/services/AIService';
-import { getCapabilityCache } from '../../../src/services/chatRequestRepair';
 
 afterEach(() => {
   cleanup();
@@ -139,29 +138,6 @@ describe('useAgentSession keepEditsInContext', () => {
       await result.current.handleAsk('Now change the word in edit 1');
     });
     expect(replayedCalls(requests[3])).toEqual([{ name: 'update_entry', arguments: '{"id":"4","content":"Fog"}' }]);
-  });
-
-  it('replays as XML text for a provider that rejects native tools', async () => {
-    const xmlConfig = { ...aiConfig, baseUrl: 'http://keep-edits-xml.test/v1' };
-    getCapabilityCache(xmlConfig.baseUrl, xmlConfig.modelId).rejectedParams.add('tools');
-    const requests = scriptChat([
-      { content: '<tool_call>\nupdate_entry\nid: 4\n---\nFog\n</tool_call>' },
-      { content: 'Done.' },
-    ]);
-    const { result } = renderSession(true, xmlConfig);
-
-    await act(async () => {
-      await result.current.handleAsk('Rewrite Harbor');
-    });
-    await act(async () => {
-      await result.current.handleAsk('Change the word in edit 1');
-    });
-    const next = requests[2];
-    expect(replayedCalls(next)).toEqual([]);
-    expect(next.some((message) => message.role === 'tool')).toBe(false);
-    expect(next.map((message) => message.role)).toEqual(['system', 'user', 'assistant', 'user', 'assistant', 'user']);
-    expect(next[2].content).toBe('<tool_call>\nupdate_entry\nid: 4\n---\nFog\n</tool_call>');
-    expect(next[3].content).toBe('Tool results:\n[update_entry] ok #4 Harbor');
   });
 });
 

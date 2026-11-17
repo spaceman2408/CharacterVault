@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  CONTINUE_NUDGE,
-  pruneMessagesToBudget,
-  TOOL_RESULTS_PREFIX,
-  TRUNCATION_SUFFIX,
-} from '../../../src/agent/core/pruneMessages';
+import { pruneMessagesToBudget, TRUNCATION_SUFFIX } from '../../../src/agent/core/pruneMessages';
 import type { AgentMessage } from '../../../src/agent/core/types';
 
 function charMeasure(messages: readonly AgentMessage[]): number {
@@ -28,13 +23,6 @@ function nativeExchange(tag: string, body: string, speech = ''): AgentMessage[] 
       tool_calls: [{ id: `call_${tag}`, name: 'read_entry', arguments: '{}' }],
     },
     { role: 'tool', tool_call_id: `call_${tag}`, content: body },
-  ];
-}
-
-function xmlExchange(tag: string, body: string, speech = `thinking ${tag}`): AgentMessage[] {
-  return [
-    { role: 'assistant', content: speech },
-    { role: 'user', content: `${TOOL_RESULTS_PREFIX}[read_entry] ${body}` },
   ];
 }
 
@@ -124,25 +112,6 @@ describe('pruneMessagesToBudget drop phase', () => {
     expectValidPairing(pruned);
   });
 
-  it('drops oldest XML assistant+blob pairs first', () => {
-    const messages: AgentMessage[] = [
-      sys(),
-      user('question'),
-      ...xmlExchange('one', 'A'.repeat(1000)),
-      ...xmlExchange('two', 'B'.repeat(1000)),
-      user('follow-up'),
-    ];
-    const budget = charMeasure([sys(), user('question'), ...xmlExchange('two', 'B'.repeat(1000)), user('follow-up')]);
-    const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
-    expect(pruned.map((m) => m.content)).toEqual([
-      'system prompt',
-      'question',
-      'thinking two',
-      `${TOOL_RESULTS_PREFIX}[read_entry] ${'B'.repeat(1000)}`,
-      'follow-up',
-    ]);
-  });
-
   it('keeps the previous request at run start while older history singletons drop', () => {
     const messages: AgentMessage[] = [
       sys(),
@@ -176,22 +145,6 @@ describe('pruneMessagesToBudget drop phase', () => {
     const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
     expect(pruned.map((m) => m.content)).toEqual(['system prompt', '', 'body', 'go']);
     expectValidPairing(pruned);
-  });
-
-  it('keeps the current request, not the continue nudge, when continuing a cut-off call', () => {
-    const cutOff = '<tool_call>\nupdate_entry\nid: 4\n---\nHalf';
-    const messages: AgentMessage[] = [
-      sys(),
-      user('earlier run request'),
-      { role: 'assistant', content: 'Earlier run reply.' },
-      user('current request'),
-      ...xmlExchange('one', 'A'.repeat(1000)),
-      { role: 'assistant', content: cutOff },
-      user(CONTINUE_NUDGE),
-    ];
-    const budget = charMeasure([sys(), { role: 'assistant', content: cutOff }, user(CONTINUE_NUDGE)]);
-    const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
-    expect(pruned.map((m) => m.content)).toEqual(['system prompt', 'current request', cutOff, CONTINUE_NUDGE]);
   });
 
   it('keeps the current request over earlier runs mid-run, in order', () => {
@@ -309,15 +262,6 @@ describe('pruneMessagesToBudget last resort', () => {
     expect(pruned[1].content).toBe('Q');
     expect(pruned[3].content).toContain(TRUNCATION_SUFFIX.trim());
     expectValidPairing(pruned);
-  });
-
-  it('trims a huge trailing XML result blob instead of the request', () => {
-    const messages: AgentMessage[] = [sys('S'), user('Q'), ...xmlExchange('new', 'N'.repeat(8000))];
-    const budget = charMeasure([sys('S'), user('Q')]) + 2000;
-    const pruned = pruneMessagesToBudget(messages, budget, charMeasure);
-    expect(charMeasure(pruned)).toBeLessThanOrEqual(budget);
-    expect(pruned.slice(0, 3).map((m) => m.content)).toEqual(['S', 'Q', 'thinking new']);
-    expect(pruned[3].content).toContain(TRUNCATION_SUFFIX.trim());
   });
 
   it('sends as-is when system plus trailing question alone exceed the budget', () => {

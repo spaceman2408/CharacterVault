@@ -19,6 +19,7 @@ function stored(id: string, seq: number, role: 'user' | 'assistant', content: st
 
 const host = (): AgentHost => ({
   toolNames: [],
+  tools: [],
   buildSystemPrompt: () => 'sys',
   extraContextChunks: async () => [],
   execute: async (action) => ({ ok: false, toolName: action.name, message: 'unused' }),
