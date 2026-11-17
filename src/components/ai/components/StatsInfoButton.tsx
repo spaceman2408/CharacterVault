@@ -108,11 +108,10 @@ export function StatsInfoButton({ stats }: { stats: ResponseStats }): React.Reac
           {typeof stats.tokensPerSecond === 'number' && (
             <div>Speed: {stats.tokensPerSecond.toFixed(2)} t/s</div>
           )}
-          {typeof stats.cachedTokens === 'number' && !!stats.promptTokens && (
+          {typeof stats.cachedTokens === 'number' && (
             <div>
-              <span className="text-fg-muted">Cached: </span>
-              {Math.round((stats.cachedTokens / stats.promptTokens) * 100)}% of{' '}
-              {stats.promptTokens.toLocaleString()} input tokens
+              <span className="text-fg-muted">Cache: </span>
+              {stats.cachedTokens > 0 ? `hit (${stats.cachedTokens.toLocaleString()} tokens)` : 'miss'}
             </div>
           )}
           {stats.modelId && (
