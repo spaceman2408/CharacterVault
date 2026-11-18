@@ -3,6 +3,13 @@
 /* Enable class-based dark mode for Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Phone with the on-screen keyboard open: the page shrinks to the space above it */
+@custom-variant kb-open {
+  @media (max-width: 639px) and (max-height: 500px) {
+    @slot;
+  }
+}
+
 /*
   ============================================================================
   THEME TOKENS — single source of truth

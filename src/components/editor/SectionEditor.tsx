@@ -470,7 +470,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
   if (section === 'extensions') {
     return (
       <div className="h-full flex flex-col min-h-0 overflow-hidden animate-fade-in-slow">
-        <div className="mb-4 shrink-0">
+        <div className="mb-4 shrink-0 kb-open:hidden">
           <h2 className="text-xl font-bold text-fg">
             {sectionMeta?.label}
           </h2>
@@ -598,7 +598,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
 
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden animate-fade-in-slow">
-      <div className="mb-4 shrink-0 space-y-3">
+      <div className="mb-4 shrink-0 space-y-3 kb-open:hidden">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h2 className="text-xl font-bold text-fg">

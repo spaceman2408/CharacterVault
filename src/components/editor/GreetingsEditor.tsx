@@ -489,8 +489,8 @@ export function GreetingsEditor({
         `}
       >
         {selectedGreeting !== undefined ? (
-          <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 md:p-6 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <div className="mb-3 flex shrink-0 items-center justify-between gap-2 md:mb-4">
+          <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 md:p-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] kb-open:p-1">
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-2 md:mb-4 kb-open:mb-1">
               <button
                 type="button"
                 onClick={handleBackToList}
@@ -502,7 +502,7 @@ export function GreetingsEditor({
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-fg">Greeting {safeSelectedIndex + 1}</p>
                 {selectedGreetingTokenCount !== null && (
-                  <p className="text-xs text-fg-muted">
+                  <p className="text-xs text-fg-muted kb-open:hidden">
                     {selectedGreetingTokenCount.toLocaleString()} tokens
                   </p>
                 )}

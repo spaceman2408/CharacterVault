@@ -196,7 +196,7 @@ function SectionTabs({ activeSection, onSectionChange, sections }: SectionTabsPr
   const ActiveIcon = activeSectionData ? iconMap[activeSectionData.icon] || FileText : FileText;
 
   return (
-    <div className="border-b border-border bg-surface/60 backdrop-blur-xl shrink-0">
+    <div className="border-b border-border bg-surface/60 backdrop-blur-xl shrink-0 kb-open:hidden">
       {/* Desktop: Horizontal tabs */}
       <div
         ref={desktopTabsRef}
@@ -1184,7 +1184,7 @@ function CharacterWorkspaceInner({
 
         {/* Center: editor */}
         <main className="flex-1 flex flex-col min-w-0 relative z-0 overflow-hidden">
-          <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6'} pb-[max(env(safe-area-inset-bottom),0px)]`}>
+          <div className={`flex-1 min-h-0 ${isTightLayout || isEdgeToEdgeLayout ? 'p-0' : 'p-3 md:p-4 lg:p-6 kb-open:p-1'} pb-[max(env(safe-area-inset-bottom),0px)]`}>
             <div className={`h-full w-full bg-surface/60 backdrop-blur-xl
               border border-border/60 shadow-lg overflow-hidden relative flex flex-col
               ${
@@ -1192,7 +1192,7 @@ function CharacterWorkspaceInner({
                   ? 'rounded-none p-2 md:p-3 border-l-0 border-r-0'
                   : isEdgeToEdgeLayout
                   ? `rounded-none p-3 md:p-4 ${!isContextOpen ? 'border-l-0' : ''} ${!isChatOpen ? 'border-r-0' : ''}`
-                  : 'rounded-2xl p-4 md:p-6'
+                  : 'rounded-2xl p-4 md:p-6 kb-open:p-2'
               }`}
               data-section-editor-container>
               <div className="relative min-h-0 flex-1">
