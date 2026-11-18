@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.9.2 staging 3';
+export const STAGING_VERSION = 'v1.9.2 staging 4';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -33,4 +33,5 @@ export const STAGING_TEST_NOTES: string[] = [
   'Phone → AI toolbar in a field: the AI buttons (Enhance, Custom…) and More should sit on the first row without being cut off, with the magnifier, { }, ;& and aA on a second row. Tapping Custom should still show the instruction box on its own line.',
   'Phone → tap into Description (or any text field) so the keyboard opens: the section bar and the field heading hide, and you should see several lines of text above the keyboard. Close the keyboard: everything comes back.',
   'Phone → same check in a greeting and in a lorebook entry (in a character and in a standalone lorebook): with the keyboard open, the token count and the Enabled/Constant toggles hide and the text area keeps several lines. Back, Duplicate, Delete and the keys box stay.',
+  'Phone → with the keyboard open in a character or a lorebook, the top header (back arrow, name, settings, export) hides too and comes back when the keyboard closes. In a standalone lorebook, tap the lorebook name in the header to rename it: the header should stay while you type.',
 ];
