@@ -523,7 +523,7 @@ export function LorebookWorkspace(): React.ReactElement {
 
   return (
     <div className="h-dvh w-full flex flex-col bg-bg overflow-hidden">
-      <header className="h-16 flex items-center justify-between px-2 sm:px-4 md:px-6 bg-surface/60 backdrop-blur-xl border-b border-border/60 shrink-0">
+      <header className="h-16 flex items-center justify-between px-2 sm:px-4 md:px-6 bg-surface/60 backdrop-blur-xl border-b border-border/60 shrink-0 kb-open:[&:not(:focus-within)]:hidden">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4">
           <button
             type="button"

@@ -549,7 +549,7 @@ function CharacterHeader({
   };
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-surface/60 backdrop-blur-xl border-b border-border/60 shrink-0">
+    <header className="h-16 flex items-center justify-between px-4 md:px-6 bg-surface/60 backdrop-blur-xl border-b border-border/60 shrink-0 kb-open:[&:not(:focus-within)]:hidden">
       <div className="flex items-center gap-3 md:gap-4">
         <button
           onClick={onClose}
