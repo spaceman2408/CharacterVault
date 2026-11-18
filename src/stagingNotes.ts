@@ -24,11 +24,13 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.9.2 staging 2';
+export const STAGING_VERSION = 'v1.9.2 staging 3';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
   'Phone (iPhone especially) → tap into the editor, the AI Custom box, the find bar or any other text field: the page should not zoom in when the keyboard opens. Pinch-zoom should still work on iPhone.',
   'Phone → open the find bar (magnifier) in a field: Find should be full width with × on the right, then ^ v, the match count and Aa / ab / .* on one row, then a full-width Replace box with Replace and Replace All under it.',
   'Phone → AI toolbar in a field: the AI buttons (Enhance, Custom…) and More should sit on the first row without being cut off, with the magnifier, { }, ;& and aA on a second row. Tapping Custom should still show the instruction box on its own line.',
+  'Phone → tap into Description (or any text field) so the keyboard opens: the section bar and the field heading hide, and you should see several lines of text above the keyboard. Close the keyboard: everything comes back.',
+  'Phone → same check in a greeting and in a lorebook entry (in a character and in a standalone lorebook): with the keyboard open, the token count and the Enabled/Constant toggles hide and the text area keeps several lines. Back, Duplicate, Delete and the keys box stay.',
 ];
