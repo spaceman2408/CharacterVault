@@ -14,6 +14,9 @@ import { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { DEFAULT_SPLIT_RATIO, useCreatorNotesPreviewPrefs } from './useCreatorNotesPreviewPrefs';
 import { SplitDivider } from './SplitDivider';
+import { CreatorNotesSnippetMenu } from './CreatorNotesSnippetMenu';
+import { padSnippetForInsert, type CreatorNotesSnippet } from './creatorNotesSnippets';
+import { EditorView } from '@codemirror/view';
 import { Columns2, Eye } from 'lucide-react';
 import { defaultToolbarActions, useAIEditor } from '../../hooks';
 import { creatorNotesExtensions, formatCreatorNotesCssInView } from '../../editor/extensions';
@@ -449,6 +452,26 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
     return <div>No character selected</div>;
   }
 
+  const insertSnippet = (snippet: CreatorNotesSnippet) => {
+    const editorDom = editorRef.current?.querySelector<HTMLElement>('.cm-editor');
+    const view = editorDom ? EditorView.findFromDOM(editorDom) : null;
+    if (!view) return;
+    const { from, to } = view.state.selection.main;
+    const { doc } = view.state;
+    const text = padSnippetForInsert(
+      snippet.code,
+      doc.sliceString(Math.max(0, from - 2), from),
+      doc.sliceString(to, Math.min(doc.length, to + 2)),
+    );
+    view.dispatch({
+      changes: { from, to, insert: text },
+      selection: { anchor: from + text.length },
+      scrollIntoView: true,
+      userEvent: 'input.snippet',
+    });
+    view.focus();
+  };
+
   const sectionMeta = CHARACTER_SECTIONS.find(s => s.id === section);
   const isCreatorNotesSection = section === 'creator_notes';
   const isDocked = isCreatorNotesSection && isSplitPreviewOpen;
@@ -649,6 +672,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
 
           {section === 'creator_notes' && (
             <div className="flex shrink-0 items-center gap-2">
+              <CreatorNotesSnippetMenu onInsert={insertSnippet} />
               <button
                 type="button"
                 onClick={() => setIsPreviewOpen(true)}

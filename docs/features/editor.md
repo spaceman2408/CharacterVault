@@ -262,7 +262,7 @@ Each section tab shows a title, description, and the editor. Some sections have 
 | **Name** and **Creator** | Simple text fields for quick edits |
 | **Tags** | Tag chips with quick add, paste, and remove controls |
 | **Description**, **Personality**, **Scenario**, etc. | Standard single editor |
-| **Creator Notes** | Editor with a **Preview** button that opens a sandboxed preview and a **Dock** button for a resizable split view (not on phones). Color swatches, a **Format** button for CSS, and a size readout. See [Creator Notes Preview](/features/creator-notes). |
+| **Creator Notes** | Editor with a **Preview** button that opens a sandboxed preview and a **Dock** button for a resizable split view (not on phones). An **Insert** menu of starter snippets, color swatches, a **Format** button for CSS, and a size readout. See [Creator Notes Preview](/features/creator-notes). |
 | **Greetings** | Special multi-greeting editor. Duplicate and reorder from the sidebar. See [Greetings Editor](/features/greetings-editor). |
 | **Lorebook** | Two-panel editor with ST fields, recursion map, search, and AI key generation. Same UI for embedded books and the [Lorebook Vault](/features/lorebook-vault). See [Lorebook Editor](/features/lorebook-editor). |
 | **Image** | Image upload panel (not a text editor) |

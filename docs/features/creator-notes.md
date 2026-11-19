@@ -15,6 +15,7 @@ If imported Creator Notes contain encoded entities like `&nbsp;` or `&amp;`, cli
 
 ### CSS Tools
 
+- **Insert** — Adds a starter snippet at the cursor: Hero banner, Gradient title, Info block, Collapsible spoiler, or Content warnings. Each one is a `<style>` block plus markup that renders the same in SillyTavern, with `{{char}}` where the name goes. Edit the colors and text to make it yours. **Ctrl+Z** removes it
 - **Color swatches** — A small swatch sits before each color in `<style>` blocks and `style="..."` attributes. Click it to pick a new color. The color keeps its format (hex, `rgb()`, `hsl()`) and its transparency, and **Ctrl+Z** undoes the whole pick
 - **Format** — Tidies the CSS inside `<style>` blocks: one property per line, nested rules indented. HTML outside the style blocks is left alone, because reindenting it can change how SillyTavern renders the notes. **Ctrl+Z** undoes it
 - **Size** — The line under the heading shows the notes' size, plus how many images are embedded as `data:` URLs and how much of the size they take
