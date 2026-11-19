@@ -12,7 +12,7 @@ import { GreetingsEditor } from './GreetingsEditor';
 import { LorebookEditor } from './LorebookEditor';
 import { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
-import { useCreatorNotesPreviewPrefs } from './useCreatorNotesPreviewPrefs';
+import { DEFAULT_SPLIT_RATIO, useCreatorNotesPreviewPrefs } from './useCreatorNotesPreviewPrefs';
 import { SplitDivider } from './SplitDivider';
 import { Columns2, Eye } from 'lucide-react';
 import { useAIEditor } from '../../hooks';
@@ -690,6 +690,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
               charName={previewCharName}
               prefs={previewPrefs}
               onPrefsChange={updatePreviewPrefs}
+              onResetSplit={() => updatePreviewPrefs({ splitRatio: DEFAULT_SPLIT_RATIO })}
               showRemoteWarning={creatorNotesRemoteWarning}
               frameClassName="block h-full w-full bg-vault-800"
               emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-fg-subtle"

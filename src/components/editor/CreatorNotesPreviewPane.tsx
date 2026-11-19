@@ -4,10 +4,11 @@
  */
 
 import React from 'react';
-import { Grid2x2, Maximize2, Monitor, Moon, PanelRight, RotateCcw, Smartphone, Sun } from 'lucide-react';
+import { Columns2, Grid2x2, Maximize2, Monitor, Moon, PanelRight, RotateCcw, Smartphone, Sun } from 'lucide-react';
 import { hasRemoteReference } from '../../utils/creatorNotesRemote';
 import {
   CREATOR_NOTES_PREVIEW_WIDTHS,
+  DEFAULT_SPLIT_RATIO,
   type CreatorNotesPreviewBackdrop,
   type CreatorNotesPreviewPrefs,
   type CreatorNotesPreviewWidth,
@@ -29,6 +30,8 @@ interface CreatorNotesPreviewPaneProps {
   charName: string;
   prefs: CreatorNotesPreviewPrefs;
   onPrefsChange: (patch: Partial<CreatorNotesPreviewPrefs>) => void;
+  /** Docked only: puts the editor/preview divider back to its default spot; disabled when already there. */
+  onResetSplit?: () => void;
   showRemoteWarning?: boolean;
   style?: React.CSSProperties;
   frameClassName?: string;
@@ -174,6 +177,7 @@ export function CreatorNotesPreviewPane({
   charName,
   prefs,
   onPrefsChange,
+  onResetSplit,
   showRemoteWarning = true,
   style,
   frameClassName = '',
@@ -278,6 +282,18 @@ export function CreatorNotesPreviewPane({
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
+          {onResetSplit && (
+            <button
+              type="button"
+              onClick={onResetSplit}
+              disabled={prefs.splitRatio === DEFAULT_SPLIT_RATIO}
+              aria-label="Reset dock size"
+              title="Reset dock size"
+              className="rounded-lg border border-border p-2 text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:pointer-events-none disabled:opacity-40"
+            >
+              <Columns2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          )}
         </div>
         {notices.length > 0 && (
           <ul aria-label="Changes in SillyTavern" className="flex w-full flex-wrap gap-1.5">

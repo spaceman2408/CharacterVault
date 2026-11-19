@@ -19,7 +19,7 @@ Click **Preview** to open a large preview window (90% of the screen). Press **Es
 
 Click **Dock** (next to **Preview**, or inside the preview window) to show the editor and a live preview side by side. On narrower screens they stack, with the editor on top. Changes you make in the editor update the preview in real time. Click **Dock** again to close the split. **Dock** is not available on phones.
 
-Drag the divider between the editor and the preview to resize them, or focus it and use the arrow keys. Double-click it to go back to half and half. The size is remembered in this browser, and each character stays docked while the workspace is open.
+Drag the divider between the editor and the preview to resize them, or focus it and use the arrow keys. Double-click it, or click **Reset dock size** in the preview's toolbar, to go back to half and half. The size is remembered in this browser, and each character stays docked while the workspace is open.
 
 ::: tip
 The split view is useful for iterating on styled notes. Make a change, see it immediately, and adjust until it looks right.
@@ -47,6 +47,7 @@ The buttons above the preview change how it's shown, not the notes. Your choices
 - **Width** — Full, Wide (720px), SillyTavern panel (480px), or Phone (390px). Not shown on phones
 - **Background** — Dark, Light, or a checkerboard to spot transparent areas. Notes that set their own background still win
 - **Replay** — Restarts CSS animations
+- **Reset dock size** — Docked only. Puts the divider back to half and half
 
 ### Sandboxed Rendering
 
