@@ -33,6 +33,7 @@ nav: [
           { text: 'AI Agent', link: '/features/ai-agent' },
           { text: 'AI Context Panel', link: '/features/ai-context' },
           { text: 'Editor & AI Toolkit', link: '/features/editor' },
+          { text: 'Editor Controls', link: '/features/editor-controls' },
           { text: 'Greetings Editor', link: '/features/greetings-editor' },
           { text: 'Lorebook Editor', link: '/features/lorebook-editor' },
           { text: 'Recursion Map Guide', link: '/features/recursion-map-guide' },
