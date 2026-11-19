@@ -664,10 +664,6 @@ export const DEFAULT_SPELLCHECK_SETTINGS: SpellcheckSettings = {
 
 export interface SamplerSettings {
   temperature: number;
-  minP: number;
-  /** 0 = disabled */
-  topK: number;
-  repetitionPenalty: number;
   topP: number;
   contextLength: number;
   maxTokens: number;
@@ -1127,9 +1123,6 @@ export const DEFAULT_SETTINGS = {
   } satisfies AIConfig,
   sampler: {
     temperature: 1.0,
-    minP: 0,
-    topK: 0,
-    repetitionPenalty: 1.0,
     topP: 1.0,
     contextLength: 8192,
     maxTokens: 2048,
@@ -1140,9 +1133,6 @@ export const DEFAULT_SETTINGS = {
       name: 'Creative',
       settings: {
         temperature: 1.1,
-        minP: 0.05,
-        topK: 0,
-        repetitionPenalty: 1.05,
         topP: 0.95,
         contextLength: 8192,
         maxTokens: 2048,
@@ -1153,9 +1143,6 @@ export const DEFAULT_SETTINGS = {
       name: 'Balanced',
       settings: {
         temperature: 0.8,
-        minP: 0.05,
-        topK: 0,
-        repetitionPenalty: 1.05,
         topP: 1.0,
         contextLength: 8192,
         maxTokens: 2048,
@@ -1166,9 +1153,6 @@ export const DEFAULT_SETTINGS = {
       name: 'Factual',
       settings: {
         temperature: 0.5,
-        minP: 0.1,
-        topK: 0,
-        repetitionPenalty: 1.05,
         topP: 0.9,
         contextLength: 8192,
         maxTokens: 1024,

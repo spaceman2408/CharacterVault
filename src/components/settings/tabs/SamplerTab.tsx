@@ -6,11 +6,8 @@
 import React, { useState } from 'react';
 import {
   BookOpen,
-  Filter,
   Hash,
-  Layers,
   Percent,
-  Repeat,
   Sliders,
   Target,
   Thermometer,
@@ -39,13 +36,10 @@ function applyNamedPreset(
   );
   if (!preset) return settings;
   // Apply sampling knobs only — keep the user's context window.
-  const { temperature, minP, topK, repetitionPenalty, topP, maxTokens } = preset.settings;
+  const { temperature, topP, maxTokens } = preset.settings;
   return {
     ...settings,
     temperature,
-    minP,
-    topK,
-    repetitionPenalty,
     topP,
     maxTokens,
   };
@@ -159,28 +153,6 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             onChange={(v) => updateSetting('topP', v)}
             formatValue={(v) => v.toFixed(2)}
           />
-          <SliderControl
-            id="minP"
-            label="Min P"
-            icon={<Filter className="w-4 h-4" />}
-            value={settings.minP}
-            min={0}
-            max={1}
-            step={0.01}
-            onChange={(v) => updateSetting('minP', v)}
-            formatValue={(v) => v.toFixed(2)}
-          />
-          <SliderControl
-            id="topK"
-            label="Top K"
-            icon={<Layers className="w-4 h-4" />}
-            value={settings.topK}
-            min={0}
-            max={100}
-            step={1}
-            onChange={(v) => updateSetting('topK', v)}
-            formatValue={(v) => Math.round(v).toString()}
-          />
         </div>
       </SettingsCard>
 
@@ -188,21 +160,10 @@ export const SamplerTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
         <div className="flex items-center gap-2 mb-4">
           <Target className="w-4 h-4 text-fg-muted" />
           <span className="text-sm font-semibold text-fg-muted">
-            Secondary Samplers
+            Output &amp; Context
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <SliderControl
-            id="repetitionPenalty"
-            label="Repetition Penalty"
-            icon={<Repeat className="w-4 h-4" />}
-            value={settings.repetitionPenalty}
-            min={1}
-            max={2}
-            step={0.05}
-            onChange={(v) => updateSetting('repetitionPenalty', v)}
-            formatValue={(v) => v.toFixed(2)}
-          />
           <SliderControl
             id="maxTokens"
             label="Max Tokens"

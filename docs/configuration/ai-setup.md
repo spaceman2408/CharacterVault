@@ -239,8 +239,8 @@ See [Sampler Settings](/configuration/sampler-settings) for a full explanation o
 The Sampler tab includes:
 
 - **Quick Presets** — One-click **Creative**, **Balanced**, or **Factual** presets.
-- **Primary Samplers** — Temperature, Top P, Min P, Top K sliders.
-- **Secondary Samplers** — Repetition Penalty, Max Tokens sliders, and Context Length dropdown.
+- **Primary Samplers** — Temperature and Top P sliders.
+- **Output & Context** — Max Tokens slider and Context Length dropdown.
 
 ## Prompts Tab
 

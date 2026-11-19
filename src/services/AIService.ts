@@ -403,9 +403,6 @@ export interface ChatCompletionRequestBody {
   messages: ChatMessage[];
   temperature?: number;
   top_p?: number;
-  min_p?: number;
-  top_k?: number;
-  repetition_penalty?: number;
   stream?: boolean;
   max_tokens?: number;
   include_reasoning?: boolean;
@@ -895,9 +892,6 @@ Provide only the generated text without any additional commentary.`;
       messages: budgetedMessages,
       temperature: sampler.temperature,
       top_p: sampler.topP,
-      min_p: sampler.minP,
-      top_k: sampler.topK,
-      repetition_penalty: sampler.repetitionPenalty,
       stream: !!stream,
       max_tokens: options?.maxTokens ?? sampler.maxTokens,
       include_reasoning: enableReasoning ? true : undefined,

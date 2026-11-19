@@ -14,9 +14,6 @@ export type ReasoningEffortValue =
 
 /** Non-OpenAI / gateway-specific fields we may strip on rejection. */
 export const NON_STANDARD_PARAMS = [
-  'min_p',
-  'top_k',
-  'repetition_penalty',
   'include_reasoning',
   'reasoning',
   'reasoning_effort',
@@ -57,14 +54,12 @@ const EFFORT_PEER: Partial<Record<ReasoningEffortValue, ReasoningEffortValue>> =
   xhigh: 'max',
 };
 
-/** Hosts known to reject non-standard sampler extras up front. */
+/** Hosts that want max_completion_tokens up front. */
 const STRICT_OPENAI_HOST_SNIPPETS = ['api.openai.com'] as const;
 
 /** Gemini's OpenAI endpoint 400s on these and on efforts above high, but takes max_tokens; a retry also spends free-tier quota. */
 const GEMINI_HOST_SNIPPET = 'generativelanguage.googleapis.com';
 const GEMINI_REJECTED_PARAMS = [
-  'min_p',
-  'repetition_penalty',
   'include_reasoning',
   'reasoning',
   'reasoning_split',
@@ -74,9 +69,6 @@ export interface ChatRequestLike {
   model?: string;
   temperature?: number;
   top_p?: number;
-  min_p?: number;
-  top_k?: number;
-  repetition_penalty?: number;
   include_reasoning?: boolean;
   reasoning?: boolean | { enabled?: boolean; effort?: string; [key: string]: unknown };
   reasoning_effort?: string;
@@ -453,7 +445,7 @@ export function recordSupportedEfforts(cache: ModelCapabilityCache, supported: s
   cache.effortAllowlist = supported.map((s) => s.toLowerCase());
 }
 
-/** Omit no-op sampler values; strict hosts also lose non-standard samplers and get max_completion_tokens. */
+/** Strict hosts get max_completion_tokens; Gemini loses the fields it rejects. */
 export function sanitizeSamplerParams(
   request: ChatRequestLike,
   baseUrl: string
@@ -461,21 +453,11 @@ export function sanitizeSamplerParams(
   const cleaned = cloneRequest(request);
 
   if (shouldOmitNonStandardSamplers(baseUrl)) {
-    delete cleaned.min_p;
-    delete cleaned.top_k;
-    delete cleaned.repetition_penalty;
     moveToMaxCompletionTokens(cleaned);
   } else if (baseUrl.toLowerCase().includes(GEMINI_HOST_SNIPPET)) {
     for (const param of GEMINI_REJECTED_PARAMS) delete cleaned[param];
     if (cleaned.reasoning_effort === 'xhigh' || cleaned.reasoning_effort === 'max') {
       cleaned.reasoning_effort = 'high';
-    }
-    if (typeof cleaned.top_k === 'number' && cleaned.top_k <= 0) delete cleaned.top_k;
-  } else {
-    if (typeof cleaned.min_p === 'number' && cleaned.min_p <= 0) delete cleaned.min_p;
-    if (typeof cleaned.top_k === 'number' && cleaned.top_k <= 0) delete cleaned.top_k;
-    if (typeof cleaned.repetition_penalty === 'number' && cleaned.repetition_penalty === 1) {
-      delete cleaned.repetition_penalty;
     }
   }
 

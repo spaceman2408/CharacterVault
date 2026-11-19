@@ -144,9 +144,6 @@ function mergeLoadedAIConfig(config: AIConfig): AIConfig {
 function mergeLoadedSampler(sampler: SamplerSettings): SamplerSettings {
   return {
     temperature: sampler?.temperature ?? DEFAULT_SETTINGS.sampler.temperature,
-    minP: sampler?.minP ?? DEFAULT_SETTINGS.sampler.minP,
-    topK: sampler?.topK ?? DEFAULT_SETTINGS.sampler.topK,
-    repetitionPenalty: sampler?.repetitionPenalty ?? DEFAULT_SETTINGS.sampler.repetitionPenalty,
     topP: sampler?.topP ?? DEFAULT_SETTINGS.sampler.topP,
     contextLength: clampContextLength(
       sampler?.contextLength ?? DEFAULT_SETTINGS.sampler.contextLength
