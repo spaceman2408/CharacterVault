@@ -109,58 +109,57 @@ function toPickerHex(color: string): string {
   return rgba ? `#${toHexByte(rgba.r)}${toHexByte(rgba.g)}${toHexByte(rgba.b)}` : '#000000';
 }
 
-function openPicker(view: EditorView, from: number, anchor: HTMLElement): void {
-  const startColor = view.state.doc.sliceString(from, view.state.doc.lineAt(from).to).match(COLOR)?.[0];
-  if (!startColor) return;
-  const original = startColor;
-  let current = original;
+function colorAt(view: EditorView, from: number): string | null {
+  const rest = view.state.doc.sliceString(from, view.state.doc.lineAt(from).to);
+  const match = rest.match(COLOR);
+  return match && rest.startsWith(match[0]) ? match[0] : null;
+}
 
-  const input = document.createElement('input');
-  input.type = 'color';
-  input.value = toPickerHex(original);
-  const rect = anchor.getBoundingClientRect();
-  Object.assign(input.style, {
-    position: 'fixed',
-    left: `${rect.left}px`,
-    top: `${rect.bottom}px`,
-    width: '1px',
-    height: '1px',
-    opacity: '0',
-    pointerEvents: 'none',
-  });
-  document.body.appendChild(input);
+/**
+ * The real color input sits inside the swatch so the browser anchors its picker there.
+ * Live picks stay out of undo history; when the picker closes, the whole pick becomes
+ * one undo step.
+ */
+function attachPicker(view: EditorView, swatch: HTMLElement, input: HTMLInputElement): void {
+  let session: { from: number; original: string; current: string } | null = null;
+
+  const begin = () => {
+    if (session) return session;
+    const from = view.posAtDOM(swatch);
+    const original = colorAt(view, from);
+    if (!original) return null;
+    session = { from, original, current: original };
+    input.value = toPickerHex(original);
+    return session;
+  };
 
   const replace = (text: string, addToHistory: boolean) => {
+    if (!session || text === session.current) return;
     view.dispatch({
-      changes: { from, to: from + current.length, insert: text },
+      changes: { from: session.from, to: session.from + session.current.length, insert: text },
       annotations: addToHistory ? undefined : Transaction.addToHistory.of(false),
       userEvent: 'input.color',
     });
-    current = text;
+    session.current = text;
   };
 
-  // Live updates stay out of undo history; on close, the whole pick becomes one undo step.
-  const onInput = () => replace(replaceColorKeepingFormat(original, input.value), false);
-  const onChange = () => {
-    const finalText = replaceColorKeepingFormat(original, input.value);
-    replace(original, false);
-    if (finalText !== original) replace(finalText, true);
-    cleanup();
+  const finish = () => {
+    if (!session) return;
+    const finalText = session.current;
+    replace(session.original, false);
+    replace(finalText, true);
+    session = null;
   };
-  const cleanup = () => {
-    input.removeEventListener('input', onInput);
-    input.removeEventListener('change', onChange);
-    input.remove();
-  };
-  input.addEventListener('input', onInput);
-  input.addEventListener('change', onChange);
-  input.addEventListener('blur', () => window.setTimeout(() => input.isConnected && cleanup(), 300));
 
-  try {
-    input.showPicker();
-  } catch {
-    input.click();
-  }
+  input.addEventListener('click', () => {
+    begin();
+  });
+  input.addEventListener('input', () => {
+    const active = begin();
+    if (active) replace(replaceColorKeepingFormat(active.original, input.value), false);
+  });
+  input.addEventListener('change', finish);
+  input.addEventListener('blur', finish);
 }
 
 class SwatchWidget extends WidgetType {
@@ -176,18 +175,27 @@ class SwatchWidget extends WidgetType {
   }
 
   toDOM(view: EditorView): HTMLElement {
-    const swatch = document.createElement('button');
-    swatch.type = 'button';
+    const swatch = document.createElement('span');
     swatch.className = 'cm-color-swatch';
-    swatch.title = 'Pick color';
-    swatch.setAttribute('aria-label', `Pick color, now ${this.color}`);
-    swatch.style.setProperty('--swatch-color', this.color);
-    swatch.addEventListener('mousedown', (event) => event.preventDefault());
-    swatch.addEventListener('click', (event) => {
-      event.preventDefault();
-      openPicker(view, view.posAtDOM(swatch), swatch);
-    });
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.className = 'cm-color-swatch-input';
+    input.title = 'Pick color';
+    swatch.appendChild(input);
+    this.paint(swatch);
+    attachPicker(view, swatch, input);
     return swatch;
+  }
+
+  // Recolor in place so a live pick doesn't replace the input and close the picker.
+  updateDOM(dom: HTMLElement): boolean {
+    this.paint(dom);
+    return true;
+  }
+
+  private paint(swatch: HTMLElement): void {
+    swatch.style.setProperty('--swatch-color', this.color);
+    swatch.querySelector('input')?.setAttribute('aria-label', `Pick color, now ${this.color}`);
   }
 
   ignoreEvent(): boolean {
@@ -222,6 +230,7 @@ const swatchPlugin = ViewPlugin.fromClass(
 
 const swatchTheme = EditorView.baseTheme({
   '.cm-color-swatch': {
+    position: 'relative',
     display: 'inline-block',
     width: '0.8em',
     height: '0.8em',
@@ -233,6 +242,17 @@ const swatchTheme = EditorView.baseTheme({
     cursor: 'pointer',
     background:
       'linear-gradient(var(--swatch-color), var(--swatch-color)), repeating-conic-gradient(#999 0% 25%, #fff 0% 50%) 0 0 / 6px 6px',
+  },
+  '.cm-color-swatch-input': {
+    position: 'absolute',
+    inset: '0',
+    width: '100%',
+    height: '100%',
+    margin: '0',
+    padding: '0',
+    border: '0',
+    opacity: '0',
+    cursor: 'pointer',
   },
 });
 
