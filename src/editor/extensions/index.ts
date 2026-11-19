@@ -54,6 +54,7 @@ export {
 
 export {
   creatorNotesExtensions,
+  formatCreatorNotesCssInView,
 } from './htmlHighlight';
 
 export {

@@ -131,7 +131,7 @@ function normalizeAiEditText(original: string, replacement: string): string {
   return `${'\n'.repeat(leadOrig)}${next}${'\n'.repeat(trailOrig)}`;
 }
 
-const defaultToolbarActions: ToolbarActionConfig[] = [
+export const defaultToolbarActions: ToolbarActionConfig[] = [
   {
     id: 'normalize-entities',
     label: ';&',

@@ -13,6 +13,12 @@ Type your content in the editor on the Creator Notes tab. You can write:
 
 If imported Creator Notes contain encoded entities like `&nbsp;` or `&amp;`, click the **;&** button in the editor toolbar to convert them back into readable characters before editing.
 
+### CSS Tools
+
+- **Color swatches** — A small swatch sits before each color in `<style>` blocks and `style="..."` attributes. Click it to pick a new color. The color keeps its format (hex, `rgb()`, `hsl()`) and its transparency, and **Ctrl+Z** undoes the whole pick
+- **Format** — Tidies the CSS inside `<style>` blocks: one property per line, nested rules indented. HTML outside the style blocks is left alone, because reindenting it can change how SillyTavern renders the notes. **Ctrl+Z** undoes it
+- **Size** — The line under the heading shows the notes' size, plus how many images are embedded as `data:` URLs and how much of the size they take
+
 ## Preview Modes
 
 Click **Preview** to open a large preview window (90% of the screen). Press **Escape** or click **Close** to return to the editor.

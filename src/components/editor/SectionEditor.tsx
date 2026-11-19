@@ -15,13 +15,25 @@ import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { DEFAULT_SPLIT_RATIO, useCreatorNotesPreviewPrefs } from './useCreatorNotesPreviewPrefs';
 import { SplitDivider } from './SplitDivider';
 import { Columns2, Eye } from 'lucide-react';
-import { useAIEditor } from '../../hooks';
-import { creatorNotesExtensions } from '../../editor/extensions';
+import { defaultToolbarActions, useAIEditor } from '../../hooks';
+import { creatorNotesExtensions, formatCreatorNotesCssInView } from '../../editor/extensions';
+import type { ToolbarActionConfig } from '../../editor/extensions';
 import { estimateTokens } from '../../services/AIService';
 import { mergeLorebookEntries } from '../../services/LorebookAttachmentService';
 import { isImeComposing } from '../../utils/imeComposing';
+import { formatBytes, measureCreatorNotes } from '../../utils/creatorNotesSize';
 import { json } from '@codemirror/lang-json';
 import type { Extension } from '@codemirror/state';
+
+const CREATOR_NOTES_TOOLBAR_ACTIONS: ToolbarActionConfig[] = [
+  ...defaultToolbarActions,
+  {
+    id: 'format-css',
+    label: 'Format',
+    title: 'Format the CSS inside <style> blocks (markup is left as is)',
+    onClick: formatCreatorNotesCssInView,
+  },
+];
 
 interface SectionEditorProps {
   section: CharacterSection;
@@ -384,8 +396,9 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
     const trimmed = liveStatsValue.trim();
     const words = trimmed === '' ? 0 : trimmed.split(/\s+/).length;
     const tokens = estimateTokens(liveStatsValue);
-    return { chars, words, tokens };
-  }, [liveStatsValue]);
+    const size = section === 'creator_notes' ? measureCreatorNotes(liveStatsValue) : null;
+    return { chars, words, tokens, size };
+  }, [liveStatsValue, section]);
 
   const sectionExtensions = React.useMemo<Extension[] | undefined>(() => {
     if (section === 'creator_notes') return creatorNotesExtensions();
@@ -407,6 +420,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
   }, [section]);
   const { editorRef, payloadPreviewModal } = useAIEditor({
     key: section,
+    toolbarActions: section === 'creator_notes' ? CREATOR_NOTES_TOOLBAR_ACTIONS : undefined,
     value: currentValue,
     placeholder: sectionPlaceholder,
     onImmediateChange: handleImmediateChange,
@@ -626,6 +640,10 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
             </p>
             <p className="mt-1 text-xs text-fg-subtle" aria-live="off">
               {liveStats.chars} chars · {liveStats.words} words · ~{liveStats.tokens} tokens
+              {liveStats.size && ` · ${formatBytes(liveStats.size.bytes)}`}
+              {liveStats.size && liveStats.size.embeddedImages > 0 && (
+                ` · ${liveStats.size.embeddedImages} embedded ${liveStats.size.embeddedImages === 1 ? 'image' : 'images'} (${formatBytes(liveStats.size.embeddedBytes)})`
+              )}
             </p>
           </div>
 
