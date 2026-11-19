@@ -33,12 +33,20 @@ The split view is useful for iterating on styled notes. Make a change, see it im
 - `{{char}}` and `{{user}}` are filled in
 - Styles are scoped to the notes, so rules on `:root`, `html`, or `body` match nothing. Put shared styles and CSS variables on a wrapper `<div>` instead
 - Scripts, event handlers like `onclick`, `<iframe>`, and `@import` are removed
-- Remote images, media, and styles with remote URLs are hidden, since SillyTavern blocks remote media unless the user allows it for that card. Images embedded as `data:` URLs still show
+- Remote images, media, and styles with remote URLs are hidden, since SillyTavern blocks remote media unless the user allows it for that card. Images embedded as `data:` URLs still show. Turn on **Remote media** to see them as a user who allowed it
 - A CSS comment inside a rule breaks the whole style block while remote media is blocked. Put comments between rules instead
 
 One difference: notes written as a full web page (`<!DOCTYPE>`, `<html>`, `<head>`, `<body>`) leave blank lines at the top and bottom in SillyTavern. The preview hides those.
 
 When the preview changes something, a short list above it says what. Turn **Match SillyTavern** off to see the raw HTML and CSS as written. Other sites, such as Chub, render notes their own way.
+
+### Preview Controls
+
+The buttons above the preview change how it's shown, not the notes. Your choices are remembered in this browser.
+
+- **Width** — Full, Wide (720px), SillyTavern panel (480px), or Phone (390px). Not shown on phones
+- **Background** — Dark, Light, or a checkerboard to spot transparent areas. Notes that set their own background still win
+- **Replay** — Restarts CSS animations
 
 ### Sandboxed Rendering
 
@@ -47,7 +55,7 @@ The preview renders inside an isolated frame with security restrictions:
 - Your HTML and CSS are isolated from the rest of the app, so styles won't leak out
 - Scripts and form submissions are blocked for security
 - Only https images, fonts, and stylesheets load, plus images embedded in the notes (`data:` URLs). Everything else is blocked
-- The preview environment uses a solid dark gray background and a base sans-serif font stack
+- The preview environment uses a dark gray background by default and a base sans-serif font stack
 
 When the notes pull images, fonts, or styles from another site, the preview shows a yellow warning bar: that site can see your IP address and that you opened the card. The warning is on by default; turn it off in **Settings → Character Workspace → Warn about remote content in Creator Notes preview**.
 

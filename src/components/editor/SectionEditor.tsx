@@ -12,6 +12,7 @@ import { GreetingsEditor } from './GreetingsEditor';
 import { LorebookEditor } from './LorebookEditor';
 import { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
+import { useCreatorNotesPreviewPrefs } from './useCreatorNotesPreviewPrefs';
 import { useAIEditor } from '../../hooks';
 import { creatorNotesExtensions } from '../../editor/extensions';
 import { estimateTokens } from '../../services/AIService';
@@ -271,7 +272,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
   } = useCharacterEditorContext();
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
-  const [matchSillyTavern, setMatchSillyTavern] = React.useState(true);
+  const [previewPrefs, updatePreviewPrefs] = useCreatorNotesPreviewPrefs();
   const [extensionsError, setExtensionsError] = React.useState<string | null>(null);
 
   // Get current value based on section
@@ -647,8 +648,8 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
             <CreatorNotesPreviewPane
               content={livePreviewValue}
               charName={previewCharName}
-              matchSillyTavern={matchSillyTavern}
-              onMatchSillyTavernChange={setMatchSillyTavern}
+              prefs={previewPrefs}
+              onPrefsChange={updatePreviewPrefs}
               showRemoteWarning={creatorNotesRemoteWarning}
               frameClassName="block h-full w-full bg-vault-800"
               emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-fg-subtle"
@@ -661,8 +662,8 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
         <CreatorNotesPreviewModal
           content={livePreviewValue}
           charName={previewCharName}
-          matchSillyTavern={matchSillyTavern}
-          onMatchSillyTavernChange={setMatchSillyTavern}
+          prefs={previewPrefs}
+          onPrefsChange={updatePreviewPrefs}
           showRemoteWarning={creatorNotesRemoteWarning}
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}
