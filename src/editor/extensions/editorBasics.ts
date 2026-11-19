@@ -2,11 +2,11 @@
  * @fileoverview Shared CodeMirror editing defaults for CharacterVault prose editors.
  * Small readability and mouse behaviors with no new dependencies:
  * caret-line highlight, bracket matching, multi-cursor / rectangular
- * selection, drop cursor, and optional placeholder.
+ * selection, drop cursor, wrap-selection on * or ", and optional placeholder.
  * @module editor/extensions/editorBasics
  */
 
-import { EditorState, type Extension } from '@codemirror/state';
+import { EditorSelection, EditorState, type Extension, type TransactionSpec } from '@codemirror/state';
 import {
   Decoration,
   EditorView,
@@ -66,6 +66,35 @@ export function highlightCaretLine(): Extension {
   return caretLineHighlighter;
 }
 
+const WRAP_CHARS = new Set(['*', '"']);
+
+/**
+ * Typing * or " over a selection wraps it instead of replacing it. The
+ * selection stays on the inner text, so a second * makes **bold**.
+ */
+export function wrapSelectionSpec(state: EditorState, text: string): TransactionSpec | null {
+  if (!WRAP_CHARS.has(text) || state.readOnly) return null;
+  if (state.selection.ranges.some((range) => range.empty)) return null;
+  return {
+    ...state.changeByRange((range) => ({
+      changes: [
+        { from: range.from, insert: text },
+        { from: range.to, insert: text },
+      ],
+      range: EditorSelection.range(range.anchor + 1, range.head + 1),
+    })),
+    scrollIntoView: true,
+    userEvent: 'input.type',
+  };
+}
+
+const wrapSelectionOnType = EditorView.inputHandler.of((view, _from, _to, text) => {
+  const spec = wrapSelectionSpec(view.state, text);
+  if (!spec) return false;
+  view.dispatch(spec);
+  return true;
+});
+
 /**
  * Base editing behaviors shared by every AI editor instance.
  * Theme colors come from CSS variables (themeSync); this only enables the behaviors.
@@ -79,6 +108,7 @@ export function editorBasics(options: EditorBasicsOptions = {}): Extension[] {
     rectangularSelection(),
     crosshairCursor(),
     EditorState.allowMultipleSelections.of(true),
+    wrapSelectionOnType,
   ];
 
   if (options.placeholderText) {

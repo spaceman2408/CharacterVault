@@ -423,6 +423,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
   }, [section]);
   const { editorRef, payloadPreviewModal } = useAIEditor({
     key: section,
+    restoreKey: characterId ? `${characterId}:${section}` : undefined,
     toolbarActions: section === 'creator_notes' ? CREATOR_NOTES_TOOLBAR_ACTIONS : undefined,
     value: currentValue,
     placeholder: sectionPlaceholder,

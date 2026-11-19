@@ -18,6 +18,7 @@ import {
   setSearchQuery,
   SearchQuery,
   searchPanelOpen as isSearchPanelOpen,
+  selectNextOccurrence,
 } from '@codemirror/search';
 import { isImeComposing } from '../../utils/imeComposing';
 
@@ -608,6 +609,8 @@ export function toolbarSearch() {
       { key: 'Mod-h', mac: 'Mod-Alt-f', run: openToolbarSearchReplace },
       { key: 'F3', run: (view) => stepToolbarSearch(view, false), shift: (view) => stepToolbarSearch(view, true) },
       { key: 'Mod-g', run: (view) => stepToolbarSearch(view, false), shift: (view) => stepToolbarSearch(view, true) },
+      // preventDefault so Chrome's bookmark dialog never opens, even when there is no next match
+      { key: 'Mod-d', run: selectNextOccurrence, preventDefault: true },
     ]),
     // Ahead of the default Escape (which collapses a selection first); a no-op when search is closed
     Prec.high(keymap.of([{ key: 'Escape', run: closeToolbarSearch }])),
