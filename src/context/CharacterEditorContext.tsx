@@ -150,6 +150,7 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   /** Request keys whose last save failed; cleared when that key saves again. */
   const failedSaveKeysRef = useRef<Set<string>>(new Set());
   const lastGreetingIndexRef = useRef<Map<string, number>>(new Map());
+  const creatorNotesDockedRef = useRef<Set<string>>(new Set());
   const openedCharacterIdRef = useRef<string | null>(null);
   const currentCharacterRef = useRef<Character | null>(currentCharacter);
   const selectedTextRef = useRef(selectedText);
@@ -414,6 +415,14 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
   );
   const rememberGreetingIndex = useCallback((characterId: string, index: number) => {
     lastGreetingIndexRef.current.set(characterId, index);
+  }, []);
+  const isCreatorNotesDocked = useCallback(
+    (characterId: string) => creatorNotesDockedRef.current.has(characterId),
+    [],
+  );
+  const rememberCreatorNotesDocked = useCallback((characterId: string, docked: boolean) => {
+    if (docked) creatorNotesDockedRef.current.add(characterId);
+    else creatorNotesDockedRef.current.delete(characterId);
   }, []);
 
   /**
@@ -1294,6 +1303,8 @@ export default function CharacterEditorProvider({ children }: CharacterEditorPro
     flushPendingSaves,
     getLastGreetingIndex,
     rememberGreetingIndex,
+    isCreatorNotesDocked,
+    rememberCreatorNotesDocked,
     setFontSize,
     setSelectedText,
     setContextSectionIds: setContextSectionIdsCallback,

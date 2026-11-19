@@ -18,6 +18,7 @@ describe('useCreatorNotesPreviewPrefs', () => {
       allowRemoteMedia: false,
       width: 'full',
       backdrop: 'dark',
+      splitRatio: 0.5,
     });
   });
 
@@ -38,7 +39,14 @@ describe('useCreatorNotesPreviewPrefs', () => {
       allowRemoteMedia: false,
       width: 'full',
       backdrop: 'light',
+      splitRatio: 0.5,
     });
+  });
+
+  it('clamps a stored split ratio', () => {
+    localStorage.setItem(KEY, JSON.stringify({ splitRatio: 0.95 }));
+    const { result } = renderHook(() => useCreatorNotesPreviewPrefs());
+    expect(result.current[0].splitRatio).toBe(0.8);
   });
 
   it('ignores unreadable storage', () => {

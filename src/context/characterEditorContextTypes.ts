@@ -138,6 +138,9 @@ export interface CharacterEditorContextValue {
   /** Greeting index last shown for a character while the workspace is open; 0 when none. */
   getLastGreetingIndex: (characterId: string) => number;
   rememberGreetingIndex: (characterId: string, index: number) => void;
+  /** Whether the Creator Notes preview was docked for a character while the workspace is open. */
+  isCreatorNotesDocked: (characterId: string) => boolean;
+  rememberCreatorNotesDocked: (characterId: string, docked: boolean) => void;
 
   /** Set font size */
   setFontSize: (size: number) => void;

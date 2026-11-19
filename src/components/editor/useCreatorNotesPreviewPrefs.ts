@@ -8,6 +8,8 @@ export interface CreatorNotesPreviewPrefs {
   allowRemoteMedia: boolean;
   width: CreatorNotesPreviewWidth;
   backdrop: CreatorNotesPreviewBackdrop;
+  /** Editor share of the docked split, 0–1. */
+  splitRatio: number;
 }
 
 export const CREATOR_NOTES_PREVIEW_WIDTHS: Record<CreatorNotesPreviewWidth, number | null> = {
@@ -19,11 +21,20 @@ export const CREATOR_NOTES_PREVIEW_WIDTHS: Record<CreatorNotesPreviewWidth, numb
 
 const STORAGE_KEY = 'creatorNotesPreviewPrefs';
 
+export const MIN_SPLIT_RATIO = 0.2;
+export const MAX_SPLIT_RATIO = 0.8;
+export const DEFAULT_SPLIT_RATIO = 0.5;
+
+export function clampSplitRatio(ratio: number): number {
+  return Math.min(MAX_SPLIT_RATIO, Math.max(MIN_SPLIT_RATIO, ratio));
+}
+
 const DEFAULT_PREFS: CreatorNotesPreviewPrefs = {
   matchSillyTavern: true,
   allowRemoteMedia: false,
   width: 'full',
   backdrop: 'dark',
+  splitRatio: DEFAULT_SPLIT_RATIO,
 };
 
 function readPrefs(): CreatorNotesPreviewPrefs {
@@ -40,6 +51,9 @@ function readPrefs(): CreatorNotesPreviewPrefs {
       backdrop: raw.backdrop === 'dark' || raw.backdrop === 'light' || raw.backdrop === 'checker'
         ? raw.backdrop
         : DEFAULT_PREFS.backdrop,
+      splitRatio: typeof raw.splitRatio === 'number' && Number.isFinite(raw.splitRatio)
+        ? clampSplitRatio(raw.splitRatio)
+        : DEFAULT_PREFS.splitRatio,
     };
   } catch {
     return DEFAULT_PREFS;

@@ -15,11 +15,11 @@ If imported Creator Notes contain encoded entities like `&nbsp;` or `&amp;`, cli
 
 ## Preview Modes
 
-Click **Preview CSS** to open a large preview window (90% of the screen). Press **Escape** or click **Close** to return to the editor.
+Click **Preview** to open a large preview window (90% of the screen). Press **Escape** or click **Close** to return to the editor.
 
-Click **Add to Editor** inside the preview to switch to a split view. On large screens the editor is on the left and the live preview on the right; on narrower screens they stack, with the editor on top. Changes you make in the editor update the preview in real time. **Add to Editor** is not available on phones.
+Click **Dock** (next to **Preview**, or inside the preview window) to show the editor and a live preview side by side. On narrower screens they stack, with the editor on top. Changes you make in the editor update the preview in real time. Click **Dock** again to close the split. **Dock** is not available on phones.
 
-To exit split view, click **Stop Previewing CSS**.
+Drag the divider between the editor and the preview to resize them, or focus it and use the arrow keys. Double-click it to go back to half and half. The size is remembered in this browser, and each character stays docked while the workspace is open.
 
 ::: tip
 The split view is useful for iterating on styled notes. Make a change, see it immediately, and adjust until it looks right.
@@ -69,7 +69,7 @@ Keep your styles self-contained. Plain http resources never load in the preview,
 
 ## Example
 
-Paste this into the Creator Notes editor and click **Preview CSS** to see it rendered:
+Paste this into the Creator Notes editor and click **Preview** to see it rendered:
 
 ```html
 <style>

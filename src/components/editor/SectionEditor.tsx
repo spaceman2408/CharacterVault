@@ -13,6 +13,8 @@ import { LorebookEditor } from './LorebookEditor';
 import { CreatorNotesPreviewModal } from './CreatorNotesPreviewModal';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import { useCreatorNotesPreviewPrefs } from './useCreatorNotesPreviewPrefs';
+import { SplitDivider } from './SplitDivider';
+import { Columns2, Eye } from 'lucide-react';
 import { useAIEditor } from '../../hooks';
 import { creatorNotesExtensions } from '../../editor/extensions';
 import { estimateTokens } from '../../services/AIService';
@@ -269,10 +271,17 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
     roleplayHighlight,
     getLastGreetingIndex,
     rememberGreetingIndex,
+    isCreatorNotesDocked,
+    rememberCreatorNotesDocked,
   } = useCharacterEditorContext();
+  const characterId = currentCharacter?.id;
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
-  const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
+  const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(
+    () => section === 'creator_notes' && !!characterId && isCreatorNotesDocked(characterId),
+  );
   const [previewPrefs, updatePreviewPrefs] = useCreatorNotesPreviewPrefs();
+  const [liveSplitRatio, setLiveSplitRatio] = React.useState<number | null>(null);
+  const splitContainerRef = React.useRef<HTMLDivElement>(null);
   const [extensionsError, setExtensionsError] = React.useState<string | null>(null);
 
   // Get current value based on section
@@ -302,11 +311,14 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
   }, [currentValue, section]);
 
   React.useEffect(() => {
-    if (section !== 'creator_notes') {
-      setIsPreviewOpen(false);
-      setIsSplitPreviewOpen(false);
-    }
-  }, [section]);
+    if (section !== 'creator_notes') setIsPreviewOpen(false);
+    setIsSplitPreviewOpen(section === 'creator_notes' && !!characterId && isCreatorNotesDocked(characterId));
+  }, [section, characterId, isCreatorNotesDocked]);
+
+  const setDocked = useCallback((docked: boolean) => {
+    setIsSplitPreviewOpen(docked);
+    if (characterId) rememberCreatorNotesDocked(characterId, docked);
+  }, [characterId, rememberCreatorNotesDocked]);
 
   React.useEffect(() => {
     if (section !== 'extensions') {
@@ -425,6 +437,8 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
 
   const sectionMeta = CHARACTER_SECTIONS.find(s => s.id === section);
   const isCreatorNotesSection = section === 'creator_notes';
+  const isDocked = isCreatorNotesSection && isSplitPreviewOpen;
+  const splitRatio = liveSplitRatio ?? previewPrefs.splitRatio;
   const previewCharName = currentCharacter.data.spec.name || currentCharacter.name;
 
   if (section === 'name') {
@@ -616,35 +630,61 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
           </div>
 
           {section === 'creator_notes' && (
-            <button
-              type="button"
-              onClick={() => {
-                if (isSplitPreviewOpen) {
-                  setIsSplitPreviewOpen(false);
-                  return;
-                }
-                setIsPreviewOpen(prev => !prev);
-              }}
-              className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                isPreviewOpen || isSplitPreviewOpen
-                  ? 'border-accent bg-accent text-accent-fg hover:opacity-90'
-                  : 'border-border bg-surface text-fg-muted hover:bg-accent-soft hover:text-accent'
-              }`}
-            >
-              {isSplitPreviewOpen ? 'Stop Previewing CSS' : 'Preview CSS'}
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(true)}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent"
+              >
+                <Eye className="h-4 w-4" aria-hidden="true" />
+                Preview
+              </button>
+              <button
+                type="button"
+                aria-pressed={isSplitPreviewOpen}
+                onClick={() => setDocked(!isSplitPreviewOpen)}
+                className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors max-sm:hidden ${
+                  isSplitPreviewOpen
+                    ? 'border-accent bg-accent text-accent-fg hover:opacity-90'
+                    : 'border-border bg-surface text-fg-muted hover:bg-accent-soft hover:text-accent'
+                }`}
+              >
+                <Columns2 className="h-4 w-4" aria-hidden="true" />
+                Dock
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      <div className={isCreatorNotesSection && isSplitPreviewOpen ? 'flex flex-1 min-h-0 flex-col gap-4 lg:flex-row' : 'flex flex-1 min-h-0 flex-col'}>
+      <div
+        ref={splitContainerRef}
+        className={isDocked ? 'flex flex-1 min-h-0 flex-col lg:flex-row' : 'flex flex-1 min-h-0 flex-col'}
+      >
         <div
           ref={editorRef}
-          className={isCreatorNotesSection && isSplitPreviewOpen ? 'min-h-0 flex-1 border border-border rounded-xl overflow-hidden lg:w-1/2' : 'flex-1 min-h-0 border border-border rounded-xl overflow-hidden'}
+          className="flex-1 min-h-0 min-w-0 border border-border rounded-xl overflow-hidden"
+          style={isDocked ? { flex: `${splitRatio} 1 0%` } : undefined}
         />
 
-        {isCreatorNotesSection && isSplitPreviewOpen ? (
-          <div className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-vault-800 shadow-inner border-border lg:w-1/2">
+        {isDocked ? (
+          <SplitDivider
+            containerRef={splitContainerRef}
+            ratio={splitRatio}
+            label="Resize editor and preview"
+            onDrag={setLiveSplitRatio}
+            onCommit={(ratio) => {
+              updatePreviewPrefs({ splitRatio: ratio });
+              setLiveSplitRatio(null);
+            }}
+          />
+        ) : null}
+
+        {isDocked ? (
+          <div
+            className="min-h-0 min-w-0 overflow-hidden rounded-xl border bg-vault-800 shadow-inner border-border"
+            style={{ flex: `${1 - splitRatio} 1 0%` }}
+          >
             <CreatorNotesPreviewPane
               content={livePreviewValue}
               charName={previewCharName}
@@ -667,8 +707,8 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
           showRemoteWarning={creatorNotesRemoteWarning}
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}
-          onAddToEditor={() => {
-            setIsSplitPreviewOpen(true);
+          onDock={() => {
+            setDocked(true);
             setIsPreviewOpen(false);
           }}
         />

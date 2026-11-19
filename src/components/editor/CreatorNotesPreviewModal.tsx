@@ -16,7 +16,7 @@ interface CreatorNotesPreviewModalProps {
   showRemoteWarning?: boolean;
   isOpen: boolean;
   onClose: () => void;
-  onAddToEditor: () => void;
+  onDock: () => void;
 }
 
 export function CreatorNotesPreviewModal({
@@ -27,7 +27,7 @@ export function CreatorNotesPreviewModal({
   showRemoteWarning,
   isOpen,
   onClose,
-  onAddToEditor,
+  onDock,
 }: CreatorNotesPreviewModalProps): React.ReactElement | null {
   React.useEffect(() => {
     if (!isOpen) return;
@@ -66,10 +66,10 @@ export function CreatorNotesPreviewModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onAddToEditor}
+              onClick={onDock}
               className="hidden rounded-lg bg-vault-600 px-3 py-2 text-sm font-medium text-white transition-colors sm:block hover:bg-hover"
             >
-              Add to Editor
+              Dock
             </button>
             <button
               type="button"
