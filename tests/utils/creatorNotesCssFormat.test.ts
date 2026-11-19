@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { formatCreatorNotesCss, formatCss } from '../../src/utils/creatorNotesCssFormat';
+import { creatorNotesCssFormatChanges, formatCreatorNotesCss, formatCss } from '../../src/utils/creatorNotesCssFormat';
 import { renderCreatorNotesLikeSillyTavern } from '../../src/utils/creatorNotesRender';
 
 const render = (notes: string) =>
@@ -44,6 +44,13 @@ describe('formatCreatorNotesCss', () => {
     expect(formatCreatorNotesCss(notes)).toBe(
       '<div class="x">\n    <b>hi</b>\n</div>\n  <style>\n    .x {\n      color: red\n    }\n  </style>',
     );
+  });
+
+  it('changes only the style blocks that need it', () => {
+    const notes = '<p>a</p>\n<style>.a{color:red}</style>\n<p>b</p>\n<style>\n  .b {\n    margin: 0\n  }\n</style>';
+    const changes = creatorNotesCssFormatChanges(notes);
+    expect(changes).toHaveLength(1);
+    expect(notes.slice(changes[0].from, changes[0].to)).toBe('<style>.a{color:red}</style>');
   });
 
   it('is stable when run twice', () => {

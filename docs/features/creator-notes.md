@@ -24,7 +24,7 @@ If imported Creator Notes contain encoded entities like `&nbsp;` or `&amp;`, cli
 
 Click **Preview** to open a large preview window (90% of the screen). Press **Escape** or click **Close** to return to the editor.
 
-Click **Dock** (next to **Preview**, or inside the preview window) to show the editor and a live preview side by side. On narrower screens they stack, with the editor on top. Changes you make in the editor update the preview in real time. Click **Dock** again to close the split. **Dock** is not available on phones.
+Click **Dock** (next to **Preview**, or inside the preview window) to show the editor and a live preview side by side. On narrower screens they stack, with the editor on top. Changes you make in the editor update the preview in real time. Click **Dock** again to close the split. On phones, **Dock** only shows up to close a split opened on a bigger screen.
 
 Drag the divider between the editor and the preview to resize them, or focus it and use the arrow keys. Double-click it, or click **Reset dock size** in the preview's toolbar, to go back to half and half. The size is remembered in this browser, and each character stays docked while the workspace is open.
 

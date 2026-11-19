@@ -73,11 +73,32 @@ export function formatCss(css: string, baseIndent = ''): string {
   return lines.join('\n');
 }
 
+export interface CssFormatChange {
+  from: number;
+  to: number;
+  insert: string;
+}
+
+/** One change per `<style>` block whose CSS formatting differs; markup outside them is untouched. */
+export function creatorNotesCssFormatChanges(notes: string): CssFormatChange[] {
+  const changes: CssFormatChange[] = [];
+  for (const match of notes.matchAll(STYLE_BLOCK)) {
+    const [whole, lineIndent, open, css, close] = match;
+    if (!css.trim()) continue;
+    const indent = lineIndent ?? '';
+    const insert = `${indent}${open}\n${formatCss(css, indent + INDENT)}\n${indent}${close}`;
+    if (insert !== whole) changes.push({ from: match.index, to: match.index + whole.length, insert });
+  }
+  return changes;
+}
+
 /** Formats the CSS inside every `<style>` block; markup outside them is left untouched. */
 export function formatCreatorNotesCss(notes: string): string {
-  return notes.replace(STYLE_BLOCK, (match, lineIndent: string | undefined, open: string, css: string, close: string) => {
-    if (!css.trim()) return match;
-    const indent = lineIndent ?? '';
-    return `${indent}${open}\n${formatCss(css, indent + INDENT)}\n${indent}${close}`;
-  });
+  let result = '';
+  let last = 0;
+  for (const change of creatorNotesCssFormatChanges(notes)) {
+    result += notes.slice(last, change.from) + change.insert;
+    last = change.to;
+  }
+  return result + notes.slice(last);
 }

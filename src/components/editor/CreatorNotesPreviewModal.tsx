@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { Columns2 } from 'lucide-react';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
 import type { CreatorNotesPreviewPrefs } from './useCreatorNotesPreviewPrefs';
 
@@ -67,8 +68,9 @@ export function CreatorNotesPreviewModal({
             <button
               type="button"
               onClick={onDock}
-              className="hidden rounded-lg bg-vault-600 px-3 py-2 text-sm font-medium text-white transition-colors sm:block hover:bg-hover"
+              className="hidden items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent sm:inline-flex"
             >
+              <Columns2 className="h-4 w-4" aria-hidden="true" />
               Dock
             </button>
             <button

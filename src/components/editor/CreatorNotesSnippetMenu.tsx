@@ -3,12 +3,15 @@ import { createPortal } from 'react-dom';
 import { Plus } from 'lucide-react';
 import { CREATOR_NOTES_SNIPPETS, type CreatorNotesSnippet } from './creatorNotesSnippets';
 
+const MENU_WIDTH = 208;
+const VIEWPORT_MARGIN = 8;
+
 interface CreatorNotesSnippetMenuProps {
   onInsert: (snippet: CreatorNotesSnippet) => void;
 }
 
 export function CreatorNotesSnippetMenu({ onInsert }: CreatorNotesSnippetMenuProps): React.ReactElement {
-  const [position, setPosition] = React.useState<{ top: number; right: number } | null>(null);
+  const [position, setPosition] = React.useState<{ top: number; left: number } | null>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
   const open = position !== null;
@@ -30,11 +33,13 @@ export function CreatorNotesSnippetMenu({ onInsert }: CreatorNotesSnippetMenuPro
     document.addEventListener('mousedown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
     menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
     return () => {
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
     };
   }, [open]);
 
@@ -44,7 +49,8 @@ export function CreatorNotesSnippetMenu({ onInsert }: CreatorNotesSnippetMenuPro
       return;
     }
     const rect = buttonRef.current.getBoundingClientRect();
-    setPosition({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    const maxLeft = window.innerWidth - MENU_WIDTH - VIEWPORT_MARGIN;
+    setPosition({ top: rect.bottom + 4, left: Math.max(VIEWPORT_MARGIN, Math.min(rect.right - MENU_WIDTH, maxLeft)) });
   };
 
   const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -76,8 +82,8 @@ export function CreatorNotesSnippetMenu({ onInsert }: CreatorNotesSnippetMenuPro
             role="menu"
             aria-label="Insert a snippet"
             onKeyDown={handleMenuKeyDown}
-            className="fixed z-9999 w-52 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-xl"
-            style={{ top: position.top, right: position.right }}
+            className="fixed z-9999 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-xl"
+            style={{ top: position.top, left: position.left, width: MENU_WIDTH }}
           >
             {CREATOR_NOTES_SNIPPETS.map((snippet) => (
               <button

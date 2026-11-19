@@ -6,7 +6,7 @@
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { html } from '@codemirror/lang-html';
-import { formatCreatorNotesCss } from '../../utils/creatorNotesCssFormat';
+import { creatorNotesCssFormatChanges } from '../../utils/creatorNotesCssFormat';
 import { colorSwatches } from './colorSwatches';
 
 const htmlLanguage = html();
@@ -15,17 +15,11 @@ export function creatorNotesExtensions(): Extension[] {
   return [htmlLanguage, colorSwatches()];
 }
 
-/** Formats the CSS in every `<style>` block as one undoable change. */
+/** Formats the CSS in every `<style>` block as one undoable change; the cursor keeps its place. */
 export function formatCreatorNotesCssInView(view: EditorView): boolean {
-  const current = view.state.doc.toString();
-  const formatted = formatCreatorNotesCss(current);
-  if (formatted === current) return false;
-  const head = view.state.selection.main.head;
-  view.dispatch({
-    changes: { from: 0, to: current.length, insert: formatted },
-    selection: { anchor: Math.min(head, formatted.length) },
-    userEvent: 'input.format',
-  });
+  const changes = creatorNotesCssFormatChanges(view.state.doc.toString());
+  if (changes.length === 0) return false;
+  view.dispatch({ changes, userEvent: 'input.format' });
   return true;
 }
 
