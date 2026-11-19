@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.9.2 staging 7';
+export const STAGING_VERSION = 'v1.9.2 staging 8';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -36,5 +36,5 @@ export const STAGING_TEST_NOTES: string[] = [
   'Phone → with the keyboard open in a character or a lorebook, the top header (back arrow, name, settings, export) hides too and comes back when the keyboard closes. In a standalone lorebook, tap the lorebook name in the header to rename it: the header should stay while you type.',
   'Creator Notes → Preview: Match SillyTavern is on. Markdown (**bold**, lists) renders, {{char}} shows the card name, and styles on :root or body stop working with a note above the preview saying so. Remote images are hidden. Turn the switch off: the notes look as they did before.',
   'Creator Notes → Preview: try the width buttons (480px is about the SillyTavern side panel), the Dark / Light / checkerboard background, and Replay (animations start over). Turn on Remote media: remote images show. Reload the page: your choices stick, in the docked split too.',
-  'Creator Notes → Dock: the editor and preview sit side by side. Drag the divider between them (it works while dragging over the preview), double-click it to reset to half and half. Switch to another tab and back: still docked. Click Dock again to undock. Dock inside the Preview window does the same.',
+  'Creator Notes → Dock: the editor and preview sit side by side. Drag the divider between them (it works while dragging over the preview), double-click it, or use the Reset dock size button next to Replay, to go back to half and half. Switch to another tab and back: still docked. Click Dock again to undock. Dock inside the Preview window does the same.',
 ];
