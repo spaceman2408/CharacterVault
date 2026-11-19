@@ -6,19 +6,16 @@ The **Creator Notes** tab lets you write notes for other users who import your c
 
 Type your content in the editor on the Creator Notes tab. You can write:
 
-- **Plain text** — Displayed as-is with a monospace font in the preview
+- **Markdown** — `**bold**`, lists, tables, and so on, the same as SillyTavern renders it
 - **HTML** — Any markup tags (headings, lists, styled text, etc.) are rendered in the preview
 - **CSS** — Style rules in `<style>` blocks are applied within the preview sandbox
+- **Macros** — `{{char}}` shows as the card's name and `{{user}}` as "User"
 
 If imported Creator Notes contain encoded entities like `&nbsp;` or `&amp;`, click the **;&** button in the editor toolbar to convert them back into readable characters before editing.
 
-::: tip
-If your content has no HTML tags at all, the preview displays it as plain preformatted text in a monospace font. You don't need to write HTML if you just want to leave a simple note.
-:::
-
 ## Preview Modes
 
-Click **Preview CSS** to open a large preview window (90% of the screen). It shows roughly how your Creator Notes will render. SillyTavern and other apps render notes their own way, so the result there may differ slightly. Press **Escape** or click **Close** to return to the editor.
+Click **Preview CSS** to open a large preview window (90% of the screen). Press **Escape** or click **Close** to return to the editor.
 
 Click **Add to Editor** inside the preview to switch to a split view. On large screens the editor is on the left and the live preview on the right; on narrower screens they stack, with the editor on top. Changes you make in the editor update the preview in real time. **Add to Editor** is not available on phones.
 
@@ -27,6 +24,21 @@ To exit split view, click **Stop Previewing CSS**.
 ::: tip
 The split view is useful for iterating on styled notes. Make a change, see it immediately, and adjust until it looks right.
 :::
+
+### Match SillyTavern
+
+**Match SillyTavern** (on by default, above the preview) renders the notes the way SillyTavern does:
+
+- Markdown is converted, and a single line break becomes a new line
+- `{{char}}` and `{{user}}` are filled in
+- Styles are scoped to the notes, so rules on `:root`, `html`, or `body` match nothing. Put shared styles and CSS variables on a wrapper `<div>` instead
+- Scripts, event handlers like `onclick`, `<iframe>`, and `@import` are removed
+- Remote images, media, and styles with remote URLs are hidden, since SillyTavern blocks remote media unless the user allows it for that card. Images embedded as `data:` URLs still show
+- A CSS comment inside a rule breaks the whole style block while remote media is blocked. Put comments between rules instead
+
+One difference: notes written as a full web page (`<!DOCTYPE>`, `<html>`, `<head>`, `<body>`) leave blank lines at the top and bottom in SillyTavern. The preview hides those.
+
+When the preview changes something, a short list above it says what. Turn **Match SillyTavern** off to see the raw HTML and CSS as written. Other sites, such as Chub, render notes their own way.
 
 ### Sandboxed Rendering
 
@@ -44,7 +56,7 @@ Always design your CSS for a dark background. The preview environment uses a dar
 :::
 
 ::: tip
-Keep your styles self-contained. Plain http resources never load in the preview, and remote https ones can tell their host who opened the card. Include styles inline or in `<style>` tags instead.
+Keep your styles self-contained. Plain http resources never load in the preview, remote https ones can tell their host who opened the card, and SillyTavern hides them by default. Include styles inline or in `<style>` tags, and embed small images as `data:` URLs.
 :::
 
 ## Example

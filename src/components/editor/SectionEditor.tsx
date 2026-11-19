@@ -271,6 +271,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
   } = useCharacterEditorContext();
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isSplitPreviewOpen, setIsSplitPreviewOpen] = React.useState(false);
+  const [matchSillyTavern, setMatchSillyTavern] = React.useState(true);
   const [extensionsError, setExtensionsError] = React.useState<string | null>(null);
 
   // Get current value based on section
@@ -423,6 +424,7 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
 
   const sectionMeta = CHARACTER_SECTIONS.find(s => s.id === section);
   const isCreatorNotesSection = section === 'creator_notes';
+  const previewCharName = currentCharacter.data.spec.name || currentCharacter.name;
 
   if (section === 'name') {
     return (
@@ -644,6 +646,9 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
           <div className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-vault-800 shadow-inner border-border lg:w-1/2">
             <CreatorNotesPreviewPane
               content={livePreviewValue}
+              charName={previewCharName}
+              matchSillyTavern={matchSillyTavern}
+              onMatchSillyTavernChange={setMatchSillyTavern}
               showRemoteWarning={creatorNotesRemoteWarning}
               frameClassName="block h-full w-full bg-vault-800"
               emptyClassName="flex h-[calc(100%-41px)] items-center justify-center px-5 py-6 text-center text-sm text-fg-subtle"
@@ -655,6 +660,9 @@ export function SectionEditor({ section, focusEntry, focusGreeting }: SectionEdi
       {section === 'creator_notes' && (
         <CreatorNotesPreviewModal
           content={livePreviewValue}
+          charName={previewCharName}
+          matchSillyTavern={matchSillyTavern}
+          onMatchSillyTavernChange={setMatchSillyTavern}
           showRemoteWarning={creatorNotesRemoteWarning}
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}

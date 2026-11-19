@@ -6,8 +6,22 @@
 import React from 'react';
 import { hasRemoteReference } from '../../utils/creatorNotesRemote';
 
+type SillyTavernRenderer = typeof import('../../utils/creatorNotesRender').renderCreatorNotesLikeSillyTavern;
+
+let sillyTavernRendererPromise: Promise<SillyTavernRenderer> | null = null;
+
+function loadSillyTavernRenderer(): Promise<SillyTavernRenderer> {
+  sillyTavernRendererPromise ??= import('../../utils/creatorNotesRender').then(
+    (module) => module.renderCreatorNotesLikeSillyTavern,
+  );
+  return sillyTavernRendererPromise;
+}
+
 interface CreatorNotesPreviewPaneProps {
   content: string;
+  charName: string;
+  matchSillyTavern: boolean;
+  onMatchSillyTavernChange: (value: boolean) => void;
   showRemoteWarning?: boolean;
   style?: React.CSSProperties;
   frameClassName?: string;
@@ -47,6 +61,8 @@ const SKELETON_DOC = `<!DOCTYPE html>
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
       body { padding: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+      #creator_notes_spoiler { font-size: 12px; padding: 5px 0; }
+      #creator_notes_spoiler p:last-child { margin-bottom: 0; }
       .creator-notes-plain {
         margin: 0; white-space: pre-wrap;
         font: 500 14px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -59,6 +75,9 @@ const SKELETON_DOC = `<!DOCTYPE html>
 
 export function CreatorNotesPreviewPane({
   content,
+  charName,
+  matchSillyTavern,
+  onMatchSillyTavernChange,
   showRemoteWarning = true,
   style,
   frameClassName = '',
@@ -67,7 +86,24 @@ export function CreatorNotesPreviewPane({
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
   const isLoadedRef = React.useRef(false);
   const deferredContent = React.useDeferredValue(content);
-  const bodyContent = React.useMemo(() => buildBodyContent(deferredContent), [deferredContent]);
+  const [renderSillyTavern, setRenderSillyTavern] = React.useState<SillyTavernRenderer | null>(null);
+
+  React.useEffect(() => {
+    if (!matchSillyTavern || renderSillyTavern) return;
+    let cancelled = false;
+    void loadSillyTavernRenderer().then((render) => {
+      if (!cancelled) setRenderSillyTavern(() => render);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [matchSillyTavern, renderSillyTavern]);
+
+  const { bodyContent, notices } = React.useMemo(() => {
+    if (!matchSillyTavern) return { bodyContent: buildBodyContent(deferredContent), notices: [] };
+    if (!renderSillyTavern) return { bodyContent: '', notices: [] };
+    return renderSillyTavern(deferredContent, { charName });
+  }, [deferredContent, matchSillyTavern, charName, renderSillyTavern]);
 
   // Update the iframe body content when deferred content changes
   React.useEffect(() => {
@@ -81,8 +117,8 @@ export function CreatorNotesPreviewPane({
   }, [bodyContent]);
 
   const hasRemote = React.useMemo(
-    () => showRemoteWarning && hasRemoteReference(deferredContent),
-    [showRemoteWarning, deferredContent],
+    () => showRemoteWarning && hasRemoteReference(bodyContent),
+    [showRemoteWarning, bodyContent],
   );
 
   if (!content.trim()) {
@@ -95,6 +131,33 @@ export function CreatorNotesPreviewPane({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface px-3 py-2 text-xs">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-fg-muted">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={matchSillyTavern}
+            onClick={() => onMatchSillyTavernChange(!matchSillyTavern)}
+            className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${matchSillyTavern ? 'bg-accent' : 'bg-border-strong'}`}
+          >
+            <span
+              className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-surface shadow-sm transition-transform ${
+                matchSillyTavern ? 'translate-x-4' : ''
+              }`}
+            />
+          </button>
+          Match SillyTavern
+        </label>
+        {notices.length > 0 && (
+          <ul aria-label="Changes in SillyTavern" className="flex flex-wrap gap-1.5">
+            {notices.map((notice) => (
+              <li key={notice} className="rounded-md bg-warning-soft px-2 py-0.5 text-warning-soft-fg">
+                {notice}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       {hasRemote && (
         <div
           role="note"
