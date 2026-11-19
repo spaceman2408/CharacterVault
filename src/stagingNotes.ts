@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.9.2 staging 10';
+export const STAGING_VERSION = 'v1.9.2 staging 11';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -39,4 +39,5 @@ export const STAGING_TEST_NOTES: string[] = [
   'Creator Notes → Dock: the editor and preview sit side by side. Drag the divider between them (it works while dragging over the preview), double-click it, or use the Reset dock size button next to Replay, to go back to half and half. Switch to another tab and back: still docked. Click Dock again to undock. Dock inside the Preview window does the same.',
   'Creator Notes → colors in <style> or style="" have a small swatch in front: click it and pick a color. The text updates in the same format (hex, rgb, hsl) and Ctrl+Z undoes the pick in one step. Format (toolbar) tidies minified CSS; Ctrl+Z undoes it. The line under the heading shows the size and any embedded data: images.',
   'Creator Notes → Insert: pick each snippet (Hero banner, Gradient title, Info block, Collapsible spoiler, Content warnings). Each lands at the cursor and shows up in Preview with the card name, and no warnings appear above the preview for it. Ctrl+Z removes it.',
+  'Creator Notes → click a color swatch: the color picker opens right next to the swatch (it used to open in the top-left corner). Format keeps your cursor where it was. Phone → Insert: the menu fits on screen and closes when you scroll. On a computer, Dock, then narrow the window to phone width: Dock still shows so you can close the split.',
 ];
