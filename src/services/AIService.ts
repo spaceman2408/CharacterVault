@@ -333,6 +333,7 @@ export interface ChatToolCall {
     name: string;
     arguments: string;
   };
+  extra_content?: Record<string, unknown>;
 }
 
 export interface ChatToolDefinition {
@@ -486,6 +487,7 @@ interface ChatCompletionChunk {
         id?: string;
         type?: string;
         function?: { name?: string; arguments?: string };
+        extra_content?: unknown;
       }>;
     };
     finish_reason: string | null;

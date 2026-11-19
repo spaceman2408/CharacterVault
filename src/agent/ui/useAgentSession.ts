@@ -82,6 +82,7 @@ function toServiceMessages(messages: AgentMessage[]): ServiceChatMessage[] {
       id: call.id,
       type: 'function' as const,
       function: { name: call.name, arguments: call.arguments },
+      ...(call.extraContent ? { extra_content: call.extraContent } : {}),
     })),
   }));
 }

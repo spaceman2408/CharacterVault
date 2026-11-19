@@ -60,6 +60,16 @@ const EFFORT_PEER: Partial<Record<ReasoningEffortValue, ReasoningEffortValue>> =
 /** Hosts known to reject non-standard sampler extras up front. */
 const STRICT_OPENAI_HOST_SNIPPETS = ['api.openai.com'] as const;
 
+/** Gemini's OpenAI endpoint 400s on these and on efforts above high, but takes max_tokens; a retry also spends free-tier quota. */
+const GEMINI_HOST_SNIPPET = 'generativelanguage.googleapis.com';
+const GEMINI_REJECTED_PARAMS = [
+  'min_p',
+  'repetition_penalty',
+  'include_reasoning',
+  'reasoning',
+  'reasoning_split',
+] as const;
+
 export interface ChatRequestLike {
   model?: string;
   temperature?: number;
@@ -455,6 +465,12 @@ export function sanitizeSamplerParams(
     delete cleaned.top_k;
     delete cleaned.repetition_penalty;
     moveToMaxCompletionTokens(cleaned);
+  } else if (baseUrl.toLowerCase().includes(GEMINI_HOST_SNIPPET)) {
+    for (const param of GEMINI_REJECTED_PARAMS) delete cleaned[param];
+    if (cleaned.reasoning_effort === 'xhigh' || cleaned.reasoning_effort === 'max') {
+      cleaned.reasoning_effort = 'high';
+    }
+    if (typeof cleaned.top_k === 'number' && cleaned.top_k <= 0) delete cleaned.top_k;
   } else {
     if (typeof cleaned.min_p === 'number' && cleaned.min_p <= 0) delete cleaned.min_p;
     if (typeof cleaned.top_k === 'number' && cleaned.top_k <= 0) delete cleaned.top_k;

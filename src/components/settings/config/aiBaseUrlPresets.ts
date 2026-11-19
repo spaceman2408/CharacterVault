@@ -54,6 +54,20 @@ export const AI_BASE_URL_PRESETS: AIBaseUrlPreset[] = [
     keyUrl: 'https://openrouter.ai/workspaces/default/keys',
   },
   {
+    id: 'openai',
+    label: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    helper: 'GPT models direct from OpenAI.',
+    keyUrl: 'https://platform.openai.com/api-keys',
+  },
+  {
+    id: 'gemini',
+    label: 'Google Gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    helper: 'Gemini models direct from Google. Free tier available.',
+    keyUrl: 'https://aistudio.google.com/apikey',
+  },
+  {
     id: 'minimax',
     label: 'Minimax',
     baseUrl: 'https://api.minimax.io/v1',

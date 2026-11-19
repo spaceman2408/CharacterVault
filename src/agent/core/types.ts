@@ -14,6 +14,8 @@ export interface NativeToolCall {
   id: string;
   name: string;
   arguments: string;
+  /** Echoed back as-is; Gemini puts the thought signature it requires on the next request here. */
+  extraContent?: Record<string, unknown>;
 }
 
 export interface AgentToolSpec {

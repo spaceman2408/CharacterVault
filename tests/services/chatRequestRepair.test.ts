@@ -282,6 +282,33 @@ describe('sanitizeSamplerParams / strict hosts', () => {
     expect(cleaned.temperature).toBe(0.7);
   });
 
+  it('drops the params Gemini rejects but keeps reasoning_effort and max_tokens', () => {
+    const cleaned = sanitizeSamplerParams(
+      {
+        min_p: 0.05,
+        top_k: 0,
+        repetition_penalty: 1.05,
+        include_reasoning: true,
+        reasoning: { enabled: true, effort: 'medium' },
+        reasoning_effort: 'medium',
+        max_tokens: 512,
+        temperature: 0.7,
+      },
+      'https://generativelanguage.googleapis.com/v1beta/openai'
+    );
+    expect(cleaned).toEqual({ reasoning_effort: 'medium', max_tokens: 512, temperature: 0.7 });
+  });
+
+  it('caps Gemini reasoning effort at high', () => {
+    for (const effort of ['xhigh', 'max']) {
+      const cleaned = sanitizeSamplerParams(
+        { reasoning_effort: effort },
+        'https://generativelanguage.googleapis.com/v1beta/openai'
+      );
+      expect(cleaned.reasoning_effort).toBe('high');
+    }
+  });
+
   it('omits no-op sampler values on non-strict hosts', () => {
     const cleaned = sanitizeSamplerParams(
       { min_p: 0, top_k: 0, repetition_penalty: 1, temperature: 0.7 },
