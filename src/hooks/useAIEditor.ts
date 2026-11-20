@@ -36,6 +36,8 @@ import { themeSync } from '../editor/extensions/themeSync';
 import { fontSizeExtension, setFontSize, editorFontSizeField, DEFAULT_FONT_SIZE } from '../editor/extensions/fontSizeControl';
 import { characterMacroHelper } from '../editor/extensions/characterMacroHelper';
 import { editorBasics } from '../editor/extensions/editorBasics';
+import { createEditorState, saveEditorState } from '../editor/savedEditorStates';
+import { externalSyncSpec } from '../editor/externalSync';
 import { macroHighlight } from '../editor/extensions/macroHighlight';
 import {
   applyRoleplayHighlightColors,
@@ -131,7 +133,7 @@ function normalizeAiEditText(original: string, replacement: string): string {
   return `${'\n'.repeat(leadOrig)}${next}${'\n'.repeat(trailOrig)}`;
 }
 
-const defaultToolbarActions: ToolbarActionConfig[] = [
+export const defaultToolbarActions: ToolbarActionConfig[] = [
   {
     id: 'normalize-entities',
     label: ';&',
@@ -143,6 +145,8 @@ const defaultToolbarActions: ToolbarActionConfig[] = [
 export interface UseAIEditorOptions {
   /** Key to force re-initialization when changed (e.g., section ID) */
   key?: string;
+  /** Remembers cursor, scroll and undo under this key across remounts (must be unique per document) */
+  restoreKey?: string;
   /** Initial document content */
   value: string;
   /** Callback when document changes (backward-compatible persist callback) */
@@ -257,6 +261,7 @@ export interface UseAIEditorReturn {
 export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   const {
     key,
+    restoreKey,
     value,
     onChange,
     onImmediateChange,
@@ -288,6 +293,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
 
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const restoreKeyRef = useRef(restoreKey);
+  restoreKeyRef.current = restoreKey;
   /** Toggles EditorState.readOnly for the open AI decision session. */
   const readOnlyCompartmentRef = useRef(new Compartment());
   const panelUpdateRef = useRef<((update: {
@@ -1140,173 +1147,172 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
   useEffect(() => {
     if (!editorRef.current || !isActive) return;
 
-    const state = EditorState.create({
-      doc: value,
-      extensions: [
-        keymap.of([
-          { key: 'Tab', run: insertTab },
-          { key: 'Shift-Tab', run: indentLess },
-        ]),
-        EditorState.tabSize.of(4),
-        indentUnit.of('    '),
-        keymap.of(defaultKeymap),
-        keymap.of(historyKeymap),
-        history(),
-        themeSync(),
-        ...editorBasics({ placeholderText: placeholder }),
-        EditorView.lineWrapping,
-        // Custom in-editor spellcheck (see src/editor/spellcheck)
-        spellcheckExtension({ settings: spellcheck, mode: spellcheckMode }),
-        EditorView.theme({
-          '&': {
-            height: '100%',
-            overflow: 'hidden',
-            ...editorStyles,
+    const savedStateKey = restoreKeyRef.current;
+    const { state, scrollTo } = createEditorState(savedStateKey, value, [
+      keymap.of([
+        { key: 'Tab', run: insertTab },
+        { key: 'Shift-Tab', run: indentLess },
+      ]),
+      EditorState.tabSize.of(4),
+      indentUnit.of('    '),
+      keymap.of(defaultKeymap),
+      keymap.of(historyKeymap),
+      history(),
+      themeSync(),
+      ...editorBasics({ placeholderText: placeholder }),
+      EditorView.lineWrapping,
+      // Custom in-editor spellcheck (see src/editor/spellcheck)
+      spellcheckExtension({ settings: spellcheck, mode: spellcheckMode }),
+      EditorView.theme({
+        '&': {
+          height: '100%',
+          overflow: 'hidden',
+          ...editorStyles,
+        },
+        '.cm-panels': {
+          flexShrink: '0',
+        },
+        '.cm-scroller': {
+          height: maxHeight && maxHeight !== 'none' ? 'auto' : '100%',
+          maxHeight: maxHeight && maxHeight !== 'none' ? maxHeight : '100%',
+          minHeight: '0',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          overscrollBehaviorY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        },
+        '.cm-content': {
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          padding: 'clamp(8px, 2vw, 12px)',
+          minHeight,
+        },
+        '.cm-gutters': {
+          backgroundColor: 'transparent',
+          border: 'none',
+        },
+        '.cm-activeLineGutter': {
+          backgroundColor: 'transparent',
+        },
+        '.cm-line': {
+          padding: '0 clamp(2px, 0.8vw, 4px)',
+        },
+      }),
+      // In-editor AI ghost preview (decoration-only until Accept)
+      ...aiGhostPreview(),
+      // User typing blocked while AI session is open (reconfigured at runtime)
+      readOnlyCompartmentRef.current.of(EditorState.readOnly.of(false)),
+      // AI result shortcuts — high precedence so they win when a result is pending
+      Prec.high(keymap.of([
+        {
+          key: 'Mod-Enter',
+          run: () => {
+            if (!aiResultRef.current) return false;
+            acceptRef.current();
+            return true;
           },
-          '.cm-panels': {
-            flexShrink: '0',
-          },
-          '.cm-scroller': {
-            height: maxHeight && maxHeight !== 'none' ? 'auto' : '100%',
-            maxHeight: maxHeight && maxHeight !== 'none' ? maxHeight : '100%',
-            minHeight: '0',
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            overscrollBehaviorY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            touchAction: 'pan-y',
-            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          },
-          '.cm-content': {
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-            padding: 'clamp(8px, 2vw, 12px)',
-            minHeight,
-          },
-          '.cm-gutters': {
-            backgroundColor: 'transparent',
-            border: 'none',
-          },
-          '.cm-activeLineGutter': {
-            backgroundColor: 'transparent',
-          },
-          '.cm-line': {
-            padding: '0 clamp(2px, 0.8vw, 4px)',
-          },
-        }),
-        // In-editor AI ghost preview (decoration-only until Accept)
-        ...aiGhostPreview(),
-        // User typing blocked while AI session is open (reconfigured at runtime)
-        readOnlyCompartmentRef.current.of(EditorState.readOnly.of(false)),
-        // AI result shortcuts — high precedence so they win when a result is pending
-        Prec.high(keymap.of([
-          {
-            key: 'Mod-Enter',
-            run: () => {
-              if (!aiResultRef.current) return false;
-              acceptRef.current();
+        },
+        {
+          key: 'Escape',
+          run: (view) => {
+            // Let search panel close first
+            if (view.state.field(searchPanelOpen, false)) return false;
+            // Dismiss result / error
+            if (aiResultRef.current || errorRef.current) {
+              rejectRef.current();
               return true;
-            },
+            }
+            // Stop in-flight request
+            if (isProcessingRef.current) {
+              abortRef.current();
+              return true;
+            }
+            return false;
           },
-          {
-            key: 'Escape',
-            run: (view) => {
-              // Let search panel close first
-              if (view.state.field(searchPanelOpen, false)) return false;
-              // Dismiss result / error
-              if (aiResultRef.current || errorRef.current) {
-                rejectRef.current();
-                return true;
-              }
-              // Stop in-flight request
-              if (isProcessingRef.current) {
-                abortRef.current();
-                return true;
-              }
-              return false;
-            },
-          },
-        ])),
-        EditorView.updateListener.of((update: ViewUpdate) => {
-          if (update.docChanged) {
-            // Keep Accept target aligned if the doc changes while AI is running
-            if (selectionLockRef.current) {
-              const mapped = mapSelectionLock(selectionLockRef.current, update.changes);
-              selectionLockRef.current = mapped;
-              selectionRef.current = mapped;
-            }
-
-            const nextValue = update.state.doc.toString();
-            if (!isApplyingExternalSyncRef.current) {
-              isLocallyDirtyRef.current = true;
-            }
-            onImmediateChangeRef.current?.(nextValue);
-            if (!isApplyingExternalSyncRef.current) {
-              schedulePersist(nextValue);
-            }
+        },
+      ])),
+      EditorView.updateListener.of((update: ViewUpdate) => {
+        if (update.docChanged) {
+          // Keep Accept target aligned if the doc changes while AI is running
+          if (selectionLockRef.current) {
+            const mapped = mapSelectionLock(selectionLockRef.current, update.changes);
+            selectionLockRef.current = mapped;
+            selectionRef.current = mapped;
           }
 
-          if (update.focusChanged) {
-            isFocusedRef.current = update.view.hasFocus;
-            // Don't flush storage while an AI Accept/Reject decision is open
-            if (
-              !isFocusedRef.current &&
-              selectionLockRef.current === null &&
-              !isProcessingRef.current &&
-              !aiResultRef.current &&
-              !errorRef.current
-            ) {
-              flushPendingPersist();
-            }
+          const nextValue = update.state.doc.toString();
+          if (!isApplyingExternalSyncRef.current) {
+            isLocallyDirtyRef.current = true;
           }
+          onImmediateChangeRef.current?.(nextValue);
+          if (!isApplyingExternalSyncRef.current) {
+            schedulePersist(nextValue);
+          }
+        }
 
-          // Track live selection for toolbar — freeze while an AI selection lock is held
-          if (!selectionLockRef.current) {
-            const sel = update.state.selection.main;
-            if (sel.from !== sel.to) {
-              const text = update.state.doc.sliceString(sel.from, sel.to);
-              setSelection({ from: sel.from, to: sel.to, text });
-              setSelectedText(text);
-            } else {
-              setSelection(null);
-              setSelectedText('');
-            }
+        if (update.focusChanged) {
+          isFocusedRef.current = update.view.hasFocus;
+          // Don't flush storage while an AI Accept/Reject decision is open
+          if (
+            !isFocusedRef.current &&
+            selectionLockRef.current === null &&
+            !isProcessingRef.current &&
+            !aiResultRef.current &&
+            !errorRef.current
+          ) {
+            flushPendingPersist();
           }
-        }),
-        // AI Toolbar Panel
-        aiToolbarPanel(
-          samplerSettings,
-          (operation, selectedText, selection, customPrompt) => {
-            void handleAIOperation(operation, selectedText, selection, customPrompt);
-          },
-          () => acceptRef.current(),
-          () => rejectRef.current(),
-          () => abortRef.current(),
-          (editedPrompt) => retryRef.current(editedPrompt),
-          onFontSizeChange,
-          toolbarActions,
-          handlePreviewPayload,
-          toolbarConfigRef.current,
-        ),
-        // Search & Replace functionality
-        toolbarSearch(),
-        toolbarSearchTheme(),
-        // Font size extension (shortcuts persist via ref to avoid remounts)
-        fontSizeExtension(fontSize, {
-          onChange: (size) => onFontSizeChangeRef.current?.(size),
-        }),
-        // Character card macro typing helper + {{char}}/{{user}} coloring
-        characterMacroHelper(),
-        macroHighlight(),
-        // "dialogue" / narration / *action* prose colors
-        roleplayHighlightExtension({ enabled: roleplayHighlight.enabled }),
-        markdownImageLinks({ openLinksEnabled: markdownImageOpenLinks }),
-        ...(additionalExtensions ?? []),
-      ],
-    });
+        }
+
+        // Track live selection for toolbar — freeze while an AI selection lock is held
+        if (!selectionLockRef.current) {
+          const sel = update.state.selection.main;
+          if (sel.from !== sel.to) {
+            const text = update.state.doc.sliceString(sel.from, sel.to);
+            setSelection({ from: sel.from, to: sel.to, text });
+            setSelectedText(text);
+          } else {
+            setSelection(null);
+            setSelectedText('');
+          }
+        }
+      }),
+      // AI Toolbar Panel
+      aiToolbarPanel(
+        samplerSettings,
+        (operation, selectedText, selection, customPrompt) => {
+          void handleAIOperation(operation, selectedText, selection, customPrompt);
+        },
+        () => acceptRef.current(),
+        () => rejectRef.current(),
+        () => abortRef.current(),
+        (editedPrompt) => retryRef.current(editedPrompt),
+        onFontSizeChange,
+        toolbarActions,
+        handlePreviewPayload,
+        toolbarConfigRef.current,
+      ),
+      // Search & Replace functionality
+      toolbarSearch(),
+      toolbarSearchTheme(),
+      // Font size extension (shortcuts persist via ref to avoid remounts)
+      fontSizeExtension(fontSize, {
+        onChange: (size) => onFontSizeChangeRef.current?.(size),
+      }),
+      // Character card macro typing helper + {{char}}/{{user}} coloring
+      characterMacroHelper(),
+      macroHighlight(),
+      // "dialogue" / narration / *action* prose colors
+      roleplayHighlightExtension({ enabled: roleplayHighlight.enabled }),
+      markdownImageLinks({ openLinksEnabled: markdownImageOpenLinks }),
+      ...(additionalExtensions ?? []),
+    ]);
 
     const view = new EditorView({
       state,
       parent: editorRef.current,
+      scrollTo,
     });
 
     viewRef.current = view;
@@ -1344,6 +1350,7 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     return () => {
       window.clearTimeout(focusTimer);
       window.clearTimeout(panelHookTimer);
+      if (savedStateKey) saveEditorState(savedStateKey, view.state, view.scrollSnapshot());
       flushPendingPersist();
       if (persistTimeoutRef.current !== null) {
         window.clearTimeout(persistTimeoutRef.current);
@@ -1391,8 +1398,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
     const view = viewRef.current;
     if (!view) return;
 
-    const editorValue = view.state.doc.toString();
-    if (value === editorValue) {
+    const syncSpec = externalSyncSpec(view.state, value);
+    if (!syncSpec) {
       isLocallyDirtyRef.current = false;
       return;
     }
@@ -1402,22 +1409,8 @@ export function useAIEditor(options: UseAIEditorOptions): UseAIEditorReturn {
       return;
     }
 
-    const currentSelection = view.state.selection.main;
-    const clampedAnchor = Math.min(currentSelection.anchor, value.length);
-    const clampedHead = Math.min(currentSelection.head, value.length);
-
     isApplyingExternalSyncRef.current = true;
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: editorValue.length,
-        insert: value,
-      },
-      selection: {
-        anchor: clampedAnchor,
-        head: clampedHead,
-      },
-    });
+    view.dispatch(syncSpec);
     isApplyingExternalSyncRef.current = false;
     isLocallyDirtyRef.current = false;
   }, [value]);

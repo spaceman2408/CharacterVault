@@ -169,4 +169,30 @@ describe('AIService prompt usage', () => {
     expect(reply.content).toBe('hi');
     expect(reply.usage).toEqual({ promptTokens: 400, cachedTokens: 300 });
   });
+
+  it('times the first output of a stream that only makes tool calls', async () => {
+    const chunks = [
+      {
+        choices: [
+          {
+            index: 0,
+            delta: { tool_calls: [{ index: 0, id: 'c1', function: { name: 'read_field', arguments: '{"id":"name"}' } }] },
+            finish_reason: 'tool_calls',
+          },
+        ],
+      },
+    ];
+    const text = chunks.map((chunk) => 'data: ' + JSON.stringify(chunk) + '\n\n').join('') + 'data: [DONE]\n\n';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(new TextEncoder().encode(text), { status: 200 })),
+    );
+    const onChunk = vi.fn();
+    const before = Date.now();
+    const service = new AIService(config({ enableStreaming: true }), DEFAULT_SETTINGS.sampler);
+    const reply = await service.chat([{ role: 'user', content: 'hi' }], undefined, onChunk);
+    expect(onChunk).not.toHaveBeenCalled();
+    expect(reply.toolCalls?.[0]?.name).toBe('read_field');
+    expect(reply.firstOutputAt).toBeGreaterThanOrEqual(before);
+  });
 });

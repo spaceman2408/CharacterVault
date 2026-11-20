@@ -1,23 +1,7 @@
 import type { AgentSkill } from '../../../db/characterTypes';
 import { buildSystemPrompt } from '../../../services/PromptBuilder';
-import { formatAgentToolGuide } from '../../core/prompts';
-import type { AgentToolMode } from '../../core/types';
-import { SUGGEST_NAMES_TOOL_DOC } from '../names/suggestNames';
-import { formatSkillsSection, READ_SKILL_TOOL_DOC } from '../skills';
-
-export const CHARACTER_ACTION_SYNTAX = `Use XML:
-<tool_call>
-update_field
-id: description
----
-A wandering knight who keeps a ledger of debts.
-</tool_call>
-
-Tools with no body: <tool_call>list_fields</tool_call>
-You may also use <tool_call name="update_field">…</tool_call>
-Put the real tool id as the first line or in name="…". Never write the word tool_name.
-Headers are one per line as key: value. The body starts after a line that is exactly --- and ends at </tool_call>.
-Do not wrap the whole card in one JSON blob. Always close every <tool_call> before starting the next.`;
+import { AGENT_TOOL_GUIDE } from '../../core/prompts';
+import { formatSkillsSection } from '../skills';
 
 export const CHARACTER_AGENT_PERSONA = `You are a CharacterVault authoring agent. You write the user's open character: SillyTavern-compatible V2/V3 spec fields, alternate greetings, and the embedded lorebook.
 Use attached Custom Context as source material when present. Do not invent contradictions. Prefer filling empty required fields and revising only what the user asked for.
@@ -34,40 +18,11 @@ Common lorebook activation on add_entry / update_entry: enabled, position (befor
 When reporting audit_card, use its Active / Inactive split as written. Active is the SillyTavern character prompt. first_mes and alternate greetings are not in that prompt; a chat uses one greeting as the opening, so do not sum them into context load or recommend trimming greetings for token budget unless the user asked about greeting size. Lorebook size is World Info: entries insert on keys up to token_budget, not the whole book. Stick to the audit fields; do not add name, creator, creator_notes, character_version, or avatar from the catalog unless the user asked about those.
 While calling tools, emit tool calls only — no user-facing prose. When the card and book cover the request, stop: no tool calls, a short summary is enough.`;
 
-export const CHARACTER_TOOL_LIST = `- list_fields — no arguments. Returns id, label, and token size. Skip this if the catalog in context is enough.
-- read_field — id. Returns that field's full content.
-- update_field — id, content (the full new value). tags is comma-separated. Not for alternate greetings.
-- replace_in_field — id, old (unique snippet from the latest read_field; quotes and dashes need not be exact), new or content (empty deletes). After a replace, read_field before another. To delete a section, old may be the first line through the last unique line. Not for alternate greetings.
-- append_to_field — id, content. Appends (blank line if the field is not empty). tags merge. Not for alternate greetings.
-- list_greetings — no arguments. Returns 1-based index and token size for each alternate greeting.
-- read_greeting — index (1-based; Greeting 1 is the first alternate). Returns that greeting's body.
-- add_greeting — content. Appends.
-- update_greeting — index (1-based), content. Full replace of that slot.
-- replace_in_greeting — index (1-based), old, new or content. Same match rules as replace_in_field.
-- delete_greeting — index (1-based). Removes that slot.
-- move_greeting — index (1-based), to (1-based destination). Reorders; other indexes shift.
-- search — query. Case-insensitive across fields, greetings, and lorebook. Locations and snippets only.
-- replace_across — old, new or content, optional replace_all. Unique match per place unless replace_all.
-- audit_card — no arguments. Reports description, first_mes, alternate_greetings, mes_example, scenario, physical_description, personality, system_prompt, post_history_instructions, tags, and lorebook. personality and physical_description may be empty if description already contains that material. system_prompt, post_history_instructions, and scenario are optional. Omits name, creator, creator_notes, character_version, avatar. Active vs inactive tokens, duplicate keys, recursion, macros, example dialogue blocks. No bodies.
-${SUGGEST_NAMES_TOOL_DOC}
-- list_entries — no arguments. Returns lorebook id, name, keys, size, flags, and book settings. Skip if the catalog in context is enough.
-- read_entry — id. Returns that entry's name, keys, common activation fields, and content.
-- add_entry — name, keys (comma-separated string), optional constant, enabled, position, depth, insertion_order, secondary_keys, selective, probability, excludeRecursion, preventRecursion, delayUntilRecursion, content (the entry body). Non-constant entries need at least one key. One add_entry per name.
-- update_entry — id, optional name, keys, constant, enabled, position, depth, insertion_order, secondary_keys, selective, probability, excludeRecursion, preventRecursion, delayUntilRecursion, content. Omit a field to leave it unchanged. content is the full new body.
-- replace_in_entry — id, old (unique snippet from the latest read_entry; quotes and dashes need not be exact), new or content (empty deletes). After a replace, read_entry before another. To delete a section, old may be the first line through the last unique line.
-- delete_entry — id. Removes that entry.
-- read_recursion — optional id. Whole-book recursion map, or one entry’s incoming/outgoing edges. No bodies.
-- test_keys — text (a sample chat message or two). Entries that would activate and the key that matched, plus key hits that stay inactive. No bodies.
-- update_book_settings — optional name, description, scan_depth, token_budget, recursive_scanning.`;
-
 export function buildCharacterAgentSystemPrompt(
   extraChunks: string[],
-  toolMode: AgentToolMode = 'native',
   skills: readonly AgentSkill[] = [],
 ): string {
-  const toolList = skills.length > 0 ? `${CHARACTER_TOOL_LIST}\n${READ_SKILL_TOOL_DOC}` : CHARACTER_TOOL_LIST;
-  const guide = formatAgentToolGuide(toolMode, toolList, CHARACTER_ACTION_SYNTAX);
   const skillsSection = skills.length > 0 ? `\n\n${formatSkillsSection(skills)}` : '';
-  const persona = `${CHARACTER_AGENT_PERSONA}\n\n${guide}${skillsSection}`;
+  const persona = `${CHARACTER_AGENT_PERSONA}\n\n${AGENT_TOOL_GUIDE}${skillsSection}`;
   return buildSystemPrompt(persona, extraChunks);
 }

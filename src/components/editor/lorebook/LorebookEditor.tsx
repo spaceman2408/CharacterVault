@@ -755,7 +755,7 @@ function LorebookEditorInner({
       >
         {selectedEntry ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="mb-0 flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2.5 sm:px-4 md:px-6">
+            <div className="mb-0 flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2.5 sm:px-4 md:px-6 kb-open:py-1">
               <button
                 type="button"
                 onClick={() => setIsMobileViewOpen(false)}
@@ -777,7 +777,7 @@ function LorebookEditorInner({
                   className="w-full min-w-0 truncate bg-transparent text-sm font-semibold text-fg outline-none placeholder:text-fg-subtle focus:ring-0"
                 />
                 {selectedEntryTokenCount !== null && (
-                  <p className="text-xs text-fg-muted">
+                  <p className="text-xs text-fg-muted kb-open:hidden">
                     {selectedEntryTokenCount.toLocaleString()} tokens
                   </p>
                 )}
@@ -828,7 +828,7 @@ function LorebookEditorInner({
                 </button>
               </div>
             </div>
-            <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden px-3 py-2 sm:px-4 md:px-6 md:py-3">
+            <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden px-3 py-2 sm:px-4 md:px-6 md:py-3 kb-open:px-1 kb-open:py-1">
               <LorebookEntryDetail
                 key={selectedEntry.id}
                 entry={selectedEntry}

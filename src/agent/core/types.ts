@@ -4,18 +4,6 @@ export interface ParsedAction {
   body: string;
 }
 
-export type ParseSegment =
-  | { kind: 'speech'; text: string }
-  | { kind: 'action'; action: ParsedAction }
-  | { kind: 'incomplete'; raw: string };
-
-export interface ParseResult {
-  segments: ParseSegment[];
-  actions: ParsedAction[];
-  speech: string;
-  incomplete: boolean;
-}
-
 export interface ActionResult {
   ok: boolean;
   toolName: string;
@@ -26,6 +14,8 @@ export interface NativeToolCall {
   id: string;
   name: string;
   arguments: string;
+  /** Echoed back as-is; Gemini puts the thought signature it requires on the next request here. */
+  extraContent?: Record<string, unknown>;
 }
 
 export interface AgentToolSpec {
@@ -45,9 +35,6 @@ export interface AgentMessage {
 
 export type AgentDoneReason = 'complete' | 'max_turns' | 'abort' | 'error';
 
-/** Native `tools` / `tool_calls` vs XML `<tool_call>` text. Never mix in one prompt. */
-export type AgentToolMode = 'native' | 'xml';
-
 export type AgentEvent =
   | { type: 'assistant_text'; text: string; reasoning?: string }
   | { type: 'tool_start'; toolName: string; headers: Record<string, string> }
@@ -64,17 +51,15 @@ export interface CompleterResult {
   toolCalls?: NativeToolCall[];
 }
 
-/** `continues` is the cut-off reply this call continues; a live draft should start from it. */
 export type Completer = (
   messages: AgentMessage[],
   onChunk?: (chunk: CompleterChunk) => void,
-  continues?: CompleterChunk,
 ) => Promise<CompleterResult>;
 
 export interface AgentHost {
   readonly toolNames: readonly string[];
-  readonly tools?: readonly AgentToolSpec[];
-  buildSystemPrompt(input: { extraChunks: string[]; toolMode?: AgentToolMode }): string;
+  readonly tools: readonly AgentToolSpec[];
+  buildSystemPrompt(input: { extraChunks: string[] }): string;
   extraContextChunks(): Promise<string[]>;
   execute(action: ParsedAction): Promise<ActionResult>;
   /** Persist side effects once per run. No-op when nothing changed. */
@@ -86,13 +71,11 @@ export interface RunLoopOptions {
   complete: Completer;
   userMessage: string;
   history?: AgentMessage[];
-  /** Defaults to native when `host.tools` is set, otherwise XML. */
-  toolMode?: AgentToolMode;
   onEvent?: (event: AgentEvent) => void;
   onChunk?: (chunk: CompleterChunk) => void;
   /**
    * Live prompt for the next (or just-updated) completion. Do not retain the array.
-   * `toolTokens` is the `toolTokens` option while the run sends native tools, else 0.
+   * `toolTokens` is the `toolTokens` option while the host has tools, else 0.
    */
   onPrompt?: (messages: readonly AgentMessage[], toolTokens: number) => void;
   isAborted?: () => boolean;
@@ -102,7 +85,7 @@ export interface RunLoopOptions {
   maxInputTokens?: number;
   /** Token estimator for budget pruning (e.g. estimatePromptTokens). */
   measurePrompt?: (messages: readonly AgentMessage[]) => number;
-  /** Estimated size of the `tools` payload. Taken off `maxInputTokens` while the run sends native tools. */
+  /** Estimated size of the `tools` payload. Taken off `maxInputTokens`. */
   toolTokens?: number;
 }
 

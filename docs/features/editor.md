@@ -2,6 +2,10 @@
 
 Most text fields in Character Vault use a **CodeMirror 6** editor — a fast, keyboard-friendly editor with AI tools built directly into the toolbar. **Name** and **Creator** are plain text boxes, and **Tags** uses a chip editor (see [Name, Creator, and Tags](#name-creator-and-tags)).
 
+::: tip Shortcuts
+Every keyboard shortcut and typing helper (wrapping text in `*` or `"`, `Ctrl+D`, multiple cursors, and more) is listed on [Editor Controls](/features/editor-controls).
+:::
+
 ::: tip
 AI toolbar operations require an AI provider to be configured. If you haven't set one up, see [AI Setup](/configuration/ai-setup).
 :::
@@ -158,7 +162,7 @@ This is available in every text editor that uses the shared CodeMirror toolbar, 
   Roleplay colors** in Settings.
 - **Markdown image links** — Image syntax is highlighted; Ctrl+click to open
   is controlled under **Settings → Character Workspace → Editor links**.
-- **Undo/Redo** — Standard `Ctrl+Z` / `Ctrl+Shift+Z` support.
+- **Undo/Redo** — `Ctrl+Z` to undo, `Ctrl+Y` (`⌘+Shift+Z` on Mac) to redo. Undo covers only your own edits in that editor and survives switching sections. See [Editor Controls](/features/editor-controls#undo-and-saving).
 - **Line wrapping** — Long lines wrap automatically.
 - **Theme sync** — The editor follows the app's dark/light mode.
 - **Auto-save** — Changes are saved as you type. The character workspace header shows **Saving…**, **Saved**, **Unsaved**, or **Save failed**. A failed save stays local and retries on the next change. Press `Ctrl+S` / `⌘+S` to flush pending saves immediately (including a lorebook draft) instead of the browser’s Save Page dialog.
@@ -262,7 +266,7 @@ Each section tab shows a title, description, and the editor. Some sections have 
 | **Name** and **Creator** | Simple text fields for quick edits |
 | **Tags** | Tag chips with quick add, paste, and remove controls |
 | **Description**, **Personality**, **Scenario**, etc. | Standard single editor |
-| **Creator Notes** | Editor with a **Preview CSS** button that opens a sandboxed preview. **Add to Editor** inside the preview switches to a split view (not on phones). See [Creator Notes Preview](/features/creator-notes). |
+| **Creator Notes** | Editor with a **Preview** button that opens a sandboxed preview and a **Dock** button for a resizable split view (not on phones). An **Insert** menu of starter snippets, color swatches, a **Format** button for CSS, and a size readout. See [Creator Notes Preview](/features/creator-notes). |
 | **Greetings** | Special multi-greeting editor. Duplicate and reorder from the sidebar. See [Greetings Editor](/features/greetings-editor). |
 | **Lorebook** | Two-panel editor with ST fields, recursion map, search, and AI key generation. Same UI for embedded books and the [Lorebook Vault](/features/lorebook-vault). See [Lorebook Editor](/features/lorebook-editor). |
 | **Image** | Image upload panel (not a text editor) |

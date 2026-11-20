@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.9.1
-Give the Agent skills it loads when your request matches, write your own, and cache your Claude runs so they cost less.
+::: tip CharacterVault 1.9.2
+Preview Creator Notes the way SillyTavern renders them, keep your place and undo across sections, and edit comfortably on phones.
 
-[Try it](https://vault.charactervault.app) · [Prompt caching](/features/ai-agent#prompt-caching) · [Agent skills](/features/ai-agent#skills)
+[Try it](https://vault.charactervault.app) · [Creator Notes](/features/creator-notes#match-sillytavern) · [Editor Controls](/features/editor-controls)
 :::
 
 # CharacterVault

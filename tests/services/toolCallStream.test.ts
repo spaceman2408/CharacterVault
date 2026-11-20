@@ -7,6 +7,22 @@ import {
 } from '../../src/services/toolCallStream';
 
 describe('toolCallStream', () => {
+  it('keeps Gemini thought signatures from streamed and whole tool calls', () => {
+    const extra = { google: { thought_signature: 'sig-1' } };
+    const acc: AccumulatingToolCall[] = [];
+    applyToolCallDeltas(acc, [
+      { index: 0, id: 'call_1', function: { name: 'read_skill', arguments: '{}' }, extra_content: extra },
+    ]);
+    expect(finalizeToolCalls(acc)).toEqual([
+      { id: 'call_1', name: 'read_skill', arguments: '{}', extraContent: extra },
+    ]);
+    expect(
+      normalizeMessageToolCalls([
+        { id: 'call_2', function: { name: 'read_skill', arguments: '{}' }, extra_content: extra },
+      ]),
+    ).toEqual([{ id: 'call_2', name: 'read_skill', arguments: '{}', extraContent: extra }]);
+  });
+
   it('accumulates streamed argument fragments by index', () => {
     const acc: AccumulatingToolCall[] = [];
     applyToolCallDeltas(acc, [{ index: 0, id: 'call_1', function: { name: 'add_entry', arguments: '{"name":' } }]);

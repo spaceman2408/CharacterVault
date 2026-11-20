@@ -111,8 +111,6 @@ export const SUGGEST_NAMES_TOOL_SPEC: AgentToolSpec = {
   },
 };
 
-export const SUGGEST_NAMES_TOOL_DOC = `- suggest_names — origin (one or more, comma-separated: ${NAME_ORIGINS.join(', ')}), optional gender (female, male, any), part (first, last, full; default full), count (default ${DEFAULT_NAME_COUNT}, max ${MAX_NAME_COUNT}), invented (true for made-up names that sound like the origins; several origins blend). Real or invented names minus overused AI names and names already in use.`;
-
 function fail(message: string): ActionResult {
   return { ok: false, toolName: 'suggest_names', message: `error: ${message}` };
 }

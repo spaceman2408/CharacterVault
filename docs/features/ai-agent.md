@@ -152,7 +152,7 @@ You can keep editing while it runs. The write only covers what the Agent changed
 
 Snippet edits match a unique stretch of existing text instead of rewriting the whole field or entry. Matching tolerates quote styles and multi-section spans. If the snippet is not unique, ask it to re-read and copy a longer stretch.
 
-Providers that accept OpenAI-style `tools` use native function calling. If a provider returns 400 on `tools`, CharacterVault remembers that model, retries the turn with XML tool calls in the message, and later runs for that model skip native tools. You do not turn this on separately. The chat header shows a **Native** or **XML** chip for the current model (hover for the same explanation).
+The Agent needs a model with tool calling (OpenAI-style `tools`). If the provider rejects tools for the selected model, the run stops with an error asking you to pick a model that supports them.
 
 Catalogs in the prompt are built at the **start** of the run. After names or keys change, the Agent can list again in that same run. The **next** Send rebuilds catalogs from the saved card.
 
@@ -176,12 +176,12 @@ To let the Agent see exactly what it wrote in earlier runs, turn on **Settings �
 - **Status line:** while a tool runs, the spinner names what it is working on, such as *Updating Description*, *Reading entry “Harbor”*, or *Searching “harbor”*. An entry added earlier in the same run shows by id (*entry #4*).
 - **Turn limit:** a run that stops at the [loop-turn cap](#limits-per-run) says so on its last message, with a **Continue** button that sends “Continue where you left off.”
 - **Starter suggestions:** an empty chat offers a few first requests based on what the card or book is missing, such as *Write a description*, *Write 2 alternate greetings*, or *Build a lorebook from my custom context*. It never suggests Appearance, Personality, Scenario, System prompt, or Post-history. A finished card gets the usual *Audit this card* style chips.
-- **Header:** a shield icon means [review](#review-edits) is on, and a yellow **Review N** button means a proposal is waiting. **New chat** is the speech bubble with a plus. The **Native** / **XML** chip hides when the panel is narrow.
+- **Header:** a shield icon means [review](#review-edits) is on, and a yellow **Review N** button means a proposal is waiting. **New chat** is the speech bubble with a plus.
 - **Finished in the background:** if a run ends while you are on another tab or in another app, the page title starts with **Agent finished** until you come back.
 - **Thinking:** streams in an expanded **Thinking** fold while it is live; after the reply it collapses
 - **Live token count:** catalogs, custom context, and the current prompt (including tool results)
 - **TTFT / t/s:** on the assistant message info tooltip when the reply finishes, same as Orion
-- **Cached tokens:** the same tooltip shows **Cached: N% of M input tokens** when the host reports prompt cache hits, see [Prompt caching](#prompt-caching)
+- **Cache:** the same tooltip shows **Cache: hit (N tokens)** or **Cache: miss** when the host reports prompt cache counts, see [Prompt caching](#prompt-caching)
 - Reads keep only their one-line summary in the chat; the full field or entry text counts in the live meter, then drops out of the transcript
 
 The thread is stored in the browser with the vault. Long threads keep a small window on screen; **Load earlier messages** pages older turns back in. Oldest rows drop past **500** saved messages per panel.
@@ -220,7 +220,7 @@ An Agent run resends the same prompt on every turn, so the provider can read mos
 
 - **Claude on OpenRouter**: every Agent request for a Claude model is marked cacheable. NanoGPT caches Claude on its own, so no marker is sent there.
 - **One prefix per run**: when a run outgrows its input budget, the oldest exchanges are dropped down to 75% of it and that cut is kept, so the next turn appends to the same prefix instead of moving it every turn.
-- **Measured hit rate**: the info button on an Agent reply shows **Cached: 84% of 12,300 input tokens** when the host reports its counts. A host that does not report them shows nothing.
+- **Hit or miss**: the info button on an Agent reply shows **Cache: hit (10,400 tokens)** or **Cache: miss** when the host reports its counts. A host that does not report them shows nothing.
 - **Tools count**: the tool definitions are part of the token estimate, so the [context meter](#context-meter) and the trimming behind it match what is actually sent.
 - **64K floor**: the Agent runs with a context length of at least 64,000 tokens, even when **Settings → Sampler → Context Length** is lower. Below that, the system prompt and the tools alone eat the budget and the Agent forgets what it already read.
 
@@ -351,9 +351,8 @@ It is chatting. A tool-capable model reads catalogs and calls `list` / `read` / 
 
 ### `incomplete_action` or cut-off tool JSON
 
-The model started a call and ran out of output, or emitted broken JSON/XML. CharacterVault salvages truncated native calls when it can, then asks the model to finish. If that keeps happening:
+The model started a call and ran out of output, or emitted broken JSON. CharacterVault salvages truncated native calls when it can, then asks the model to finish. If that keeps happening:
 
-- Use a model with **native** `tools` (not XML-in-chat)
 - Prefer a current tool-calling model (**Qwen3.8**, **DeepSeek V4**, **GLM-5.3**, **Kimi K3**, or **Gemma 4**) over a chat-only instruct
 - Split the job, or step up a size, if a small local keeps cutting off (“rewrite description” vs “rebuild the lorebook”)
 

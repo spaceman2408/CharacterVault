@@ -18,6 +18,7 @@ import {
   setSearchQuery,
   SearchQuery,
   searchPanelOpen as isSearchPanelOpen,
+  selectNextOccurrence,
 } from '@codemirror/search';
 import { isImeComposing } from '../../utils/imeComposing';
 
@@ -239,17 +240,6 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   searchInput.placeholder = 'Find...';
   searchInput.setAttribute('main-field', 'true');
   searchInput.setAttribute('aria-label', 'Find in editor');
-  searchInput.style.cssText = `
-    flex: 1;
-    min-width: 0;
-    padding: 6px 10px;
-    font-size: 16px;
-    border: 1px solid var(--ai-toolbar-input-border);
-    border-radius: 6px;
-    background-color: var(--ai-toolbar-input-bg);
-    color: var(--ai-toolbar-text);
-    outline: none;
-  `;
   searchRow.appendChild(searchInput);
 
   const prevBtn = document.createElement('button');
@@ -385,7 +375,6 @@ function createSearchPanelControls(view: EditorView): SearchPanelControls {
   replaceInput.className = 'replace-input';
   replaceInput.placeholder = 'Replace...';
   replaceInput.setAttribute('aria-label', 'Replace in editor');
-  replaceInput.style.cssText = searchInput.style.cssText;
   replaceRow.appendChild(replaceInput);
 
   const replaceBtn = document.createElement('button');
@@ -620,6 +609,8 @@ export function toolbarSearch() {
       { key: 'Mod-h', mac: 'Mod-Alt-f', run: openToolbarSearchReplace },
       { key: 'F3', run: (view) => stepToolbarSearch(view, false), shift: (view) => stepToolbarSearch(view, true) },
       { key: 'Mod-g', run: (view) => stepToolbarSearch(view, false), shift: (view) => stepToolbarSearch(view, true) },
+      // preventDefault so Chrome's bookmark dialog never opens, even when there is no next match
+      { key: 'Mod-d', run: selectNextOccurrence, preventDefault: true },
     ]),
     // Ahead of the default Escape (which collapses a selection first); a no-op when search is closed
     Prec.high(keymap.of([{ key: 'Escape', run: closeToolbarSearch }])),
@@ -660,6 +651,7 @@ export function toolbarSearchTheme() {
     },
     '& .cm-toolbar-search-panel .search-input, & .cm-toolbar-search-panel .replace-input': {
       flex: '1',
+      minWidth: '0',
       padding: '6px 10px',
       fontSize: '16px',
       border: '1px solid var(--ai-toolbar-input-border)',
@@ -738,6 +730,30 @@ export function toolbarSearchTheme() {
       fontWeight: '500',
       color: 'var(--ai-toolbar-text-muted)',
       padding: '0 6px',
+    },
+    '@media (max-width: 640px)': {
+      '.cm-toolbar-search-panel .search-row, .cm-toolbar-search-panel .replace-row': {
+        flexWrap: 'wrap',
+      },
+      '.cm-toolbar-search-panel .search-row': {
+        position: 'relative',
+        paddingRight: '36px',
+      },
+      '.cm-toolbar-search-panel .search-input, .cm-toolbar-search-panel .replace-input': {
+        flex: '1 1 100%',
+      },
+      '.cm-toolbar-search-panel .search-btn, .cm-toolbar-search-panel .search-option': {
+        flex: '1 1 0',
+      },
+      '.cm-toolbar-search-panel .search-btn.close': {
+        position: 'absolute',
+        top: '2px',
+        right: '0',
+      },
+      '.cm-toolbar-search-panel .search-match-count': {
+        flex: '1 1 0',
+        textAlign: 'center',
+      },
     },
   });
 }

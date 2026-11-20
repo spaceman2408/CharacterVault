@@ -3,7 +3,6 @@ import {
   applyCapabilityCache,
   clearCapabilityCaches,
   getCapabilityCache,
-  isNativeToolsRejected,
   mapEffortToSupported,
   matchRejectedParams,
   parseSupportedValues,
@@ -88,13 +87,13 @@ describe('matchRejectedParams', () => {
     expect(matchRejectedParams({ error: { param: 'model', message: 'The model does not exist' } }, keys)).toEqual([]);
   });
 
-  it('matches min_p from message without false positives', () => {
-    const keys = ['min_p', 'top_p', 'temperature'];
+  it('matches logit_bias from message without false positives', () => {
+    const keys = ['logit_bias', 'top_p', 'temperature'];
     const found = matchRejectedParams(
-      { error: { message: 'Unknown parameter: min_p' } },
+      { error: { message: 'Unknown parameter: logit_bias' } },
       keys
     );
-    expect(found).toEqual(['min_p']);
+    expect(found).toEqual(['logit_bias']);
   });
 });
 
@@ -103,9 +102,6 @@ describe('repairChatRequest', () => {
     model: 'deepseek/deepseek-v4-pro-cheaper:thinking',
     temperature: 0.7,
     top_p: 1,
-    min_p: 0.05,
-    top_k: 40,
-    repetition_penalty: 1.1,
     include_reasoning: true,
     reasoning: { enabled: true, effort: 'medium' },
     reasoning_effort: 'medium',
@@ -128,7 +124,7 @@ describe('repairChatRequest', () => {
     expect(result!.request.reasoning).toEqual({ enabled: true, effort: 'high' });
     expect(result!.removed).not.toContain('reasoning');
     expect(result!.removed).not.toContain('reasoning_effort');
-    expect(result!.request.min_p).toBe(0.05);
+    expect(result!.request.top_p).toBe(1);
   });
 
   it('renames max_tokens to max_completion_tokens when OpenAI asks for it', () => {
@@ -175,13 +171,12 @@ describe('repairChatRequest', () => {
 
   it('strips only named sampler params', () => {
     const result = repairChatRequest(baseRequest(), {
-      error: { message: 'Unsupported parameter: min_p' },
+      error: { message: 'Unsupported parameter: top_p' },
     });
     expect(result).not.toBeNull();
-    expect(result!.removed).toEqual(['min_p']);
-    expect(result!.request.min_p).toBeUndefined();
+    expect(result!.removed).toEqual(['top_p']);
+    expect(result!.request.top_p).toBeUndefined();
     expect(result!.request.temperature).toBe(0.7);
-    expect(result!.request.top_p).toBe(1);
     expect(result!.request.reasoning_effort).toBe('medium');
   });
 
@@ -225,36 +220,19 @@ describe('repairChatRequest', () => {
   });
 });
 
-describe('isNativeToolsRejected', () => {
-  beforeEach(() => {
-    clearCapabilityCaches();
-  });
-
-  it('is true after a tools rejection is cached for that model', () => {
-    const cache = getCapabilityCache('https://api.example.com', 'model-a');
-    recordRepairInCache(cache, { request: {}, removed: ['tools', 'tool_choice'], remapped: {} });
-    expect(isNativeToolsRejected('https://api.example.com', 'model-a')).toBe(true);
-    expect(isNativeToolsRejected('https://api.example.com', 'model-b')).toBe(false);
-  });
-});
-
 describe('stripAllNonStandardParams', () => {
   it('removes non-standard params and keeps core sampling', () => {
     const result = stripAllNonStandardParams({
       model: 'm',
       temperature: 0.7,
       top_p: 1,
-      min_p: 0.05,
-      top_k: 40,
-      repetition_penalty: 1.1,
       reasoning_effort: 'high',
       reasoning: { enabled: true, effort: 'high' },
     });
-    expect(result.removed).toEqual(
-      expect.arrayContaining(['min_p', 'top_k', 'repetition_penalty', 'reasoning_effort', 'reasoning'])
-    );
+    expect(result.removed).toEqual(expect.arrayContaining(['reasoning_effort', 'reasoning']));
     expect(result.request.temperature).toBe(0.7);
-    expect(result.request.min_p).toBeUndefined();
+    expect(result.request.top_p).toBe(1);
+    expect(result.request.reasoning).toBeUndefined();
   });
 });
 
@@ -263,17 +241,6 @@ describe('sanitizeSamplerParams / strict hosts', () => {
     expect(shouldOmitNonStandardSamplers('https://api.openai.com/v1')).toBe(true);
     expect(shouldOmitNonStandardSamplers('https://api.synthetic.new/v1')).toBe(false);
     expect(shouldOmitNonStandardSamplers('https://nano-gpt.com/api/v1')).toBe(false);
-  });
-
-  it('omits non-standard samplers on strict hosts', () => {
-    const cleaned = sanitizeSamplerParams(
-      { min_p: 0.05, top_k: 40, repetition_penalty: 1.1, temperature: 0.7 },
-      'https://api.openai.com/v1'
-    );
-    expect(cleaned.min_p).toBeUndefined();
-    expect(cleaned.top_k).toBeUndefined();
-    expect(cleaned.repetition_penalty).toBeUndefined();
-    expect(cleaned.temperature).toBe(0.7);
   });
 
   it('sends the output cap as max_completion_tokens on strict hosts only', () => {
@@ -285,25 +252,28 @@ describe('sanitizeSamplerParams / strict hosts', () => {
     });
   });
 
-  it('keeps Synthetic-supported extras (top_k, repetition_penalty) and drops no-op min_p', () => {
+  it('drops the params Gemini rejects but keeps reasoning_effort and max_tokens', () => {
     const cleaned = sanitizeSamplerParams(
-      { min_p: 0, top_k: 40, repetition_penalty: 1.1, temperature: 0.7 },
-      'https://api.synthetic.new/v1'
+      {
+        include_reasoning: true,
+        reasoning: { enabled: true, effort: 'medium' },
+        reasoning_effort: 'medium',
+        max_tokens: 512,
+        temperature: 0.7,
+      },
+      'https://generativelanguage.googleapis.com/v1beta/openai'
     );
-    expect(cleaned.min_p).toBeUndefined();
-    expect(cleaned.top_k).toBe(40);
-    expect(cleaned.repetition_penalty).toBe(1.1);
-    expect(cleaned.temperature).toBe(0.7);
+    expect(cleaned).toEqual({ reasoning_effort: 'medium', max_tokens: 512, temperature: 0.7 });
   });
 
-  it('omits no-op sampler values on non-strict hosts', () => {
-    const cleaned = sanitizeSamplerParams(
-      { min_p: 0, top_k: 0, repetition_penalty: 1, temperature: 0.7 },
-      'https://nano-gpt.com/api/v1'
-    );
-    expect(cleaned.min_p).toBeUndefined();
-    expect(cleaned.top_k).toBeUndefined();
-    expect(cleaned.repetition_penalty).toBeUndefined();
+  it('caps Gemini reasoning effort at high', () => {
+    for (const effort of ['xhigh', 'max']) {
+      const cleaned = sanitizeSamplerParams(
+        { reasoning_effort: effort },
+        'https://generativelanguage.googleapis.com/v1beta/openai'
+      );
+      expect(cleaned.reasoning_effort).toBe('high');
+    }
   });
 });
 

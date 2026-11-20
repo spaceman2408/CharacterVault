@@ -1,6 +1,6 @@
 # Sampler Settings
 
-Sampler settings control how the AI generates text — balancing creativity, coherence, and diversity. Character Vault exposes the most commonly used sampling parameters.
+Sampler settings control how the AI generates text — balancing creativity and focus. Character Vault keeps to the standard OpenAI parameters that nearly every provider accepts.
 
 ## Accessing Sampler Settings
 
@@ -10,19 +10,17 @@ Sampler settings control how the AI generates text — balancing creativity, coh
 
 ## Quick Presets
 
-Three built-in presets apply modern sampling combinations with one click. They follow a **min-p–first** stack (top-k off, light repetition penalty) and **do not change** your current context length.
+Three built-in presets set Temperature, Top P, and Max Tokens with one click. They **do not change** your current context length.
 
-| Preset | Temp | Min P | Top P | Top K | Rep Pen | Max Tokens | Best For |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Creative** | 1.1 | 0.05 | 0.95 | 0 | 1.05 | 2048 | Brainstorming, storytelling, expanding descriptions |
-| **Balanced** | 0.8 | 0.05 | 1.0 | 0 | 1.05 | 2048 | General-purpose writing and editing |
-| **Factual** | 0.5 | 0.1 | 0.9 | 0 | 1.05 | 1024 | Grammar fixes, factual rewrites, concise edits |
+| Preset | Temp | Top P | Max Tokens | Best For |
+| :--- | :--- | :--- | :--- | :--- |
+| **Creative** | 1.1 | 0.95 | 2048 | Brainstorming, storytelling, expanding descriptions |
+| **Balanced** | 0.8 | 1.0 | 2048 | General-purpose writing and editing |
+| **Factual** | 0.5 | 0.9 | 1024 | Grammar fixes, factual rewrites, concise edits |
 
 Select a preset to apply its values, then fine-tune individual parameters as needed.
 
 ## Primary Samplers
-
-These are the most commonly adjusted parameters:
 
 ### Temperature
 
@@ -35,7 +33,7 @@ Controls randomness in generation. Lower values produce more focused, determinis
 | 0.7 – 0.8 | Balanced everyday writing (Balanced preset uses 0.8) |
 | 1.0 | Neutral / raw distribution (app default when no preset is applied) |
 | 1.1 – 1.3 | Creative and varied (Creative preset uses 1.1) |
-| 1.5 – 2.0 | Highly unpredictable — pair with Min P |
+| 1.5 – 2.0 | Highly unpredictable — pair with a lower Top P |
 
 **Range**: 0.0 – 2.0 (step: 0.1)
 
@@ -45,55 +43,14 @@ Nucleus sampling — considers only tokens whose cumulative probability is below
 
 | Value | Behavior |
 | :--- | :--- |
-| 0.5 | Very focused — rarely needed with Min P |
+| 0.5 | Very focused |
 | 0.9 | Mild focus (Factual preset) |
 | 0.95 | Slightly open (Creative preset) |
-| 1.0 | No top-p filtering — let Min P handle truncation (Balanced / app default) |
+| 1.0 | No top-p filtering (Balanced / app default) |
 
 **Range**: 0.0 – 1.0 (step: 0.05)
 
-### Min P
-
-Minimum probability threshold. Filters out tokens with probabilities below this percentage of the top token's probability. Unlike Top P, this works relative to the best token, making it more adaptive at different probability scales.
-
-| Value | Behavior |
-| :--- | :--- |
-| 0.0 | No filtering (app default — fully open) |
-| 0.05 | Recommended modern default (Creative / Balanced presets) |
-| 0.1 | Tighter relative floor (Factual preset) |
-
-**Range**: 0.0 – 1.0 (step: 0.01)
-
-### Top K
-
-Limits token selection to the K most likely candidates. Lower values restrict output more aggressively.
-
-| Value | Behavior |
-| :--- | :--- |
-| 0 | Disabled (modern default; all quick presets use this) |
-| 20 – 40 | Legacy hard cutoff — prefer Min P instead |
-| 100 | Very permissive hard cutoff |
-
-**Range**: 0 – 100 (step: 1)
-
-::: tip
-Modern sampling stacks usually disable Top K (`0`) and rely on **Min P** (optionally with a mild Top P). Character Vault's quick presets follow that approach.
-:::
-
-## Secondary Samplers
-
-### Repetition Penalty
-
-Penalizes repeated tokens and phrases. Values above 1.0 discourage repetition; values at 1.0 disable the penalty.
-
-| Value | Behavior |
-| :--- | :--- |
-| 1.0 | No penalty (app default) |
-| 1.05 | Light anti-repetition (all quick presets) |
-| 1.1 | Moderate — use if the model loops |
-| 1.2+ | Strong — can produce awkward or stilted phrasing |
-
-**Range**: 1.0 – 2.0 (step: 0.05)
+## Output & Context
 
 ### Max Tokens
 
@@ -137,10 +94,8 @@ The Max Tokens slider goes up to 8,100; imported values are capped at 8,192 on s
 
 - **For the AI assistant (Orion)**: A balanced or creative preset works well for brainstorming character details.
 - **For the AI toolbar**: Factual or balanced is often better for grammar fixes and rewrites; creative is better for vivid/emotion operations.
-- **High Temperature + Min P**: Pair creative temperatures (≈1.1+) with Min P ≈0.05 so coherence holds while variety stays high.
-- **Prefer Min P over Top K**: Top K is a fixed hard cutoff; Min P adapts to model confidence and is the modern primary truncation sampler.
-- **Repetition Penalty**: Keep it light (≈1.05). Values above 1.15 can start to produce awkward phrasing.
-- **Non-standard parameters**: Min P 0, Top K 0, and Repetition Penalty 1.0 are never sent (they do nothing). On `api.openai.com` those three are never sent at all. Other hosts get them, and if a host rejects one (or a reasoning parameter), Character Vault removes it and retries (up to 3 retries).
+- **High Temperature**: Pair creative temperatures (≈1.1+) with a Top P around 0.95 so coherence holds while variety stays high.
+- **Rejected parameters**: If a host rejects a parameter, Character Vault removes it and retries (up to 3 retries). Some reasoning models ignore or reject Temperature and Top P.
 
 ## Next Steps
 

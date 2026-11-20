@@ -362,7 +362,7 @@ export function LorebookEntryDetail({
             )}
           </button>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5 kb-open:hidden">
           <ToggleChip
             pressed={draftEntry.enabled}
             onPressedChange={(next) => persistPatch({ enabled: next })}

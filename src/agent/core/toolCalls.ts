@@ -1,5 +1,8 @@
 import type { NativeToolCall, ParsedAction } from './types';
-import { isValidToolName } from './parseActions';
+
+export function isValidToolName(name: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9_]*$/.test(name);
+}
 
 function headerValue(value: unknown): string | null {
   if (value == null) return null;

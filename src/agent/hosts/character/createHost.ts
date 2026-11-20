@@ -1,6 +1,6 @@
 import type { AgentSkill, CharacterBook, CharacterSpec } from '../../../db/characterTypes';
 import { formatCustomContextChunk } from '../../../services/CustomContextService';
-import type { ActionResult, AgentHost, AgentToolMode, AgentToolSpec, ParsedAction } from '../../core/types';
+import type { ActionResult, AgentHost, AgentToolSpec, ParsedAction } from '../../core/types';
 import type { CharacterReviewPayload } from '../../review/types';
 import { createLorebookHost } from '../lorebook/createHost';
 import { LOREBOOK_TOOL_SPECS } from '../lorebook/schemas';
@@ -118,8 +118,8 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
     ],
     tools: characterAgentToolSpecs(skills),
 
-    buildSystemPrompt(input: { extraChunks: string[]; toolMode?: AgentToolMode }): string {
-      return buildCharacterAgentSystemPrompt(input.extraChunks, input.toolMode ?? 'native', skills);
+    buildSystemPrompt(input: { extraChunks: string[] }): string {
+      return buildCharacterAgentSystemPrompt(input.extraChunks, skills);
     },
 
     async extraContextChunks(): Promise<string[]> {

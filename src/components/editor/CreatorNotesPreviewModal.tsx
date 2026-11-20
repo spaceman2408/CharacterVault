@@ -5,22 +5,30 @@
 
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { Columns2 } from 'lucide-react';
 import { CreatorNotesPreviewPane } from './CreatorNotesPreviewPane';
+import type { CreatorNotesPreviewPrefs } from './useCreatorNotesPreviewPrefs';
 
 interface CreatorNotesPreviewModalProps {
   content: string;
+  charName: string;
+  prefs: CreatorNotesPreviewPrefs;
+  onPrefsChange: (patch: Partial<CreatorNotesPreviewPrefs>) => void;
   showRemoteWarning?: boolean;
   isOpen: boolean;
   onClose: () => void;
-  onAddToEditor: () => void;
+  onDock: () => void;
 }
 
 export function CreatorNotesPreviewModal({
   content,
+  charName,
+  prefs,
+  onPrefsChange,
   showRemoteWarning,
   isOpen,
   onClose,
-  onAddToEditor,
+  onDock,
 }: CreatorNotesPreviewModalProps): React.ReactElement | null {
   React.useEffect(() => {
     if (!isOpen) return;
@@ -59,10 +67,11 @@ export function CreatorNotesPreviewModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onAddToEditor}
-              className="hidden rounded-lg bg-vault-600 px-3 py-2 text-sm font-medium text-white transition-colors sm:block hover:bg-hover"
+              onClick={onDock}
+              className="hidden items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent sm:inline-flex"
             >
-              Add to Editor
+              <Columns2 className="h-4 w-4" aria-hidden="true" />
+              Dock
             </button>
             <button
               type="button"
@@ -76,6 +85,9 @@ export function CreatorNotesPreviewModal({
 
         <CreatorNotesPreviewPane
           content={content}
+          charName={charName}
+          prefs={prefs}
+          onPrefsChange={onPrefsChange}
           showRemoteWarning={showRemoteWarning}
           frameClassName="flex-1 overflow-auto rounded-[1.25rem] border border-vault-600 bg-vault-800 shadow-[0_20px_60px_rgba(17,24,39,0.35)]"
           emptyClassName="flex-1 overflow-auto rounded-[1.25rem] border-dashed border-vault-500 bg-vault-800 px-5 py-6 text-center text-sm text-fg-subtle"

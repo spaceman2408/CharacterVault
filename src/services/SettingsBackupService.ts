@@ -203,9 +203,6 @@ function normalizeBackupSampler(value: unknown): SamplerSettings {
   const d = DEFAULT_SETTINGS.sampler;
   return {
     temperature: asNumber(raw.temperature, d.temperature),
-    minP: asNumber(raw.minP, d.minP),
-    topK: asNumber(raw.topK, d.topK),
-    repetitionPenalty: asNumber(raw.repetitionPenalty, d.repetitionPenalty),
     topP: asNumber(raw.topP, d.topP),
     contextLength: clampContextLength(asNumber(raw.contextLength, d.contextLength)),
     maxTokens: Math.min(asNumber(raw.maxTokens, d.maxTokens), 8192),

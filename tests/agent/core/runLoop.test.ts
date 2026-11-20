@@ -19,6 +19,7 @@ function fakeHost(execute?: (action: ParsedAction) => Promise<ActionResult>): {
   const persist = vi.fn(async () => undefined);
   const host: AgentHost = {
     toolNames: ['add_entry', 'list_entries'],
+    tools: [],
     buildSystemPrompt: ({ extraChunks }) => `sys\n${extraChunks.join('\n')}`,
     extraContextChunks: vi.fn(async () => ['catalog']),
     async execute(action) {
@@ -37,6 +38,18 @@ function scriptedComplete(replies: Array<string | CompleterResult>): Completer {
     const reply = replies[index] ?? 'done';
     index += 1;
     return typeof reply === 'string' ? { content: reply } : reply;
+  };
+}
+
+let callSeq = 0;
+
+function addEntry(name: string, content = 'Body'): CompleterResult {
+  callSeq += 1;
+  return {
+    content: '',
+    toolCalls: [
+      { id: `call_${callSeq}`, name: 'add_entry', arguments: JSON.stringify({ name, keys: name.toLowerCase(), content }) },
+    ],
   };
 }
 
@@ -71,18 +84,13 @@ describe('runLoop', () => {
     const { host, persist, calls } = fakeHost();
     const complete = vi.fn(
       scriptedComplete([
-        `<<<add_entry
-name: Keep
-keys: keep
----
-Castle
->>>
-<<<add_entry
-name: Harbor
-keys: harbor
----
-Docks
->>>`,
+        {
+          content: '',
+          toolCalls: [
+            { id: 'call_keep', name: 'add_entry', arguments: '{"name":"Keep","keys":"keep","content":"Castle"}' },
+            { id: 'call_harbor', name: 'add_entry', arguments: '{"name":"Harbor","keys":"harbor","content":"Docks"}' },
+          ],
+        },
         'All set.',
       ]),
     );
@@ -104,13 +112,13 @@ Docks
     expect(host.extraContextChunks).toHaveBeenCalledTimes(1);
     const secondMessages = complete.mock.calls[1][0];
     const toolFollowUp = secondMessages[secondMessages.length - 1];
-    expect(toolFollowUp.role).toBe('user');
-    expect(toolFollowUp.content).toContain('[add_entry] ok add_entry');
+    expect(toolFollowUp.role).toBe('tool');
+    expect(toolFollowUp.content).toBe('ok add_entry');
     const promptedWithTools = onPrompt.mock.calls.some((call) => {
       const prompt = call[0] as AgentMessage[];
       return prompt.some(
         (message) =>
-          typeof message.content === 'string' && message.content.includes('[add_entry] ok add_entry'),
+          message.role === 'tool' && message.content === 'ok add_entry',
       );
     });
     expect(promptedWithTools).toBe(true);
@@ -123,7 +131,7 @@ Docks
       host,
       complete: async () => {
         turns += 1;
-        return { content: '<<<list_entries>>>' };
+        return { content: '', toolCalls: [{ id: `call_${turns}`, name: 'list_entries', arguments: '{}' }] };
       },
       userMessage: 'go',
       maxTurns: 3,
@@ -177,92 +185,6 @@ Docks
     });
     expect(result.reason).toBe('abort');
     expect(persist).toHaveBeenCalledTimes(1);
-  });
-
-  it('salvages an unclosed add_entry that already has headers and a body', async () => {
-    const { host, calls } = fakeHost();
-    const complete = vi.fn(
-      scriptedComplete([
-        `<<<add_entry
-name: Keep
-keys: keep
----
-Castle`,
-        'Stopped.',
-      ]),
-    );
-    const events: AgentEvent[] = [];
-    const result = await runLoop({
-      host,
-      complete,
-      userMessage: 'go',
-      onEvent: collect(events).push,
-    });
-    expect(result.reason).toBe('complete');
-    expect(calls[0]?.headers.name).toBe('Keep');
-    expect(calls[0]?.body).toBe('Castle');
-    expect(events.some((event) => event.type === 'tool_result' && event.result.toolName === 'incomplete_action')).toBe(
-      false,
-    );
-  });
-
-  it('feeds a name-only incomplete call back with applied names', async () => {
-    const { host } = fakeHost();
-    const complete = vi.fn(
-      scriptedComplete([
-        `<tool_call>
-add_entry
-name: Keep
-keys: keep
----
-Castle
-</tool_call>
-<tool_call>
-add_entry`,
-        'Stopped.',
-      ]),
-    );
-    const events: AgentEvent[] = [];
-    const result = await runLoop({
-      host,
-      complete,
-      userMessage: 'go',
-      onEvent: collect(events).push,
-    });
-    expect(result.reason).toBe('complete');
-    const incomplete = events.find(
-      (event) => event.type === 'tool_result' && event.result.toolName === 'incomplete_action',
-    );
-    expect(incomplete?.type === 'tool_result' && incomplete.result.message).toContain('Applied:');
-    expect(incomplete?.type === 'tool_result' && incomplete.result.message).toContain('Re-emit ONLY');
-    const followUp = complete.mock.calls[1][0].at(-1);
-    expect(followUp?.content).toContain('incomplete_action');
-  });
-
-  it('continues once when finish_reason is length and the tail is not salvageable', async () => {
-    const { host, calls } = fakeHost();
-    const complete = vi.fn(
-      scriptedComplete([
-        { content: '<tool_call>\nadd_entry\n', finishReason: 'length' },
-        `name: Keep
-keys: keep
----
-Castle
-</tool_call>`,
-        'Stopped.',
-      ]),
-    );
-    const result = await runLoop({
-      host,
-      complete,
-      userMessage: 'go',
-    });
-    expect(result.reason).toBe('complete');
-    expect(complete).toHaveBeenCalledTimes(3);
-    expect(calls[0]?.headers.name).toBe('Keep');
-    const continueMessages = complete.mock.calls[1][0];
-    expect(continueMessages.at(-1)?.content).toContain('cut off');
-    expect(complete.mock.calls[1][2]).toEqual({ content: '<tool_call>\nadd_entry\n', reasoning: undefined });
   });
 
   it('prefers native tool_calls and echoes role=tool results', async () => {
@@ -384,8 +306,8 @@ Castle
     const seenSizes: number[] = [];
     const seenJson: string[] = [];
     const inner = scriptedComplete([
-      '<<<add_entry\nname: Keep\nkeys: keep\n---\nCastle\n>>>',
-      '<<<add_entry\nname: Harbor\nkeys: harbor\n---\nDocks\n>>>',
+      addEntry('Keep', 'Castle'),
+      addEntry('Harbor', 'Docks'),
       'All set.',
     ]);
     const complete = vi.fn(async (messages: AgentMessage[]) => {
@@ -409,7 +331,7 @@ Castle
     expect(seenJson[2]).not.toContain('Castle');
   });
 
-  it('takes the tool definitions off the message budget while sending native tools', async () => {
+  it('takes the tool definitions off the message budget', async () => {
     const big = 'x'.repeat(2000);
     const { host: base } = fakeHost(async () => ({ ok: true, toolName: 'add_entry', message: `ok ${big}` }));
     const host: AgentHost = { ...base, tools: [{ name: 'add_entry', description: 'Add', parameters: {} }] };
@@ -430,7 +352,6 @@ Castle
       host,
       complete,
       userMessage: 'go',
-      toolMode: 'native',
       maxInputTokens: 4000,
       toolTokens: 1500,
       measurePrompt: measure,
@@ -441,15 +362,13 @@ Castle
     expect(new Set(prompted)).toEqual(new Set([1500]));
   });
 
-  it('does not count tool definitions in XML mode', async () => {
-    const { host: base } = fakeHost();
-    const host: AgentHost = { ...base, tools: [{ name: 'add_entry', description: 'Add', parameters: {} }] };
+  it('counts no tool tokens for a host without tools', async () => {
+    const { host } = fakeHost();
     const prompted: number[] = [];
     await runLoop({
       host,
       complete: scriptedComplete(['Nothing to do.']),
       userMessage: 'go',
-      toolMode: 'xml',
       maxInputTokens: 4000,
       toolTokens: 1500,
       measurePrompt: () => 10,
@@ -469,7 +388,7 @@ Castle
     const requests: string[][] = [];
     const replies = Array.from(
       { length: 11 },
-      (_, index) => `<<<add_entry\nname: Entry${index}\nkeys: k${index}\n---\nBody\n>>>`,
+      (_, index) => addEntry(`Entry${index}`),
     );
     const inner = scriptedComplete([...replies, 'All set.']);
     const complete = vi.fn(async (messages: AgentMessage[]) => {
@@ -489,7 +408,7 @@ Castle
     expect(moved).toBeLessThanOrEqual(3);
   });
 
-  it('does not parse XML from the body in native mode', async () => {
+  it('does not parse tool XML from the message body', async () => {
     const { host, calls } = fakeHost();
     const result = await runLoop({
       host,
@@ -503,7 +422,6 @@ Castle
 </tool_call>`,
       ]),
       userMessage: 'go',
-      toolMode: 'native',
     });
     expect(result.reason).toBe('complete');
     expect(calls).toHaveLength(0);
@@ -520,79 +438,24 @@ Castle
     { role: 'assistant', content: 'Done.' },
   ];
 
-  function hasNativeTurns(messages: AgentMessage[]): boolean {
-    return messages.some((message) => message.role === 'tool' || Boolean(message.tool_calls?.length));
-  }
-
-  it('sends replayed native history as XML when the run starts in XML mode', async () => {
+  it('keeps replayed history as tool calls', async () => {
     const { host } = fakeHost();
     const complete = vi.fn(scriptedComplete(['Stopped.']));
-    await runLoop({ host, complete, userMessage: 'go', history: replayedHistory, toolMode: 'xml' });
-    const sent = complete.mock.calls[0][0];
-    expect(hasNativeTurns(sent)).toBe(false);
-    expect(sent.map((message) => message.role)).toEqual(['system', 'user', 'assistant', 'user', 'assistant', 'user']);
-    expect(sent[2].content).toContain('<tool_call>\nadd_entry\nname: Harbor\n---\nFog.\n</tool_call>');
-    expect(sent[3].content).toBe('Tool results:\n[add_entry] ok #4 Harbor');
-  });
-
-  it('keeps replayed native history as tool calls in native mode', async () => {
-    const { host } = fakeHost();
-    const complete = vi.fn(scriptedComplete(['Stopped.']));
-    await runLoop({ host, complete, userMessage: 'go', history: replayedHistory, toolMode: 'native' });
+    await runLoop({ host, complete, userMessage: 'go', history: replayedHistory });
     expect(complete.mock.calls[0][0].slice(1, -1)).toEqual(replayedHistory);
   });
 
-  it('converts replayed native history when native tools are rejected mid-run', async () => {
-    const { host } = fakeHost();
-    const sent: AgentMessage[][] = [];
-    const complete = vi.fn(async (messages: AgentMessage[]) => {
-      sent.push(structuredClone(messages));
-      if (sent.length === 1) {
-        throw Object.assign(new Error('Unknown parameter: tools'), { type: 'tools_unsupported' });
-      }
-      return { content: 'Stopped.' };
+  it('stops with the error when the provider rejects tools', async () => {
+    const { host, persist } = fakeHost();
+    const events: AgentEvent[] = [];
+    const complete = vi.fn(async () => {
+      throw Object.assign(new Error("This model doesn't support tool calling"), { type: 'tools_unsupported' });
     });
-    await runLoop({ host, complete, userMessage: 'go', history: replayedHistory, toolMode: 'native' });
-    expect(hasNativeTurns(sent[0])).toBe(true);
-    expect(hasNativeTurns(sent[1])).toBe(false);
-    expect(sent[1][2].content).toContain('<tool_call>\nadd_entry');
-    expect(sent[1].at(-1)).toEqual({ role: 'user', content: 'go' });
-  });
-
-  it('rebuilds an XML prompt after native tools are rejected', async () => {
-    const { host, calls } = fakeHost();
-    host.buildSystemPrompt = ({ extraChunks, toolMode }) =>
-      `${toolMode ?? 'none'}\n${extraChunks.join('\n')}`;
-    let attempts = 0;
-    const complete = vi.fn(async (messages: AgentMessage[]) => {
-      attempts += 1;
-      if (attempts === 1) {
-        expect(messages[0]?.content).toContain('native');
-        throw Object.assign(new Error('Unknown parameter: tools'), { type: 'tools_unsupported' });
-      }
-      expect(messages[0]?.content).toContain('xml');
-      if (attempts === 2) {
-        return {
-          content: `<tool_call>
-add_entry
-name: Keep
-keys: keep
----
-Castle
-</tool_call>`,
-        };
-      }
-      return { content: 'Stopped.' };
-    });
-    const result = await runLoop({
-      host,
-      complete,
-      userMessage: 'go',
-      toolMode: 'native',
-    });
-    expect(result.reason).toBe('complete');
-    expect(attempts).toBe(3);
-    expect(calls[0]?.headers.name).toBe('Keep');
+    const result = await runLoop({ host, complete, userMessage: 'go', onEvent: collect(events).push });
+    expect(result.reason).toBe('error');
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(events).toContainEqual({ type: 'error', message: "This model doesn't support tool calling" });
   });
 
   it('hands each executed action to its tool_result event', async () => {
@@ -624,40 +487,25 @@ Castle
     });
   });
 
-  it('hands XML actions to their tool_result events too', async () => {
-    const { host } = fakeHost();
-    const events: AgentEvent[] = [];
-    await runLoop({
-      host,
-      toolMode: 'xml',
-      complete: scriptedComplete([
-        `<tool_call>
-add_entry
-name: Keep
-keys: keep
----
-Castle
-</tool_call>`,
-        'Stopped.',
-      ]),
-      userMessage: 'go',
-      onEvent: collect(events).push,
-    });
-    const result = events.find((event) => event.type === 'tool_result');
-    expect(result).toMatchObject({
-      action: { name: 'add_entry', headers: { name: 'Keep' }, body: 'Castle' },
-    });
-  });
-
   it('sends no action with results for calls that never ran', async () => {
     const { host } = fakeHost();
     const events: AgentEvent[] = [];
-    const call = '<tool_call>\nadd_entry\nname: Keep\n---\nCastle\n</tool_call>';
+    const complete = vi.fn(
+      scriptedComplete([
+        {
+          content: '',
+          toolCalls: [
+            { id: 'call_a', name: 'add_entry', arguments: '{"name":"Keep","content":"Castle"}' },
+            { id: 'call_b', name: 'add_entry', arguments: '{"name":"Dock","content":"Pier"}' },
+          ],
+        },
+        'Stopped.',
+      ]),
+    );
     await runLoop({
       host,
-      toolMode: 'xml',
       maxActionsPerTurn: 1,
-      complete: scriptedComplete([`${call}\n${call}`, 'Stopped.']),
+      complete,
       userMessage: 'go',
       onEvent: collect(events).push,
     });
@@ -666,5 +514,7 @@ Castle
     expect(results[0].type === 'tool_result' && results[0].action?.name).toBe('add_entry');
     expect(results[1].type === 'tool_result' && results[1].result.message).toContain('too_many_actions');
     expect(results[1].type === 'tool_result' && results[1].action).toBeUndefined();
+    const replies = complete.mock.calls[1][0].filter((message: AgentMessage) => message.role === 'tool');
+    expect(replies.map((message: AgentMessage) => message.tool_call_id)).toEqual(['call_a', 'call_b']);
   });
 });

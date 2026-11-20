@@ -84,7 +84,7 @@ Character Vault sends the effort you selected when reasoning is on, unless the m
 
 You may see a console message such as `remapped parameters: reasoning_effort=high`. That means your setting was adjusted for compatibility, not that reasoning was turned off.
 
-If a parameter is completely unsupported (not just a bad value), Character Vault may **drop** it and retry (up to 3 retries). If the error doesn't say which parameter is wrong, it may drop reasoning entirely for that model until you reload. Non-standard sampler fields (`min_p`, `top_k`, `repetition_penalty`) can be dropped the same way on strict OpenAI-compatible hosts; that is separate from effort.
+If a parameter is completely unsupported (not just a bad value), Character Vault may **drop** it and retry (up to 3 retries). If the error doesn't say which parameter is wrong, it may drop reasoning entirely for that model until you reload.
 
 ## Practical recommendations
 
@@ -104,7 +104,7 @@ Higher effort does **not** always improve creative prose. For roleplay flavor an
 ## Related settings
 
 - [AI Setup](/configuration/ai-setup) — base URL, API key, model, streaming, NanoGPT / Synthetic / OpenRouter usage cards  
-- [Sampler Settings](/configuration/sampler-settings) — temperature, top-p, min-p, context length  
+- [Sampler Settings](/configuration/sampler-settings) — temperature, top-p, max tokens, context length  
 - [Editor & AI Toolkit](/features/editor) — toolbar operations that use these settings  
 - [AI Assistant Orion](/features/ai-assistant)
 - [AI Agent](/features/ai-agent)  

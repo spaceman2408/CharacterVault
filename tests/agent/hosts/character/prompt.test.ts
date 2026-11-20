@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCharacterAgentSystemPrompt, CHARACTER_TOOL_LIST } from '../../../../src/agent/hosts/character/prompt';
+import { buildCharacterAgentSystemPrompt } from '../../../../src/agent/hosts/character/prompt';
 import { CHARACTER_TOOL_SPECS } from '../../../../src/agent/hosts/character/schemas';
 import {
   CHARACTER_OVERRIDES_LOREBOOK_TOOLS,
@@ -36,12 +36,11 @@ const SHARED_EXPECTATIONS = [
 ] as const;
 
 describe('buildCharacterAgentSystemPrompt', () => {
-  it('teaches native functions only by default', () => {
+  it('teaches native functions', () => {
     const prompt = buildCharacterAgentSystemPrompt([]);
     expect(prompt).toContain('provided functions');
     expect(prompt).not.toContain('<tool_call>');
     expect(prompt).not.toContain('Prefer those over XML');
-    expect(prompt).not.toContain(CHARACTER_TOOL_LIST);
     expect(prompt).not.toContain('- list_fields —');
     for (const snippet of SHARED_EXPECTATIONS) {
       expect(prompt).toContain(snippet);
@@ -52,28 +51,10 @@ describe('buildCharacterAgentSystemPrompt', () => {
     expect(prompt).not.toContain('look and personality');
     expect(prompt).not.toContain('(Appearance)');
   });
-
-  it('teaches XML tool_call for card fields and does not mention custom fences', () => {
-    const prompt = buildCharacterAgentSystemPrompt([], 'xml');
-    expect(prompt).toContain('<tool_call>');
-    expect(prompt).toContain('</tool_call>');
-    expect(prompt).not.toContain('provided functions');
-    expect(prompt).toContain(CHARACTER_TOOL_LIST);
-    for (const snippet of SHARED_EXPECTATIONS) {
-      expect(prompt).toContain(snippet);
-    }
-    expect(prompt).not.toContain('Lorebook tab');
-    expect(prompt).not.toContain('<<<');
-    expect(prompt).not.toContain('>>>');
-    expect(prompt).toContain('Never write the word tool_name');
-    expect(prompt).not.toContain('look and personality');
-    expect(prompt).not.toContain('(Appearance)');
-  });
 });
 
-describe('character tool list/spec sync', () => {
+describe('character tool spec sync', () => {
   it('covers the composed spec set with no duplicates', () => {
-    const listed = [...CHARACTER_TOOL_LIST.matchAll(/^- (\w+)/gm)].map((match) => match[1]);
     const composedSpecs = [
       ...CHARACTER_TOOL_SPECS,
       ...LOREBOOK_TOOL_SPECS.filter(
@@ -81,13 +62,6 @@ describe('character tool list/spec sync', () => {
       ),
     ];
     const composedNames = composedSpecs.map((spec) => spec.name);
-    for (const name of composedNames) {
-      expect(listed).toContain(name);
-    }
-    for (const name of listed) {
-      expect(composedNames).toContain(name);
-    }
-    expect(new Set(listed).size).toBe(listed.length);
     expect(new Set(composedNames).size).toBe(composedNames.length);
     expect([...CHARACTER_TOOL_NAMES].sort()).toEqual(
       CHARACTER_TOOL_SPECS.map((spec) => spec.name).sort(),

@@ -4,12 +4,13 @@ import {
   abortResponseStats,
   accumulateResponseStats,
   computeResponseStats,
+  MIN_SPEED_TOKENS,
   toResponseStats,
 } from '../../../src/components/ai/utils';
 
 describe('computeResponseStats', () => {
   it('uses first-token TTFT and generation speed', () => {
-    const content = 'abcd';
+    const content = 'abcd'.repeat(40);
     const stats = computeResponseStats({
       requestStartTime: 1000,
       firstTokenTime: 1300,
@@ -26,7 +27,7 @@ describe('computeResponseStats', () => {
   });
 
   it('treats the full wait as TTFT when no chunk arrives', () => {
-    const content = 'abcdefgh';
+    const content = 'abcdefgh'.repeat(20);
     const stats = computeResponseStats({
       requestStartTime: 0,
       firstTokenTime: null,
@@ -36,6 +37,14 @@ describe('computeResponseStats', () => {
     });
     expect(stats.ttft).toBe(500);
     expect(stats.tokensPerSecond).toBe(estimateTokens(content) / 0.5);
+  });
+
+  it('omits t/s when too little was generated to measure', () => {
+    const stats = (content: string) =>
+      computeResponseStats({ requestStartTime: 0, firstTokenTime: 800, endTime: 806, content, modelId: 'm' });
+    expect(stats('').tokensPerSecond).toBeUndefined();
+    expect(stats('Added the key to the Guild.').tokensPerSecond).toBeUndefined();
+    expect(stats('x'.repeat(MIN_SPEED_TOKENS * 4)).tokensPerSecond).toBeDefined();
   });
 
   it('omits t/s when asked', () => {
@@ -80,7 +89,7 @@ describe('abortResponseStats', () => {
 
 describe('accumulateResponseStats', () => {
   it('keeps the first TTFT and combines t/s across a continuation', () => {
-    const content = 'abcd';
+    const content = 'abcd'.repeat(40);
     const first = accumulateResponseStats(undefined, {
       requestStartTime: 0,
       firstTokenTime: 100,

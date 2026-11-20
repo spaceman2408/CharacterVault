@@ -1,9 +1,7 @@
 import type { AgentSkill } from '../../../db/characterTypes';
 import { buildSystemPrompt } from '../../../services/PromptBuilder';
-import { formatAgentToolGuide } from '../../core/prompts';
-import type { AgentToolMode } from '../../core/types';
-import { SUGGEST_NAMES_TOOL_DOC } from '../names/suggestNames';
-import { formatSkillsSection, READ_SKILL_TOOL_DOC } from '../skills';
+import { AGENT_TOOL_GUIDE } from '../../core/prompts';
+import { formatSkillsSection } from '../skills';
 
 export const LOREBOOK_AGENT_PERSONA = `You are a lorebook authoring agent for CharacterVault. You write SillyTavern-compatible world-info entries into the user's open lorebook.
 Use attached Custom Context as source material when present. Do not invent contradictions. Prefer several focused entries over one giant dump.
@@ -16,27 +14,11 @@ When a new character, NPC, or family needs a name the user did not give, call su
 To remove an entry, delete_entry by id. You do not need to read it first unless you are unsure. Prefer update_entry to fix a malformed entry. Use update_book_settings for scan_depth, token_budget, and recursive_scanning. After a large write, audit_book if you need a size/key/recursion check.
 While calling tools, emit tool calls only — no user-facing prose. When the book covers the request, stop: no tool calls, a short summary is enough.`;
 
-export const LOREBOOK_TOOL_LIST = `- list_entries — no arguments. Returns id, name, keys, token size, flags, and book settings. Skip this if the catalog in context is enough.
-- read_entry — id. Returns that entry's name, keys, common activation fields, and content.
-- add_entry — name, keys (comma-separated string), optional constant, enabled, position, depth, insertion_order, secondary_keys, selective, probability, excludeRecursion, preventRecursion, delayUntilRecursion, content (the entry body). Non-constant entries need at least one key. One add_entry per name.
-- update_entry — id, optional name, keys, constant, enabled, position, depth, insertion_order, secondary_keys, selective, probability, excludeRecursion, preventRecursion, delayUntilRecursion, content. Omit a field to leave it unchanged. content is the full new body.
-- replace_in_entry — id, old (unique snippet from the latest read_entry; quotes and dashes need not be exact), new or content (empty deletes). After a replace, read_entry before another. To delete a section, old may be the first line through the last unique line.
-- delete_entry — id. Removes that entry.
-- search — query. Case-insensitive. Locations and snippets only.
-- replace_across — old, new or content, optional replace_all. Unique match per place unless replace_all.
-- audit_book — no arguments. Counts, tokens, duplicate keys, recursion. No bodies.
-- read_recursion — optional id. Whole-book recursion map, or one entry's incoming/outgoing edges. No bodies.
-- test_keys — text (a sample chat message or two). Entries that would activate and the key that matched, plus key hits that stay inactive. No bodies.
-- update_book_settings — optional name, description, scan_depth, token_budget, recursive_scanning.
-${SUGGEST_NAMES_TOOL_DOC}`;
-
 export function buildLorebookAgentSystemPrompt(
   extraChunks: string[],
-  toolMode: AgentToolMode = 'native',
   skills: readonly AgentSkill[] = [],
 ): string {
-  const toolList = skills.length > 0 ? `${LOREBOOK_TOOL_LIST}\n${READ_SKILL_TOOL_DOC}` : LOREBOOK_TOOL_LIST;
   const skillsSection = skills.length > 0 ? `\n\n${formatSkillsSection(skills)}` : '';
-  const persona = `${LOREBOOK_AGENT_PERSONA}\n\n${formatAgentToolGuide(toolMode, toolList)}${skillsSection}`;
+  const persona = `${LOREBOOK_AGENT_PERSONA}\n\n${AGENT_TOOL_GUIDE}${skillsSection}`;
   return buildSystemPrompt(persona, extraChunks);
 }

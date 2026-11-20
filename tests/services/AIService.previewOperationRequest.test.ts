@@ -21,9 +21,6 @@ function baseSampler(overrides: Partial<SamplerSettings> = {}): SamplerSettings 
     ...DEFAULT_SETTINGS.sampler,
     temperature: 0.5,
     topP: 0.9,
-    minP: 0.05,
-    topK: 40,
-    repetitionPenalty: 1.1,
     contextLength: 4096,
     maxTokens: 512,
     ...overrides,
@@ -101,14 +98,12 @@ describe('AIService.previewOperationRequest', () => {
     const baseUrl = 'https://example.com/v1';
     const modelId = 'cached-model';
     const cache = getCapabilityCache(baseUrl, modelId);
-    cache.rejectedParams.add('min_p');
-    cache.rejectedParams.add('top_k');
+    cache.rejectedParams.add('top_p');
 
     const service = new AIService(baseConfig({ modelId }), baseSampler());
     const preview = service.previewOperationRequest('vivid', 'colorful scene', []);
 
-    expect(preview.body.min_p).toBeUndefined();
-    expect(preview.body.top_k).toBeUndefined();
+    expect(preview.body.top_p).toBeUndefined();
     expect(preview.body.temperature).toBe(0.5);
 
     clearCapabilityCaches();

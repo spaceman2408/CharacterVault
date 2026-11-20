@@ -323,6 +323,9 @@ export class AIError extends Error {
   }
 }
 
+export const TOOLS_UNSUPPORTED_MESSAGE =
+  "This model doesn't support tool calling, which the agent needs. Pick a model that does.";
+
 export interface ChatToolCall {
   id: string;
   type?: 'function';
@@ -330,6 +333,7 @@ export interface ChatToolCall {
     name: string;
     arguments: string;
   };
+  extra_content?: Record<string, unknown>;
 }
 
 export interface ChatToolDefinition {
@@ -399,9 +403,6 @@ export interface ChatCompletionRequestBody {
   messages: ChatMessage[];
   temperature?: number;
   top_p?: number;
-  min_p?: number;
-  top_k?: number;
-  repetition_penalty?: number;
   stream?: boolean;
   max_tokens?: number;
   include_reasoning?: boolean;
@@ -453,6 +454,8 @@ interface AIResponse {
   /** Upstream host the gateway reports as having served the request (OpenRouter's `provider`). */
   provider?: string;
   usage?: PromptUsage;
+  /** When a stream's first text, reasoning, or tool-call piece arrived (ms). Tool-call pieces never reach onChunk. */
+  firstOutputAt?: number;
 }
 
 /**
@@ -481,6 +484,7 @@ interface ChatCompletionChunk {
         id?: string;
         type?: string;
         function?: { name?: string; arguments?: string };
+        extra_content?: unknown;
       }>;
     };
     finish_reason: string | null;
@@ -888,9 +892,6 @@ Provide only the generated text without any additional commentary.`;
       messages: budgetedMessages,
       temperature: sampler.temperature,
       top_p: sampler.topP,
-      min_p: sampler.minP,
-      top_k: sampler.topK,
-      repetition_penalty: sampler.repetitionPenalty,
       stream: !!stream,
       max_tokens: options?.maxTokens ?? sampler.maxTokens,
       include_reasoning: enableReasoning ? true : undefined,
@@ -1044,8 +1045,11 @@ Provide only the generated text without any additional commentary.`;
     options?: ChatCompletionOptions
   ): Promise<AIResponse> {
     const useStreaming = this.config.enableStreaming && onChunk;
-    const request = this.buildChatCompletionBody(messages, customSampler, !!useStreaming, options);
     const cache = getCapabilityCache(this.getBaseUrl(), this.config.modelId);
+    if (options?.tools?.length && cache.rejectedParams.has('tools')) {
+      throw new AIError(TOOLS_UNSUPPORTED_MESSAGE, 'tools_unsupported', 400);
+    }
+    const request = this.buildChatCompletionBody(messages, customSampler, !!useStreaming, options);
 
     this.abortController = new AbortController();
     const { signal } = this.abortController;
@@ -1090,11 +1094,7 @@ Provide only the generated text without any additional commentary.`;
           recordRepairInCache(cache, repaired);
 
           if (repaired.removed.includes('tools')) {
-            throw new AIError(
-              'This model does not support native function calling',
-              'tools_unsupported',
-              400,
-            );
+            throw new AIError(TOOLS_UNSUPPORTED_MESSAGE, 'tools_unsupported', 400);
           }
 
           const remapParts = Object.entries(repaired.remapped).map(
@@ -1299,9 +1299,11 @@ Provide only the generated text without any additional commentary.`;
     let doneSentinel = false;
     let pendingLine = '';
     let bytesRead = 0;
+    let firstOutputAt: number | undefined;
 
     const emitDeltas = (contentDelta?: string, reasoningDelta?: string) => {
       if (contentDelta || reasoningDelta) {
+        firstOutputAt ??= Date.now();
         onChunk({
           content: contentDelta || undefined,
           reasoning: reasoningDelta || undefined,
@@ -1359,6 +1361,7 @@ Provide only the generated text without any additional commentary.`;
               emitDeltas(parsed.contentDelta, parsed.reasoningDelta);
               const choice = parsedChunk.choices?.[0];
               if (choice?.delta?.tool_calls?.length) {
+                firstOutputAt ??= Date.now();
                 applyToolCallDeltas(toolCallAcc, choice.delta.tool_calls);
               }
               if (choice?.finish_reason) finishReason = choice.finish_reason;
@@ -1388,6 +1391,7 @@ Provide only the generated text without any additional commentary.`;
         toolCalls: finalizeToolCalls(toolCallAcc),
         provider,
         usage,
+        firstOutputAt,
       };
     } catch (error) {
       if (this.isAborted() || (error instanceof Error && error.name === 'AbortError')) {
