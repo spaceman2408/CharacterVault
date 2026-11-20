@@ -47,6 +47,8 @@ Choose a provider preset from the dropdown, or select **Custom URL** to type in 
 | **Nano-GPT** | `https://nano-gpt.com/api/v1` | NanoGPT hosted endpoint. Supports provider selection and subscription billing. |
 | **Synthetic** | `https://api.synthetic.new/v1` | OpenAI-compatible endpoint. Prefer `syn:` aliases so you always get the latest recommended model. |
 | **OpenRouter** | `https://openrouter.ai/api/v1` | OpenRouter multi-model gateway. Use `org/model` slugs such as `openai/gpt-4o`. Supports host selection plus routing and privacy options. |
+| **OpenAI** | `https://api.openai.com/v1` | GPT models direct from OpenAI. |
+| **Google Gemini** | `https://generativelanguage.googleapis.com/v1beta/openai` | Gemini models direct from Google. Free tier available. |
 | **Minimax** | `https://api.minimax.io/v1` | OpenAI-compatible endpoint. API keys start with `sk-cp`. |
 | **Moonshot (Kimi)** | `https://api.moonshot.ai/v1` | Kimi models direct from Moonshot, pay as you go. Use a key from the Moonshot platform. Kimi's coding-plan endpoint blocks browser requests, so it can't be used here. |
 | **Z.ai (GLM)** | `https://api.z.ai/api/paas/v4` | GLM models direct from Z.ai, pay as you go. |

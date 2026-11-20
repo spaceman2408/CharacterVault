@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.9.2 (2026-11-20)
+
+CharacterVault 1.9.2 makes the Creator Notes preview render the way SillyTavern does, with preview controls, a resizable Dock, and CSS tools. The editor keeps your cursor, scroll, and undo when you switch sections, wraps a selection when you type `*` or `"`, and fits phones with the keyboard open. Plus OpenAI and Google Gemini presets, a simpler Sampler, native-only Agent tool calls, and a fix for absurd tokens-per-second readings. Full notes: [v1.9.2 release notes](/releases/v1.9.2).
+
+### Highlights
+
+- **Creator Notes that render like SillyTavern** — **Creator Notes → Preview** has **Match SillyTavern** on by default, plus Width, Background, Replay, and Remote media controls, a resizable **Dock**, an **Insert** menu of starter snippets, color swatches, a CSS **Format** button, and a size readout
+- **The editor keeps your place** — switching sections keeps cursor, scroll, and undo, outside changes stay out of **Ctrl+Z**, typing `*` or `"` over a selection wraps it, and **Ctrl+D** selects the next match
+- **Phone editing that fits** — no iPhone focus zoom, find bar and AI toolbar rows that fit, and the header, section bar, and field heading hide while the keyboard is open
+- OpenAI and Google Gemini presets in **Settings → AI Config → API Base URL**
+- The Agent uses native tool calls only; the XML mode and its chip are gone
+- **Settings → Sampler** drops Min P, Top K, and Repetition Penalty
+- Reply stats show **Cache: hit** or **miss** instead of a percentage
+- Fix for absurd tokens-per-second readings on tool-only and short replies
+
+Details: [Creator Notes](/features/creator-notes#match-sillytavern) · [Editor Controls](/features/editor-controls) · [What's New](/whats-new)
+
+---
+
 ## 1.9.1 (2026-11-16)
 
 CharacterVault 1.9.1 gives the Agent skills: named instructions it loads when your request matches, with three that ship and your own in a new Agent Skills settings tab. Claude runs in the Agent now hit the provider's prompt cache and the reply tooltip shows the measured hit rate. Settings save automatically, saved presets show up in the Prompts tab model pickers, and the Agent chat shows what the Agent read, searched, and checked and highlights @mentions, plus a fix for settings changes not reaching the lorebook Agent until a reload. Full notes: [v1.9.1 release notes](/releases/v1.9.1).
