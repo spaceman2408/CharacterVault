@@ -24,7 +24,9 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.9.3 staging 1';
+export const STAGING_VERSION = 'v1.9.3 staging 2';
 
 /** One short line per thing you want testers to try. */
-export const STAGING_TEST_NOTES: string[] = [];
+export const STAGING_TEST_NOTES: string[] = [
+  'Character header → Find (search icon): type a word that appears in several places (description, greetings, lorebook entries). Results are grouped by place; try Aa, ab, .* and, with text in Replace, AB. The preview shows old struck through and new next to it. Untick a match or a whole group. Click a match to open that section. The Replace button comes next, so nothing is changed yet.',
+];
