@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import {
+  applyFindReplace,
   findInCard,
   MAX_FIND_MATCHES,
   type FindMatch,
@@ -16,6 +17,12 @@ interface FindReplaceModalProps {
   onClose: () => void;
   loadCard: () => Promise<FindReplaceCard | null>;
   onJump: (targetId: string) => void;
+  /** Resolves false when the card changed since `before` was loaded; nothing is saved then. */
+  onApply: (
+    before: FindReplaceCard,
+    after: FindReplaceCard,
+    summary: { count: number; places: number },
+  ) => Promise<boolean>;
 }
 
 const DEBOUNCE_MS = 150;
@@ -186,7 +193,7 @@ function ResultGroup({
                     >
                       {showBreaks(match.text)}
                     </mark>
-                    {showReplacement && !isExcluded && (
+                    {showReplacement && !isExcluded && match.replacement && (
                       <ins className="rounded-sm bg-success/20 px-0.5 text-success no-underline">
                         {showBreaks(match.replacement)}
                       </ins>
@@ -208,6 +215,7 @@ export function FindReplaceModal({
   onClose,
   loadCard,
   onJump,
+  onApply,
 }: FindReplaceModalProps): React.ReactElement | null {
   const [query, setQuery] = React.useState('');
   const [replacement, setReplacement] = React.useState('');
@@ -220,6 +228,9 @@ export function FindReplaceModal({
   const [card, setCard] = React.useState<FindReplaceCard | null>(null);
   const [excluded, setExcluded] = React.useState<Set<string>>(() => new Set());
   const [collapsed, setCollapsed] = React.useState<Set<string>>(() => new Set());
+  const [notice, setNotice] = React.useState<string | null>(null);
+  const [isApplying, setIsApplying] = React.useState(false);
+  const [isPreviewingApply, setIsPreviewingApply] = React.useState(false);
   const findInputRef = React.useRef<HTMLInputElement>(null);
 
   const debouncedQuery = useDebounced(query, DEBOUNCE_MS);
@@ -257,6 +268,14 @@ export function FindReplaceModal({
     setExcluded(new Set());
   }, [debouncedQuery, caseSensitive, wholeWord, regex, card]);
 
+  React.useEffect(() => {
+    setNotice(null);
+  }, [debouncedQuery, debouncedReplacement, options]);
+
+  React.useEffect(() => {
+    setNotice(null);
+  }, [debouncedQuery, debouncedReplacement, options]);
+
   const result = React.useMemo(
     () => (card ? findInCard(card, debouncedQuery, debouncedReplacement, options) : null),
     [card, debouncedQuery, debouncedReplacement, options],
@@ -290,22 +309,55 @@ export function FindReplaceModal({
     [onClose, onJump],
   );
 
+  const isSettled = query === debouncedQuery && replacement === debouncedReplacement;
+  const includedCount = result?.ok ? result.total - excluded.size : 0;
+  const canApply =
+    !!card && !!result?.ok && !result.truncated && includedCount > 0 && isSettled && !isApplying;
+
+  const handleApply = async () => {
+    if (!card || !result?.ok || !canApply) return;
+    const applied = applyFindReplace(card, result.groups, excluded);
+    if (!applied.ok) {
+      setNotice(applied.error);
+      return;
+    }
+    setIsApplying(true);
+    try {
+      const saved = await onApply(
+        card,
+        { spec: applied.spec, book: applied.book },
+        { count: applied.count, places: applied.places },
+      );
+      if (saved) {
+        setIsPreviewingApply(false);
+        onClose();
+        return;
+      }
+      setCard(await loadCard());
+      setNotice('The card changed. Matches updated.');
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
   if (!isOpen) return null;
 
-  const showReplacement = debouncedReplacement.length > 0;
+  const showReplacement = debouncedReplacement.length > 0 || (isPreviewingApply && canApply);
   let summary: React.ReactNode = null;
-  if (result && !result.ok) {
+  if (notice) {
+    summary = <span className="text-warning">{notice}</span>;
+  } else if (result && !result.ok) {
     summary = <span className="text-danger">{result.error}</span>;
   } else if (result && debouncedQuery) {
     if (result.total === 0) {
       summary = 'No matches';
     } else {
-      const included = result.total - excluded.size;
       summary = (
         <>
           {result.truncated ? `First ${MAX_FIND_MATCHES.toLocaleString()} matches` : `${result.total.toLocaleString()} match${result.total === 1 ? '' : 'es'}`}
           {` in ${result.groups.length} place${result.groups.length === 1 ? '' : 's'}`}
-          {excluded.size > 0 && ` · ${included.toLocaleString()} selected`}
+          {result.truncated && ' · refine to replace'}
+          {!result.truncated && excluded.size > 0 && ` · ${includedCount.toLocaleString()} selected`}
         </>
       );
     }
@@ -379,9 +431,25 @@ export function FindReplaceModal({
               onToggle={() => setOptions((previous) => ({ ...previous, preserveCase: !previous.preserveCase }))}
             />
           </div>
-          <p className="min-h-5 text-xs text-fg-muted" aria-live="polite">
-            {summary}
-          </p>
+          <div className="flex min-h-8 items-center gap-3">
+            <p className="min-w-0 flex-1 text-xs text-fg-muted" aria-live="polite">
+              {summary}
+            </p>
+            {result?.ok && result.total > 0 && (
+              <button
+                type="button"
+                onClick={() => { void handleApply(); }}
+                onMouseEnter={() => setIsPreviewingApply(true)}
+                onMouseLeave={() => setIsPreviewingApply(false)}
+                onFocus={() => setIsPreviewingApply(true)}
+                onBlur={() => setIsPreviewingApply(false)}
+                disabled={!canApply}
+                className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {debouncedReplacement ? 'Replace' : 'Remove'} {includedCount.toLocaleString()}
+              </button>
+            )}
+          </div>
         </div>
 
         <ul className="min-h-0 flex-1 overflow-y-auto px-2 py-2">

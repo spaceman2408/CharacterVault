@@ -248,6 +248,11 @@ export function findInCard(
   return { ok: true, groups, total, truncated };
 }
 
+/** True when both cards hold the same spec and lorebook (used to detect edits made since a find or replace). */
+export function sameFindReplaceCard(a: FindReplaceCard, b: FindReplaceCard): boolean {
+  return JSON.stringify(a.spec) === JSON.stringify(b.spec) && JSON.stringify(a.book ?? null) === JSON.stringify(b.book ?? null);
+}
+
 function replaceRanges(text: string, matches: FindMatch[]): string {
   let next = text;
   for (const match of [...matches].sort((a, b) => b.start - a.start)) {

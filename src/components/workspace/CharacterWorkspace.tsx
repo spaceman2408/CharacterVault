@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { CharacterAgentChat, type AgentToolTarget } from '../../agent';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
-import type { CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
+import type { Character, CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
 import { createEmptyCharacterBook } from '../../db/characterTypes';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { generateThumbnail } from '../../utils/thumbnail';
@@ -22,7 +22,7 @@ import { usePersistedPanelWidth } from '../ai/hooks';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { CharacterHistoryModal } from '../history/CharacterHistoryModal';
 import { FindReplaceModal } from '../editor/FindReplaceModal';
-import type { FindReplaceCard } from '../../services/findReplace';
+import { sameFindReplaceCard, type FindReplaceCard } from '../../services/findReplace';
 import { estimateCharacterCardTokens, formatTokenEstimate } from '../../services/AIService';
 import { characterExportService } from '../../services/CharacterExportService';
 import { characterSnapshotService } from '../../services/CharacterSnapshotService';
@@ -975,12 +975,54 @@ function CharacterWorkspaceInner({
     [setActiveSection],
   );
 
-  const loadFindReplaceCard = useCallback(async (): Promise<FindReplaceCard | null> => {
+  const latestFindReplaceCard = useCallback(async (): Promise<{ character: Character; card: FindReplaceCard } | null> => {
     flushLorebookDraft();
-    const latest = (await flushPendingSaves()) ?? currentCharacter;
-    if (!latest) return null;
-    return { spec: latest.data.spec, book: latest.data.characterBook };
+    const character = (await flushPendingSaves()) ?? currentCharacter;
+    if (!character) return null;
+    return { character, card: { spec: character.data.spec, book: character.data.characterBook } };
   }, [flushPendingSaves, currentCharacter]);
+
+  const loadFindReplaceCard = useCallback(
+    async (): Promise<FindReplaceCard | null> => (await latestFindReplaceCard())?.card ?? null,
+    [latestFindReplaceCard],
+  );
+
+  const saveFindReplaceCard = useCallback(
+    (character: Character, card: FindReplaceCard) =>
+      updateCharacter({
+        name: card.spec.name,
+        data: { spec: card.spec, characterBook: card.book, extensions: character.data.extensions },
+      }),
+    [updateCharacter],
+  );
+
+  const applyFindReplaceResult = useCallback(
+    async (before: FindReplaceCard, after: FindReplaceCard, summary: { count: number; places: number }): Promise<boolean> => {
+      const latest = await latestFindReplaceCard();
+      if (!latest || !sameFindReplaceCard(latest.card, before)) return false;
+      await characterSnapshotService.createSnapshot(latest.character, 'replace');
+      const saved = await saveFindReplaceCard(latest.character, after);
+      const savedCard: FindReplaceCard = { spec: saved.data.spec, book: saved.data.characterBook };
+
+      const undo = async () => {
+        const current = await latestFindReplaceCard();
+        if (!current || current.character.id !== saved.id || !sameFindReplaceCard(current.card, savedCard)) {
+          showEphemeralToast({ type: 'error', title: 'Card changed since the replace', message: 'Use Snapshots to roll back.' });
+          return;
+        }
+        await saveFindReplaceCard(current.character, before);
+        showEphemeralToast({ title: 'Replace undone' });
+      };
+
+      showEphemeralToast({
+        title: `Replaced ${summary.count.toLocaleString()} in ${summary.places} place${summary.places === 1 ? '' : 's'}`,
+        durationMs: 8000,
+        action: { label: 'Undo', onClick: () => { void undo(); } },
+      });
+      return true;
+    },
+    [latestFindReplaceCard, saveFindReplaceCard],
+  );
 
   const openFindReplaceTarget = useCallback(
     (targetId: string) => {
@@ -1345,6 +1387,7 @@ function CharacterWorkspaceInner({
         isOpen={isFindReplaceOpen}
         onClose={() => setIsFindReplaceOpen(false)}
         loadCard={loadFindReplaceCard}
+        onApply={applyFindReplaceResult}
         onJump={openFindReplaceTarget}
       />
 

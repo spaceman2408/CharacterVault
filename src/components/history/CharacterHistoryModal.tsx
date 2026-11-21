@@ -40,6 +40,8 @@ function formatSnapshotLabel(source: SnapshotMetadata['source']): string {
       return 'Manual save point';
     case 'rollback':
       return 'Post-restore save point';
+    case 'replace':
+      return 'Find & Replace save point';
     default:
       return characterSnapshotService.formatSnapshotSource(source);
   }
@@ -55,6 +57,8 @@ function formatSnapshotDescription(source: SnapshotMetadata['source']): string {
       return 'Saved on demand from the revisions panel.';
     case 'rollback':
       return 'Saved after a restore completed.';
+    case 'replace':
+      return 'Saved before a Find & Replace.';
     default:
       return characterSnapshotService.describeSnapshotSource(source);
   }

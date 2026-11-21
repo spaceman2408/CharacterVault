@@ -10,6 +10,7 @@ export interface EphemeralToastOptions {
   title: string;
   message?: string;
   durationMs?: number;
+  action?: { label: string; onClick: () => void };
 }
 
 const HOST_ID = 'cv-ephemeral-toast-host';
@@ -103,6 +104,19 @@ export function showEphemeralToast(options: EphemeralToastOptions): void {
   };
 
   close.addEventListener('click', dismiss);
+
+  if (options.action) {
+    const { label, onClick } = options.action;
+    const actionButton = document.createElement('button');
+    actionButton.type = 'button';
+    actionButton.className = 'mt-1 rounded-md px-2 py-0.5 text-sm font-semibold underline underline-offset-2 hover:bg-hover';
+    actionButton.textContent = label;
+    actionButton.addEventListener('click', () => {
+      dismiss();
+      onClick();
+    });
+    body.appendChild(actionButton);
+  }
 
   toast.appendChild(iconWrap);
   toast.appendChild(body);

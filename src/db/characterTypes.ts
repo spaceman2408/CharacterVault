@@ -212,7 +212,7 @@ export interface Character {
   lastOpenedAt?: Timestamp;
 }
 
-export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback';
+export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback' | 'replace';
 
 /** Content-addressed image store; identical images share one row */
 export interface StoredImage {

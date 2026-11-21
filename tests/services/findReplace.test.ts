@@ -6,6 +6,7 @@ import {
   findInCard,
   MAX_FIND_MATCHES,
   preserveCase,
+  sameFindReplaceCard,
   type FindReplaceCard,
   type FindReplaceOptions,
 } from '../../src/services/findReplace';
@@ -227,5 +228,15 @@ describe('applyFindReplace', () => {
     const applied = applyFindReplace(c, found.groups);
     expect(applied.ok && applied.book).toBe(c.book);
     expect(applied.ok && applied.places).toBe(1);
+  });
+});
+
+describe('sameFindReplaceCard', () => {
+  it('compares spec and lorebook by value', () => {
+    const c = card();
+    expect(sameFindReplaceCard(c, JSON.parse(JSON.stringify(c)))).toBe(true);
+    expect(sameFindReplaceCard(c, { ...c, spec: { ...c.spec, scenario: 'changed' } })).toBe(false);
+    expect(sameFindReplaceCard(c, { ...c, book: undefined })).toBe(false);
+    expect(sameFindReplaceCard({ spec: c.spec }, { spec: c.spec, book: undefined })).toBe(true);
   });
 });
