@@ -177,3 +177,83 @@ describe('CharacterImportService physical_description preservation', () => {
     expect(input.data?.extensions).toMatchObject({ custom_flag: true });
   });
 });
+
+describe('V3-only card fields', () => {
+  const service = new CharacterImportService();
+  const createCharacter = vi.mocked(characterDb.createCharacter);
+
+  const V3_EXTRAS = {
+    nickname: 'Kis',
+    group_only_greetings: ['Everyone here?'],
+    source: ['https://example.com/kisuki'],
+    creator_notes_multilingual: { ja: 'テスト' },
+    assets: [{ type: 'icon', uri: 'ccdefault:', name: 'main', ext: 'png' }],
+    creation_date: 1700000000,
+    modification_date: 1700000500,
+  };
+
+  beforeEach(() => {
+    createCharacter.mockReset();
+    createCharacter.mockImplementation(async (input) => ({
+      id: 'imported-1',
+      name: input.name,
+      imageData: input.imageData ?? '',
+      thumbnailData: input.thumbnailData ?? '',
+      version: 1,
+      createdAt: '2020-01-01T00:00:00.000Z',
+      updatedAt: '2020-01-01T00:00:00.000Z',
+      data: input.data as Character['data'],
+    }));
+  });
+
+  it('keeps V3-only fields through import and V3 export', async () => {
+    const card = {
+      spec: 'chara_card_v3',
+      spec_version: '3.0',
+      data: { ...makeCharacter().data.spec, ...V3_EXTRAS, extensions: {} },
+    };
+    const imported = await service.importFromFile(jsonFile(card));
+    expect(imported.success).toBe(true);
+    expect(capturedInput().data?.spec).toMatchObject(V3_EXTRAS);
+
+    const exported = await new CharacterExportService().exportAsJSON(imported.character!);
+    const out = JSON.parse(await exported.blob!.text());
+    expect(out.data).toMatchObject(V3_EXTRAS);
+  });
+
+  it('keeps V3-only fields from a SillyTavern clipboard payload', async () => {
+    const result = await service.importFromClipboardData({
+      source: 'st',
+      character: { ...makeCharacter().data.spec, ...V3_EXTRAS, extensions: {} },
+      avatar: null,
+    });
+    expect(result.success).toBe(true);
+    expect(capturedInput().data?.spec).toMatchObject(V3_EXTRAS);
+  });
+
+  it('drops malformed V3-only values and defaults group greetings on V3 export', async () => {
+    const card = {
+      spec: 'chara_card_v3',
+      spec_version: '3.0',
+      data: {
+        ...makeCharacter().data.spec,
+        extensions: {},
+        nickname: 42,
+        group_only_greetings: 'not an array',
+        assets: [{ type: 'icon' }],
+        creation_date: 'yesterday',
+      },
+    };
+    const imported = await service.importFromFile(jsonFile(card));
+    const spec = capturedInput().data?.spec;
+    expect(spec?.nickname).toBeUndefined();
+    expect(spec?.group_only_greetings).toBeUndefined();
+    expect(spec?.assets).toBeUndefined();
+    expect(spec?.creation_date).toBeUndefined();
+
+    const v3 = JSON.parse(await (await new CharacterExportService().exportAsJSON(imported.character!)).blob!.text());
+    expect(v3.data.group_only_greetings).toEqual([]);
+    const v2 = JSON.parse(await (await new CharacterExportService().exportAsV2(imported.character!)).blob!.text());
+    expect(v2.data).not.toHaveProperty('group_only_greetings');
+  });
+});

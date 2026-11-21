@@ -14,6 +14,7 @@ import type {
 } from '../db/characterTypes';
 import { lorebookService } from './LorebookService';
 import { entryToCardBookEntry } from './LorebookConverter';
+import { readCardV3Extras } from './cardV3Extras';
 import { convertImageToPng, hasPngSignature } from '../utils/pngImage';
 import type { SettingsBackupFile } from './SettingsBackupService';
 
@@ -367,6 +368,7 @@ export class CharacterExportService {
    */
   private characterToV3(character: Character): { spec: string; spec_version: string; data: CharacterCardV2 } {
     const cardData = this.characterDataToV2(character);
+    cardData.group_only_greetings ??= [];
     
     return {
       spec: 'chara_card_v3',
@@ -414,6 +416,7 @@ export class CharacterExportService {
       tags: spec.tags || [],
       creator_notes: spec.creator_notes || '',
       avatar: spec.avatar || '',
+      ...readCardV3Extras(spec),
     };
   }
 
