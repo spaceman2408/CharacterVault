@@ -21,6 +21,8 @@ import { ChatModeSwitch } from '../ai/ChatModeSwitch';
 import { usePersistedPanelWidth } from '../ai/hooks';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { CharacterHistoryModal } from '../history/CharacterHistoryModal';
+import { FindReplaceModal } from '../editor/FindReplaceModal';
+import type { FindReplaceCard } from '../../services/findReplace';
 import { estimateCharacterCardTokens, formatTokenEstimate } from '../../services/AIService';
 import { characterExportService } from '../../services/CharacterExportService';
 import { characterSnapshotService } from '../../services/CharacterSnapshotService';
@@ -58,6 +60,7 @@ import {
   AlertCircle,
   X,
   FileJson,
+  Search,
   Image as ImageIcon,
 } from 'lucide-react';
 import { ConfirmDeleteDialog } from '../editor/ConfirmDeleteDialog';
@@ -459,6 +462,7 @@ function ImageEditor(): React.ReactElement {
 interface CharacterHeaderProps {
   onClose: () => void;
   onOpenSettings: () => void;
+  onOpenFindReplace: () => void;
   onOpenRevisions: () => void;
   isOpeningRevisions?: boolean;
   isContextOpen: boolean;
@@ -472,6 +476,7 @@ interface CharacterHeaderProps {
 function CharacterHeader({
   onClose,
   onOpenSettings, 
+  onOpenFindReplace,
   onOpenRevisions,
   isOpeningRevisions = false,
   isContextOpen, 
@@ -676,6 +681,15 @@ function CharacterHeader({
         )}
 
         <div className="h-6 w-px bg-hover mx-1 hidden sm:block" />
+
+        <button
+          onClick={onOpenFindReplace}
+          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
+          title="Find & Replace"
+        >
+          <Search className="w-4 h-4" />
+          <span className="hidden md:inline">Find</span>
+        </button>
 
         <button
           onClick={onOpenRevisions}
@@ -912,6 +926,7 @@ function CharacterWorkspaceInner({
     null,
   );
   const [greetingFocus, setGreetingFocus] = useState<{ index: number; nonce: number } | null>(null);
+  const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const { 
     currentCharacter,
     activeSection,
@@ -958,6 +973,24 @@ function CharacterWorkspaceInner({
       setLorebookFocusEntry({ id: target.id, nonce: Date.now() });
     },
     [setActiveSection],
+  );
+
+  const loadFindReplaceCard = useCallback(async (): Promise<FindReplaceCard | null> => {
+    flushLorebookDraft();
+    const latest = (await flushPendingSaves()) ?? currentCharacter;
+    if (!latest) return null;
+    return { spec: latest.data.spec, book: latest.data.characterBook };
+  }, [flushPendingSaves, currentCharacter]);
+
+  const openFindReplaceTarget = useCallback(
+    (targetId: string) => {
+      const [kind, key] = targetId.split(':');
+      if (kind === 'field') openAgentTarget({ type: 'field', id: key });
+      else if (kind === 'greeting') openAgentTarget({ type: 'greeting', index: Number(key) + 1 });
+      else if (kind === 'entry') openAgentTarget({ type: 'entry', id: Number(key) });
+      else setActiveSection('lorebook');
+    },
+    [openAgentTarget, setActiveSection],
   );
 
   // Section editors remount per visit; a kept focus would reselect that item every time.
@@ -1134,6 +1167,7 @@ function CharacterWorkspaceInner({
       <CharacterHeader
         onClose={() => { void handleClose(); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenFindReplace={() => setIsFindReplaceOpen(true)}
         onOpenRevisions={() => { void openHistory(); }}
         isOpeningRevisions={isOpeningHistory}
         isContextOpen={isContextOpen}
@@ -1305,6 +1339,13 @@ function CharacterWorkspaceInner({
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         onToast={(type, title, message) => addToast(type, title, message)}
+      />
+
+      <FindReplaceModal
+        isOpen={isFindReplaceOpen}
+        onClose={() => setIsFindReplaceOpen(false)}
+        loadCard={loadFindReplaceCard}
+        onJump={openFindReplaceTarget}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
