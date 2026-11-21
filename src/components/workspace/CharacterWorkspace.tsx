@@ -10,6 +10,7 @@ import { CharacterAgentChat, type AgentToolTarget } from '../../agent';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
 import type { Character, CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
 import { createEmptyCharacterBook } from '../../db/characterTypes';
+import { EditorView } from '@codemirror/view';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { generateThumbnail } from '../../utils/thumbnail';
 import { SectionEditor } from '../editor/SectionEditor';
@@ -685,7 +686,7 @@ function CharacterHeader({
         <button
           onClick={onOpenFindReplace}
           className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
-          title="Find & Replace"
+          title="Find & Replace (Ctrl+Shift+F)"
         >
           <Search className="w-4 h-4" />
           <span className="hidden md:inline">Find</span>
@@ -835,6 +836,25 @@ function Backdrop({ isOpen, onClick }: BackdropProps): React.ReactElement {
 
 const DESKTOP_MIN_WIDTH_PX = 1024;
 
+const MAX_FIND_PREFILL_LENGTH = 200;
+
+/** Single-line selection in the focused field or editor, for prefilling Find. */
+function selectionTextForFind(): string {
+  const active = document.activeElement;
+  let text = '';
+  if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+    text = active.value.slice(active.selectionStart ?? 0, active.selectionEnd ?? 0);
+  } else if (active instanceof HTMLElement) {
+    const view = EditorView.findFromDOM(active);
+    if (view) {
+      const { from, to } = view.state.selection.main;
+      text = view.state.sliceDoc(from, to);
+    }
+  }
+  if (!text.trim() || /[\r\n]/.test(text) || text.length > MAX_FIND_PREFILL_LENGTH) return '';
+  return text;
+}
+
 function getIsMobileViewport(): boolean {
   if (typeof window === 'undefined') return false;
   return window.innerWidth < DESKTOP_MIN_WIDTH_PX;
@@ -927,6 +947,7 @@ function CharacterWorkspaceInner({
   );
   const [greetingFocus, setGreetingFocus] = useState<{ index: number; nonce: number } | null>(null);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
+  const [findReplacePrefill, setFindReplacePrefill] = useState<{ text: string; nonce: number } | null>(null);
   const { 
     currentCharacter,
     activeSection,
@@ -1203,13 +1224,28 @@ function CharacterWorkspaceInner({
     return () => document.removeEventListener('keydown', handleSaveShortcut);
   }, [flushPendingSaves]);
 
+  useEffect(() => {
+    const handleFindShortcut = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.altKey) return;
+      if (event.key.toLowerCase() !== 'f') return;
+      event.preventDefault();
+      event.stopPropagation();
+      const selection = selectionTextForFind();
+      setFindReplacePrefill(selection ? { text: selection, nonce: Date.now() } : null);
+      setIsFindReplaceOpen(true);
+    };
+    // Capture phase: the editor's own Mod-f binding would otherwise also open its find bar.
+    document.addEventListener('keydown', handleFindShortcut, true);
+    return () => document.removeEventListener('keydown', handleFindShortcut, true);
+  }, []);
+
   return (
     <div className="h-dvh w-full flex flex-col bg-bg overflow-hidden">
       
       <CharacterHeader
         onClose={() => { void handleClose(); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenFindReplace={() => setIsFindReplaceOpen(true)}
+        onOpenFindReplace={() => { setFindReplacePrefill(null); setIsFindReplaceOpen(true); }}
         onOpenRevisions={() => { void openHistory(); }}
         isOpeningRevisions={isOpeningHistory}
         isContextOpen={isContextOpen}
@@ -1389,6 +1425,7 @@ function CharacterWorkspaceInner({
         loadCard={loadFindReplaceCard}
         onApply={applyFindReplaceResult}
         onJump={openFindReplaceTarget}
+        prefill={findReplacePrefill}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

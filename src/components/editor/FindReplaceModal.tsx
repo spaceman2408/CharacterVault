@@ -17,6 +17,8 @@ interface FindReplaceModalProps {
   onClose: () => void;
   loadCard: () => Promise<FindReplaceCard | null>;
   onJump: (targetId: string) => void;
+  /** Replaces the Find text when a new nonce arrives (Ctrl+Shift+F with a selection). */
+  prefill?: { text: string; nonce: number } | null;
   /** Resolves false when the card changed since `before` was loaded; nothing is saved then. */
   onApply: (
     before: FindReplaceCard,
@@ -216,6 +218,7 @@ export function FindReplaceModal({
   loadCard,
   onJump,
   onApply,
+  prefill,
 }: FindReplaceModalProps): React.ReactElement | null {
   const [query, setQuery] = React.useState('');
   const [replacement, setReplacement] = React.useState('');
@@ -235,6 +238,13 @@ export function FindReplaceModal({
 
   const debouncedQuery = useDebounced(query, DEBOUNCE_MS);
   const debouncedReplacement = useDebounced(replacement, DEBOUNCE_MS);
+
+  React.useEffect(() => {
+    if (!prefill) return;
+    setQuery(prefill.text);
+    const frame = requestAnimationFrame(() => findInputRef.current?.select());
+    return () => cancelAnimationFrame(frame);
+  }, [prefill]);
 
   React.useEffect(() => {
     if (!isOpen) return;
