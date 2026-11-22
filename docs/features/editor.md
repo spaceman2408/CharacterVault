@@ -129,7 +129,7 @@ Click **Find** (search icon) in the character header, or press `Ctrl+Shift+F` (`
 
 - **Options** — **Aa** (match case), **ab** (whole word), **.*** (regular expression). **AB** next to **Replace** keeps the case of each match.
 - **Preview** — matches are grouped by place, with the old text struck through next to the new. Untick a match or a whole group to skip it. Click a match to open that section. Up to 2,000 matches are listed.
-- **Replace 12** — changes the ticked matches in one step. With **Replace** empty, the button reads **Remove 12**; hover it to see what goes. Replacing text with the same text says **Nothing would change**.
+- **Replace** — changes the ticked matches in one step. The button shows how many, for example **Replace 12**. With the **Replace** box empty it becomes **Remove**; hover it to see what goes. Replacing text with the same text says **Nothing would change**.
 - **Undo** — a toast offers **Undo** after a replace. It puts the card back unless you edited it since; otherwise use [Snapshots](/features/snapshots-history), which keeps a **Find & Replace save point** from just before.
 - **Close** — press `Escape` or click **×**.
 
