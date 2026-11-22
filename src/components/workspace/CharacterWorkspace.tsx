@@ -948,6 +948,9 @@ function CharacterWorkspaceInner({
   const [greetingFocus, setGreetingFocus] = useState<{ index: number; nonce: number } | null>(null);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [findReplacePrefill, setFindReplacePrefill] = useState<{ text: string; nonce: number } | null>(null);
+  const dismissReplaceToastRef = React.useRef<(() => void) | null>(null);
+  // Undo writes through this workspace, so it must not outlive it.
+  useEffect(() => () => dismissReplaceToastRef.current?.(), []);
   const { 
     currentCharacter,
     activeSection,
@@ -1035,7 +1038,8 @@ function CharacterWorkspaceInner({
         showEphemeralToast({ title: 'Replace undone' });
       };
 
-      showEphemeralToast({
+      dismissReplaceToastRef.current?.();
+      dismissReplaceToastRef.current = showEphemeralToast({
         title: `Replaced ${summary.count.toLocaleString()} in ${summary.places} place${summary.places === 1 ? '' : 's'}`,
         durationMs: 8000,
         action: { label: 'Undo', onClick: () => { void undo(); } },
@@ -1044,6 +1048,8 @@ function CharacterWorkspaceInner({
     },
     [latestFindReplaceCard, saveFindReplaceCard],
   );
+
+  const closeFindReplace = useCallback(() => setIsFindReplaceOpen(false), []);
 
   const openFindReplaceTarget = useCallback(
     (targetId: string) => {
@@ -1228,6 +1234,7 @@ function CharacterWorkspaceInner({
     const handleFindShortcut = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.altKey) return;
       if (event.key.toLowerCase() !== 'f') return;
+      if (document.querySelector('[aria-modal="true"]:not([aria-labelledby="find-replace-title"])')) return;
       event.preventDefault();
       event.stopPropagation();
       const selection = selectionTextForFind();
@@ -1421,7 +1428,7 @@ function CharacterWorkspaceInner({
 
       <FindReplaceModal
         isOpen={isFindReplaceOpen}
-        onClose={() => setIsFindReplaceOpen(false)}
+        onClose={closeFindReplace}
         loadCard={loadFindReplaceCard}
         onApply={applyFindReplaceResult}
         onJump={openFindReplaceTarget}

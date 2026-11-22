@@ -125,7 +125,7 @@ function TriStateCheckbox({
   );
 }
 
-function ResultGroup({
+const ResultGroup = React.memo(function ResultGroup({
   group,
   showReplacement,
   excluded,
@@ -138,7 +138,7 @@ function ResultGroup({
   showReplacement: boolean;
   excluded: ReadonlySet<string>;
   collapsed: boolean;
-  onToggleCollapsed: () => void;
+  onToggleCollapsed: (targetId: string) => void;
   onSetExcluded: (ids: string[], excluded: boolean) => void;
   onJump: (targetId: string) => void;
 }): React.ReactElement {
@@ -151,7 +151,7 @@ function ResultGroup({
     <li>
       <div
         className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-hover"
-        onClick={onToggleCollapsed}
+        onClick={() => onToggleCollapsed(target.id)}
       >
         <Chevron className="h-3.5 w-3.5 shrink-0 text-fg-subtle" aria-hidden="true" />
         <TriStateCheckbox
@@ -210,7 +210,7 @@ function ResultGroup({
       )}
     </li>
   );
-}
+});
 
 export function FindReplaceModal({
   isOpen,
@@ -246,23 +246,33 @@ export function FindReplaceModal({
     return () => cancelAnimationFrame(frame);
   }, [prefill]);
 
+  // Parent callbacks change identity on every save; reading them through refs keeps
+  // the open effect from reloading the card and refocusing Find while the modal is open.
+  const loadCardRef = React.useRef(loadCard);
+  const onCloseRef = React.useRef(onClose);
+  React.useEffect(() => {
+    loadCardRef.current = loadCard;
+    onCloseRef.current = onClose;
+  });
+
   React.useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    void loadCard().then((loaded) => {
+    void loadCardRef.current().then((loaded) => {
       if (!cancelled) setCard(loaded);
     });
     findInputRef.current?.focus();
     findInputRef.current?.select();
     return () => {
       cancelled = true;
+      setCard(null);
     };
-  }, [isOpen, loadCard]);
+  }, [isOpen]);
 
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') onCloseRef.current();
     };
     document.addEventListener('keydown', handleKeyDown);
     const previousOverflow = document.body.style.overflow;
@@ -271,16 +281,12 @@ export function FindReplaceModal({
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   const { caseSensitive, wholeWord, regex } = options;
   React.useEffect(() => {
     setExcluded(new Set());
   }, [debouncedQuery, caseSensitive, wholeWord, regex, card]);
-
-  React.useEffect(() => {
-    setNotice(null);
-  }, [debouncedQuery, debouncedReplacement, options]);
 
   React.useEffect(() => {
     setNotice(null);
@@ -331,6 +337,10 @@ export function FindReplaceModal({
       setNotice(applied.error);
       return;
     }
+    if (applied.places === 0) {
+      setNotice('Nothing would change.');
+      return;
+    }
     setIsApplying(true);
     try {
       const saved = await onApply(
@@ -343,7 +353,7 @@ export function FindReplaceModal({
         onClose();
         return;
       }
-      setCard(await loadCard());
+      setCard(await loadCardRef.current());
       setNotice('The card changed. Matches updated.');
     } finally {
       setIsApplying(false);
@@ -471,7 +481,7 @@ export function FindReplaceModal({
                 showReplacement={showReplacement}
                 excluded={excluded}
                 collapsed={collapsed.has(group.target.id)}
-                onToggleCollapsed={() => toggleCollapsed(group.target.id)}
+                onToggleCollapsed={toggleCollapsed}
                 onSetExcluded={setMatchesExcluded}
                 onJump={handleJump}
               />

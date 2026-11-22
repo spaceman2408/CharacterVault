@@ -52,9 +52,10 @@ function typeClasses(type: EphemeralToastType): { shell: string; icon: string } 
 
 /**
  * Show a short-lived toast in the bottom-right corner.
+ * Returns a function that dismisses it early (safe to call more than once).
  */
-export function showEphemeralToast(options: EphemeralToastOptions): void {
-  if (typeof document === 'undefined') return;
+export function showEphemeralToast(options: EphemeralToastOptions): () => void {
+  if (typeof document === 'undefined') return () => {};
 
   const type = options.type ?? 'success';
   const durationMs = options.durationMs ?? 2800;
@@ -94,7 +95,12 @@ export function showEphemeralToast(options: EphemeralToastOptions): void {
   close.innerHTML =
     '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
 
+  let dismissed = false;
+  let autoDismissTimer = 0;
   const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    window.clearTimeout(autoDismissTimer);
     toast.style.opacity = '0';
     toast.style.transform = 'translateX(0.5rem)';
     window.setTimeout(() => {
@@ -123,5 +129,6 @@ export function showEphemeralToast(options: EphemeralToastOptions): void {
   toast.appendChild(close);
   host.appendChild(toast);
 
-  window.setTimeout(dismiss, durationMs);
+  autoDismissTimer = window.setTimeout(dismiss, durationMs);
+  return dismiss;
 }
