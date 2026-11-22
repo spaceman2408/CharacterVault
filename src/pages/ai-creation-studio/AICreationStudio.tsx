@@ -651,6 +651,7 @@ export const AICreationStudio: React.FC = () => {
                       generatedData={state.generatedData}
                       generatedReasoning={state.generatedReasoning}
                       enabledFields={enabledFields}
+                      activeField={isLoading ? state.currentField : null}
                       onFieldChange={updateGeneratedField}
                     />
                   </div>
