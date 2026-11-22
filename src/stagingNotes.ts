@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.9.3 staging 7';
+export const STAGING_VERSION = 'v1.9.3 staging 8';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -34,4 +34,6 @@ export const STAGING_TEST_NOTES: string[] = [
   'Find & Replace fixes: typing stays quick with thousands of results; it no longer jumps the cursor back to Find when the card saves; Ctrl+Shift+F does nothing while Snapshots, Settings or another window is open; leaving the character closes the Undo toast; replacing text with the same text says Nothing would change.',
   'Endpoints with no API key: in Settings → AI Config, use a custom URL on any hostname (not just localhost), leave the key empty and pick a model. AI Creation Studio lets you Generate, and Settings → Prompts → Model for this prompt can Fetch models with no key warning. If the endpoint does need a key, you get its own error.',
   'AI Creation Studio: Save to Vault stays hidden while a character is generating (including Retry and Regenerate) and comes back when it finishes. Press Stop first if you want to save a partial card.',
+  'AI Creation Studio fixes: edit the name while the rest is still generating and it stays (later fields use your edit); Regenerate a field, then press Stop, and the old text comes back; type a concept in Write, pick a tag in Tags, switch back, and your text is still there; Stop shows Partially Complete with Continue instead of Generation Failed.',
+  'AI Creation Studio thinking: with a thinking model (raise Reasoning effort if it skips thinking), each field shows an open Thinking block while it generates, like Orion, and folds it once the field is done.',
 ];
