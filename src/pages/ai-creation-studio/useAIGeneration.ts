@@ -450,9 +450,9 @@ export function useAIGeneration(): UseAIGenerationResult {
     regenerateBackupRef.current = null;
     setState((prev) => ({
       ...(backup ? withRestoredField(prev, backup) : prev),
-      status: 'error',
+      status: 'complete',
       currentField: null,
-      error: 'Generation stopped by user.',
+      error: null,
     }));
   }, [abortCurrent]);
 
