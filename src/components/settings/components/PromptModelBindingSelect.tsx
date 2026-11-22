@@ -27,7 +27,6 @@ import {
   builtinPresetForUrl,
   defaultPresetLabel,
   findSavedPreset,
-  getStoredApiKey,
   isPresetUrl,
   normalizeBaseUrl,
 } from '../config/aiBaseUrlPresets';
@@ -63,16 +62,6 @@ function savedPresetMatches(
   if (!preset || !binding) return false;
   if (normalizeBaseUrl(preset.baseUrl) !== normalizeBaseUrl(binding.baseUrl)) return false;
   return !preset.modelId || preset.modelId === binding.modelId;
-}
-
-function isLocalEndpoint(baseUrl: string): boolean {
-  const normalized = normalizeBaseUrl(baseUrl).toLowerCase();
-  return (
-    normalized.includes('127.0.0.1') ||
-    normalized.includes('localhost') ||
-    normalized.startsWith('http://192.168.') ||
-    normalized.startsWith('http://10.')
-  );
 }
 
 /** Prefer 16px text on mobile so iOS does not zoom on focus. */
@@ -197,12 +186,6 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
       model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       model.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const hasKeyForEndpoint =
-    selectedEndpoint === DEFAULT_ENDPOINT ||
-    isLocalEndpoint(selectedEndpoint) ||
-    !!getStoredApiKey(globalAi.apiKeysByBaseUrl, selectedEndpoint) ||
-    (normalizeBaseUrl(globalAi.baseUrl) === selectedEndpoint && !!globalAi.apiKey);
 
   const closeModelPicker = useCallback(() => {
     setIsModelOpen(false);
@@ -459,12 +442,8 @@ ${preset.modelId ?? ''}`}
               <button
                 type="button"
                 onClick={() => void onFetch(selectedEndpoint)}
-                disabled={isFetching || !hasKeyForEndpoint}
-                title={
-                  !hasKeyForEndpoint
-                    ? 'Add an API key for this endpoint on the AI Config tab'
-                    : 'Fetch models for this endpoint'
-                }
+                disabled={isFetching}
+                title="Fetch models for this endpoint"
                 className="min-h-11 px-4 py-2.5 bg-muted hover:bg-accent-soft hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed text-fg-muted rounded-xl transition-all flex items-center justify-center gap-2 text-base sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 shrink-0 touch-manipulation"
               >
                 {isFetching ? (
@@ -503,12 +482,7 @@ ${preset.modelId ?? ''}`}
             </p>
           )}
 
-          {!hasKeyForEndpoint && (
-            <p className="text-xs text-warning">
-              Add an API key for this endpoint on the AI Config tab before using this mapping.
-            </p>
-          )}
-          {hasKeyForEndpoint && !selectedModelId && (
+          {!selectedModelId && (
             <p className="text-xs text-warning">
               Select or enter a model ID.
             </p>
