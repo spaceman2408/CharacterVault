@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.9.3 staging 8';
+export const STAGING_VERSION = 'v1.9.3 staging 9';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -36,4 +36,5 @@ export const STAGING_TEST_NOTES: string[] = [
   'AI Creation Studio: Save to Vault stays hidden while a character is generating (including Retry and Regenerate) and comes back when it finishes. Press Stop first if you want to save a partial card.',
   'AI Creation Studio fixes: edit the name while the rest is still generating and it stays (later fields use your edit); Regenerate a field, then press Stop, and the old text comes back; type a concept in Write, pick a tag in Tags, switch back, and your text is still there; Stop shows Partially Complete with Continue instead of Generation Failed.',
   'AI Creation Studio thinking: with a thinking model (raise Reasoning effort if it skips thinking), each field shows an open Thinking block while it generates, like Orion, and folds it once the field is done.',
+  'Lorebooks → open a lorebook → Find (or Ctrl+Shift+F): search across the book name, description and every entry (title, name, keys, content). Replace, Undo and Snapshots work like in a character. Replacing text in the book name renames the lorebook; emptying the name is refused.',
 ];
