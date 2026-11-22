@@ -27,7 +27,6 @@ import {
   builtinPresetForUrl,
   defaultPresetLabel,
   findSavedPreset,
-  getStoredApiKey,
   isPresetUrl,
   normalizeBaseUrl,
 } from '../config/aiBaseUrlPresets';
@@ -63,16 +62,6 @@ function savedPresetMatches(
   if (!preset || !binding) return false;
   if (normalizeBaseUrl(preset.baseUrl) !== normalizeBaseUrl(binding.baseUrl)) return false;
   return !preset.modelId || preset.modelId === binding.modelId;
-}
-
-function isLocalEndpoint(baseUrl: string): boolean {
-  const normalized = normalizeBaseUrl(baseUrl).toLowerCase();
-  return (
-    normalized.includes('127.0.0.1') ||
-    normalized.includes('localhost') ||
-    normalized.startsWith('http://192.168.') ||
-    normalized.startsWith('http://10.')
-  );
 }
 
 /** Prefer 16px text on mobile so iOS does not zoom on focus. */
@@ -198,12 +187,6 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
       model.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const hasKeyForEndpoint =
-    selectedEndpoint === DEFAULT_ENDPOINT ||
-    isLocalEndpoint(selectedEndpoint) ||
-    !!getStoredApiKey(globalAi.apiKeysByBaseUrl, selectedEndpoint) ||
-    (normalizeBaseUrl(globalAi.baseUrl) === selectedEndpoint && !!globalAi.apiKey);
-
   const closeModelPicker = useCallback(() => {
     setIsModelOpen(false);
     setSearchTerm('');
@@ -255,7 +238,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
     isModelOpen &&
     typeof document !== 'undefined' &&
     createPortal(
-      <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center">
+      <div className="fixed inset-0 z-200 flex items-end sm:items-center justify-center">
         <button
           type="button"
           aria-label="Close model picker"
@@ -266,7 +249,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="relative z-[201] w-full sm:max-w-md sm:mx-4 max-h-[min(85dvh,36rem)] flex flex-col bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 sm:fade-in pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          className="relative z-201 w-full sm:max-w-md sm:mx-4 max-h-[min(85dvh,36rem)] flex flex-col bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 sm:fade-in pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         >
           <div className="relative flex items-center justify-between gap-3 px-4 pt-3 pb-2 sm:px-5 sm:pt-4 border-b border-border shrink-0 bg-surface/95 backdrop-blur-sm rounded-t-2xl">
             <div className="mx-auto sm:hidden w-10 h-1 rounded-full bg-border absolute left-1/2 -translate-x-1/2 top-2" />
@@ -353,7 +336,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium text-base sm:text-sm break-words">
+                              <span className="font-medium text-base sm:text-sm wrap-break-word">
                                 {model.name}
                               </span>
                               {selected && (
@@ -422,7 +405,7 @@ ${preset.modelId ?? ''}`}
           )}
         </select>
         {selectedEndpoint === DEFAULT_ENDPOINT && (
-          <p className="text-xs text-fg-muted break-words">
+          <p className="text-xs text-fg-muted wrap-break-word">
             Uses default: {globalSummary}
           </p>
         )}
@@ -459,12 +442,8 @@ ${preset.modelId ?? ''}`}
               <button
                 type="button"
                 onClick={() => void onFetch(selectedEndpoint)}
-                disabled={isFetching || !hasKeyForEndpoint}
-                title={
-                  !hasKeyForEndpoint
-                    ? 'Add an API key for this endpoint on the AI Config tab'
-                    : 'Fetch models for this endpoint'
-                }
+                disabled={isFetching}
+                title="Fetch models for this endpoint"
                 className="min-h-11 px-4 py-2.5 bg-muted hover:bg-accent-soft hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed text-fg-muted rounded-xl transition-all flex items-center justify-center gap-2 text-base sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 shrink-0 touch-manipulation"
               >
                 {isFetching ? (
@@ -503,12 +482,7 @@ ${preset.modelId ?? ''}`}
             </p>
           )}
 
-          {!hasKeyForEndpoint && (
-            <p className="text-xs text-warning">
-              Add an API key for this endpoint on the AI Config tab before using this mapping.
-            </p>
-          )}
-          {hasKeyForEndpoint && !selectedModelId && (
+          {!selectedModelId && (
             <p className="text-xs text-warning">
               Select or enter a model ID.
             </p>

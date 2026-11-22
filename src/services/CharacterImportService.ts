@@ -15,6 +15,7 @@ import type {
 import { characterDb } from '../db/CharacterDatabase';
 import { generateThumbnail } from '../utils/thumbnail';
 import { cardBookEntryToEntry } from './LorebookConverter';
+import { readCardV3Extras } from './cardV3Extras';
 
 const IMPORTED_CHARACTER_FLAG = 'character_vault_imported';
 
@@ -150,6 +151,7 @@ export class CharacterImportService {
         tags: Array.isArray(cardData.tags) ? cardData.tags : undefined,
         creator_notes: typeof cardData.creator_notes === 'string' ? cardData.creator_notes : undefined,
         avatar: typeof cardData.avatar === 'string' ? cardData.avatar : undefined,
+        ...readCardV3Extras(cardData),
       };
       const character = await this.createCharacterFromV2(card, '', '');
       return {
@@ -228,6 +230,7 @@ export class CharacterImportService {
       tags: getArray('tags'),
       creator_notes: getString('creator_notes', 'creatorcomment') || undefined,
       avatar: getString('avatar') || undefined,
+      ...readCardV3Extras(inner, outer),
     };
     return card;
   }
@@ -318,6 +321,7 @@ export class CharacterImportService {
           tags: Array.isArray(cardData.tags) ? cardData.tags : undefined,
           creator_notes: typeof cardData.creator_notes === 'string' ? cardData.creator_notes : undefined,
           avatar: typeof cardData.avatar === 'string' ? cardData.avatar : undefined,
+          ...readCardV3Extras(cardData),
         };
         const character = await this.createCharacterFromV2(card, imageData, thumbnailData);
         return {
@@ -353,6 +357,7 @@ export class CharacterImportService {
           tags: Array.isArray(data.tags) ? data.tags : undefined,
           creator_notes: typeof data.creator_notes === 'string' ? data.creator_notes : undefined,
           avatar: typeof data.avatar === 'string' ? data.avatar : undefined,
+          ...readCardV3Extras(data),
         };
 
         const character = await characterDb.createCharacter({
@@ -619,6 +624,7 @@ export class CharacterImportService {
       creator: data.creator,
       character_version: data.character_version,
       tags: data.tags,
+      ...readCardV3Extras(data),
     };
 
     const character = await characterDb.createCharacter({
@@ -753,6 +759,7 @@ export class CharacterImportService {
         tags: Array.isArray(cardData.tags) ? cardData.tags : undefined,
         creator_notes: typeof cardData.creator_notes === 'string' ? cardData.creator_notes : undefined,
         avatar: typeof cardData.avatar === 'string' ? cardData.avatar : undefined,
+        ...readCardV3Extras(cardData),
       };
       const character = await this.createCharacterFromV2(card, imageData, thumbnailData);
       return {
@@ -803,6 +810,7 @@ export class CharacterImportService {
       tags: Array.isArray(data.tags) ? data.tags : undefined,
       creator_notes: typeof data.creator_notes === 'string' ? data.creator_notes : undefined,
       avatar: typeof data.avatar === 'string' ? data.avatar : undefined,
+      ...readCardV3Extras(data),
     };
   }
 

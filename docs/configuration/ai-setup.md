@@ -6,7 +6,7 @@ Character Vault's AI features (Orion, the Agent, the AI toolbar, and AI Creation
 
 1. Click the gear (**Settings**) in the library header or the character workspace header.
 2. On **AI Config**, pick a preset or **Custom URL**. Nano-GPT is selected by default.
-3. Paste your API key (leave it blank for a local server).
+3. Paste your API key (leave it blank for a local server or any endpoint that doesn't need one).
 4. Click **Fetch models** and pick a model. The model can't be typed in on this tab; if Fetch models fails, fix the URL, key, or [CORS](#local-backends) first.
 5. Close the panel. Settings save automatically as you change them.
 
@@ -285,7 +285,7 @@ Under each expanded prompt, **Model for this prompt** controls which API endpoin
 
 **Requirements**
 
-- API keys are still managed on the **AI Config** tab (including per–base URL memory). The Prompts tab only **selects** among endpoints that already have a key (or local endpoints that do not need one).
+- API keys are still managed on the **AI Config** tab (including per–base URL memory). The Prompts tab only **selects** among endpoints you've set up there. An endpoint with no key still fetches models; if it does need a key, you get its own error.
 - A mapped prompt must have both an endpoint and a non-empty model ID. Until it does, settings don't save and the footer names the prompt.
 - Collapsed prompt headers show `→ {modelId}` when a mapping is set.
 

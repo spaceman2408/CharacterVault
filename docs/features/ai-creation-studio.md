@@ -102,8 +102,12 @@ Toggle First Message and Examples in **Settings → Creation Studio → Generati
 
 **During generation:**
 - Each field streams as the AI writes
+- With a thinking model, the field shows an open **Thinking** block while it generates, like Orion, and folds it once the field is done. Raise **Reasoning effort** if the model skips thinking
 - A progress indicator shows the current field
-- **Stop** keeps whatever has already been written
+- Fields that are done can be edited; later fields use your edit
+- **Save to Vault** is hidden until the run finishes, including Retry and Regenerate
+- **Stop** keeps whatever has already been written and shows **Partially Complete** with **Continue**
+- Stopping a **Regenerate**, or one that fails, puts the old text back
 - **Go Back** stops the run, clears the preview, and returns you to the same concept or tags
 - The concept or tags used stay on screen for reference
 
@@ -148,7 +152,7 @@ Once generation is complete (or you have at least a name), you can save:
    - **Library** — return to the vault
 
 ::: info Partial Saves
-You can save with only a name. Missing fields are empty in the editor.
+You can save with only a name. Missing fields are empty in the editor. To save during a run, press **Stop** first.
 :::
 
 ## Creation Studio settings

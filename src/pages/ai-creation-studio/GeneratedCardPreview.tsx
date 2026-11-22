@@ -3,65 +3,19 @@
  * @module @pages/ai-creation-studio/GeneratedCardPreview
  */
 
-import React, { useRef, useEffect, useState, memo } from 'react';
-import { Type, FileText, MessageCircle, MessagesSquare, Sparkles } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { Type, FileText, MessageCircle, MessagesSquare } from 'lucide-react';
 import type { GenerationField } from './types';
 import { GENERATION_FIELDS } from './types';
 import type { StudioSettings } from '../../db/characterTypes';
 import { estimateTokens } from '../../services/AIService';
-
-const FieldReasoning: React.FC<{ reasoning: string }> = memo(({ reasoning }) => {
-  const [open, setOpen] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const userScrolledUp = useRef(false);
-
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el || userScrolledUp.current) return;
-    el.scrollTop = el.scrollHeight;
-  }, [reasoning]);
-
-  if (!reasoning.trim()) return null;
-
-  return (
-    <div>
-      <button
-        onClick={() => {
-          setOpen(!open);
-          userScrolledUp.current = false;
-        }}
-        className="flex items-center gap-1 p-0.5 rounded text-fg-subtle hover:text-fg transition-colors"
-        title={open ? 'Hide thinking' : 'Show thinking'}
-      >
-        <Sparkles className="w-3 h-3 text-accent" />
-        <span className="text-[11px]">Thinking</span>
-      </button>
-      {open && (
-        <div
-          ref={contentRef}
-          onScroll={() => {
-            const el = contentRef.current;
-            if (!el) return;
-            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
-            userScrolledUp.current = !atBottom;
-          }}
-          className="mt-1 max-h-32 sm:max-h-40 overflow-y-auto bg-muted/90 border border-border rounded-md px-2 py-1.5 shadow-sm"
-        >
-          <pre className="font-mono text-fg-subtle whitespace-pre-wrap leading-relaxed">
-            {reasoning}
-          </pre>
-        </div>
-      )}
-    </div>
-  );
-});
-
-FieldReasoning.displayName = 'FieldReasoning';
+import { FoldedText } from '../../components/ai/components/FoldedText';
 
 interface GeneratedCardPreviewProps {
   generatedData: Record<string, string | undefined>;
   generatedReasoning: Partial<Record<GenerationField, string>>;
   enabledFields?: StudioSettings['enabledFields'];
+  activeField?: GenerationField | null;
   onFieldChange: (field: GenerationField, value: string) => void;
 }
 
@@ -122,6 +76,7 @@ export const GeneratedCardPreview: React.FC<GeneratedCardPreviewProps> = ({
   generatedData,
   generatedReasoning,
   enabledFields,
+  activeField,
   onFieldChange,
 }) => {
   const visibleFields = enabledFields
@@ -152,7 +107,15 @@ export const GeneratedCardPreview: React.FC<GeneratedCardPreviewProps> = ({
               )}
             </div>
 
-            {reasoning && <FieldReasoning reasoning={reasoning} />}
+            {reasoning?.trim() && (
+              <FoldedText
+                key={activeField === field.key ? 'live' : 'done'}
+                label="Thinking"
+                defaultOpen={activeField === field.key}
+              >
+                {reasoning.trim()}
+              </FoldedText>
+            )}
 
             {field.key === 'name' ? (
               <input

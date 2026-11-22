@@ -152,8 +152,26 @@ export function createEmptyCharacterBook(name = ''): CharacterBook {
   };
 }
 
+export interface CharacterAsset {
+  type: string;
+  uri: string;
+  name: string;
+  ext: string;
+}
+
+/** V3 card fields kept for round-trip fidelity; not editable in the app. */
+export interface CharacterCardV3Extras {
+  nickname?: string;
+  group_only_greetings?: string[];
+  source?: string[];
+  creator_notes_multilingual?: Record<string, string>;
+  assets?: CharacterAsset[];
+  creation_date?: number;
+  modification_date?: number;
+}
+
 /** Character card V2/V3 fields */
-export interface CharacterSpec {
+export interface CharacterSpec extends CharacterCardV3Extras {
   name: string;
   description: string;
   personality: string;
@@ -194,7 +212,7 @@ export interface Character {
   lastOpenedAt?: Timestamp;
 }
 
-export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback';
+export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback' | 'replace';
 
 /** Content-addressed image store; identical images share one row */
 export interface StoredImage {
@@ -418,7 +436,7 @@ export const CHARACTER_SECTIONS: SectionMeta[] = [
 /** Fallback tab order when settings.sectionOrder is unset */
 export const DEFAULT_SECTION_ORDER: CharacterSection[] = CHARACTER_SECTIONS.map(s => s.id);
 
-export interface CharacterCardV2 {
+export interface CharacterCardV2 extends CharacterCardV3Extras {
   name: string;
   description: string;
   personality: string;

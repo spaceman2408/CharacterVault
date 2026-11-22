@@ -3,7 +3,7 @@
  * @module @pages/ai-creation-studio/AICreationStudio
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -61,6 +61,7 @@ export const AICreationStudio: React.FC = () => {
   } = useAIGeneration();
 
   const [concept, setConcept] = useState('');
+  const derivedConceptRef = useRef('');
   const [inputMode, setInputMode] = useState<InputMode>('write');
   const [tagSelections, setTagSelections] = useState<Record<string, string[]>>({});
   const {
@@ -108,11 +109,15 @@ export const AICreationStudio: React.FC = () => {
     (mode: InputMode) => {
       if (mode === 'write' && inputMode === 'tags') {
         const derived = buildConceptFromTags(tagSelections);
-        if (derived) setConcept(derived);
+        const isUntouched = !concept.trim() || concept === derivedConceptRef.current;
+        if (derived && isUntouched) {
+          setConcept(derived);
+          derivedConceptRef.current = derived;
+        }
       }
       setInputMode(mode);
     },
-    [inputMode, tagSelections]
+    [inputMode, tagSelections, concept]
   );
 
   const handleGenerate = useCallback(() => {
@@ -330,7 +335,8 @@ export const AICreationStudio: React.FC = () => {
     setPendingDiscard(null);
   }, []);
 
-  const canSave = state.status === 'complete' || (hasGeneratedContent && state.generatedData.name);
+  const canSave =
+    !isLoading && (state.status === 'complete' || (hasGeneratedContent && state.generatedData.name));
   const showEmptyState = state.status === 'idle' && !saveSuccess;
   const activeFields = GENERATION_FIELDS.filter((f) => enabledFields[f.key] !== false);
   const remainingFields = activeFields.filter((f) => !state.completedFields.includes(f.key));
@@ -645,6 +651,7 @@ export const AICreationStudio: React.FC = () => {
                       generatedData={state.generatedData}
                       generatedReasoning={state.generatedReasoning}
                       enabledFields={enabledFields}
+                      activeField={isLoading ? state.currentField : null}
                       onFieldChange={updateGeneratedField}
                     />
                   </div>

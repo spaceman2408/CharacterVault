@@ -9,6 +9,7 @@ import {
   Book,
   Download,
   History,
+  Search,
   Loader2,
   MessageSquare,
   PanelRight,
@@ -18,6 +19,9 @@ import { LorebookAgentChat, type AgentToolTarget } from '../../agent';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { LorebookEditor } from '../editor/LorebookEditor';
 import { LorebookHistoryModal } from '../history/LorebookHistoryModal';
+import { FindReplaceModal } from '../editor/FindReplaceModal';
+import { showUndoneToast, showUndoRefusedToast, useFindReplace } from '../editor/useFindReplace';
+import { sameFindReplaceCard, type FindReplaceCard } from '../../services/findReplace';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { AIChatPanel } from '../ai/AIChatPanel';
 import { ChatModeSwitch } from '../ai/ChatModeSwitch';
@@ -65,6 +69,8 @@ const DESKTOP_MIN_WIDTH_PX = 1024;
 const HEADER_ACTION_CLASS =
   'flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200';
 
+const REQUIRED_FIND_TARGETS = ['book:name'];
+
 function getIsMobileViewport(): boolean {
   if (typeof window === 'undefined') return false;
   return window.matchMedia(`(max-width: ${DESKTOP_MIN_WIDTH_PX - 1}px)`).matches;
@@ -95,6 +101,7 @@ export function LorebookWorkspace(): React.ReactElement {
     currentLorebook?.id ?? null,
   );
   const [agentRunning, setAgentRunning] = useState(false);
+  const findReplace = useFindReplace();
   const [lorebookFocusEntry, setLorebookFocusEntry] = useState<{ id: number; nonce: number } | null>(
     null,
   );
@@ -483,6 +490,56 @@ export function LorebookWorkspace(): React.ReactElement {
     return latest;
   }, [updateLorebook, flushLinkedSync]);
 
+  const loadFindReplaceBook = useCallback(async (): Promise<FindReplaceCard | null> => {
+    const lorebook = await flushPendingLorebook();
+    return lorebook ? { book: lorebook.book } : null;
+  }, [flushPendingLorebook]);
+
+  // The header title and book.name are kept in sync, so a replace in the book name renames the lorebook.
+  const saveFindReplaceBook = useCallback(
+    async (lorebook: VaultLorebook, book: CharacterBook): Promise<VaultLorebook> => {
+      const name = book.name?.trim();
+      if (name && name !== lorebook.name) {
+        const updated = await updateLorebook(lorebook.id, { name, book });
+        currentLorebookRef.current = updated;
+        scheduleLinkedSync(updated);
+        return updated;
+      }
+      await handleBookChange(book);
+      return currentLorebookRef.current ?? lorebook;
+    },
+    [updateLorebook, scheduleLinkedSync, handleBookChange],
+  );
+
+  const { showReplacedToast } = findReplace;
+  const applyFindReplaceResult = useCallback(
+    async (before: FindReplaceCard, after: FindReplaceCard, summary: { count: number; places: number }): Promise<boolean> => {
+      const latest = await flushPendingLorebook();
+      if (!latest || !before.book || !after.book || !sameFindReplaceCard({ book: latest.book }, before)) return false;
+      await lorebookSnapshotService.createFromLorebook(latest, 'replace');
+      const saved = await saveFindReplaceBook(latest, after.book);
+      const savedCard: FindReplaceCard = { book: saved.book };
+      const previousBook = before.book;
+
+      showReplacedToast(summary, async () => {
+        const current = await flushPendingLorebook();
+        if (!current || current.id !== saved.id || !sameFindReplaceCard({ book: current.book }, savedCard)) {
+          showUndoRefusedToast();
+          return;
+        }
+        await saveFindReplaceBook(current, previousBook);
+        showUndoneToast();
+      });
+      return true;
+    },
+    [flushPendingLorebook, saveFindReplaceBook, showReplacedToast],
+  );
+
+  const openFindReplaceTarget = useCallback((targetId: string) => {
+    const [kind, key] = targetId.split(':');
+    if (kind === 'entry') setLorebookFocusEntry({ id: Number(key), nonce: Date.now() });
+  }, []);
+
   const handleClose = useCallback(async () => {
     try {
       await flushChatSessions();
@@ -606,6 +663,15 @@ export function LorebookWorkspace(): React.ReactElement {
             onOpenCharacter={handleOpenLinkedCharacter}
           />
 
+          <button
+            type="button"
+            onClick={findReplace.open}
+            className={HEADER_ACTION_CLASS}
+            title="Find & Replace (Ctrl+Shift+F)"
+          >
+            <Search className="w-4 h-4" />
+            <span className="hidden md:inline">Find</span>
+          </button>
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
@@ -769,6 +835,16 @@ export function LorebookWorkspace(): React.ReactElement {
           }}
         />
       )}
+
+      <FindReplaceModal
+        isOpen={findReplace.isOpen}
+        onClose={findReplace.close}
+        loadCard={loadFindReplaceBook}
+        onApply={applyFindReplaceResult}
+        onJump={openFindReplaceTarget}
+        prefill={findReplace.prefill}
+        requiredTargetIds={REQUIRED_FIND_TARGETS}
+      />
 
       <CharacterSettingsPanel
         isOpen={isSettingsOpen}

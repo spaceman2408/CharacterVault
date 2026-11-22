@@ -34,6 +34,7 @@ const SNAPSHOT_SOURCE_LABELS: Record<SnapshotSource, string> = {
   auto: 'Auto',
   manual: 'Manual',
   rollback: 'Rollback',
+  replace: 'Replace',
 };
 
 const SNAPSHOT_SOURCE_DESCRIPTIONS: Record<SnapshotSource, string> = {
@@ -41,6 +42,7 @@ const SNAPSHOT_SOURCE_DESCRIPTIONS: Record<SnapshotSource, string> = {
   auto: 'Idle snapshot',
   manual: 'Manual snapshot',
   rollback: 'After restore',
+  replace: 'Before Find & Replace',
 };
 
 const DIFFABLE_SECTIONS: Array<SnapshotDiffEntry['section']> = [

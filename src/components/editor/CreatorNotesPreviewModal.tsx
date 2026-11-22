@@ -58,7 +58,12 @@ export function CreatorNotesPreviewModal({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 flex h-[90vh] w-[90vw] flex-col overflow-hidden rounded-2xl border shadow-2xl border-border bg-surface">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Creator Notes Preview"
+        className="relative z-10 flex h-[90vh] w-[90vw] flex-col overflow-hidden rounded-2xl border shadow-2xl border-border bg-surface"
+      >
         {/* Header */}
         <div className="flex items-center justify-between gap-4 border-b px-5 py-4 border-border">
           <h3 className="text-lg font-semibold text-fg">

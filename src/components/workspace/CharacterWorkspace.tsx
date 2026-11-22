@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { CharacterAgentChat, type AgentToolTarget } from '../../agent';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
-import type { CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
+import type { Character, CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
 import { createEmptyCharacterBook } from '../../db/characterTypes';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { generateThumbnail } from '../../utils/thumbnail';
@@ -21,6 +21,9 @@ import { ChatModeSwitch } from '../ai/ChatModeSwitch';
 import { usePersistedPanelWidth } from '../ai/hooks';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { CharacterHistoryModal } from '../history/CharacterHistoryModal';
+import { FindReplaceModal } from '../editor/FindReplaceModal';
+import { showUndoneToast, showUndoRefusedToast, useFindReplace } from '../editor/useFindReplace';
+import { sameFindReplaceCard, type FindReplaceCard } from '../../services/findReplace';
 import { estimateCharacterCardTokens, formatTokenEstimate } from '../../services/AIService';
 import { characterExportService } from '../../services/CharacterExportService';
 import { characterSnapshotService } from '../../services/CharacterSnapshotService';
@@ -58,6 +61,7 @@ import {
   AlertCircle,
   X,
   FileJson,
+  Search,
   Image as ImageIcon,
 } from 'lucide-react';
 import { ConfirmDeleteDialog } from '../editor/ConfirmDeleteDialog';
@@ -459,6 +463,7 @@ function ImageEditor(): React.ReactElement {
 interface CharacterHeaderProps {
   onClose: () => void;
   onOpenSettings: () => void;
+  onOpenFindReplace: () => void;
   onOpenRevisions: () => void;
   isOpeningRevisions?: boolean;
   isContextOpen: boolean;
@@ -472,6 +477,7 @@ interface CharacterHeaderProps {
 function CharacterHeader({
   onClose,
   onOpenSettings, 
+  onOpenFindReplace,
   onOpenRevisions,
   isOpeningRevisions = false,
   isContextOpen, 
@@ -676,6 +682,15 @@ function CharacterHeader({
         )}
 
         <div className="h-6 w-px bg-hover mx-1 hidden sm:block" />
+
+        <button
+          onClick={onOpenFindReplace}
+          className="flex items-center gap-2 px-2 md:px-3 py-2 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-xl transition-colors duration-200"
+          title="Find & Replace (Ctrl+Shift+F)"
+        >
+          <Search className="w-4 h-4" />
+          <span className="hidden md:inline">Find</span>
+        </button>
 
         <button
           onClick={onOpenRevisions}
@@ -912,6 +927,7 @@ function CharacterWorkspaceInner({
     null,
   );
   const [greetingFocus, setGreetingFocus] = useState<{ index: number; nonce: number } | null>(null);
+  const findReplace = useFindReplace();
   const { 
     currentCharacter,
     activeSection,
@@ -958,6 +974,63 @@ function CharacterWorkspaceInner({
       setLorebookFocusEntry({ id: target.id, nonce: Date.now() });
     },
     [setActiveSection],
+  );
+
+  const latestFindReplaceCard = useCallback(async (): Promise<{ character: Character; card: FindReplaceCard } | null> => {
+    flushLorebookDraft();
+    const character = (await flushPendingSaves()) ?? currentCharacter;
+    if (!character) return null;
+    return { character, card: { spec: character.data.spec, book: character.data.characterBook } };
+  }, [flushPendingSaves, currentCharacter]);
+
+  const loadFindReplaceCard = useCallback(
+    async (): Promise<FindReplaceCard | null> => (await latestFindReplaceCard())?.card ?? null,
+    [latestFindReplaceCard],
+  );
+
+  const saveFindReplaceCard = useCallback(
+    (character: Character, card: FindReplaceCard) => {
+      const spec = card.spec ?? character.data.spec;
+      return updateCharacter({
+        name: spec.name,
+        data: { spec, characterBook: card.book, extensions: character.data.extensions },
+      });
+    },
+    [updateCharacter],
+  );
+
+  const { showReplacedToast } = findReplace;
+  const applyFindReplaceResult = useCallback(
+    async (before: FindReplaceCard, after: FindReplaceCard, summary: { count: number; places: number }): Promise<boolean> => {
+      const latest = await latestFindReplaceCard();
+      if (!latest || !sameFindReplaceCard(latest.card, before)) return false;
+      await characterSnapshotService.createSnapshot(latest.character, 'replace');
+      const saved = await saveFindReplaceCard(latest.character, after);
+      const savedCard: FindReplaceCard = { spec: saved.data.spec, book: saved.data.characterBook };
+
+      showReplacedToast(summary, async () => {
+        const current = await latestFindReplaceCard();
+        if (!current || current.character.id !== saved.id || !sameFindReplaceCard(current.card, savedCard)) {
+          showUndoRefusedToast();
+          return;
+        }
+        await saveFindReplaceCard(current.character, before);
+        showUndoneToast();
+      });
+      return true;
+    },
+    [latestFindReplaceCard, saveFindReplaceCard, showReplacedToast],
+  );
+
+  const openFindReplaceTarget = useCallback(
+    (targetId: string) => {
+      const [kind, key] = targetId.split(':');
+      if (kind === 'field') openAgentTarget({ type: 'field', id: key });
+      else if (kind === 'greeting') openAgentTarget({ type: 'greeting', index: Number(key) + 1 });
+      else if (kind === 'entry') openAgentTarget({ type: 'entry', id: Number(key) });
+      else setActiveSection('lorebook');
+    },
+    [openAgentTarget, setActiveSection],
   );
 
   // Section editors remount per visit; a kept focus would reselect that item every time.
@@ -1134,6 +1207,7 @@ function CharacterWorkspaceInner({
       <CharacterHeader
         onClose={() => { void handleClose(); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenFindReplace={findReplace.open}
         onOpenRevisions={() => { void openHistory(); }}
         isOpeningRevisions={isOpeningHistory}
         isContextOpen={isContextOpen}
@@ -1305,6 +1379,15 @@ function CharacterWorkspaceInner({
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         onToast={(type, title, message) => addToast(type, title, message)}
+      />
+
+      <FindReplaceModal
+        isOpen={findReplace.isOpen}
+        onClose={findReplace.close}
+        loadCard={loadFindReplaceCard}
+        onApply={applyFindReplaceResult}
+        onJump={openFindReplaceTarget}
+        prefill={findReplace.prefill}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

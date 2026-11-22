@@ -37,11 +37,19 @@ Each card shows the name, description (if any), entry count, total tokens, **Upd
 
 Opening a book shows a full workspace:
 
-- **Header** – Back to vault, editable title, entry/token summary, **Snapshots**, **Linked**, **Settings**, export, optional chat panel
+- **Header** – Back to vault, editable title, entry/token summary, **Find**, **Snapshots**, **Linked**, **Settings**, export, optional chat panel
 - **Main** – Shared [Lorebook Editor](/features/lorebook-editor) (entry list + detail)
 - **Chat** – Optional side panel: **Orion** to talk about the book, or **Agent** to add and revise entries in this book ([AI Agent](/features/ai-agent))
 
 Data stays in **IndexedDB** on this device. No account is required. Library header **Backup** includes standalone lorebooks in the vault ZIP. Restore by importing that ZIP; books are added as copies. See [Import & Export → Vault backup](/features/import-export#vault-backup).
+
+## Find & Replace
+
+Click **Find** in the workspace header, or press `Ctrl+Shift+F` (`⌘+Shift+F` on Mac). It searches the book name, the book description, and every entry's title, name, keys, filter keys, and content.
+
+The preview, options, **Replace** / **Remove**, and **Undo** work the same as in a character: see [Text Editor → Find & Replace](/features/editor#find-replace). Each replace saves a **Find & Replace** snapshot first.
+
+Replacing text in the book name renames the lorebook. A replace that would leave the name empty is refused.
 
 ## Snapshots
 
@@ -52,6 +60,7 @@ Standalone books have their own snapshot history (similar to character snapshots
 | **Opened** | Baseline when the book is first opened. You can update it in place; you cannot delete it. It stays last in the list. |
 | **Manual** | **Save snapshot** in the Snapshots modal (only if something changed) |
 | **Auto** | Taken before an Agent run, and before **Open in vault** on a character replaces the book's contents |
+| **Find & Replace** | Taken just before a [Find & Replace](#find-replace) changes the book |
 | **Rollback** | After restoring a previous snapshot |
 
 Open **Snapshots** in the workspace header to list, preview, restore, or delete snapshots. See also [Snapshots & Rollback](/features/snapshots-history#standalone-lorebook-snapshots).

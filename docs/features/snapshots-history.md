@@ -18,6 +18,7 @@ Each snapshot is labelled with a colour-coded badge in the timeline:
 | **Opened card** | Automatically the first time you open a character card. Only one baseline exists per character; it can't be deleted, but you can replace it (see [Storage & Limits](#storage-limits)). It stays last in the list. |
 | **Manual save point** | When you click **Save snapshot** in the Snapshots modal. |
 | **Agentic auto save point** | Created by the Agent once before it writes the card (only if something changed). |
+| **Find & Replace save point** | Created just before a [Find & Replace](/features/editor#find-replace) changes the card. |
 | **Post-restore save point** | Automatically after a restore (full card or section) completes. This records the state right after the rollback is applied. |
 
 ## Opening the Snapshots Panel
@@ -118,6 +119,7 @@ Books in the [Lorebook Vault](/features/lorebook-vault) have a separate modal, t
 | **Opened** | Baseline when the book is first opened. **Update baseline** replaces it with the current book; you cannot delete it. It stays last in the list. |
 | **Manual** | **Save snapshot** in the modal (only if something changed) |
 | **Auto** | Taken by the lorebook [Agent](/features/ai-agent) once before a run writes the book, and before **Open in vault** on a character replaces the book's contents |
+| **Find & Replace** | Created just before a [Find & Replace](/features/lorebook-vault#find-replace) changes the book |
 | **Rollback** | Created after a restore |
 
 You can list snapshots, preview book metadata and a sample of entries, restore a snapshot over the current book, or delete individual snapshots. Restore asks for confirmation. Restoring a library book also updates every linked character. History is stored locally with the rest of the vault.

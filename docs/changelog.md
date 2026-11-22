@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.10.0 (2026-11-22)
+
+CharacterVault 1.10.0 adds Find & Replace across a whole character or lorebook, with a grouped preview, a snapshot before every replace, and Undo. The AI Creation Studio shows each field's thinking while it writes and works with endpoints that need no API key, plus fixes for editing, Stop, and Regenerate during generation and for V3 card fields lost on import. Full notes: [v1.10.0 release notes](/releases/v1.10.0).
+
+### Highlights
+
+- **Find & Replace across a character** — **Character header → Find** or **Ctrl+Shift+F** searches every field, greeting, and lorebook entry, groups matches with a struck-through preview, replaces the ticked ones in one step, and offers **Undo** plus a **Find & Replace save point**
+- **Find & Replace in lorebooks** — **Lorebooks → open a book → Find** searches the book name, description, and every entry; replacing in the name renames the book
+- **Creation Studio thinking and keyless endpoints** — each Studio field shows an open **Thinking** block while it generates, and endpoints with no API key work in the Studio and in **Settings → Prompts → Model for this prompt**
+- **Save to Vault** stays hidden while a character is generating
+- Fixes for Studio edits, Regenerate, Stop, and Write/Tags switching during generation, and for V3-only card fields dropped on import and export
+
+Details: [Text Editor](/features/editor#find-replace) · [Lorebook Vault](/features/lorebook-vault#find-replace) · [What's New](/whats-new)
+
+---
+
 ## 1.9.2 (2026-11-20)
 
 CharacterVault 1.9.2 makes the Creator Notes preview render the way SillyTavern does, with preview controls, a resizable Dock, and CSS tools. The editor keeps your cursor, scroll, and undo when you switch sections, wraps a selection when you type `*` or `"`, and fits phones with the keyboard open. Plus OpenAI and Google Gemini presets, a simpler Sampler, native-only Agent tool calls, and a fix for absurd tokens-per-second readings. Full notes: [v1.9.2 release notes](/releases/v1.9.2).
