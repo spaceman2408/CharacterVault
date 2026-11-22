@@ -238,7 +238,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
     isModelOpen &&
     typeof document !== 'undefined' &&
     createPortal(
-      <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center">
+      <div className="fixed inset-0 z-200 flex items-end sm:items-center justify-center">
         <button
           type="button"
           aria-label="Close model picker"
@@ -249,7 +249,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="relative z-[201] w-full sm:max-w-md sm:mx-4 max-h-[min(85dvh,36rem)] flex flex-col bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 sm:fade-in pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          className="relative z-201 w-full sm:max-w-md sm:mx-4 max-h-[min(85dvh,36rem)] flex flex-col bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl animate-in slide-in-from-bottom-4 sm:zoom-in-95 sm:fade-in pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         >
           <div className="relative flex items-center justify-between gap-3 px-4 pt-3 pb-2 sm:px-5 sm:pt-4 border-b border-border shrink-0 bg-surface/95 backdrop-blur-sm rounded-t-2xl">
             <div className="mx-auto sm:hidden w-10 h-1 rounded-full bg-border absolute left-1/2 -translate-x-1/2 top-2" />
@@ -336,7 +336,7 @@ export const PromptModelBindingSelect: React.FC<PromptModelBindingSelectProps> =
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium text-base sm:text-sm break-words">
+                              <span className="font-medium text-base sm:text-sm wrap-break-word">
                                 {model.name}
                               </span>
                               {selected && (
@@ -405,7 +405,7 @@ ${preset.modelId ?? ''}`}
           )}
         </select>
         {selectedEndpoint === DEFAULT_ENDPOINT && (
-          <p className="text-xs text-fg-muted break-words">
+          <p className="text-xs text-fg-muted wrap-break-word">
             Uses default: {globalSummary}
           </p>
         )}
