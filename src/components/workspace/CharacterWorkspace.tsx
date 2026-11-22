@@ -10,7 +10,6 @@ import { CharacterAgentChat, type AgentToolTarget } from '../../agent';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
 import type { Character, CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
 import { createEmptyCharacterBook } from '../../db/characterTypes';
-import { EditorView } from '@codemirror/view';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { generateThumbnail } from '../../utils/thumbnail';
 import { SectionEditor } from '../editor/SectionEditor';
@@ -23,6 +22,7 @@ import { usePersistedPanelWidth } from '../ai/hooks';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
 import { CharacterHistoryModal } from '../history/CharacterHistoryModal';
 import { FindReplaceModal } from '../editor/FindReplaceModal';
+import { showUndoneToast, showUndoRefusedToast, useFindReplace } from '../editor/useFindReplace';
 import { sameFindReplaceCard, type FindReplaceCard } from '../../services/findReplace';
 import { estimateCharacterCardTokens, formatTokenEstimate } from '../../services/AIService';
 import { characterExportService } from '../../services/CharacterExportService';
@@ -836,25 +836,6 @@ function Backdrop({ isOpen, onClick }: BackdropProps): React.ReactElement {
 
 const DESKTOP_MIN_WIDTH_PX = 1024;
 
-const MAX_FIND_PREFILL_LENGTH = 200;
-
-/** Single-line selection in the focused field or editor, for prefilling Find. */
-function selectionTextForFind(): string {
-  const active = document.activeElement;
-  let text = '';
-  if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
-    text = active.value.slice(active.selectionStart ?? 0, active.selectionEnd ?? 0);
-  } else if (active instanceof HTMLElement) {
-    const view = EditorView.findFromDOM(active);
-    if (view) {
-      const { from, to } = view.state.selection.main;
-      text = view.state.sliceDoc(from, to);
-    }
-  }
-  if (!text.trim() || /[\r\n]/.test(text) || text.length > MAX_FIND_PREFILL_LENGTH) return '';
-  return text;
-}
-
 function getIsMobileViewport(): boolean {
   if (typeof window === 'undefined') return false;
   return window.innerWidth < DESKTOP_MIN_WIDTH_PX;
@@ -946,11 +927,7 @@ function CharacterWorkspaceInner({
     null,
   );
   const [greetingFocus, setGreetingFocus] = useState<{ index: number; nonce: number } | null>(null);
-  const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
-  const [findReplacePrefill, setFindReplacePrefill] = useState<{ text: string; nonce: number } | null>(null);
-  const dismissReplaceToastRef = React.useRef<(() => void) | null>(null);
-  // Undo writes through this workspace, so it must not outlive it.
-  useEffect(() => () => dismissReplaceToastRef.current?.(), []);
+  const findReplace = useFindReplace();
   const { 
     currentCharacter,
     activeSection,
@@ -1012,14 +989,17 @@ function CharacterWorkspaceInner({
   );
 
   const saveFindReplaceCard = useCallback(
-    (character: Character, card: FindReplaceCard) =>
-      updateCharacter({
-        name: card.spec.name,
-        data: { spec: card.spec, characterBook: card.book, extensions: character.data.extensions },
-      }),
+    (character: Character, card: FindReplaceCard) => {
+      const spec = card.spec ?? character.data.spec;
+      return updateCharacter({
+        name: spec.name,
+        data: { spec, characterBook: card.book, extensions: character.data.extensions },
+      });
+    },
     [updateCharacter],
   );
 
+  const { showReplacedToast } = findReplace;
   const applyFindReplaceResult = useCallback(
     async (before: FindReplaceCard, after: FindReplaceCard, summary: { count: number; places: number }): Promise<boolean> => {
       const latest = await latestFindReplaceCard();
@@ -1028,28 +1008,19 @@ function CharacterWorkspaceInner({
       const saved = await saveFindReplaceCard(latest.character, after);
       const savedCard: FindReplaceCard = { spec: saved.data.spec, book: saved.data.characterBook };
 
-      const undo = async () => {
+      showReplacedToast(summary, async () => {
         const current = await latestFindReplaceCard();
         if (!current || current.character.id !== saved.id || !sameFindReplaceCard(current.card, savedCard)) {
-          showEphemeralToast({ type: 'error', title: 'Card changed since the replace', message: 'Use Snapshots to roll back.' });
+          showUndoRefusedToast();
           return;
         }
         await saveFindReplaceCard(current.character, before);
-        showEphemeralToast({ title: 'Replace undone' });
-      };
-
-      dismissReplaceToastRef.current?.();
-      dismissReplaceToastRef.current = showEphemeralToast({
-        title: `Replaced ${summary.count.toLocaleString()} in ${summary.places} place${summary.places === 1 ? '' : 's'}`,
-        durationMs: 8000,
-        action: { label: 'Undo', onClick: () => { void undo(); } },
+        showUndoneToast();
       });
       return true;
     },
-    [latestFindReplaceCard, saveFindReplaceCard],
+    [latestFindReplaceCard, saveFindReplaceCard, showReplacedToast],
   );
-
-  const closeFindReplace = useCallback(() => setIsFindReplaceOpen(false), []);
 
   const openFindReplaceTarget = useCallback(
     (targetId: string) => {
@@ -1230,29 +1201,13 @@ function CharacterWorkspaceInner({
     return () => document.removeEventListener('keydown', handleSaveShortcut);
   }, [flushPendingSaves]);
 
-  useEffect(() => {
-    const handleFindShortcut = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.altKey) return;
-      if (event.key.toLowerCase() !== 'f') return;
-      if (document.querySelector('[aria-modal="true"]:not([aria-labelledby="find-replace-title"])')) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const selection = selectionTextForFind();
-      setFindReplacePrefill(selection ? { text: selection, nonce: Date.now() } : null);
-      setIsFindReplaceOpen(true);
-    };
-    // Capture phase: the editor's own Mod-f binding would otherwise also open its find bar.
-    document.addEventListener('keydown', handleFindShortcut, true);
-    return () => document.removeEventListener('keydown', handleFindShortcut, true);
-  }, []);
-
   return (
     <div className="h-dvh w-full flex flex-col bg-bg overflow-hidden">
       
       <CharacterHeader
         onClose={() => { void handleClose(); }}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenFindReplace={() => { setFindReplacePrefill(null); setIsFindReplaceOpen(true); }}
+        onOpenFindReplace={findReplace.open}
         onOpenRevisions={() => { void openHistory(); }}
         isOpeningRevisions={isOpeningHistory}
         isContextOpen={isContextOpen}
@@ -1427,12 +1382,12 @@ function CharacterWorkspaceInner({
       />
 
       <FindReplaceModal
-        isOpen={isFindReplaceOpen}
-        onClose={closeFindReplace}
+        isOpen={findReplace.isOpen}
+        onClose={findReplace.close}
         loadCard={loadFindReplaceCard}
         onApply={applyFindReplaceResult}
         onJump={openFindReplaceTarget}
-        prefill={findReplacePrefill}
+        prefill={findReplace.prefill}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />

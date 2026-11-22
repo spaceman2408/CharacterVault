@@ -8,7 +8,8 @@ export interface FindReplaceOptions {
 }
 
 export interface FindReplaceCard {
-  spec: CharacterSpec;
+  /** Omitted for a standalone vault lorebook: only the book is searched. */
+  spec?: CharacterSpec;
   book?: CharacterBook;
 }
 
@@ -43,7 +44,7 @@ export type FindResult =
   | { ok: false; error: string };
 
 export type ApplyResult =
-  | { ok: true; spec: CharacterSpec; book?: CharacterBook; count: number; places: number }
+  | { ok: true; spec?: CharacterSpec; book?: CharacterBook; count: number; places: number }
   | { ok: false; error: string };
 
 export const MAX_FIND_MATCHES = 2000;
@@ -105,13 +106,15 @@ function entryFieldText(entry: LorebookEntry, field: EntryField): string {
 export function collectFindTargets(card: FindReplaceCard): FindTarget[] {
   const { spec, book } = card;
   const targets: FindTarget[] = [];
-  for (const { id, label } of CARD_FIELDS) {
-    const text = id === 'tags' ? (spec.tags ?? []).join(', ') : spec[id] ?? '';
-    targets.push({ id: `field:${id}`, group: 'card', label, text, list: id === 'tags' || undefined });
-    if (id === 'first_mes') {
-      (spec.alternate_greetings ?? []).forEach((greeting, index) => {
-        targets.push({ id: `greeting:${index}`, group: 'card', label: `Greeting ${index + 1}`, text: greeting ?? '' });
-      });
+  if (spec) {
+    for (const { id, label } of CARD_FIELDS) {
+      const text = id === 'tags' ? (spec.tags ?? []).join(', ') : spec[id] ?? '';
+      targets.push({ id: `field:${id}`, group: 'card', label, text, list: id === 'tags' || undefined });
+      if (id === 'first_mes') {
+        (spec.alternate_greetings ?? []).forEach((greeting, index) => {
+          targets.push({ id: `greeting:${index}`, group: 'card', label: `Greeting ${index + 1}`, text: greeting ?? '' });
+        });
+      }
     }
   }
   if (!book) return targets;
@@ -268,11 +271,15 @@ function splitList(text: string): string[] {
     .filter((part) => part.length > 0);
 }
 
-/** Applies every match not in `excluded` to the card. `groups` must come from `findInCard` on this same card. */
+/**
+ * Applies every match not in `excluded` to the card. `groups` must come from `findInCard` on this same card.
+ * `required` adds target ids that must not be left empty (on top of the name, first message and greetings).
+ */
 export function applyFindReplace(
   card: FindReplaceCard,
   groups: FindTargetMatches[],
   excluded: ReadonlySet<string> = new Set(),
+  required: readonly string[] = [],
 ): ApplyResult {
   const edits = new Map<string, string>();
   let count = 0;
@@ -282,17 +289,17 @@ export function applyFindReplace(
     const next = replaceRanges(target.text, included);
     count += included.length;
     if (next === target.text) continue;
-    if (!next.trim() && (MUST_NOT_EMPTY.has(target.id) || target.id.startsWith('greeting:'))) {
+    if (!next.trim() && (MUST_NOT_EMPTY.has(target.id) || required.includes(target.id) || target.id.startsWith('greeting:'))) {
       return { ok: false, error: `This would leave ${target.label} empty` };
     }
     edits.set(target.id, next);
   }
 
-  let spec: CharacterSpec = card.spec;
+  let spec = card.spec;
   let book = card.book;
   if (edits.size === 0) return { ok: true, spec, book, count, places: 0 };
 
-  const greetings = [...(spec.alternate_greetings ?? [])];
+  const greetings = [...(spec?.alternate_greetings ?? [])];
   let greetingsChanged = false;
   const entryEdits = new Map<number, Partial<Record<EntryField, string>>>();
   let bookName: string | undefined;
@@ -300,7 +307,7 @@ export function applyFindReplace(
 
   for (const [id, text] of edits) {
     const [kind, key, field] = id.split(':');
-    if (kind === 'field') {
+    if (kind === 'field' && spec) {
       spec = { ...spec, [key]: key === 'tags' ? splitList(text) : text };
     } else if (kind === 'greeting') {
       greetings[Number(key)] = text;
@@ -313,7 +320,7 @@ export function applyFindReplace(
       entryEdits.set(entryId, { ...entryEdits.get(entryId), [field]: text });
     }
   }
-  if (greetingsChanged) spec = { ...spec, alternate_greetings: greetings };
+  if (greetingsChanged && spec) spec = { ...spec, alternate_greetings: greetings };
 
   if (book && (entryEdits.size > 0 || bookName !== undefined || bookDescription !== undefined)) {
     book = {

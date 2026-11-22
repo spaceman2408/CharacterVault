@@ -18,6 +18,7 @@ const SOURCE_LABELS: Record<string, string> = {
   auto: 'Auto',
   manual: 'Manual',
   rollback: 'Rollback',
+  replace: 'Find & Replace',
 };
 
 function formatWhen(iso: string): string {

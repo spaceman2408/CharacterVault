@@ -173,10 +173,10 @@ describe('applyFindReplace', () => {
     const found = find(c, 'kisuki', 'Mira');
     const applied = applyFindReplace(c, found.groups);
     if (!applied.ok) throw new Error(applied.error);
-    expect(applied.spec.name).toBe('Mira');
-    expect(applied.spec.description).toBe('Mira is a paralegal. Mira hates mornings.');
-    expect(applied.spec.alternate_greetings).toEqual(['Mira waves.', 'Nothing here.']);
-    expect(applied.spec.tags).toEqual(['office', 'Mira']);
+    expect(applied.spec?.name).toBe('Mira');
+    expect(applied.spec?.description).toBe('Mira is a paralegal. Mira hates mornings.');
+    expect(applied.spec?.alternate_greetings).toEqual(['Mira waves.', 'Nothing here.']);
+    expect(applied.spec?.tags).toEqual(['office', 'Mira']);
     expect(applied.book?.name).toBe('Mira lore');
     expect(applied.book?.entries[0].keys).toEqual(['Mira', 'paralegal']);
     expect(applied.book?.entries[0].content).toBe('Mira works late.');
@@ -196,7 +196,7 @@ describe('applyFindReplace', () => {
     const desc = found.groups.find((g) => g.target.id === 'field:description')!;
     const applied = applyFindReplace(c, found.groups, new Set([desc.matches[1].id]));
     if (!applied.ok) throw new Error(applied.error);
-    expect(applied.spec.description).toBe('Mira is a paralegal. KISUKI hates mornings.');
+    expect(applied.spec?.description).toBe('Mira is a paralegal. KISUKI hates mornings.');
     expect(applied.count).toBe(found.total - 1);
   });
 
@@ -212,14 +212,14 @@ describe('applyFindReplace', () => {
     const found = find(c, 'Kisuki', '', { caseSensitive: true, wholeWord: true });
     const scenarioOnly = found.groups.filter((g) => g.target.id === 'field:scenario');
     const applied = applyFindReplace(c, scenarioOnly);
-    expect(applied.ok && applied.spec.scenario).toBe('');
+    expect(applied.ok && applied.spec?.scenario).toBe('');
   });
 
   it('splits tags and keys when the replacement adds a comma', () => {
     const c = card();
     const found = find(c, 'kisuki', 'a, b', { caseSensitive: true });
     const applied = applyFindReplace(c, found.groups.filter((g) => g.target.id === 'field:tags'));
-    expect(applied.ok && applied.spec.tags).toEqual(['office', 'a', 'b']);
+    expect(applied.ok && applied.spec?.tags).toEqual(['office', 'a', 'b']);
   });
 
   it('leaves the lorebook untouched when no lorebook match is applied', () => {
@@ -235,8 +235,37 @@ describe('sameFindReplaceCard', () => {
   it('compares spec and lorebook by value', () => {
     const c = card();
     expect(sameFindReplaceCard(c, JSON.parse(JSON.stringify(c)))).toBe(true);
-    expect(sameFindReplaceCard(c, { ...c, spec: { ...c.spec, scenario: 'changed' } })).toBe(false);
+    expect(sameFindReplaceCard(c, { ...c, spec: spec({ scenario: 'changed' }) })).toBe(false);
     expect(sameFindReplaceCard(c, { ...c, book: undefined })).toBe(false);
     expect(sameFindReplaceCard({ spec: c.spec }, { spec: c.spec, book: undefined })).toBe(true);
+  });
+});
+
+describe('standalone lorebook (no spec)', () => {
+  const lorebookOnly = (): FindReplaceCard => ({ book: book([entry(), entry({ id: 4, comment: 'Office', keys: ['office'], content: 'Kisuki files.' })]) });
+
+  it('searches only the book', () => {
+    const ids = collectFindTargets(lorebookOnly()).map((t) => t.id);
+    expect(ids.every((id) => id.startsWith('book:') || id.startsWith('entry:'))).toBe(true);
+    const result = find(lorebookOnly(), 'kisuki');
+    expect(result.groups.map((g) => g.target.id)).toEqual(['book:name', 'entry:3:keys', 'entry:3:content', 'entry:4:content']);
+  });
+
+  it('applies to the book and leaves spec undefined', () => {
+    const c = lorebookOnly();
+    const applied = applyFindReplace(c, find(c, 'kisuki', 'Mira').groups);
+    if (!applied.ok) throw new Error(applied.error);
+    expect(applied.spec).toBeUndefined();
+    expect(applied.book?.name).toBe('Mira lore');
+    expect(applied.book?.entries.map((e) => e.content)).toEqual(['Mira works late.', 'Mira files.']);
+  });
+
+  it('refuses to empty a target the caller marks as required', () => {
+    const c = lorebookOnly();
+    const groups = find(c, '^Kisuki lore$', '', { regex: true }).groups;
+    expect(applyFindReplace(c, groups).ok).toBe(true);
+    const refused = applyFindReplace(c, groups, new Set(), ['book:name']);
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.error).toContain('Book Name');
   });
 });

@@ -19,6 +19,8 @@ interface FindReplaceModalProps {
   onJump: (targetId: string) => void;
   /** Replaces the Find text when a new nonce arrives (Ctrl+Shift+F with a selection). */
   prefill?: { text: string; nonce: number } | null;
+  /** Extra targets a replace must not empty (e.g. a vault lorebook's name). */
+  requiredTargetIds?: readonly string[];
   /** Resolves false when the card changed since `before` was loaded; nothing is saved then. */
   onApply: (
     before: FindReplaceCard,
@@ -219,6 +221,7 @@ export function FindReplaceModal({
   onJump,
   onApply,
   prefill,
+  requiredTargetIds,
 }: FindReplaceModalProps): React.ReactElement | null {
   const [query, setQuery] = React.useState('');
   const [replacement, setReplacement] = React.useState('');
@@ -332,7 +335,7 @@ export function FindReplaceModal({
 
   const handleApply = async () => {
     if (!card || !result?.ok || !canApply) return;
-    const applied = applyFindReplace(card, result.groups, excluded);
+    const applied = applyFindReplace(card, result.groups, excluded, requiredTargetIds);
     if (!applied.ok) {
       setNotice(applied.error);
       return;
@@ -354,7 +357,7 @@ export function FindReplaceModal({
         return;
       }
       setCard(await loadCardRef.current());
-      setNotice('The card changed. Matches updated.');
+      setNotice('Changed since the search. Matches updated.');
     } finally {
       setIsApplying(false);
     }
