@@ -80,6 +80,7 @@ export function useAIGeneration(): UseAIGenerationResult {
   const isAbortedRef = useRef<boolean>(false);
   const mountedRef = useRef(true);
   const loadIdRef = useRef(0);
+  const runDataRef = useRef<Partial<CharacterSpec> | null>(null);
   stateRef.current = state;
 
   /** Cancel any in-flight request on the AIService and mark the current run as aborted. */
@@ -301,24 +302,9 @@ export function useAIGeneration(): UseAIGenerationResult {
       generatedData: Partial<CharacterSpec>,
       trimmedConcept: string
     ) => {
-      for (const field of fields) {
-        if (isAbortedRef.current) {
-          throw new AIError('Request was cancelled', 'unknown');
-        }
-        if (!isEnabledField(enabledFieldsRef.current, field)) {
-          discardFieldOutput(generatedData, field);
-          continue;
-        }
-
-        currentFieldRef.current = field;
-        setState((prev) => ({
-          ...prev,
-          currentField: field,
-          generatedData: { ...generatedData },
-        }));
-
-        try {
-          const result = await generateField(field, trimmedConcept, generatedData);
+      runDataRef.current = generatedData;
+      try {
+        for (const field of fields) {
           if (isAbortedRef.current) {
             throw new AIError('Request was cancelled', 'unknown');
           }
@@ -327,26 +313,42 @@ export function useAIGeneration(): UseAIGenerationResult {
             continue;
           }
 
-          generatedData[field] = result;
-          setState((prev) => ({
-            ...prev,
-            completedFields: Array.from(new Set([...prev.completedFields, field])),
-            generatedData: { ...generatedData },
-          }));
-        } catch (err) {
-          if (isAbortedRef.current) {
-            throw new AIError('Request was cancelled', 'unknown');
-          }
-          if (!isEnabledField(enabledFieldsRef.current, field)) {
-            discardFieldOutput(generatedData, field);
-            continue;
-          }
-          throw err;
-        } finally {
-          if (currentFieldRef.current === field) {
-            currentFieldRef.current = null;
+          currentFieldRef.current = field;
+          setState((prev) => ({ ...prev, currentField: field }));
+
+          try {
+            const result = await generateField(field, trimmedConcept, generatedData);
+            if (isAbortedRef.current) {
+              throw new AIError('Request was cancelled', 'unknown');
+            }
+            if (!isEnabledField(enabledFieldsRef.current, field)) {
+              discardFieldOutput(generatedData, field);
+              continue;
+            }
+
+            generatedData[field] = result;
+            setState((prev) => ({
+              ...prev,
+              completedFields: Array.from(new Set([...prev.completedFields, field])),
+              generatedData: { ...prev.generatedData, [field]: result },
+            }));
+          } catch (err) {
+            if (isAbortedRef.current) {
+              throw new AIError('Request was cancelled', 'unknown');
+            }
+            if (!isEnabledField(enabledFieldsRef.current, field)) {
+              discardFieldOutput(generatedData, field);
+              continue;
+            }
+            throw err;
+          } finally {
+            if (currentFieldRef.current === field) {
+              currentFieldRef.current = null;
+            }
           }
         }
+      } finally {
+        if (runDataRef.current === generatedData) runDataRef.current = null;
       }
     },
     [generateField, discardFieldOutput]
@@ -661,6 +663,7 @@ export function useAIGeneration(): UseAIGenerationResult {
   }, [loadConfig, runFieldSequence, concept, abortCurrent]);
 
   const updateGeneratedField = useCallback((field: GenerationField, value: string) => {
+    if (runDataRef.current) runDataRef.current[field] = value;
     setState((prev) => ({
       ...prev,
       generatedData: { ...prev.generatedData, [field]: value },
