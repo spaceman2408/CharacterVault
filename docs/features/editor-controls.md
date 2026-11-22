@@ -67,8 +67,9 @@ The card saves as you type. `Ctrl+S` just saves right away.
 | Search and replace | `Ctrl+H` | `⌘+⌥+F` |
 | Next / previous match | `F3` / `Shift+F3`, `Ctrl+G` / `Ctrl+Shift+G`, or `Enter` / `Shift+Enter` in the search box | Same, with `⌘` |
 | Close search | `Escape` | `Escape` |
+| Find & Replace across the character or lorebook | `Ctrl+Shift+F` | `⌘+Shift+F` |
 
-More in [Search & Replace](/features/editor#search-replace).
+More in [Search & Replace](/features/editor#search-replace) and [Find & Replace](/features/editor#find-replace).
 
 ## AI toolbar
 

@@ -6,6 +6,16 @@ Quick overview of recent updates to CharacterVault.
 
 ## November 2026
 
+### 1.10.0
+
+CharacterVault 1.10.0 adds Find & Replace across a whole character or lorebook, with a grouped preview, a snapshot before every replace, and Undo. The AI Creation Studio shows each field's thinking while it writes and works with endpoints that need no API key, plus fixes for editing, Stop, and Regenerate during generation and for V3 card fields lost on import.
+
+- **Find & Replace across a character**: **Character header → Find** or **Ctrl+Shift+F** searches every field, greeting, and lorebook entry, previews each change, and offers **Undo**
+- **Find & Replace in lorebooks**: **Lorebooks → open a book → Find** searches the book name, description, and every entry
+- **Creation Studio thinking and keyless endpoints**: each Studio field shows its **Thinking** while it generates, and endpoints with no API key work in the Studio and **Settings → Prompts**
+
+[Release 1.10.0 →](/releases/v1.10.0) · [Find & Replace →](/features/editor#find-replace) · [Lorebook Vault →](/features/lorebook-vault#find-replace)
+
 ### 1.9.2
 
 CharacterVault 1.9.2 makes the Creator Notes preview render the way SillyTavern does, with preview controls, a resizable Dock, and CSS tools. The editor keeps your cursor, scroll, and undo when you switch sections, wraps a selection when you type `*` or `"`, and fits phones with the keyboard open. Plus OpenAI and Google Gemini presets, a simpler Sampler, native-only Agent tool calls, and a fix for absurd tokens-per-second readings.
@@ -51,17 +61,6 @@ CharacterVault 1.8.5 warns before you leave a running Agent and marks runs that 
 - **Real names**: asked for a rename or new NPCs without names, the Agent picks real names that fit the setting and never reuses one already on the card or in its lorebook
 
 [Release 1.8.5 →](/releases/v1.8.5) · [AI Agent →](/features/ai-agent#leaving-mid-run)
-
-### 1.8.4
-
-CharacterVault 1.8.4 lets you pin and rank OpenRouter hosts, keep prompts private or stick to free models with new OpenRouter Options, keep Exacto on for Agent tool calls, and merge a library lorebook into a character's own entries, plus a fix for typing spaces in book names.
-
-- **OpenRouter host control**: pin a host per model under **Provider**, set **Settings → AI Config → OpenRouter Options → Host priority**, and see which host answered in a reply's stats
-- **OpenRouter privacy and model filters**: **No training on prompts**, **Zero data retention only**, and **Free models only** in **OpenRouter Options**, all off by default
-- **Exacto for the Agent**: **OpenRouter Options → Always use Exacto for the Agent** keeps `:exacto` on Agent tool calls with any host priority
-- **Merge a library book** (**Character → Lorebook → Attach**): **Merge** adds the book's entries after the character's own and unlinks the book
-
-[Release 1.8.4 →](/releases/v1.8.4) · [AI Setup →](/configuration/ai-setup#openrouter-options) · [Lorebook Vault →](/features/lorebook-vault#merge-into-existing-entries)
 
 ---
 

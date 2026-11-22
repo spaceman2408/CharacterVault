@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.9.2
-Preview Creator Notes the way SillyTavern renders them, keep your place and undo across sections, and edit comfortably on phones.
+::: tip CharacterVault 1.10.0
+Find & Replace across a whole character or lorebook with a preview and Undo, plus live thinking in the Creation Studio.
 
-[Try it](https://vault.charactervault.app) · [Creator Notes](/features/creator-notes#match-sillytavern) · [Editor Controls](/features/editor-controls)
+[Try it](https://vault.charactervault.app) · [Find & Replace](/features/editor#find-replace) · [Lorebook Vault](/features/lorebook-vault#find-replace)
 :::
 
 # CharacterVault
@@ -14,6 +14,7 @@ CharacterVault is a browser-based tool for building character cards with the V2/
 
 - **Generate complete characters with AI** using the Creation Studio — describe your concept or select tags, customize prompts and fields, and the AI creates a character card from scratch
 - **Edit every field** of a V2/V3 character card, including name, tags, description, personality, greetings, and lorebook
+- **Find & Replace** across a whole character or lorebook, with a preview of every change, a snapshot before it lands, and Undo
 - **Manage standalone lorebooks** in a second vault library (SillyTavern World Info), with snapshots and optional linking to characters (linked books stay in sync)
 - **Map recursion** between lorebook entries and bulk-edit recursion flags without leaving the editor
 - **Use AI to help you write** with Orion (chat that does not change the card), an **Agent** that can fill and revise the open character or lorebook (optional review diff before writes land), and an AI toolbar that can enhance, rephrase, shorten, and fix text with an in-editor ghost preview, plus search, resize text, and normalize HTML entities

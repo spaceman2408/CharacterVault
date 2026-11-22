@@ -121,6 +121,20 @@ Click the 🔍 button in the toolbar, or press `Ctrl+F` / `Cmd+F`. Press `Ctrl+H
 
 If you have text selected when opening search (up to 100 characters), it automatically fills the search field.
 
+## Find & Replace
+
+The find bar above works in one field. **Find & Replace** searches the whole character at once: every text field, each greeting, and the character's lorebook entries (title, name, keys, filter keys, content).
+
+Click **Find** (search icon) in the character header, or press `Ctrl+Shift+F` (`⌘+Shift+F` on Mac) from anywhere in the character. Text selected in a section lands in **Find**.
+
+- **Options** — **Aa** (match case), **ab** (whole word), **.*** (regular expression). **AB** next to **Replace** keeps the case of each match.
+- **Preview** — matches are grouped by place, with the old text struck through next to the new. Untick a match or a whole group to skip it. Click a match to open that section. Up to 2,000 matches are listed.
+- **Replace 12** — changes the ticked matches in one step. With **Replace** empty, the button reads **Remove 12**; hover it to see what goes. Replacing text with the same text says **Nothing would change**.
+- **Undo** — a toast offers **Undo** after a replace. It puts the card back unless you edited it since; otherwise use [Snapshots](/features/snapshots-history), which keeps a **Find & Replace save point** from just before.
+- **Close** — press `Escape` or click **×**.
+
+`Ctrl+Shift+F` does nothing while Snapshots, Settings, or another window is open. Lorebooks have the same tool: see [Lorebook Vault → Find & Replace](/features/lorebook-vault#find-replace).
+
 ## Font Size
 
 Click the **aA** button in the toolbar to open a font size slider.
