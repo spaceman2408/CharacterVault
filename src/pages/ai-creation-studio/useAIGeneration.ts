@@ -42,6 +42,21 @@ const INITIAL_STATE: GenerationState = {
   failedField: null,
 };
 
+interface RegenerateBackup {
+  field: GenerationField;
+  value?: string;
+  reasoning?: string;
+}
+
+function withRestoredField(prev: GenerationState, backup: RegenerateBackup): GenerationState {
+  return {
+    ...prev,
+    generatedData: { ...prev.generatedData, [backup.field]: backup.value },
+    generatedReasoning: { ...prev.generatedReasoning, [backup.field]: backup.reasoning },
+    completedFields: Array.from(new Set([...prev.completedFields, backup.field])),
+  };
+}
+
 export interface UseAIGenerationResult {
   state: GenerationState;
   isConfigured: boolean;
@@ -81,6 +96,7 @@ export function useAIGeneration(): UseAIGenerationResult {
   const mountedRef = useRef(true);
   const loadIdRef = useRef(0);
   const runDataRef = useRef<Partial<CharacterSpec> | null>(null);
+  const regenerateBackupRef = useRef<RegenerateBackup | null>(null);
   stateRef.current = state;
 
   /** Cancel any in-flight request on the AIService and mark the current run as aborted. */
@@ -430,8 +446,10 @@ export function useAIGeneration(): UseAIGenerationResult {
     abortCurrent();
     currentFieldRef.current = null;
     setIsLoading(false);
+    const backup = regenerateBackupRef.current;
+    regenerateBackupRef.current = null;
     setState((prev) => ({
-      ...prev,
+      ...(backup ? withRestoredField(prev, backup) : prev),
       status: 'error',
       currentField: null,
       error: 'Generation stopped by user.',
@@ -540,6 +558,11 @@ export function useAIGeneration(): UseAIGenerationResult {
       isAbortedRef.current = false;
       setIsLoading(true);
       currentFieldRef.current = field;
+      regenerateBackupRef.current = {
+        field,
+        value: stateRef.current.generatedData[field],
+        reasoning: stateRef.current.generatedReasoning[field],
+      };
       setState((prev) => ({
         ...prev,
         status: 'generating',
@@ -585,16 +608,18 @@ export function useAIGeneration(): UseAIGenerationResult {
         if (!isAbortedRef.current) {
           const errorMessage =
             err instanceof AIError ? err.message : 'An unexpected error occurred during generation';
+          const backup = regenerateBackupRef.current;
 
           setState((prev) => ({
-            ...prev,
+            ...(backup ? withRestoredField(prev, backup) : prev),
             status: 'error',
             error: errorMessage,
-            failedField: field,
+            failedField: backup ? null : field,
             currentField: null,
           }));
         }
       } finally {
+        if (regenerateBackupRef.current?.field === field) regenerateBackupRef.current = null;
         if (currentFieldRef.current === field) currentFieldRef.current = null;
         setIsLoading(false);
       }
@@ -672,6 +697,7 @@ export function useAIGeneration(): UseAIGenerationResult {
 
   const reset = useCallback(() => {
     abortCurrent();
+    regenerateBackupRef.current = null;
     currentFieldRef.current = null;
     setState(INITIAL_STATE);
     setIsLoading(false);
