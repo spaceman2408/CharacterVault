@@ -120,18 +120,7 @@ export function useAIGeneration(): UseAIGenerationResult {
         inFlightServiceRef.current?.dispose();
       }
 
-      // For local endpoints (localhost, 127.0.0.1), API key is optional
-      const isLocalEndpoint = config.baseUrl && (
-        config.baseUrl.includes('localhost') ||
-        config.baseUrl.includes('127.0.0.1') ||
-        config.baseUrl.includes('0.0.0.0')
-      );
-
-      const hasConfig = !!(
-        config.baseUrl && 
-        config.modelId && 
-        (config.apiKey || isLocalEndpoint)
-      );
+      const hasConfig = !!(config.baseUrl && config.modelId);
       setIsConfigured(hasConfig);
 
       if (hasConfig) {
