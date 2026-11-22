@@ -330,7 +330,8 @@ export const AICreationStudio: React.FC = () => {
     setPendingDiscard(null);
   }, []);
 
-  const canSave = state.status === 'complete' || (hasGeneratedContent && state.generatedData.name);
+  const canSave =
+    !isLoading && (state.status === 'complete' || (hasGeneratedContent && state.generatedData.name));
   const showEmptyState = state.status === 'idle' && !saveSuccess;
   const activeFields = GENERATION_FIELDS.filter((f) => enabledFields[f.key] !== false);
   const remainingFields = activeFields.filter((f) => !state.completedFields.includes(f.key));
