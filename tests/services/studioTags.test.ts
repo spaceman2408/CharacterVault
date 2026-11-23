@@ -34,13 +34,14 @@ describe('new built-in categories', () => {
     expect(TAG_CATEGORIES.find((c) => c.key === 'kink_fetish')?.nsfw).toBe(true);
   });
 
-  it('builds concepts with dynamic and kink tags last', () => {
+  it('builds concepts labeled by category with dynamic and kink tags last', () => {
     const concept = buildConceptFromTags({
-      identity: ['elf'],
-      dynamic: ['enemies_to_lovers'],
       kink_fetish: ['bondage'],
+      identity: ['elf', 'female'],
+      dynamic: ['enemies_to_lovers'],
+      tone: [],
     });
-    expect(concept).toBe('Elf, Enemies To Lovers, Bondage');
+    expect(concept).toBe('Identity: Elf, Female; Dynamic: Enemies To Lovers; Kink & Fetish: Bondage');
   });
 });
 

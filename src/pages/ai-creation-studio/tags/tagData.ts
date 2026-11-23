@@ -322,15 +322,13 @@ export function buildConceptFromTags(selections: Record<string, string[]>): stri
   const order: TagCategoryKey[] = ['identity', 'role', 'personality', 'genre', 'appearance', 'tone', 'dynamic', 'kink_fetish'];
 
   for (const key of order) {
-    const tags = selections[key] ?? [];
-    for (const tag of tags) {
-      if (tag) {
-        parts.push(formatTag(tag));
-      }
-    }
+    const tags = (selections[key] ?? []).filter(Boolean);
+    if (tags.length === 0) continue;
+    const label = TAG_CATEGORIES.find((category) => category.key === key)?.label ?? key;
+    parts.push(`${label}: ${tags.map(formatTag).join(', ')}`);
   }
 
-  return parts.join(', ');
+  return parts.join('; ');
 }
 
 /**
