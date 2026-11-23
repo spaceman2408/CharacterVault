@@ -24,7 +24,9 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.10.1 staging 1';
+export const STAGING_VERSION = 'v1.10.1 staging 2';
 
 /** One short line per thing you want testers to try. */
-export const STAGING_TEST_NOTES: string[] = [];
+export const STAGING_TEST_NOTES: string[] = [
+  'Settings → Skills → Import / Export all / Select to export: export one skill (open it → Export), several, or all to a .json file, then import it back. Import also takes Markdown skill files (SKILL.md with name and description frontmatter, or a # heading), and several files at once. A name that already exists asks Replace (updates it in place, keeps it on or off) or Keep both (adds a numbered copy).',
+];
