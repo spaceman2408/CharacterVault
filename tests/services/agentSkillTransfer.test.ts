@@ -126,6 +126,43 @@ description: 'Use for image prompts.'
     ]);
   });
 
+  it('reads multi-line frontmatter values', () => {
+    const folded = `---
+name: Scene Pacing
+description: >-
+  Use when a scene drags
+  or rushes.
+
+  Not for dialogue.
+metadata:
+  name: ignored
+---
+Keep beats tight.`;
+    expect(parseSkillMarkdown(folded)).toEqual({
+      name: 'Scene Pacing',
+      description: 'Use when a scene drags or rushes.\nNot for dialogue.',
+      content: 'Keep beats tight.',
+    });
+
+    const literal = `---
+name: Lore Check
+description: |
+  Line one
+    indented
+  Line three
+---
+Body.`;
+    expect(parseSkillMarkdown(literal).description).toBe('Line one\n  indented\nLine three');
+
+    const plain = `---
+name: Voice Match
+description: Use when matching
+  a character's voice.
+---
+Body.`;
+    expect(parseSkillMarkdown(plain).description).toBe("Use when matching a character's voice.");
+  });
+
   it('disambiguates duplicate names across multi-file imports', () => {
     const parsed = parseSkillFiles([
       { name: 'a.json', text: JSON.stringify({ name: 'Tone', content: 'First' }) },
@@ -175,6 +212,21 @@ describe('agentSkillTransfer conflict detection and merge', () => {
     expect(result.added[0].name).toBe('Character to Image');
     expect(result.skills[0].name).toBe('Character to Image');
     expect(result.skills.find((s) => s.id === 'default-greeting-writer')?.content).toBe('New body.');
+  });
+
+  it('keeps a replaced skill switched off', () => {
+    const result = mergeImportedSkills(
+      [{ id: 'custom-1', name: 'Mine', description: '', content: 'Old', enabled: false }],
+      [{ name: 'Mine', description: 'New', content: 'New body.' }],
+      'replace',
+    );
+    expect(result.replaced[0]).toEqual({
+      id: 'custom-1',
+      name: 'Mine',
+      description: 'New',
+      content: 'New body.',
+      enabled: false,
+    });
   });
 
   it('keeps both skills by generating unique numbered names', () => {

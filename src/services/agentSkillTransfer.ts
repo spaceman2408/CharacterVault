@@ -187,6 +187,61 @@ function unquoteYamlScalar(raw: string): string {
   return trimmed;
 }
 
+function foldYamlLines(lines: readonly string[]): string {
+  let out = '';
+  let pendingBreaks = 0;
+  for (const line of lines) {
+    if (!line.trim()) {
+      pendingBreaks += 1;
+      continue;
+    }
+    if (out) out += pendingBreaks > 0 ? '\n'.repeat(pendingBreaks) : ' ';
+    out += line.trim();
+    pendingBreaks = 0;
+  }
+  return out;
+}
+
+function parseFrontmatter(block: string): Record<string, string> {
+  const lines = block.split('\n');
+  const fields: Record<string, string> = {};
+  let i = 0;
+  while (i < lines.length) {
+    const entry = /^([a-zA-Z0-9_-]+)\s*:\s*(.*)$/.exec(lines[i]);
+    i += 1;
+    if (!entry) continue;
+    const key = entry[1].toLowerCase();
+    const rawValue = entry[2].trim();
+
+    const continuation: string[] = [];
+    while (i < lines.length && (!lines[i].trim() || /^\s/.test(lines[i]))) {
+      continuation.push(lines[i]);
+      i += 1;
+    }
+    while (continuation.length > 0 && !continuation[continuation.length - 1].trim()) {
+      continuation.pop();
+    }
+
+    const blockScalar = /^([|>])[+-]?\d*$/.exec(rawValue);
+    if (blockScalar) {
+      if (blockScalar[1] === '|') {
+        const indents = continuation
+          .filter((line) => line.trim())
+          .map((line) => /^\s*/.exec(line)![0].length);
+        const indent = indents.length > 0 ? Math.min(...indents) : 0;
+        fields[key] = continuation.map((line) => line.slice(indent).trimEnd()).join('\n').trim();
+      } else {
+        fields[key] = foldYamlLines(continuation);
+      }
+    } else if (continuation.length > 0) {
+      fields[key] = unquoteYamlScalar(foldYamlLines([rawValue, ...continuation]));
+    } else {
+      fields[key] = unquoteYamlScalar(rawValue);
+    }
+  }
+  return fields;
+}
+
 function filenameStem(filename: string | undefined): string {
   if (!filename) return '';
   const base = filename.replace(/^.*[/\\]/, '').replace(/\.[^.]+$/, '');
@@ -202,14 +257,9 @@ export function parseSkillMarkdown(text: string, filename?: string): PortableAge
 
   const fmMatch = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(normalized);
   if (fmMatch) {
-    for (const line of fmMatch[1].split('\n')) {
-      const entry = /^([a-zA-Z0-9_-]+)\s*:\s*(.*)$/.exec(line.trim());
-      if (!entry) continue;
-      const key = entry[1].toLowerCase();
-      const value = unquoteYamlScalar(entry[2]);
-      if (key === 'name' && value) name = value;
-      if (key === 'description' && value) description = value;
-    }
+    const fields = parseFrontmatter(fmMatch[1]);
+    name = fields.name ?? '';
+    description = fields.description ?? '';
     body = normalized.slice(fmMatch[0].length);
   }
 
@@ -296,7 +346,7 @@ export function mergeImportedSkills(
     const matchIndex = retained.findIndex((skill) => skillNameKey(skill.name) === key);
     if (matchIndex !== -1 && strategy === 'replace') {
       const updated: AgentSkill = {
-        id: retained[matchIndex].id,
+        ...retained[matchIndex],
         name: item.name.trim(),
         description: item.description.trim(),
         content: item.content,
