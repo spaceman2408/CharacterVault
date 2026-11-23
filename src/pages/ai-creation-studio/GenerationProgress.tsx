@@ -55,6 +55,9 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
         const isActive = currentField === field.key;
         const isFailed = failedField === field.key;
         const isPending = !isDone && !isActive && !isFailed;
+        const basis = state.descriptionBasis[field.key];
+        const isOutdated =
+          isDone && !isFailed && !isActive && basis !== undefined && basis !== (state.generatedData.description ?? '');
 
         return (
           <div key={field.key}>
@@ -98,6 +101,11 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
                 {isActive && (
                   <p className="text-xs text-accent/80 mt-0.5">
                     Generating...
+                  </p>
+                )}
+                {isOutdated && (
+                  <p className="text-xs text-warning mt-0.5">
+                    Description changed
                   </p>
                 )}
                 {isFailed && (

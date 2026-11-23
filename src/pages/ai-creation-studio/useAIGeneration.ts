@@ -44,6 +44,7 @@ const INITIAL_STATE: GenerationState = {
   completedFields: [],
   generatedData: {},
   generatedReasoning: {},
+  descriptionBasis: {},
   error: null,
   failedField: null,
 };
@@ -285,6 +286,14 @@ export function useAIGeneration(): UseAIGenerationResult {
             `Generation returned empty content for "${field}". The model may have errored during generation.`,
             'unknown'
           );
+        }
+
+        if (field === 'first_mes' || field === 'mes_example') {
+          const basis = currentData.description ?? '';
+          setState((prev) => ({
+            ...prev,
+            descriptionBasis: { ...prev.descriptionBasis, [field]: basis },
+          }));
         }
 
         return content;
