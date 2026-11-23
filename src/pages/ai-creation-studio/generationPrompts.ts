@@ -46,6 +46,11 @@ export function renderStudioTemplate(
   return out;
 }
 
+export function buildRevisionBlock(previous: string | undefined, note: string): string {
+  const previousBlock = previous?.trim() ? `\n\nPrevious version:\n${previous.trim()}` : '';
+  return `\n\n<revision>${previousBlock}\n\nWrite a new version that follows this note: ${note.trim()}\nKeep everything the note does not ask to change, and follow all the rules above.\n</revision>`;
+}
+
 export function validateStudioPrompts(prompts: Partial<Record<StudioPromptKey, string>>): string | null {
   const errors: string[] = [];
   const keys = Object.keys(STUDIO_PROMPT_REQUIRED_VARS) as StudioPromptKey[];

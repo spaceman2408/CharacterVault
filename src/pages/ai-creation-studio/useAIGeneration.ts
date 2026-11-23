@@ -13,10 +13,16 @@ import type { GenerationField, GenerationState } from './types';
 import type { GenerationStyleTags } from './tags/tagData';
 import {
   buildDescriptionStyleInstructions,
+  buildRevisionBlock,
   buildGenerationStyleInstructions,
   buildNarrationFormatInstruction,
   renderStudioTemplate,
 } from './generationPrompts';
+
+interface Revision {
+  previous?: string;
+  note: string;
+}
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -67,7 +73,7 @@ export interface UseAIGenerationResult {
   start: (concept: string, tags: GenerationStyleTags) => Promise<void>;
   abort: () => void;
   retryField: (field: GenerationField) => Promise<void>;
-  regenerateField: (field: GenerationField) => Promise<void>;
+  regenerateField: (field: GenerationField, note?: string) => Promise<void>;
   continueGeneration: () => Promise<void>;
   reloadConfig: () => Promise<void>;
   updateGeneratedField: (field: GenerationField, value: string) => void;
@@ -175,7 +181,12 @@ export function useAIGeneration(): UseAIGenerationResult {
   }, [loadConfig, abortCurrent]);
 
   const buildMessages = useCallback(
-    (field: GenerationField, concept: string, data: Partial<CharacterSpec>): ChatMessage[] => {
+    (
+      field: GenerationField,
+      concept: string,
+      data: Partial<CharacterSpec>,
+      revision?: Revision
+    ): ChatMessage[] => {
       const prompts = studioPromptsRef.current;
       const systemPrompt: ChatMessage = { role: 'system', content: prompts.system };
       const { perspective, tense } = generationTagsRef.current;
@@ -207,15 +218,15 @@ export function useAIGeneration(): UseAIGenerationResult {
             narrationRule,
             firstMessageBlock:
               field === 'mes_example' && data.first_mes
-                ? `
-Opening message:
-${data.first_mes}`
+                ? `\nOpening message:\n${data.first_mes}`
                 : '',
           });
           break;
         default:
           userPrompt = '';
       }
+
+      if (revision) userPrompt += buildRevisionBlock(revision.previous, revision.note);
 
       return [systemPrompt, { role: 'user', content: userPrompt }];
     },
@@ -226,12 +237,13 @@ ${data.first_mes}`
     async (
       field: GenerationField,
       concept: string,
-      currentData: Partial<CharacterSpec>
+      currentData: Partial<CharacterSpec>,
+      revision?: Revision
     ): Promise<string> => {
       const service = aiServiceRef.current;
       if (!service) throw new Error('AI service not initialized');
 
-      const messages = buildMessages(field, concept, currentData);
+      const messages = buildMessages(field, concept, currentData, revision);
 
       let accumulatedContent = '';
       let accumulatedReasoning = '';
@@ -543,7 +555,7 @@ ${data.first_mes}`
   );
 
   const regenerateField = useCallback(
-    async (field: GenerationField) => {
+    async (field: GenerationField, note?: string) => {
       // Cancel any in-flight request before starting a new one
       abortCurrent();
 
@@ -564,6 +576,9 @@ ${data.first_mes}`
       isAbortedRef.current = false;
       setIsLoading(true);
       currentFieldRef.current = field;
+      const revision = note?.trim()
+        ? { previous: stateRef.current.generatedData[field], note }
+        : undefined;
       regenerateBackupRef.current = {
         field,
         value: stateRef.current.generatedData[field],
@@ -584,7 +599,7 @@ ${data.first_mes}`
         const currentData = stateRef.current.generatedData;
         const effectiveConcept = concept || currentData.name || 'Character';
         const contextData = { ...currentData, [field]: undefined };
-        const result = await generateField(field, effectiveConcept, contextData);
+        const result = await generateField(field, effectiveConcept, contextData, revision);
 
         if (isAbortedRef.current) return;
         if (!isEnabledField(enabledFieldsRef.current, field)) {

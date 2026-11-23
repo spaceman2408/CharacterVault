@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_STUDIO_PROMPTS, normalizeStudioSettings } from '../../src/db/characterTypes';
 import { LEGACY_STUDIO_PROMPTS } from '../../src/db/legacyStudioPrompts';
 import {
+  buildRevisionBlock,
   renderStudioTemplate,
   validateStudioPrompts,
 } from '../../src/pages/ai-creation-studio/generationPrompts';
@@ -83,5 +84,17 @@ Keep it short.`;
     for (const key of ['name', 'description', 'first_mes', 'mes_example'] as const) {
       expect(legacy[key]).not.toBe(DEFAULT_STUDIO_PROMPTS[key]);
     }
+  });
+});
+
+describe('buildRevisionBlock', () => {
+  it('includes the previous version and the note', () => {
+    const block = buildRevisionBlock('  Maren Odell ', '  more Welsh ');
+    expect(block).toContain('Previous version:\nMaren Odell\n');
+    expect(block).toContain('follows this note: more Welsh\n');
+  });
+
+  it('omits the previous version when there is none', () => {
+    expect(buildRevisionBlock(undefined, 'older')).not.toContain('Previous version');
   });
 });

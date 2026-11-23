@@ -205,8 +205,8 @@ export const AICreationStudio: React.FC = () => {
   );
 
   const handleRegenerateField = useCallback(
-    (field: GenerationField) => {
-      void regenerateField(field);
+    (field: GenerationField, note?: string) => {
+      void regenerateField(field, note);
     },
     [regenerateField]
   );
