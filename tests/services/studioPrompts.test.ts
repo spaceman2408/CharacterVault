@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_STUDIO_PROMPTS, normalizeStudioSettings } from '../../src/db/characterTypes';
+import { LEGACY_STUDIO_PROMPTS } from '../../src/db/legacyStudioPrompts';
 import {
   renderStudioTemplate,
   validateStudioPrompts,
@@ -62,5 +63,25 @@ describe('normalizeStudioSettings', () => {
   it('falls back to defaults for empty prompt strings', () => {
     const normalized = normalizeStudioSettings({ prompts: { system: '' } });
     expect(normalized.prompts.system).toBe(DEFAULT_STUDIO_PROMPTS.system);
+  });
+
+  it('upgrades saved copies of old built-in defaults and keeps edited prompts', () => {
+    const legacy = LEGACY_STUDIO_PROMPTS[0];
+    const edited = `${legacy.first_mes}
+Keep it short.`;
+    const normalized = normalizeStudioSettings({
+      prompts: { ...legacy, first_mes: edited },
+    });
+    expect(normalized.prompts.description).toBe(DEFAULT_STUDIO_PROMPTS.description);
+    expect(normalized.prompts.mes_example).toBe(DEFAULT_STUDIO_PROMPTS.mes_example);
+    expect(normalized.prompts.first_mes).toBe(edited);
+  });
+
+  it('keeps old defaults distinct from current ones except the unchanged system prompt', () => {
+    const legacy = LEGACY_STUDIO_PROMPTS[0];
+    expect(legacy.system).toBe(DEFAULT_STUDIO_PROMPTS.system);
+    for (const key of ['name', 'description', 'first_mes', 'mes_example'] as const) {
+      expect(legacy[key]).not.toBe(DEFAULT_STUDIO_PROMPTS[key]);
+    }
   });
 });

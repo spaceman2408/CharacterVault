@@ -205,6 +205,12 @@ export function useAIGeneration(): UseAIGenerationResult {
             description,
             styleBlock,
             narrationRule,
+            firstMessageBlock:
+              field === 'mes_example' && data.first_mes
+                ? `
+Opening message:
+${data.first_mes}`
+                : '',
           });
           break;
         default:

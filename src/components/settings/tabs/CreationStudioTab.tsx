@@ -43,6 +43,10 @@ const STUDIO_VARIABLE_INFO: Record<keyof StudioTemplateVars, { label: string; de
     label: 'Narration format',
     description: 'How narration and dialogue should be written, based on your perspective tag.',
   },
+  firstMessageBlock: {
+    label: 'First message',
+    description: 'The generated first message, so examples match its style. Empty when First Message is off.',
+  },
 };
 
 function studioPromptVariables(key: StudioPromptKey): PromptVariable[] {

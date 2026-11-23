@@ -16,6 +16,7 @@ export interface StudioTemplateVars {
   description: string;
   styleBlock: string;
   narrationRule: string;
+  firstMessageBlock: string;
 }
 
 export const STUDIO_PROMPT_REQUIRED_VARS: Record<StudioPromptKey, string[]> = {
@@ -31,7 +32,7 @@ export const STUDIO_PROMPT_OPTIONAL_VARS: Record<StudioPromptKey, Array<keyof St
   name: [],
   description: ['styleBlock'],
   first_mes: ['styleBlock', 'narrationRule'],
-  mes_example: ['styleBlock', 'narrationRule'],
+  mes_example: ['styleBlock', 'narrationRule', 'firstMessageBlock'],
 };
 
 export function renderStudioTemplate(
