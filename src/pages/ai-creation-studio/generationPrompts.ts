@@ -49,6 +49,18 @@ export function buildRevisionBlock(previous: string | undefined, note: string): 
   return `\n\n<revision>${previousBlock}\n\nWrite a new version that follows this note: ${note.trim()}\nKeep everything the note does not ask to change, and follow all the rules above.\n</revision>`;
 }
 
+export function replaceNameWithCharMacro(text: string, name: string): string {
+  const full = name.trim();
+  if (!full) return text;
+  const parts = full.split(/\s+/).filter((part) => part !== full && part.length >= 3 && /^\p{Lu}/u.test(part));
+  let out = text;
+  for (const part of [full, ...parts]) {
+    const escaped = part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out.replace(new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, 'gu'), '{{char}}');
+  }
+  return out;
+}
+
 export function validateStudioPrompts(prompts: Partial<Record<StudioPromptKey, string>>): string | null {
   const errors: string[] = [];
   const keys = Object.keys(STUDIO_PROMPT_REQUIRED_VARS) as StudioPromptKey[];
@@ -98,10 +110,10 @@ export function buildGenerationStyleInstructions(
   let tenseInstruction = '';
   switch (tense) {
     case 'present_tense':
-      tenseInstruction = 'Use present tense throughout.';
+      tenseInstruction = 'Write all narration and actions in present tense (e.g. "she turns", not "she turned"). Dialogue may use any tense.';
       break;
     case 'past_tense':
-      tenseInstruction = 'Use past tense throughout.';
+      tenseInstruction = 'Write all narration and actions in past tense (e.g. "she turned", not "she turns"). Dialogue may use any tense.';
       break;
   }
 

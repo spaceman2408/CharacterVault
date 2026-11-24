@@ -3,6 +3,7 @@ import { DEFAULT_STUDIO_PROMPTS, normalizeStudioSettings } from '../../src/db/ch
 import { LEGACY_STUDIO_PROMPTS } from '../../src/db/legacyStudioPrompts';
 import {
   buildRevisionBlock,
+  replaceNameWithCharMacro,
   renderStudioTemplate,
   validateStudioPrompts,
 } from '../../src/pages/ai-creation-studio/generationPrompts';
@@ -96,5 +97,32 @@ describe('buildRevisionBlock', () => {
 
   it('omits the previous version when there is none', () => {
     expect(buildRevisionBlock(undefined, 'older')).not.toContain('Previous version');
+  });
+});
+
+describe('replaceNameWithCharMacro', () => {
+  it('replaces the full name and capitalized name parts as whole words', () => {
+    const text = "{{user}}: Isolda Merrick? *Isolda's knife stops. Merrick rhymes with nothing; Isoldane is a town.*";
+    expect(replaceNameWithCharMacro(text, 'Isolda Merrick')).toBe(
+      "{{user}}: {{char}}? *{{char}}'s knife stops. {{char}} rhymes with nothing; Isoldane is a town.*"
+    );
+  });
+
+  it('leaves lowercase connecting words alone', () => {
+    expect(replaceNameWithCharMacro('Aldric of the Vale went to the vale.', 'Aldric of the Vale')).toBe(
+      '{{char}} went to the vale.'
+    );
+  });
+
+  it('returns text unchanged for an empty name', () => {
+    expect(replaceNameWithCharMacro('Hello', '  ')).toBe('Hello');
+  });
+});
+
+describe('legacy studio prompts', () => {
+  it('upgrades a saved copy of every earlier default to the current one', () => {
+    for (const legacy of LEGACY_STUDIO_PROMPTS) {
+      expect(normalizeStudioSettings({ prompts: legacy }).prompts).toEqual(DEFAULT_STUDIO_PROMPTS);
+    }
   });
 });

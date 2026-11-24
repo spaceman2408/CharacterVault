@@ -992,7 +992,7 @@ export const DEFAULT_STUDIO_PROMPTS: StudioPrompts = {
 </format>
 
 <quality>
-- Be specific. "Hums sea shanties off-key while she works" beats "has a cheerful personality". No vague filler like "a mysterious past" or "eyes that hold secrets".
+- Be specific: name the exact habit, object, place, or event instead of a broad trait. No vague filler like "a mysterious past" or "eyes that hold secrets".
 - Give \${name} at least one real flaw or inner contradiction, not only strengths.
 - Keep details consistent across sections. A roleplay model will read this card, so every line should help it play \${name}.
 </quality>
@@ -1007,7 +1007,7 @@ Age, height, build, hair, eyes, distinguishing features, clothing/style.
 Core traits, temperament, flaws, how they come across to strangers vs. people they trust.
 
 ## Speech
-How they talk: vocabulary, rhythm, verbal habits, accent, pet phrases, topics they avoid.
+How they talk: vocabulary, rhythm, verbal habits, accent, topics they avoid. At most one pet phrase, and describe the pattern rather than listing lines to repeat.
 
 ## Likes
 Genuine interests, passions, comforts — specific to this character, not generic.
@@ -1022,7 +1022,7 @@ Abilities and expertise — what they are known for or unusually good at.
 What drives them. Short-term wants and deeper motivations.
 
 ## Relationship with {{user}}
-Include ONLY if the concept implies a connection to {{user}} (e.g. rivals, old friends, employer). How \${name} sees and treats {{user}}.
+Include ONLY if the concept itself names a relationship with {{user}} or the player (e.g. rivals, old friends, employer, or a relationship tag under Dynamic). Describe how \${name} sees and treats {{user}}. Otherwise omit this section and do not invent shared history, a role, or a job for {{user}} anywhere in the description.
 
 ## Sexual Kinks
 Include ONLY if the concept explicitly implies an adult or sexual character. Omit entirely otherwise. If included, \${name} must be an adult and Appearance must state an age of 18 or older.
@@ -1049,9 +1049,10 @@ Description:
 <content>
 - Establish a clear scene: location, what \${name} is doing, and the atmosphere.
 - Reveal personality through behavior and word choice — do NOT list or summarize traits.
-- \${name}'s dialogue must follow the voice in the description.
+- \${name}'s dialogue must follow the voice in the description. Use a pet phrase at most once.
 - End on something concrete for {{user}} to respond to: an action, a question, an unresolved moment.
 - Never write {{user}}'s actions, dialogue, thoughts, or feelings. Describe only what \${name} does and what {{user}} can see and hear; leave {{user}}'s response to the player.
+- Do not assume {{user}}'s gender, appearance, or background: no gendered nicknames like "lad" or "miss".
 </content>
 
 Output only the message. No labels, headers, or commentary.`,
@@ -1083,6 +1084,8 @@ Cover these three distinct beats, one per exchange:
 3. A moment that spotlights a specific personality trait, quirk, or skill.
 
 Do not reuse the opening message's scene or lines.
+In the {{char}} replies, never narrate {{user}}'s actions, words, thoughts, or feelings, and do not assume {{user}}'s gender, appearance, or background (no gendered nicknames like "lad" or "miss").
+Use a pet phrase at most once across all three exchanges.
 Match \${name}'s voice precisely to the description: their vocabulary, speech rhythm, emotional register, and mannerisms must be consistent across all three exchanges.
 </content>
 

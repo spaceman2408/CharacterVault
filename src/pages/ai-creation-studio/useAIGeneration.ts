@@ -14,6 +14,7 @@ import type { GenerationStyleTags } from './tags/tagData';
 import {
   buildDescriptionStyleInstructions,
   buildRevisionBlock,
+  replaceNameWithCharMacro,
   buildGenerationStyleInstructions,
   buildNarrationFormatInstruction,
   renderStudioTemplate,
@@ -280,12 +281,16 @@ export function useAIGeneration(): UseAIGenerationResult {
           throw new AIError('Request was cancelled', 'unknown');
         }
 
-        const content = response.content || '';
+        let content = response.content || '';
         if (!content.trim()) {
           throw new AIError(
             `Generation returned empty content for "${field}". The model may have errored during generation.`,
             'unknown'
           );
+        }
+
+        if (field === 'mes_example' && currentData.name) {
+          content = replaceNameWithCharMacro(content, currentData.name);
         }
 
         if (field === 'first_mes' || field === 'mes_example') {
