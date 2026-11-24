@@ -79,11 +79,11 @@ Keep it short.`;
     expect(normalized.prompts.first_mes).toBe(edited);
   });
 
-  it('keeps old defaults distinct from current ones except the unchanged system prompt', () => {
-    const legacy = LEGACY_STUDIO_PROMPTS[0];
-    expect(legacy.system).toBe(DEFAULT_STUDIO_PROMPTS.system);
-    for (const key of ['name', 'description', 'first_mes', 'mes_example'] as const) {
-      expect(legacy[key]).not.toBe(DEFAULT_STUDIO_PROMPTS[key]);
+  it('keeps old defaults distinct from current ones', () => {
+    for (const legacy of LEGACY_STUDIO_PROMPTS) {
+      for (const key of Object.keys(DEFAULT_STUDIO_PROMPTS) as Array<keyof typeof DEFAULT_STUDIO_PROMPTS>) {
+        expect(legacy[key]).not.toBe(DEFAULT_STUDIO_PROMPTS[key]);
+      }
     }
   });
 });

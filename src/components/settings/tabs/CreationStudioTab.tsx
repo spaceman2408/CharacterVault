@@ -41,7 +41,7 @@ const STUDIO_VARIABLE_INFO: Record<keyof StudioTemplateVars, { label: string; de
   },
   narrationRule: {
     label: 'Narration format',
-    description: 'How narration and dialogue should be written, based on your perspective tag.',
+    description: 'How narration refers to {{user}}, based on your perspective tag.',
   },
   firstMessageBlock: {
     label: 'First message',

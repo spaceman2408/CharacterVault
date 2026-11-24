@@ -79,90 +79,54 @@ export function validateStudioPrompts(prompts: Partial<Record<StudioPromptKey, s
   return errors.length > 0 ? errors.join('\n') : null;
 }
 
-/**
- * Build generation style instructions based on selected perspective and tense tags.
- */
+const TENSE_RULES: Record<TenseTag, string> = {
+  present_tense: 'Present tense for narration and actions ("she turns").',
+  past_tense: 'Past tense for narration and actions ("she turned").',
+};
+
+function requireStyleTags(perspective: PerspectiveTag | null, tense: TenseTag | null): asserts perspective is PerspectiveTag {
+  if (!perspective || !tense) {
+    throw new Error('Generation style requires one perspective tag and one tense tag.');
+  }
+}
+
 export function buildGenerationStyleInstructions(
   perspective: PerspectiveTag | null,
   tense: TenseTag | null
 ): string {
-  if (!perspective || !tense) {
-    throw new Error('Generation style requires one perspective tag and one tense tag.');
-  }
-
-  let perspectiveInstruction = '';
-  switch (perspective) {
-    case 'first_person':
-      perspectiveInstruction = "Write in first person from the character's perspective (I, me, my).";
-      break;
-    case 'second_person':
-      perspectiveInstruction = 'Write in second person, addressing the reader as "you".';
-      break;
-    case 'third_person':
-      perspectiveInstruction = 'Write in third person (he, she, they).';
-      break;
-    case 'first_person_you':
-      perspectiveInstruction =
-        "Write in first person from the character's perspective (I, me, my), and refer to {{user}} as \"you\".";
-      break;
-  }
-
-  let tenseInstruction = '';
-  switch (tense) {
-    case 'present_tense':
-      tenseInstruction = 'Write all narration and actions in present tense (e.g. "she turns", not "she turned"). Dialogue may use any tense.';
-      break;
-    case 'past_tense':
-      tenseInstruction = 'Write all narration and actions in past tense (e.g. "she turned", not "she turns"). Dialogue may use any tense.';
-      break;
-  }
-
-  return `\n\n<generation_style>\n${perspectiveInstruction}\n${tenseInstruction}\n</generation_style>`;
+  requireStyleTags(perspective, tense);
+  const perspectiveRules: Record<PerspectiveTag, string> = {
+    first_person: 'First person, as the character (I, me, my).',
+    second_person: 'Second person: "you" is {{user}}.',
+    third_person: 'Third person (he, she, they).',
+    first_person_you: 'First person, as the character (I, me, my), calling {{user}} "you".',
+  };
+  return `\n\nStyle:\n- ${perspectiveRules[perspective]}\n- ${TENSE_RULES[tense!]}`;
 }
 
 export function buildDescriptionStyleInstructions(
   perspective: PerspectiveTag | null,
   tense: TenseTag | null
 ): string {
-  if (!perspective || !tense) {
-    throw new Error('Generation style requires one perspective tag and one tense tag.');
-  }
-
-  let perspectiveInstruction = '';
-  switch (perspective) {
-    case 'first_person':
-      perspectiveInstruction =
-        "Write description content in first person from the character's perspective (I, me, my).";
-      break;
-    case 'first_person_you':
-      perspectiveInstruction =
-        'Write description content in first person from the character\'s perspective, but refer to the player only as {{user}}. Do not address {{user}} as "you" in the description. Example: write "{{user}} is the only thing that feels stable in my life," not "You are the only thing that feels stable in my life."';
-      break;
-    case 'second_person':
-    case 'third_person':
-      perspectiveInstruction =
-        'Write description content in third-person omniscient style (he, she, they, the character), describing the character rather than addressing the reader.';
-      break;
-  }
-
-  const tenseInstruction =
-    tense === 'present_tense'
-      ? 'Use present tense throughout.'
-      : 'Use past tense throughout.';
-
-  return `\n\n<generation_style>\n${perspectiveInstruction}\n${tenseInstruction}\nDescriptions are character-card reference material, not an opening message. Do not write directly to the reader in description sections.</generation_style>`;
+  requireStyleTags(perspective, tense);
+  const perspectiveRules: Record<PerspectiveTag, string> = {
+    first_person: 'First person, as the character (I, me, my).',
+    first_person_you: 'First person, as the character (I, me, my). Call the player {{user}}, never "you".',
+    second_person: 'Third person, describing the character. Never address the reader as "you".',
+    third_person: 'Third person, describing the character. Never address the reader as "you".',
+  };
+  return `\n\nStyle:\n- ${perspectiveRules[perspective]}\n- ${tense === 'present_tense' ? 'Present tense.' : 'Past tense.'}`;
 }
 
 export function buildNarrationFormatInstruction(perspective: PerspectiveTag | null): string {
   switch (perspective) {
     case 'first_person':
-      return 'Narrative/action text should use first person from the character\'s perspective; dialogue should still be quoted naturally.';
-    case 'second_person':
-      return 'Narrative/action text should use second person, addressing {{user}} as "you"; dialogue should still be quoted naturally. {{user}} is already in the scene when the text starts. Use "you" only for what {{user}} sees, hears, and physically senses (rain, cold, light); never for what they do, say, decide, or feel emotionally, or how they got there.';
     case 'third_person':
-      return 'Narrative/action text should use third person; dialogue should still be quoted naturally.';
+      return 'Refer to {{user}} as {{user}}, not "you".';
+    case 'second_person':
+      return '{{user}} is already in the scene. Use "you" only for what {{user}} sees, hears, or physically senses, never for what they do, say, or decide.';
     case 'first_person_you':
-      return 'Narrative/action text should use first person from the character\'s perspective and refer to {{user}} as "you"; dialogue should still be quoted naturally.';
+      return '"You" is {{user}}.';
     default:
       throw new Error('Generation style requires a valid perspective tag.');
   }
