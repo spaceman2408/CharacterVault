@@ -158,7 +158,7 @@ export function buildNarrationFormatInstruction(perspective: PerspectiveTag | nu
     case 'first_person':
       return 'Narrative/action text should use first person from the character\'s perspective; dialogue should still be quoted naturally.';
     case 'second_person':
-      return 'Narrative/action text should use second person, addressing {{user}} as "you"; dialogue should still be quoted naturally.';
+      return 'Narrative/action text should use second person, addressing {{user}} as "you"; dialogue should still be quoted naturally. {{user}} is already in the scene when the text starts. Use "you" only for what {{user}} sees, hears, and physically senses (rain, cold, light); never for what they do, say, decide, or feel emotionally, or how they got there.';
     case 'third_person':
       return 'Narrative/action text should use third person; dialogue should still be quoted naturally.';
     case 'first_person_you':
