@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Settings2,
+  AlertCircle,
   Sparkles,
   Loader2,
   Save,
@@ -390,13 +391,26 @@ export const AICreationStudio: React.FC = () => {
             </div>
           </div>
 
-          <button
-            onClick={handleOpenSettings}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
-          >
-            <Settings2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Settings</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {!isConfigured && (
+              <button
+                onClick={handleOpenSettings}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-warning-soft-fg bg-warning-soft border border-warning/30 rounded-lg hover:opacity-90 transition-opacity"
+                title="Configure your AI provider and model"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span className="sm:hidden">Set up AI</span>
+                <span className="hidden sm:inline">AI not configured</span>
+              </button>
+            )}
+            <button
+              onClick={handleOpenSettings}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-fg-muted hover:bg-accent-soft hover:text-accent rounded-lg transition-colors"
+            >
+              <Settings2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+          </div>
         </div>
       </header>
 

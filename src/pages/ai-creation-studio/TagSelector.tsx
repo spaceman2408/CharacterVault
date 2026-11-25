@@ -11,8 +11,6 @@ import {
   ChevronRight,
   X,
   Shuffle,
-  AlertCircle,
-  Settings2,
   Loader2,
   Star,
   Plus,
@@ -245,30 +243,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           </button>
         )}
       </div>
-
-      {/* Not Configured State */}
-      {!isConfigured && (
-        <div className="flex flex-col items-center text-center gap-3 p-5 bg-warning-soft/60 border border-warning/30 rounded-xl">
-          <div className="w-10 h-10 rounded-full bg-warning-soft flex items-center justify-center">
-            <AlertCircle className="w-5 h-5 text-warning" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-warning-soft-fg">
-              AI Provider Not Configured
-            </p>
-            <p className="text-xs text-warning-soft-fg mt-0.5">
-              Configure your AI provider and choose a model to start generating characters.
-            </p>
-          </div>
-          <button
-            onClick={onOpenSettings}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-warning-soft-fg bg-warning-soft hover:opacity-90 rounded-lg transition-colors"
-          >
-            <Settings2 className="w-4 h-4" />
-            Configure AI
-          </button>
-        </div>
-      )}
 
       {/* Selected summary */}
       <div className="space-y-3 p-4 bg-bg/50 border border-border rounded-xl">
