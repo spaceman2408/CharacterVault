@@ -426,11 +426,6 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                   <span className="text-sm font-semibold text-fg">
                     {category.label}
                   </span>
-                  {category.key === 'generation' && (
-                    <span className="font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
-                      Required
-                    </span>
-                  )}
                   {category.nsfw && (
                     <span className="font-bold px-1.5 py-0.5 rounded-full bg-danger-soft text-danger-soft-fg">
                       NSFW
@@ -442,11 +437,18 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     </span>
                   )}
                 </div>
-                {isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-fg-subtle" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-fg-subtle" />
-                )}
+                <div className="flex items-center gap-2">
+                  {category.key === 'generation' && (
+                    <span className="font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
+                      Required
+                    </span>
+                  )}
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-fg-subtle" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-fg-subtle" />
+                  )}
+                </div>
               </button>
 
               {isExpanded && (
