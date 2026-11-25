@@ -28,7 +28,7 @@
         var theme = saved === 'light' || saved === 'dark' ? saved : (prefersDark ? 'dark' : 'light');
         document.documentElement.setAttribute('data-theme', theme);
         var meta = document.getElementById('theme-color-meta');
-        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b0c12' : '#faf9fc');
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b0c12' : '#fcfbfe');
       } catch (e) {}
     })();
   </script>
@@ -115,7 +115,7 @@
         <div class="hero-header">
           <a class="release-pill" href="https://vault.charactervault.app/docs/releases/v1.10.0" target="_blank" rel="noopener">
             <span class="release-badge">v1.10.0</span>
-            <span class="release-text">Find &amp; Replace across cards &amp; lorebooks</span>
+            <span class="release-text">Find &amp; Replace for cards &amp; lorebooks</span>
             <svg class="arrow" width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8h9M8.5 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
 
@@ -412,13 +412,23 @@
               <div class="browser-bar">
                 <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
                 <div class="browser-url" id="lore-url">vault.charactervault.app / recursion-map</div>
+                <button type="button" class="frame-zoom-btn" id="lore-zoom-btn" aria-label="Expand lorebook screenshot">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 2H2v4M10 2h4v4M14 10v4h-4M2 10v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span>Expand</span>
+                </button>
               </div>
-              <div role="tabpanel" id="lore-panel-map" aria-labelledby="lore-tab-map" data-url="vault.charactervault.app / recursion-map">
+              <figure class="lore-panel" role="tabpanel" id="lore-panel-map" aria-labelledby="lore-tab-map" data-url="vault.charactervault.app / recursion-map">
                 <img src="assets/screenshots/recursion-map.png" alt="Recursion map showing interconnected World Info lorebook entries and key editor inspector" width="1916" height="942" loading="lazy" class="zoomable">
-              </div>
-              <div role="tabpanel" id="lore-panel-vault" aria-labelledby="lore-tab-vault" data-url="vault.charactervault.app / lorebooks" hidden>
+                <figcaption class="stage-caption">
+                  <strong>Recursion map</strong> — Click any node to trace unlocked paths, edit primary keys inline, or toggle recursion flags in bulk.
+                </figcaption>
+              </figure>
+              <figure class="lore-panel" role="tabpanel" id="lore-panel-vault" aria-labelledby="lore-tab-vault" data-url="vault.charactervault.app / lorebooks" hidden>
                 <img src="assets/screenshots/lorebook-vault.png" alt="Lorebook Vault listing standalone World Info books with entry counts, token counts, and linked character avatars" width="1919" height="939" loading="lazy" class="zoomable">
-              </div>
+                <figcaption class="stage-caption">
+                  <strong>Lorebook Vault</strong> — Keep standalone books organized alongside characters, with linked character avatars and live entry/token counts.
+                </figcaption>
+              </figure>
             </div>
           </div>
         </div>
@@ -477,10 +487,10 @@
                   <button type="button" class="demo-cycle-btn" id="ghost-next" aria-label="Next rewrite example">Next example</button>
                 </div>
                 <div class="ghost-toolbar" aria-hidden="true">
-                  <span class="gt-pill gt-active" id="ghost-op">Vivid</span>
-                  <span class="gt-pill">Rephrase</span>
-                  <span class="gt-pill">Shorten</span>
-                  <span class="gt-pill">Custom</span>
+                  <span class="gt-pill" data-op="Enhance">Enhance</span>
+                  <span class="gt-pill" data-op="Rephrase">Rephrase</span>
+                  <span class="gt-pill gt-active" data-op="Vivid">Vivid</span>
+                  <span class="gt-pill" data-op="Custom">Custom</span>
                   <span class="gt-instr" id="ghost-instr">Make it more vivid</span>
                 </div>
                 <div class="ghost-editor">
@@ -656,7 +666,7 @@
             </div>
             <h3>Portable one-file ZIP backups</h3>
             <p>
-              Click <strong>Backup</strong> to export every character (embedded PNG or JSON), standalone lorebook, and setting into one ZIP. API keys stay excluded unless you explicitly opt in.
+              Click <strong>Backup</strong> to export every character (embedded PNG or JSON), standalone lorebook, and your settings into one ZIP. API keys stay excluded unless you explicitly opt in.
             </p>
           </article>
 
@@ -879,7 +889,7 @@ npm run dev
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
     </button>
     <figure class="lightbox-figure">
-      <img src="" alt="" id="lightbox-img">
+      <img alt="" id="lightbox-img">
       <figcaption id="lightbox-caption"></figcaption>
     </figure>
   </div>

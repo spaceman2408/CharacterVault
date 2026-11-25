@@ -16,7 +16,7 @@ const themeColorMeta = document.getElementById('theme-color-meta');
 const applyTheme = (theme, persist) => {
   document.documentElement.setAttribute('data-theme', theme);
   if (themeColorMeta) {
-    themeColorMeta.setAttribute('content', theme === 'dark' ? '#0b0c12' : '#faf9fc');
+    themeColorMeta.setAttribute('content', theme === 'dark' ? '#0b0c12' : '#fcfbfe');
   }
   if (themeToggle) {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -208,12 +208,18 @@ if (ghostDemo) {
   const beforeEl = document.getElementById('ghost-before');
   const targetEl = document.getElementById('ghost-target');
   const afterEl = document.getElementById('ghost-after');
-  const opEl = document.getElementById('ghost-op');
+  const opPills = Array.from(ghostDemo.querySelectorAll('.gt-pill[data-op]'));
   const instrEl = document.getElementById('ghost-instr');
   const statusEl = document.getElementById('ghost-status');
   const actionsEl = document.getElementById('ghost-actions');
   const acceptEl = document.getElementById('ghost-accept');
   const nextBtn = document.getElementById('ghost-next');
+
+  const setActiveOp = (opName) => {
+    for (const pill of opPills) {
+      pill.classList.toggle('gt-active', pill.dataset.op === opName);
+    }
+  };
 
   const examples = [
     {
@@ -262,7 +268,7 @@ if (ghostDemo) {
     });
 
   const renderStatic = (ex) => {
-    opEl.textContent = ex.op;
+    setActiveOp(ex.op);
     instrEl.textContent = ex.instr;
     beforeEl.textContent = ex.before;
     targetEl.className = 'ghost-target is-accepted';
@@ -275,7 +281,7 @@ if (ghostDemo) {
   const playExample = async (myToken) => {
     while (active && myToken === token) {
       const ex = examples[idx];
-      opEl.textContent = ex.op;
+      setActiveOp(ex.op);
       instrEl.textContent = ex.instr;
       beforeEl.textContent = ex.before;
       afterEl.textContent = ex.after;
@@ -533,6 +539,7 @@ const lightboxImg = document.getElementById('lightbox-img');
 const lightboxCaption = document.getElementById('lightbox-caption');
 const lightboxClose = document.getElementById('lightbox-close');
 const stageZoomBtn = document.getElementById('stage-zoom-btn');
+const loreZoomBtn = document.getElementById('lore-zoom-btn');
 
 if (lightbox && lightboxImg && lightboxClose) {
   let lastTrigger = null;
@@ -554,7 +561,7 @@ if (lightbox && lightboxImg && lightboxClose) {
     document.body.style.overflow = '';
     setTimeout(() => {
       lightbox.hidden = true;
-      lightboxImg.src = '';
+      lightboxImg.removeAttribute('src');
       if (lastTrigger && typeof lastTrigger.focus === 'function') {
         lastTrigger.focus();
       }
@@ -569,6 +576,13 @@ if (lightbox && lightboxImg && lightboxClose) {
     stageZoomBtn.addEventListener('click', () => {
       const visibleImg = document.querySelector('.stage-panel:not([hidden]) img');
       openLightbox(visibleImg, stageZoomBtn);
+    });
+  }
+
+  if (loreZoomBtn) {
+    loreZoomBtn.addEventListener('click', () => {
+      const visibleImg = document.querySelector('.lore-panel:not([hidden]) img');
+      openLightbox(visibleImg, loreZoomBtn);
     });
   }
 
