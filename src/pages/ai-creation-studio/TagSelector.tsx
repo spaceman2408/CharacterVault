@@ -27,6 +27,7 @@ import {
 } from './tags/tagData';
 import { isImeComposing } from '../../utils/imeComposing';
 import { TagChip } from './TagChip';
+import { GenerationStyleOptions, RequiredBadge } from './GenerationStyle';
 
 interface TagSelectorProps {
   selections: Record<string, string[]>;
@@ -124,7 +125,9 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   onRemoveCustomTag,
 }) => {
   const [search, setSearch] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    () => new Set(hasRequiredGenerationTags(selections) ? [] : ['generation'])
+  );
 
   const categoryByKey = useMemo(() => {
     const map = new Map<string, TagCategory>();
@@ -336,6 +339,40 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
       {/* Category sections */}
       <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
+        <div className="border border-border rounded-xl overflow-hidden">
+          <button
+            onClick={() => toggleCategory('generation')}
+            className="w-full flex items-center justify-between px-3 py-2.5 bg-surface/30 hover:bg-hover/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-fg">Generation Style</span>
+              {(selections.generation ?? []).length > 0 && (
+                <span className="font-bold px-1.5 py-0.5 rounded-full bg-accent-soft text-accent">
+                  {(selections.generation ?? []).length}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <RequiredBadge />
+              {expandedCategories.has('generation') ? (
+                <ChevronDown className="w-4 h-4 text-fg-subtle" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-fg-subtle" />
+              )}
+            </div>
+          </button>
+          {expandedCategories.has('generation') && (
+            <div className="px-3 py-3 bg-surface">
+              <GenerationStyleOptions
+                selections={selections}
+                onSelectionsChange={onSelectionsChange}
+                isGenerating={isGenerating}
+                favorites={favorites}
+                onToggleFavorite={onToggleFavorite}
+              />
+            </div>
+          )}
+        </div>
         {tagCategories.map((category) => {
           const isExpanded = expandedCategories.has(category.key);
           const selectedInCat = selections[category.key] ?? [];

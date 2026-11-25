@@ -12,17 +12,10 @@ import {
   Tag,
 } from 'lucide-react';
 import { TagSelector } from './TagSelector';
-import { TagChip } from './TagChip';
+import { GenerationStyleSelector } from './GenerationStyle';
 import type { InputMode } from './types';
 import type { TagCategory, TaggedRef } from './tags/tagData';
-import {
-  formatTag,
-  getGenerationTags,
-  hasRequiredGenerationTags,
-  PERSPECTIVE_TAGS,
-  TENSE_TAGS,
-  toggleGenerationTagSelection,
-} from './tags/tagData';
+import { hasRequiredGenerationTags } from './tags/tagData';
 
 interface ConceptInputProps {
   /* Write mode state */
@@ -52,87 +45,6 @@ interface ConceptInputProps {
 }
 
 const WORD_COUNT_MIN = 3;
-const STYLE_DEFAULT_TITLES = { add: 'Select by default', remove: 'Stop selecting by default' };
-
-interface GenerationStyleSelectorProps {
-  selections: Record<string, string[]>;
-  onSelectionsChange: (s: Record<string, string[]>) => void;
-  isGenerating: boolean;
-  favorites: TaggedRef[];
-  onToggleFavorite: (category: string, tag: string) => void;
-}
-
-const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
-  selections,
-  onSelectionsChange,
-  isGenerating,
-  favorites,
-  onToggleFavorite,
-}) => {
-  const generationSelections = selections.generation ?? [];
-  const generationTags = getGenerationTags(selections);
-
-  const toggleTag = (tag: string) => {
-    onSelectionsChange({
-      ...selections,
-      generation: toggleGenerationTagSelection(generationSelections, tag),
-    });
-  };
-
-  const renderTagButton = (tag: string) => {
-    const isSelected = generationSelections.includes(tag);
-    return (
-      <TagChip
-        key={tag}
-        label={formatTag(tag)}
-        selected={isSelected}
-        favorite={favorites.some((f) => f.category === 'generation' && f.tag === tag)}
-        onToggle={() => toggleTag(tag)}
-        onToggleFavorite={() => onToggleFavorite('generation', tag)}
-        disabled={isGenerating}
-        favoriteTitles={STYLE_DEFAULT_TITLES}
-      />
-    );
-  };
-
-  return (
-    <div className="space-y-3 p-4 bg-bg/50 border border-border rounded-xl">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
-          Generation Style
-        </span>
-        <span className="font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
-          Required
-        </span>
-      </div>
-
-      <div className="space-y-2">
-        <div>
-          <p className="font-medium text-fg-muted mb-1.5">
-            Perspective
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {PERSPECTIVE_TAGS.map(renderTagButton)}
-          </div>
-        </div>
-        <div>
-          <p className="font-medium text-fg-muted mb-1.5">
-            Tense
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {TENSE_TAGS.map(renderTagButton)}
-          </div>
-        </div>
-      </div>
-
-      {(!generationTags.perspective || !generationTags.tense) && (
-        <p className="text-xs text-warning">
-          Choose one perspective and one tense before generating.
-        </p>
-      )}
-    </div>
-  );
-};
 
 export const ConceptInput: React.FC<ConceptInputProps> = ({
   concept,
@@ -191,16 +103,16 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
         </button>
       </div>
 
-      <GenerationStyleSelector
-        selections={tagSelections}
-        onSelectionsChange={onTagSelectionsChange}
-        isGenerating={isGenerating}
-        favorites={favorites}
-        onToggleFavorite={onToggleFavorite}
-      />
-
       {inputMode === 'write' ? (
         <>
+          <GenerationStyleSelector
+            selections={tagSelections}
+            onSelectionsChange={onTagSelectionsChange}
+            isGenerating={isGenerating}
+            favorites={favorites}
+            onToggleFavorite={onToggleFavorite}
+          />
+
           {/* Header */}
           <div className="text-center sm:text-left">
             <h2 className="text-lg font-bold text-fg">
