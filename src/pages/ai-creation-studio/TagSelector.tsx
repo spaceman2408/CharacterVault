@@ -14,7 +14,6 @@ import {
   Loader2,
   Star,
   Plus,
-  Trash2,
   Clock,
 } from 'lucide-react';
 import {
@@ -423,29 +422,18 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     const isExcluded = !isSelected && excludedTags.has(tag);
                     const custom = isCustomTag(category.key, tag);
                     return (
-                      <span key={tag} className="inline-flex items-center gap-0.5">
-                        <TagChip
-                          label={formatTag(tag)}
-                          selected={isSelected}
-                          favorite={isFavorite(category.key, tag)}
-                          onToggle={() => toggleTag(category.key, tag)}
-                          onToggleFavorite={() => onToggleFavorite(category.key, tag)}
-                          disabled={isGenerating}
-                          excluded={isExcluded}
-                          custom={custom}
-                        />
-                        {custom && (
-                          <button
-                            onClick={() => onRemoveCustomTag(category.key, tag)}
-                            disabled={isGenerating}
-                            className="p-1 text-fg-subtle hover:text-danger transition-colors disabled:opacity-40"
-                            aria-label={`Delete custom tag ${formatTag(tag)}`}
-                            title="Delete this custom tag"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        )}
-                      </span>
+                      <TagChip
+                        key={tag}
+                        label={formatTag(tag)}
+                        selected={isSelected}
+                        favorite={isFavorite(category.key, tag)}
+                        onToggle={() => toggleTag(category.key, tag)}
+                        onToggleFavorite={() => onToggleFavorite(category.key, tag)}
+                        onDelete={custom ? () => onRemoveCustomTag(category.key, tag) : undefined}
+                        disabled={isGenerating}
+                        excluded={isExcluded}
+                        custom={custom}
+                      />
                     );
                   })}
                   {filteredTags.length === 0 && searchLower && (
