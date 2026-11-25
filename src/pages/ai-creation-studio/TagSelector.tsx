@@ -24,11 +24,11 @@ import {
   getExcludedTagsForUI,
   hasRequiredGenerationTags,
   isCustomTag,
-  toggleGenerationTagSelection,
   type TagCategory,
   type TaggedRef,
 } from './tags/tagData';
 import { isImeComposing } from '../../utils/imeComposing';
+import { TagChip } from './TagChip';
 
 interface TagSelectorProps {
   selections: Record<string, string[]>;
@@ -126,9 +126,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   onRemoveCustomTag,
 }) => {
   const [search, setSearch] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    () => new Set(['generation'])
-  );
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => new Set());
 
   const categoryByKey = useMemo(() => {
     const map = new Map<string, TagCategory>();
@@ -151,18 +149,10 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   const toggleTag = useCallback(
     (categoryKey: string, tag: string) => {
       const current = selections[categoryKey] ?? [];
-      const exists = current.includes(tag);
-
-      if (categoryKey === 'generation') {
-        const updated = toggleGenerationTagSelection(current, tag);
-        onSelectionsChange({ ...selections, [categoryKey]: updated });
-      } else {
-        // Existing logic for other categories
-        const updated = exists
-          ? current.filter((t) => t !== tag)
-          : [...current, tag];
-        onSelectionsChange({ ...selections, [categoryKey]: updated });
-      }
+      const updated = current.includes(tag)
+        ? current.filter((t) => t !== tag)
+        : [...current, tag];
+      onSelectionsChange({ ...selections, [categoryKey]: updated });
     },
     [selections, onSelectionsChange]
   );
@@ -175,14 +165,14 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
     [selections, onSelectionsChange]
   );
 
-  const hasSelection = useMemo(
-    () => Object.values(selections).some((arr) => arr.length > 0),
+  const conceptSelections = useMemo(
+    () => Object.entries(selections).filter(([key]) => key !== 'generation'),
     [selections]
   );
 
   const hasConceptSelection = useMemo(
-    () => Object.entries(selections).some(([key, arr]) => key !== 'generation' && arr.length > 0),
-    [selections]
+    () => conceptSelections.some(([, arr]) => arr.length > 0),
+    [conceptSelections]
   );
 
   const hasGenerationTags = useMemo(
@@ -191,17 +181,25 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   );
 
   const selectedCount = useMemo(
-    () => Object.values(selections).reduce((sum, arr) => sum + arr.length, 0),
-    [selections]
+    () => conceptSelections.reduce((sum, [, arr]) => sum + arr.length, 0),
+    [conceptSelections]
   );
+
+  const tagCategories = useMemo(
+    () => categories.filter((category) => category.key !== 'generation'),
+    [categories]
+  );
+
+  const isFavorite = (category: string, tag: string) =>
+    favorites.some((f) => f.category === category && f.tag === tag);
 
   const searchLower = search.trim().toLowerCase();
 
   // Get excluded tags based on current selections. Every rendered tag is
   // passed as a candidate so custom tags get gender-opposition gray-outs too.
   const excludedTags = useMemo(
-    () => getExcludedTagsForUI(selections, categories.flatMap((category) => category.tags)),
-    [selections, categories]
+    () => getExcludedTagsForUI(selections, tagCategories.flatMap((category) => category.tags)),
+    [selections, tagCategories]
   );
 
   const favoriteTags = useMemo(
@@ -276,45 +274,27 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
       <div className="space-y-3 p-4 bg-bg/50 border border-border rounded-xl">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
-            Selected {hasSelection && `(${selectedCount})`}
+            Selected {hasConceptSelection && `(${selectedCount})`}
           </span>
-          {hasSelection && (
+          {hasConceptSelection && (
             <button
-              onClick={() => onSelectionsChange({})}
+              onClick={() => onSelectionsChange({ generation: selections.generation ?? [] })}
               className="text-xs text-fg-muted hover:text-danger transition-colors"
             >
               Clear all
             </button>
           )}
         </div>
-        {hasSelection ? (
+        {hasConceptSelection ? (
           <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-            {Object.entries(selections).flatMap(([key, tags]) =>
+            {conceptSelections.flatMap(([key, tags]) =>
               tags.map((tag) => {
-                const isFav = favorites.some((f) => f.category === key && f.tag === tag);
                 return (
                   <span
                     key={`${key}-${tag}`}
                     className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border bg-accent-soft text-accent border-accent"
                   >
                     {formatTag(tag)}
-                    <button
-                      onClick={() => onToggleFavorite(key, tag)}
-                      disabled={isGenerating}
-                      className="ml-0.5 hover:opacity-75 transition-opacity disabled:opacity-40"
-                      aria-label={isFav ? `Unfavorite ${formatTag(tag)}` : `Favorite ${formatTag(tag)}`}
-                      title={
-                        key === 'generation'
-                          ? isFav
-                            ? 'Stop selecting by default'
-                            : 'Select by default'
-                          : isFav
-                          ? 'Remove from favorites'
-                          : 'Add to favorites'
-                      }
-                    >
-                      <Star className={`w-3 h-3 ${isFav ? 'fill-current' : ''}`} />
-                    </button>
                     <button
                       onClick={() => removeTag(key, tag)}
                       disabled={isGenerating}
@@ -343,36 +323,17 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
             Favorites
           </span>
           <div className="flex flex-wrap gap-1.5">
-            {favoriteTags.map(({ category, tag }) => {
-              const isSelected = (selections[category] ?? []).includes(tag);
-              return (
-                <span
-                  key={`fav-${category}-${tag}`}
-                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border transition-all ${
-                    isSelected
-                      ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
-                      : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
-                  }`}
-                >
-                  <button
-                    onClick={() => toggleTag(category, tag)}
-                    disabled={isGenerating}
-                    className="disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {formatTag(tag)}
-                  </button>
-                  <button
-                    onClick={() => onToggleFavorite(category, tag)}
-                    disabled={isGenerating}
-                    className="ml-0.5 hover:opacity-75 hover:text-danger transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label={`Remove ${formatTag(tag)} from favorites`}
-                    title="Remove from favorites"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              );
-            })}
+            {favoriteTags.map(({ category, tag }) => (
+              <TagChip
+                key={`fav-${category}-${tag}`}
+                label={formatTag(tag)}
+                selected={(selections[category] ?? []).includes(tag)}
+                favorite
+                onToggle={() => toggleTag(category, tag)}
+                onToggleFavorite={() => onToggleFavorite(category, tag)}
+                disabled={isGenerating}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -401,7 +362,7 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
       {/* Category sections */}
       <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-        {categories.map((category) => {
+        {tagCategories.map((category) => {
           const isExpanded = expandedCategories.has(category.key);
           const selectedInCat = selections[category.key] ?? [];
 
@@ -437,18 +398,11 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {category.key === 'generation' && (
-                    <span className="font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
-                      Required
-                    </span>
-                  )}
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-fg-subtle" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-fg-subtle" />
-                  )}
-                </div>
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-fg-subtle" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-fg-subtle" />
+                )}
               </button>
 
               {isExpanded && (
@@ -459,22 +413,16 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     const custom = isCustomTag(category.key, tag);
                     return (
                       <span key={tag} className="inline-flex items-center gap-0.5">
-                        <button
-                          onClick={() => toggleTag(category.key, tag)}
-                          disabled={isGenerating || isExcluded}
-                          title={isExcluded ? 'This tag conflicts with your current selection' : undefined}
-                          className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed ${
-                            isSelected
-                              ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
-                              : isExcluded
-                              ? 'opacity-30 border-border text-fg-subtle line-through'
-                              : custom
-                              ? 'border-dashed border-accent/60 text-fg-muted hover:border-accent hover:bg-accent-soft hover:text-accent'
-                              : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
-                          }`}
-                        >
-                          {formatTag(tag)}
-                        </button>
+                        <TagChip
+                          label={formatTag(tag)}
+                          selected={isSelected}
+                          favorite={isFavorite(category.key, tag)}
+                          onToggle={() => toggleTag(category.key, tag)}
+                          onToggleFavorite={() => onToggleFavorite(category.key, tag)}
+                          disabled={isGenerating}
+                          excluded={isExcluded}
+                          custom={custom}
+                        />
                         {custom && (
                           <button
                             onClick={() => onRemoveCustomTag(category.key, tag)}

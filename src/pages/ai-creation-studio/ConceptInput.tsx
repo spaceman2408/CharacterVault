@@ -11,10 +11,10 @@ import {
   Loader2,
   X,
   PenLine,
-  Star,
   Tag,
 } from 'lucide-react';
 import { TagSelector } from './TagSelector';
+import { TagChip } from './TagChip';
 import type { InputMode } from './types';
 import type { TagCategory, TaggedRef } from './tags/tagData';
 import {
@@ -54,6 +54,7 @@ interface ConceptInputProps {
 }
 
 const WORD_COUNT_MIN = 3;
+const STYLE_DEFAULT_TITLES = { add: 'Select by default', remove: 'Stop selecting by default' };
 
 interface GenerationStyleSelectorProps {
   selections: Record<string, string[]>;
@@ -82,37 +83,17 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
 
   const renderTagButton = (tag: string) => {
     const isSelected = generationSelections.includes(tag);
-    const isFav = favorites.some((f) => f.category === 'generation' && f.tag === tag);
     return (
-      <span
+      <TagChip
         key={tag}
-        className={`inline-flex items-center rounded-lg border transition-all ${isGenerating ? 'opacity-50' : ''} ${
-          isSelected
-            ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
-            : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => toggleTag(tag)}
-          disabled={isGenerating}
-          className={`py-1 text-xs font-medium disabled:cursor-not-allowed ${isSelected || isFav ? 'pl-2.5 pr-1' : 'px-2.5'}`}
-        >
-          {formatTag(tag)}
-        </button>
-        {(isSelected || isFav) && (
-          <button
-            type="button"
-            onClick={() => onToggleFavorite('generation', tag)}
-            disabled={isGenerating}
-            className="py-1 pr-2 hover:opacity-75 transition-opacity disabled:cursor-not-allowed"
-            aria-label={isFav ? `Stop selecting ${formatTag(tag)} by default` : `Select ${formatTag(tag)} by default`}
-            title={isFav ? 'Stop selecting by default' : 'Select by default'}
-          >
-            <Star className={`w-3 h-3 ${isFav ? 'fill-current' : ''}`} />
-          </button>
-        )}
-      </span>
+        label={formatTag(tag)}
+        selected={isSelected}
+        favorite={favorites.some((f) => f.category === 'generation' && f.tag === tag)}
+        onToggle={() => toggleTag(tag)}
+        onToggleFavorite={() => onToggleFavorite('generation', tag)}
+        disabled={isGenerating}
+        favoriteTitles={STYLE_DEFAULT_TITLES}
+      />
     );
   };
 
@@ -212,16 +193,16 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
         </button>
       </div>
 
+      <GenerationStyleSelector
+        selections={tagSelections}
+        onSelectionsChange={onTagSelectionsChange}
+        isGenerating={isGenerating}
+        favorites={favorites}
+        onToggleFavorite={onToggleFavorite}
+      />
+
       {inputMode === 'write' ? (
         <>
-          <GenerationStyleSelector
-            selections={tagSelections}
-            onSelectionsChange={onTagSelectionsChange}
-            isGenerating={isGenerating}
-            favorites={favorites}
-            onToggleFavorite={onToggleFavorite}
-          />
-
           {/* Header */}
           <div className="text-center sm:text-left">
             <h2 className="text-lg font-bold text-fg">
