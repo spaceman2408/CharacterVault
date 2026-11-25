@@ -11,6 +11,7 @@ import {
   Loader2,
   X,
   PenLine,
+  Star,
   Tag,
 } from 'lucide-react';
 import { TagSelector } from './TagSelector';
@@ -58,12 +59,16 @@ interface GenerationStyleSelectorProps {
   selections: Record<string, string[]>;
   onSelectionsChange: (s: Record<string, string[]>) => void;
   isGenerating: boolean;
+  favorites: TaggedRef[];
+  onToggleFavorite: (category: string, tag: string) => void;
 }
 
 const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
   selections,
   onSelectionsChange,
   isGenerating,
+  favorites,
+  onToggleFavorite,
 }) => {
   const generationSelections = selections.generation ?? [];
   const generationTags = getGenerationTags(selections);
@@ -77,20 +82,34 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
 
   const renderTagButton = (tag: string) => {
     const isSelected = generationSelections.includes(tag);
+    const isFav = favorites.some((f) => f.category === 'generation' && f.tag === tag);
     return (
-      <button
-        key={tag}
-        type="button"
-        onClick={() => toggleTag(tag)}
-        disabled={isGenerating}
-        className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-          isSelected
-            ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
-            : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
-        }`}
-      >
-        {formatTag(tag)}
-      </button>
+      <span key={tag} className="inline-flex items-center gap-0.5">
+        <button
+          type="button"
+          onClick={() => toggleTag(tag)}
+          disabled={isGenerating}
+          className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+            isSelected
+              ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
+              : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
+          }`}
+        >
+          {formatTag(tag)}
+        </button>
+        {(isSelected || isFav) && (
+          <button
+            type="button"
+            onClick={() => onToggleFavorite('generation', tag)}
+            disabled={isGenerating}
+            className="p-1 text-accent hover:opacity-75 transition-opacity disabled:opacity-40"
+            aria-label={isFav ? `Stop selecting ${formatTag(tag)} by default` : `Select ${formatTag(tag)} by default`}
+            title={isFav ? 'Stop selecting by default' : 'Select by default'}
+          >
+            <Star className={`w-3 h-3 ${isFav ? 'fill-current' : ''}`} />
+          </button>
+        )}
+      </span>
     );
   };
 
@@ -196,6 +215,8 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
             selections={tagSelections}
             onSelectionsChange={onTagSelectionsChange}
             isGenerating={isGenerating}
+            favorites={favorites}
+            onToggleFavorite={onToggleFavorite}
           />
 
           {/* Header */}

@@ -786,14 +786,34 @@ export function isFavoriteTag(category: string, tag: string): boolean {
   return getFavoriteTags().some((f) => f.category === category && f.tag === tag);
 }
 
+function isSameStyleGroup(a: string, b: string): boolean {
+  return (isPerspectiveTag(a) && isPerspectiveTag(b)) || (isTenseTag(a) && isTenseTag(b));
+}
+
 export function toggleFavoriteTag(category: string, tag: string): TaggedRef[] {
   const current = getFavoriteTags();
   const exists = current.some((f) => f.category === category && f.tag === tag);
+  // A favorite perspective or tense is preselected, so only one per group can be a favorite.
   const next = exists
     ? current.filter((f) => !(f.category === category && f.tag === tag))
-    : [...current, { category, tag }];
+    : [
+        ...current.filter(
+          (f) => !(category === 'generation' && f.category === 'generation' && isSameStyleGroup(f.tag, tag))
+        ),
+        { category, tag },
+      ];
   writeTagRefList(FAVORITE_TAGS_KEY, next);
   return next;
+}
+
+export function favoriteStyleSelections(favorites: TaggedRef[]): Record<string, string[]> {
+  const styleTags = favorites.filter((f) => f.category === 'generation').map((f) => f.tag);
+  const perspective = styleTags.find(isPerspectiveTag);
+  const tense = styleTags.find(isTenseTag);
+  const generation: string[] = [];
+  if (perspective) generation.push(perspective);
+  if (tense) generation.push(tense);
+  return generation.length > 0 ? { generation } : {};
 }
 
 export function getRecentTags(): TaggedRef[] {

@@ -205,7 +205,10 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   );
 
   const favoriteTags = useMemo(
-    () => favorites.filter((f) => categoryByKey.get(f.category)?.tags.includes(f.tag)),
+    () =>
+      favorites.filter(
+        (f) => f.category !== 'generation' && categoryByKey.get(f.category)?.tags.includes(f.tag)
+      ),
     [favorites, categoryByKey]
   );
 
@@ -295,17 +298,23 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border bg-accent-soft text-accent border-accent"
                   >
                     {formatTag(tag)}
-                    {key !== 'generation' && (
-                      <button
-                        onClick={() => onToggleFavorite(key, tag)}
-                        disabled={isGenerating}
-                        className="ml-0.5 hover:opacity-75 transition-opacity disabled:opacity-40"
-                        aria-label={isFav ? `Unfavorite ${formatTag(tag)}` : `Favorite ${formatTag(tag)}`}
-                        title={isFav ? 'Remove from favorites' : 'Add to favorites'}
-                      >
-                        <Star className={`w-3 h-3 ${isFav ? 'fill-current' : ''}`} />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onToggleFavorite(key, tag)}
+                      disabled={isGenerating}
+                      className="ml-0.5 hover:opacity-75 transition-opacity disabled:opacity-40"
+                      aria-label={isFav ? `Unfavorite ${formatTag(tag)}` : `Favorite ${formatTag(tag)}`}
+                      title={
+                        key === 'generation'
+                          ? isFav
+                            ? 'Stop selecting by default'
+                            : 'Select by default'
+                          : isFav
+                          ? 'Remove from favorites'
+                          : 'Add to favorites'
+                      }
+                    >
+                      <Star className={`w-3 h-3 ${isFav ? 'fill-current' : ''}`} />
+                    </button>
                     <button
                       onClick={() => removeTag(key, tag)}
                       disabled={isGenerating}

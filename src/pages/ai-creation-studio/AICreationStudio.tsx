@@ -29,7 +29,14 @@ import { GenerationProgress } from './GenerationProgress';
 import { GeneratedCardPreview } from './GeneratedCardPreview';
 import { TagVortexOverlay } from './TagVortexOverlay';
 import { randomizeTags } from './tags/tagData';
-import { buildConceptFromTags, formatTag, getGenerationTags, hasRequiredGenerationTags } from './tags/tagData';
+import {
+  buildConceptFromTags,
+  favoriteStyleSelections,
+  formatTag,
+  getFavoriteTags,
+  getGenerationTags,
+  hasRequiredGenerationTags,
+} from './tags/tagData';
 import type { GenerationField } from './types';
 import type { InputMode } from './types';
 import { GENERATION_FIELDS } from './types';
@@ -63,7 +70,9 @@ export const AICreationStudio: React.FC = () => {
   const [concept, setConcept] = useState('');
   const derivedConceptRef = useRef('');
   const [inputMode, setInputMode] = useState<InputMode>('write');
-  const [tagSelections, setTagSelections] = useState<Record<string, string[]>>({});
+  const [tagSelections, setTagSelections] = useState<Record<string, string[]>>(() =>
+    favoriteStyleSelections(getFavoriteTags())
+  );
   const {
     allCategories,
     visibleCategories,
@@ -290,7 +299,7 @@ export const AICreationStudio: React.FC = () => {
   const handleCreateAnother = useCallback(() => {
     // Clear all form state
     setConcept('');
-    setTagSelections({});
+    setTagSelections(favoriteStyleSelections(favorites));
     setInputMode('write');
 
     // Clear success state
@@ -304,7 +313,7 @@ export const AICreationStudio: React.FC = () => {
 
     // Fully reset generation state
     reset();
-  }, [reset]);
+  }, [reset, favorites]);
 
   const goBackNow = useCallback(() => {
     // Abort any ongoing generation first
