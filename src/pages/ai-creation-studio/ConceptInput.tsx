@@ -84,16 +84,19 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
     const isSelected = generationSelections.includes(tag);
     const isFav = favorites.some((f) => f.category === 'generation' && f.tag === tag);
     return (
-      <span key={tag} className="inline-flex items-center gap-0.5">
+      <span
+        key={tag}
+        className={`inline-flex items-center rounded-lg border transition-all ${isGenerating ? 'opacity-50' : ''} ${
+          isSelected
+            ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
+            : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
+        }`}
+      >
         <button
           type="button"
           onClick={() => toggleTag(tag)}
           disabled={isGenerating}
-          className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-            isSelected
-              ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
-              : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
-          }`}
+          className={`py-1 text-xs font-medium disabled:cursor-not-allowed ${isSelected || isFav ? 'pl-2.5 pr-1' : 'px-2.5'}`}
         >
           {formatTag(tag)}
         </button>
@@ -102,7 +105,7 @@ const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
             type="button"
             onClick={() => onToggleFavorite('generation', tag)}
             disabled={isGenerating}
-            className="p-1 text-accent hover:opacity-75 transition-opacity disabled:opacity-40"
+            className="py-1 pr-2 hover:opacity-75 transition-opacity disabled:cursor-not-allowed"
             aria-label={isFav ? `Stop selecting ${formatTag(tag)} by default` : `Select ${formatTag(tag)} by default`}
             title={isFav ? 'Stop selecting by default' : 'Select by default'}
           >
