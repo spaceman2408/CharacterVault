@@ -225,26 +225,26 @@ if (ghostDemo) {
     {
       op: 'Vivid',
       instr: 'Make it more vivid',
-      before: 'Aria Voss charts dead star systems for whoever pays. ',
-      original: 'She is tall and has a scar.',
-      rewrite: 'A thin scar splits her left brow, pale against skin that has outlived three suns.',
-      after: ' She keeps her coffee black and her promises rare.',
+      before: 'Nadia checks the airlock seal before every shift. ',
+      original: 'She looks tired and has grease on her hands.',
+      rewrite: 'Dark circles sit under her eyes, and hydraulic grease stains the knuckles of her work gloves.',
+      after: ' She keeps a spare wrench clipped to her belt.',
     },
     {
       op: 'Custom',
-      instr: "Show, don't tell",
-      before: 'The archive hums after midnight. ',
-      original: 'Kael is grumpy but kind.',
-      rewrite: "Kael's scowl arrives before he does, yet he still leaves the porch lantern lit for strays.",
-      after: ' Nobody asks what he did before the treaty.',
+      instr: 'Make it more specific',
+      before: 'Tomas runs the corner repair shop off Fourth Street. ',
+      original: 'He is quiet and careful with machines.',
+      rewrite: 'He barely speaks while working, sorting every stripped screw into labeled tin trays.',
+      after: ' Most regulars leave their radios on the counter and come back Tuesday.',
     },
     {
       op: 'Enhance',
-      instr: 'Add sensory detail',
-      before: 'Mira tends the last greenhouse on Europa. ',
-      original: 'She really cares about her plants.',
-      rewrite: 'She names every seedling by hand and hums to the tomatoes whenever the heaters stutter.',
-      after: ' Frost creeps across the dome glass at dusk.',
+      instr: 'Add a concrete detail',
+      before: 'Hannah keeps a small herb garden on the apartment roof. ',
+      original: 'She checks on the plants every morning.',
+      rewrite: 'She climbs up before sunrise with a dented watering can, checking the rosemary pots for frost.',
+      after: ' The stairwell door sticks when the air turns damp.',
     },
   ];
 
@@ -373,9 +373,9 @@ if (agentDemo) {
 
   const steps = [
     { kind: 'tool', cls: 'step-list', tag: 'audit', text: 'lorebook · 14 entries scanned' },
-    { kind: 'tool', cls: 'step-read', tag: 'read', text: 'entry #7 “old keep”, entry #3 “compact”' },
-    { kind: 'tool', cls: 'step-write', tag: 'write', text: 'rekey #7 → “The Old Keep”' },
-    { kind: 'tool', cls: 'step-write', tag: 'write', text: 'rekey #3 → “The Meridian Compact”' },
+    { kind: 'tool', cls: 'step-read', tag: 'read', text: 'entry #7 “yard 4”, entry #3 “thruster”' },
+    { kind: 'tool', cls: 'step-write', tag: 'write', text: 'rekey #7 → “Orbital Yard 4”' },
+    { kind: 'tool', cls: 'step-write', tag: 'write', text: 'rekey #3 → “Thruster Log”' },
     { kind: 'tool', cls: 'step-delete', tag: 'delete', text: 'remove #11 (empty stub)' },
     { kind: 'summary', text: 'Rekeyed two entries to proper nouns and removed the empty stub. No broken recursion links found.' },
     { kind: 'done', text: '3 changes applied · Agentic auto save point created' },
@@ -490,7 +490,7 @@ if (ctxDemo) {
     if (selected.length === 0) {
       const empty = document.createElement('span');
       empty.className = 'ctx-empty';
-      empty.textContent = 'No sections pinned — Orion starts with a blank slate.';
+      empty.textContent = 'No sections pinned. Orion starts with a blank slate.';
       chipsEl.appendChild(empty);
       return;
     }
