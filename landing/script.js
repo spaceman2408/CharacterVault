@@ -610,6 +610,7 @@ const lightboxCaption = document.getElementById('lightbox-caption');
 const lightboxClose = document.getElementById('lightbox-close');
 const stageZoomBtn = document.getElementById('stage-zoom-btn');
 const loreZoomBtn = document.getElementById('lore-zoom-btn');
+const showcaseZoomBtn = document.getElementById('showcase-zoom-btn');
 
 if (lightbox && lightboxImg && lightboxClose) {
   let lastTrigger = null;
@@ -656,6 +657,13 @@ if (lightbox && lightboxImg && lightboxClose) {
     });
   }
 
+  if (showcaseZoomBtn) {
+    showcaseZoomBtn.addEventListener('click', () => {
+      const img = document.querySelector('#editor-showcase .showcase-stage img');
+      openLightbox(img, showcaseZoomBtn);
+    });
+  }
+
   lightboxClose.addEventListener('click', closeLightbox);
 
   lightbox.addEventListener('click', (event) => {
@@ -664,5 +672,51 @@ if (lightbox && lightboxImg && lightboxClose) {
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !lightbox.hidden) closeLightbox();
+  });
+}
+
+/* ---------- Card Editor Hotspot Tour ---------- */
+
+const editorShowcase = document.getElementById('editor-showcase');
+if (editorShowcase) {
+  const spots = Array.from(editorShowcase.querySelectorAll('.hs'));
+  const caption = editorShowcase.querySelector('.showcase-caption');
+  const captionDetail = caption ? caption.querySelector('.cap-detail') : null;
+
+  const setOpenSpot = (spot) => {
+    for (const s of spots) {
+      const active = s === spot;
+      s.classList.toggle('open', active);
+      s.setAttribute('aria-expanded', String(active));
+    }
+    if (caption && captionDetail) {
+      captionDetail.innerHTML = spot ? spot.querySelector('.hs-tip').innerHTML : '';
+      caption.classList.toggle('has-detail', Boolean(spot));
+    }
+  };
+
+  for (const spot of spots) {
+    spot.addEventListener('click', (event) => {
+      event.stopPropagation();
+      setOpenSpot(spot.classList.contains('open') ? null : spot);
+    });
+    spot.addEventListener('pointerenter', (event) => {
+      if (event.pointerType === 'mouse' && !spot.classList.contains('open')) {
+        setOpenSpot(null);
+      }
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.hs')) setOpenSpot(null);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      setOpenSpot(null);
+      if (document.activeElement && document.activeElement.classList.contains('hs')) {
+        document.activeElement.blur();
+      }
+    }
   });
 }

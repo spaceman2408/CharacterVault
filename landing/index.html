@@ -255,6 +255,51 @@
           </p>
         </div>
 
+        <figure class="browser-frame showcase-frame showcase reveal reveal-scale" id="editor-showcase">
+          <div class="browser-bar">
+            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="browser-url">vault.charactervault.app / editor</div>
+            <button type="button" class="frame-zoom-btn" id="showcase-zoom-btn" aria-label="Expand editor screenshot">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 2H2v4M10 2h4v4M14 10v4h-4M2 10v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Expand</span>
+            </button>
+          </div>
+          <div class="showcase-stage">
+            <img src="assets/screenshots/showcase-image.png" alt="The card editor with a character's first message open, the AI Context panel on the left, and the Orion chat on the right" class="zoomable" loading="lazy" width="1920" height="1080">
+            <button type="button" class="hs" data-side="down-right" style="--x: 23.7%; --y: 4.17%; --i: 0" aria-label="Autosave and token count" aria-expanded="false">
+              <span class="hs-tip"><strong>Autosave and token count</strong> Changes save as you type. Active tokens go out with every message; total adds greetings and lorebook entries.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-left" style="--x: 82.14%; --y: 2.96%; --i: 1" aria-label="Snapshots" aria-expanded="false">
+              <span class="hs-tip"><strong>Snapshots</strong> Go back to an earlier version of the card, or restore a single section from the diff.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-left" style="--x: 94.06%; --y: 2.96%; --i: 2" aria-label="Export" aria-expanded="false">
+              <span class="hs-tip"><strong>Export</strong> Download the card as PNG or JSON, ready to load in SillyTavern.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-right" style="--x: 48.96%; --y: 8.15%; --i: 3" aria-label="A tab for every field" aria-expanded="false">
+              <span class="hs-tip"><strong>A tab for every field</strong> Name, greetings, examples, system prompt, lorebook, creator notes, and the rest of the V2 and V3 spec.</span>
+            </button>
+            <button type="button" class="hs" data-side="left" style="--x: 86.2%; --y: 13.7%; --i: 4" aria-label="Orion, Chat or Agent" aria-expanded="false">
+              <span class="hs-tip"><strong>Orion, Chat or Agent</strong> Talk ideas through in Chat, or switch to Agent and describe the edit you want made to the card.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-right" style="--x: 30.1%; --y: 24.35%; --i: 5" aria-label="Rewrite a selection" aria-expanded="false">
+              <span class="hs-tip"><strong>Rewrite a selection</strong> Highlight text and pick a rewrite, or type your own instruction with Custom. Nuke Card is a custom button with a saved prompt.</span>
+            </button>
+            <button type="button" class="hs" data-side="down-left" style="--x: 72.5%; --y: 24.35%; --i: 6" aria-label="Editor tools" aria-expanded="false">
+              <span class="hs-tip"><strong>Editor tools</strong> Search and replace, a preview of the exact AI request payload, HTML entity cleanup, and font size.</span>
+            </button>
+            <button type="button" class="hs" data-side="right" style="--x: 1.61%; --y: 52.5%; --i: 7" aria-label="AI Context" aria-expanded="false">
+              <span class="hs-tip"><strong>AI Context</strong> Tick the sections the AI can read and add your own notes. The usage bar shows how much of the model's context they fill.</span>
+            </button>
+            <button type="button" class="hs" data-side="left" style="--x: 79.69%; --y: 59.81%; --i: 8" aria-label="Color-coded writing" aria-expanded="false">
+              <span class="hs-tip"><strong>Color-coded writing</strong> "Dialogue", *actions*, and {{char}} macros each get their own color, and spellcheck underlines typos.</span>
+            </button>
+          </div>
+          <figcaption class="showcase-caption" aria-live="polite">
+            <span class="cap-hint">Hover or click any dot to see what that part of the editor does.</span>
+            <span class="cap-detail"></span>
+          </figcaption>
+        </figure>
+
         <div class="bento-grid">
           <article class="bento-card bento-wide bento-anatomy reveal reveal-scale">
             <div class="bento-copy">
