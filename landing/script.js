@@ -52,16 +52,64 @@ if (window.matchMedia) {
   });
 }
 
-/* ---------- Header Scroll & Mobile Menu ---------- */
+/* ---------- Header Scroll, Progress & Active Nav ---------- */
 
 const header = document.getElementById('site-header');
 const menuToggle = document.getElementById('menu-toggle');
 const mobileMenu = document.getElementById('mobile-menu');
+const scrollProgressBar = document.getElementById('scroll-progress');
+const heroStage = document.getElementById('hero-stage');
 
-if (header) {
-  const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 10);
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
+const navLinks = Array.from(document.querySelectorAll('.nav-desktop a[href^="#"]'));
+const trackedSections = navLinks
+  .map((link) => ({ link, section: document.querySelector(link.getAttribute('href')) }))
+  .filter((item) => item.section);
+
+let scrollRaf = 0;
+const updateScrollEffects = () => {
+  scrollRaf = 0;
+  const y = window.scrollY;
+  if (header) {
+    header.classList.toggle('scrolled', y > 10);
+  }
+  if (y < 140) {
+    for (const { link } of trackedSections) link.classList.remove('is-active');
+  }
+  if (scrollProgressBar) {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+    scrollProgressBar.style.transform = `scaleX(${ratio.toFixed(4)})`;
+  }
+  if (heroStage && !reducedMotion && window.innerWidth > 1024) {
+    const shift = Math.min(16, y * 0.04);
+    heroStage.style.setProperty('--hero-shift', `${(-shift).toFixed(1)}px`);
+  }
+};
+
+window.addEventListener(
+  'scroll',
+  () => {
+    if (!scrollRaf) scrollRaf = requestAnimationFrame(updateScrollEffects);
+  },
+  { passive: true }
+);
+window.addEventListener('resize', updateScrollEffects, { passive: true });
+updateScrollEffects();
+
+if ('IntersectionObserver' in window && trackedSections.length > 0) {
+  const activeObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          for (const { link, section } of trackedSections) {
+            link.classList.toggle('is-active', section === entry.target);
+          }
+        }
+      }
+    },
+    { rootMargin: '-28% 0px -56% 0px', threshold: 0 }
+  );
+  trackedSections.forEach(({ section }) => activeObserver.observe(section));
 }
 
 const setMenuOpen = (open) => {
@@ -94,22 +142,44 @@ if (menuToggle && mobileMenu) {
   });
 }
 
-/* ---------- Scroll Reveal ---------- */
+/* ---------- Choreographed Scroll Reveals ---------- */
 
-const revealEls = document.querySelectorAll('.reveal');
+const revealEls = Array.from(document.querySelectorAll('.reveal'));
+
+for (const el of revealEls) {
+  const step = Number(el.dataset.stagger);
+  if (step > 0) {
+    const children = el.querySelectorAll('.reveal-child');
+    children.forEach((child, idx) => {
+      child.style.setProperty('--reveal-delay', `${idx * step}ms`);
+    });
+  }
+}
+
+const revealAboveFold = () => {
+  const cutoff = window.innerHeight * 0.92;
+  for (const el of revealEls) {
+    if (!el.classList.contains('is-visible') && el.getBoundingClientRect().top < cutoff) {
+      el.classList.add('is-visible');
+    }
+  }
+};
+
 if (!reducedMotion && 'IntersectionObserver' in window && revealEls.length > 0) {
-  const observer = new IntersectionObserver(
+  const revealObserver = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
           entry.target.classList.add('is-visible');
-          observer.unobserve(entry.target);
+          revealObserver.unobserve(entry.target);
         }
       }
     },
-    { threshold: 0.08, rootMargin: '0px 0px -24px 0px' }
+    { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
   );
-  revealEls.forEach((el) => observer.observe(el));
+  revealEls.forEach((el) => revealObserver.observe(el));
+  revealAboveFold();
+  window.addEventListener('hashchange', () => setTimeout(revealAboveFold, 60));
 } else {
   revealEls.forEach((el) => el.classList.add('is-visible'));
 }
