@@ -12,11 +12,15 @@ export interface ModelProvider {
   name?: string;
   /** Endpoint variant shown next to the name: quantization, region, or tier */
   variant?: string;
+  /** OpenRouter endpoint quantization (`fp8`, `bf16`, …); absent when unknown */
+  quantization?: string;
   pricing: {
     inputPer1kTokens: number;
     outputPer1kTokens: number;
   };
   available: boolean;
+  /** Short badge shown instead of "Unavailable" when a setting blocks this host */
+  unavailableReason?: string;
 }
 
 /** Response from the provider-discovery endpoint */

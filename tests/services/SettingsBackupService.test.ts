@@ -155,6 +155,7 @@ describe('parseSettingsBackup', () => {
       sort: 'latency',
       denyDataCollection: true,
       zdrOnly: 'yes',
+      minQuantization: 'fp8',
       freeModelsOnly: true,
       exactoForAgent: true,
     };
@@ -169,6 +170,7 @@ describe('parseSettingsBackup', () => {
       sort: 'latency',
       denyDataCollection: true,
       zdrOnly: false,
+      minQuantization: 'fp8',
       freeModelsOnly: true,
       exactoForAgent: true,
     });
@@ -179,6 +181,13 @@ describe('parseSettingsBackup', () => {
       settings: { ai: { openRouter: { ...openRouter, sort: 'random' } } },
     });
     expect(unknownSort.settings.ai.openRouter?.sort).toBeUndefined();
+
+    const unknownQuant = parseSettingsBackup({
+      kind: 'charactervault-settings',
+      version: 1,
+      settings: { ai: { openRouter: { ...openRouter, minQuantization: 'int2' } } },
+    });
+    expect(unknownQuant.settings.ai.openRouter?.minQuantization).toBeUndefined();
   });
 
   it('keeps saved base URL presets and drops malformed or duplicate ones', () => {

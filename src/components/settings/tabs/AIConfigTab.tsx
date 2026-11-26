@@ -7,6 +7,7 @@ import React from 'react';
 import {
   AlertCircle,
   Brain,
+  Cpu,
   CreditCard,
   Gauge,
   Bookmark,
@@ -37,10 +38,27 @@ import { ProviderSelect } from '../components/ProviderSelect';
 import { SettingsCard } from '../components/SettingsCard';
 import { PASSWORD_MANAGER_IGNORE_PROPS, SecretInput } from '../components/SecretInput';
 import { SettingsToggle } from '../components/SettingsToggle';
-import { OPENROUTER_SORTS, type ReasoningEffort } from '../../../db/characterTypes';
-import { getOpenRouterPinnedHost, isOpenRouterBaseUrl } from '../../../services/providers';
+import {
+  OPENROUTER_QUANT_FLOORS,
+  OPENROUTER_SORTS,
+  type OpenRouterQuantFloor,
+  type ReasoningEffort,
+} from '../../../db/characterTypes';
+import {
+  getOpenRouterPinnedHost,
+  isOpenRouterBaseUrl,
+  meetsOpenRouterQuantFloor,
+} from '../../../services/providers';
 import { getHiddenChainOfThoughtNote } from '../../../services/reasoning/hiddenChainOfThought';
 import type { SettingsTabProps } from '../types';
+
+const QUANT_FLOOR_LABELS: Record<OpenRouterQuantFloor, string> = {
+  fp4: 'fp4',
+  fp6: 'fp6',
+  fp8: 'fp8',
+  fp16: 'bf16 / fp16',
+  fp32: 'fp32',
+};
 
 const smallButtonClass =
   'inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50';
@@ -81,6 +99,20 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
   const hiddenCotNote = getHiddenChainOfThoughtNote(localAIConfig.modelId);
   const isOpenRouter = isOpenRouterBaseUrl(localAIConfig.baseUrl);
   const openRouterPin = isOpenRouter ? getOpenRouterPinnedHost(localAIConfig) : undefined;
+  const quantFloor = isOpenRouter ? localAIConfig.openRouter?.minQuantization : undefined;
+  const hostOptions = quantFloor
+    ? modelProviders.map((host) =>
+        meetsOpenRouterQuantFloor(host.quantization, quantFloor)
+          ? host
+          : {
+              ...host,
+              available: false,
+              unavailableReason: host.quantization
+                ? `Below ${QUANT_FLOOR_LABELS[quantFloor]}`
+                : 'Unknown quant',
+            }
+      )
+    : modelProviders;
   const savedPresets = localAIConfig.customBaseUrlPresets ?? [];
   const currentUrl = normalizeBaseUrl(localAIConfig.baseUrl);
   const currentModel = localAIConfig.modelId;
@@ -457,7 +489,7 @@ ${preset.modelId ?? ''}`}
           {localAIConfig.modelId && supportsProviderSelection && (
             <div className="relative">
               <ProviderSelect
-                providers={modelProviders}
+                providers={hostOptions}
                 selectedProvider={
                   isOpenRouter ? (openRouterPin ?? '') : (localAIConfig.selectedProvider ?? '')
                 }
@@ -559,6 +591,41 @@ ${preset.modelId ?? ''}`}
               <p className="mt-2 text-xs text-fg-muted">
                 Which hosts OpenRouter tries first. A model with a pinned host uses the pin instead.
                 Any choice but Balanced also turns off Auto Exacto for Agent tool calls.
+              </p>
+            </div>
+            <div>
+              <label
+                htmlFor="openrouter-min-quant"
+                className="flex items-center gap-2 text-sm font-medium text-fg-muted mb-2"
+              >
+                <span className="p-1.5 rounded-md bg-muted text-fg-muted">
+                  <Cpu className="w-4 h-4" />
+                </span>
+                Minimum quantization
+              </label>
+              <select
+                id="openrouter-min-quant"
+                value={localAIConfig.openRouter?.minQuantization ?? ''}
+                onChange={(e) => {
+                  const minQuantization = OPENROUTER_QUANT_FLOORS.find(
+                    (value) => value === e.target.value
+                  );
+                  setDraft((prev) => ({
+                    ...prev,
+                    ai: { ...prev.ai, openRouter: { ...prev.ai.openRouter, minQuantization } },
+                  }));
+                }}
+                className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
+              >
+                <option value="">Any (default)</option>
+                {OPENROUTER_QUANT_FLOORS.map((floor) => (
+                  <option key={floor} value={floor}>
+                    {QUANT_FLOOR_LABELS[floor]} or higher
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-fg-muted">
+                Skips hosts below this precision or with unknown quantization.
               </p>
             </div>
             <SettingsToggle

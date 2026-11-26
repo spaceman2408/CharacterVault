@@ -24,6 +24,7 @@ import {
   DEFAULT_SECTION_ORDER,
   DEFAULT_SETTINGS,
   DEFAULT_SPELLCHECK_SETTINGS,
+  OPENROUTER_QUANT_FLOORS,
   OPENROUTER_SORTS,
   clampContextLength,
   normalizeDefaultChatPanel,
@@ -193,6 +194,7 @@ function normalizeBackupOpenRouter(value: unknown): OpenRouterOptions {
     sort: OPENROUTER_SORTS.find((sort) => sort === raw.sort),
     denyDataCollection: asBoolean(raw.denyDataCollection, false),
     zdrOnly: asBoolean(raw.zdrOnly, false),
+    minQuantization: OPENROUTER_QUANT_FLOORS.find((floor) => floor === raw.minQuantization),
     freeModelsOnly: asBoolean(raw.freeModelsOnly, false),
     exactoForAgent: asBoolean(raw.exactoForAgent, false),
   };

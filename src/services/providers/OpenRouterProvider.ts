@@ -6,6 +6,7 @@ import type {
   AIConfig,
   AIModelInfo,
   OpenRouterOptions,
+  OpenRouterQuantFloor,
   OpenRouterSort,
 } from '../../db/characterTypes';
 import type {
@@ -76,6 +77,36 @@ export interface OpenRouterProviderPrefs {
   sort?: OpenRouterSort;
   data_collection?: 'allow' | 'deny';
   zdr?: boolean;
+  quantizations?: string[];
+}
+
+const QUANT_BITS: Record<string, number> = {
+  int4: 4,
+  fp4: 4,
+  mxfp4: 4,
+  nvfp4: 4,
+  fp6: 6,
+  int8: 8,
+  fp8: 8,
+  mxfp8: 8,
+  fp16: 16,
+  bf16: 16,
+  fp32: 32,
+};
+
+/** OpenRouter `quantizations` values at or above the floor; `unknown` is never included. */
+export function openRouterQuantizationsAtOrAbove(floor: OpenRouterQuantFloor): string[] {
+  const min = QUANT_BITS[floor];
+  return Object.keys(QUANT_BITS).filter((quant) => QUANT_BITS[quant] >= min);
+}
+
+export function meetsOpenRouterQuantFloor(
+  quantization: string | undefined,
+  floor: OpenRouterQuantFloor | undefined
+): boolean {
+  if (!floor) return true;
+  const bits = quantization ? QUANT_BITS[quantization.toLowerCase()] : undefined;
+  return bits !== undefined && bits >= QUANT_BITS[floor];
 }
 
 export function isOpenRouterBaseUrl(baseUrl: string): boolean {
@@ -101,8 +132,8 @@ export function getOpenRouterPinnedHost(config: AIConfig): string | undefined {
 }
 
 /**
- * OpenRouter's data-policy errors point at its own privacy settings. When CharacterVault's
- * privacy filters are on, they may be the cause, so name them too.
+ * OpenRouter's routing errors point at its own settings. When CharacterVault's privacy or
+ * quantization filters are on, they may be the cause, so name them too.
  */
 export function openRouterDataPolicyHint(config: AIConfig, errorBody: unknown): string | undefined {
   const error = (
@@ -112,12 +143,16 @@ export function openRouterDataPolicyHint(config: AIConfig, errorBody: unknown): 
   )?.error;
   const message = asString(error?.message) ?? '';
   const failedStep = error?.metadata?.failed_routing_step;
-  if (failedStep !== 'Filter by Data Policy' && !/data policy/i.test(message)) return undefined;
+  const step = asString(failedStep) ?? '';
+  const dataPolicy = step === 'Filter by Data Policy' || /data policy/i.test(message);
+  const quantization = /quantization/i.test(step) || /quantization/i.test(message);
+  if (!dataPolicy && !quantization) return undefined;
 
   const options = config.openRouter ?? {};
   const enabled = [
-    options.zdrOnly ? 'Zero data retention only' : null,
-    options.denyDataCollection ? 'No training on prompts' : null,
+    dataPolicy && options.zdrOnly ? 'Zero data retention only' : null,
+    dataPolicy && options.denyDataCollection ? 'No training on prompts' : null,
+    quantization && options.minQuantization ? 'Minimum quantization' : null,
   ].filter((name): name is string => name !== null);
   if (enabled.length === 0) return undefined;
 
@@ -151,6 +186,9 @@ export function buildOpenRouterProviderPrefs(
   }
   if (options.denyDataCollection) prefs.data_collection = 'deny';
   if (options.zdrOnly) prefs.zdr = true;
+  if (options.minQuantization) {
+    prefs.quantizations = openRouterQuantizationsAtOrAbove(options.minQuantization);
+  }
 
   return Object.keys(prefs).length > 0 ? prefs : undefined;
 }
@@ -290,10 +328,12 @@ export function mapOpenRouterEndpoints(data: unknown, modelId: string): ModelPro
     if (!tag || seen.has(tag)) continue;
     seen.add(tag);
 
+    const quantization = asString(endpoint.quantization);
     providers.push({
       provider: tag,
       name: asString(endpoint.provider_name) ?? tag,
-      variant: endpointVariant(tag, asString(endpoint.quantization)),
+      variant: endpointVariant(tag, quantization),
+      quantization: quantization && quantization !== 'unknown' ? quantization : undefined,
       pricing: {
         inputPer1kTokens: (asNumber(endpoint.pricing?.prompt) ?? 0) * 1000,
         outputPer1kTokens: (asNumber(endpoint.pricing?.completion) ?? 0) * 1000,

@@ -765,6 +765,9 @@ export interface AIConfig {
 export const OPENROUTER_SORTS = ['price', 'throughput', 'latency'] as const;
 export type OpenRouterSort = (typeof OPENROUTER_SORTS)[number];
 
+export const OPENROUTER_QUANT_FLOORS = ['fp4', 'fp6', 'fp8', 'fp16', 'fp32'] as const;
+export type OpenRouterQuantFloor = (typeof OPENROUTER_QUANT_FLOORS)[number];
+
 /** OpenRouter routing preferences, sent as the request body's `provider` object. */
 export interface OpenRouterOptions {
   /**
@@ -780,6 +783,8 @@ export interface OpenRouterOptions {
   denyDataCollection?: boolean;
   /** Only route to Zero Data Retention endpoints. */
   zdrOnly?: boolean;
+  /** Skip hosts below this precision; `fp16` also allows bf16. Unset allows any. */
+  minQuantization?: OpenRouterQuantFloor;
   /** Show only $0 models in OpenRouter model lists (requests are unchanged). */
   freeModelsOnly?: boolean;
   /**
