@@ -24,7 +24,7 @@ export function shouldShowStagingNotes(seenVersion: string | null, version: stri
 }
 
 /** Bump this every time you post new notes so testers see the popup again. */
-export const STAGING_VERSION = 'v1.10.1 staging 4';
+export const STAGING_VERSION = 'v1.10.1 staging 5';
 
 /** One short line per thing you want testers to try. */
 export const STAGING_TEST_NOTES: string[] = [
@@ -37,4 +37,5 @@ export const STAGING_TEST_NOTES: string[] = [
   'AI Creation Studio → Tags: every tag chip works the same way. Click the name to select it, click the star inside the chip to favorite it. Selected only removes (×), Favorites unfavorite with the star, and Generation Style is a collapsible section above Identity.',
   'AI Creation Studio → Tags → add your own tag: delete it with the trash icon inside its chip. It takes two clicks (the icon turns into a red check first), and deleting also removes it from Favorites.',
   'AI Creation Studio: with no AI provider set up, an "AI not configured" button shows in the header instead of the big warning box ("Set up AI" on phones).',
+  'Settings → AI Config on OpenRouter: Minimum quantization under Provider skips hosts below the chosen precision (4-bit, 8-bit, 16-bit, …), and Hide unknown also skips hosts that do not report one. Open the Provider list to see skipped hosts greyed out, then send a message and check that the reply info shows an allowed host.',
 ];
