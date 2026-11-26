@@ -785,6 +785,8 @@ export interface OpenRouterOptions {
   zdrOnly?: boolean;
   /** Skip hosts below this bit width (`fp8` also allows int8/mxfp8, …); unknown hosts still pass. */
   minQuantization?: OpenRouterQuantFloor;
+  /** Skip hosts that don't report their quantization. */
+  hideUnknownQuant?: boolean;
   /** Show only $0 models in OpenRouter model lists (requests are unchanged). */
   freeModelsOnly?: boolean;
   /**

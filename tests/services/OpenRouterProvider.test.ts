@@ -16,14 +16,14 @@ import {
   mapOpenRouterCatalog,
   mapOpenRouterEndpoints,
   mapOpenRouterZdrModelIds,
-  meetsOpenRouterQuantFloor,
+  meetsOpenRouterQuantFilter,
   normalizeOpenRouterKey,
+  openRouterAllowedQuantizations,
   openRouterAppHeaders,
   openRouterDataPolicyHint,
   openRouterEndpointsUrl,
   openRouterExactoModelId,
   openRouterKeyUrl,
-  openRouterQuantizationsAtOrAbove,
   openRouterZdrUrl,
   resolveOpenRouterNextUrl,
   resolveProvider,
@@ -374,33 +374,41 @@ describe('OpenRouter provider routing', () => {
     ).toBeUndefined();
   });
 
-  it('lists every quantization at or above the floor, plus unknown', () => {
-    expect(openRouterQuantizationsAtOrAbove('fp4')).toEqual([
+  it('lists every quantization at or above the floor, plus unknown unless hidden', () => {
+    const allowed = openRouterAllowedQuantizations;
+    expect(allowed({})).toBeUndefined();
+    expect(allowed({ minQuantization: 'fp4' })).toEqual([
       'int4', 'fp4', 'mxfp4', 'nvfp4', 'fp6', 'int8', 'fp8', 'mxfp8', 'fp16', 'bf16', 'fp32',
       'unknown',
     ]);
-    expect(openRouterQuantizationsAtOrAbove('fp6')).toEqual([
+    expect(allowed({ minQuantization: 'fp6' })).toEqual([
       'fp6', 'int8', 'fp8', 'mxfp8', 'fp16', 'bf16', 'fp32', 'unknown',
     ]);
-    expect(openRouterQuantizationsAtOrAbove('fp8')).toEqual([
+    expect(allowed({ minQuantization: 'fp8' })).toEqual([
       'int8', 'fp8', 'mxfp8', 'fp16', 'bf16', 'fp32', 'unknown',
     ]);
-    expect(openRouterQuantizationsAtOrAbove('fp16')).toEqual(['fp16', 'bf16', 'fp32', 'unknown']);
-    expect(openRouterQuantizationsAtOrAbove('fp32')).toEqual(['fp32', 'unknown']);
+    expect(allowed({ minQuantization: 'fp16' })).toEqual(['fp16', 'bf16', 'fp32', 'unknown']);
+    expect(allowed({ minQuantization: 'fp32' })).toEqual(['fp32', 'unknown']);
+    expect(allowed({ minQuantization: 'fp32', hideUnknownQuant: true })).toEqual(['fp32']);
+    expect(allowed({ hideUnknownQuant: true })).toEqual([
+      'int4', 'fp4', 'mxfp4', 'nvfp4', 'fp6', 'int8', 'fp8', 'mxfp8', 'fp16', 'bf16', 'fp32',
+    ]);
   });
 
-  it('checks a host quantization against the floor', () => {
-    expect(meetsOpenRouterQuantFloor(undefined, undefined)).toBe(true);
-    expect(meetsOpenRouterQuantFloor('fp4', undefined)).toBe(true);
-    expect(meetsOpenRouterQuantFloor('fp8', 'fp8')).toBe(true);
-    expect(meetsOpenRouterQuantFloor('BF16', 'fp8')).toBe(true);
-    expect(meetsOpenRouterQuantFloor('int4', 'fp4')).toBe(true);
-    expect(meetsOpenRouterQuantFloor('nvfp4', 'fp4')).toBe(true);
-    expect(meetsOpenRouterQuantFloor('int4', 'fp8')).toBe(false);
-    expect(meetsOpenRouterQuantFloor('fp4', 'fp8')).toBe(false);
-    expect(meetsOpenRouterQuantFloor('fp8', 'fp16')).toBe(false);
-    expect(meetsOpenRouterQuantFloor(undefined, 'fp32')).toBe(true);
-    expect(meetsOpenRouterQuantFloor('unknown', 'fp32')).toBe(true);
+  it('checks a host quantization against the quant filters', () => {
+    const fp8 = { minQuantization: 'fp8' as const };
+    expect(meetsOpenRouterQuantFilter(undefined, {})).toBe(true);
+    expect(meetsOpenRouterQuantFilter('fp4', {})).toBe(true);
+    expect(meetsOpenRouterQuantFilter('fp8', fp8)).toBe(true);
+    expect(meetsOpenRouterQuantFilter('BF16', fp8)).toBe(true);
+    expect(meetsOpenRouterQuantFilter('int4', { minQuantization: 'fp4' })).toBe(true);
+    expect(meetsOpenRouterQuantFilter('nvfp4', { minQuantization: 'fp4' })).toBe(true);
+    expect(meetsOpenRouterQuantFilter('int4', fp8)).toBe(false);
+    expect(meetsOpenRouterQuantFilter('fp8', { minQuantization: 'fp16' })).toBe(false);
+    expect(meetsOpenRouterQuantFilter(undefined, { minQuantization: 'fp32' })).toBe(true);
+    expect(meetsOpenRouterQuantFilter('unknown', { minQuantization: 'fp32' })).toBe(true);
+    expect(meetsOpenRouterQuantFilter(undefined, { hideUnknownQuant: true })).toBe(false);
+    expect(meetsOpenRouterQuantFilter('fp4', { hideUnknownQuant: true })).toBe(true);
   });
 
   it('sends the quantization floor with or without a pinned host', () => {
@@ -433,6 +441,14 @@ describe('OpenRouter provider routing', () => {
         quantError
       )
     ).toBe('Minimum quantization is on in Settings → AI Config → OpenRouter Options.');
+    expect(
+      openRouterDataPolicyHint(
+        openRouterConfig({ openRouter: { minQuantization: 'fp8', hideUnknownQuant: true } }),
+        quantError
+      )
+    ).toBe(
+      'Minimum quantization and Hide unknown are on in Settings → AI Config → OpenRouter Options.'
+    );
     expect(openRouterDataPolicyHint(openRouterConfig(), quantError)).toBeUndefined();
     expect(
       openRouterDataPolicyHint(

@@ -156,6 +156,7 @@ describe('parseSettingsBackup', () => {
       denyDataCollection: true,
       zdrOnly: 'yes',
       minQuantization: 'fp8',
+      hideUnknownQuant: true,
       freeModelsOnly: true,
       exactoForAgent: true,
     };
@@ -171,6 +172,7 @@ describe('parseSettingsBackup', () => {
       denyDataCollection: true,
       zdrOnly: false,
       minQuantization: 'fp8',
+      hideUnknownQuant: true,
       freeModelsOnly: true,
       exactoForAgent: true,
     });

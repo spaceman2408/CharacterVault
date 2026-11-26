@@ -195,6 +195,7 @@ function normalizeBackupOpenRouter(value: unknown): OpenRouterOptions {
     denyDataCollection: asBoolean(raw.denyDataCollection, false),
     zdrOnly: asBoolean(raw.zdrOnly, false),
     minQuantization: OPENROUTER_QUANT_FLOORS.find((floor) => floor === raw.minQuantization),
+    hideUnknownQuant: asBoolean(raw.hideUnknownQuant, false),
     freeModelsOnly: asBoolean(raw.freeModelsOnly, false),
     exactoForAgent: asBoolean(raw.exactoForAgent, false),
   };

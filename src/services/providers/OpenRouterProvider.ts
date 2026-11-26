@@ -6,7 +6,6 @@ import type {
   AIConfig,
   AIModelInfo,
   OpenRouterOptions,
-  OpenRouterQuantFloor,
   OpenRouterSort,
 } from '../../db/characterTypes';
 import type {
@@ -94,20 +93,24 @@ const QUANT_BITS: Record<string, number> = {
   fp32: 32,
 };
 
-/** OpenRouter `quantizations` values at or above the floor, plus `unknown` so unlabeled hosts stay usable. */
-export function openRouterQuantizationsAtOrAbove(floor: OpenRouterQuantFloor): string[] {
-  const min = QUANT_BITS[floor];
-  return [...Object.keys(QUANT_BITS).filter((quant) => QUANT_BITS[quant] >= min), 'unknown'];
+/** OpenRouter `quantizations` allowlist, or undefined when no quant filter is on. */
+export function openRouterAllowedQuantizations(
+  options: OpenRouterOptions = {}
+): string[] | undefined {
+  if (!options.minQuantization && !options.hideUnknownQuant) return undefined;
+  const min = options.minQuantization ? QUANT_BITS[options.minQuantization] : 0;
+  const known = Object.keys(QUANT_BITS).filter((quant) => QUANT_BITS[quant] >= min);
+  return options.hideUnknownQuant ? known : [...known, 'unknown'];
 }
 
-/** Hosts with no known quantization pass, matching the `unknown` allowance in the request. */
-export function meetsOpenRouterQuantFloor(
+/** Whether a host with this quantization passes the quant filters; mirrors the request allowlist. */
+export function meetsOpenRouterQuantFilter(
   quantization: string | undefined,
-  floor: OpenRouterQuantFloor | undefined
+  options: OpenRouterOptions = {}
 ): boolean {
-  if (!floor) return true;
   const bits = quantization ? QUANT_BITS[quantization.toLowerCase()] : undefined;
-  return bits === undefined || bits >= QUANT_BITS[floor];
+  if (bits === undefined) return !options.hideUnknownQuant;
+  return !options.minQuantization || bits >= QUANT_BITS[options.minQuantization];
 }
 
 export function isOpenRouterBaseUrl(baseUrl: string): boolean {
@@ -154,6 +157,7 @@ export function openRouterDataPolicyHint(config: AIConfig, errorBody: unknown): 
     dataPolicy && options.zdrOnly ? 'Zero data retention only' : null,
     dataPolicy && options.denyDataCollection ? 'No training on prompts' : null,
     quantization && options.minQuantization ? 'Minimum quantization' : null,
+    quantization && options.hideUnknownQuant ? 'Hide unknown' : null,
   ].filter((name): name is string => name !== null);
   if (enabled.length === 0) return undefined;
 
@@ -187,9 +191,8 @@ export function buildOpenRouterProviderPrefs(
   }
   if (options.denyDataCollection) prefs.data_collection = 'deny';
   if (options.zdrOnly) prefs.zdr = true;
-  if (options.minQuantization) {
-    prefs.quantizations = openRouterQuantizationsAtOrAbove(options.minQuantization);
-  }
+  const quantizations = openRouterAllowedQuantizations(options);
+  if (quantizations) prefs.quantizations = quantizations;
 
   return Object.keys(prefs).length > 0 ? prefs : undefined;
 }
