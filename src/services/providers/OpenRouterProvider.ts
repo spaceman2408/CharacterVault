@@ -94,19 +94,20 @@ const QUANT_BITS: Record<string, number> = {
   fp32: 32,
 };
 
-/** OpenRouter `quantizations` values at or above the floor; `unknown` is never included. */
+/** OpenRouter `quantizations` values at or above the floor, plus `unknown` so unlabeled hosts stay usable. */
 export function openRouterQuantizationsAtOrAbove(floor: OpenRouterQuantFloor): string[] {
   const min = QUANT_BITS[floor];
-  return Object.keys(QUANT_BITS).filter((quant) => QUANT_BITS[quant] >= min);
+  return [...Object.keys(QUANT_BITS).filter((quant) => QUANT_BITS[quant] >= min), 'unknown'];
 }
 
+/** Hosts with no known quantization pass, matching the `unknown` allowance in the request. */
 export function meetsOpenRouterQuantFloor(
   quantization: string | undefined,
   floor: OpenRouterQuantFloor | undefined
 ): boolean {
   if (!floor) return true;
   const bits = quantization ? QUANT_BITS[quantization.toLowerCase()] : undefined;
-  return bits !== undefined && bits >= QUANT_BITS[floor];
+  return bits === undefined || bits >= QUANT_BITS[floor];
 }
 
 export function isOpenRouterBaseUrl(baseUrl: string): boolean {

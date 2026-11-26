@@ -52,12 +52,12 @@ import {
 import { getHiddenChainOfThoughtNote } from '../../../services/reasoning/hiddenChainOfThought';
 import type { SettingsTabProps } from '../types';
 
-const QUANT_FLOOR_LABELS: Record<OpenRouterQuantFloor, string> = {
-  fp4: 'fp4',
-  fp6: 'fp6',
-  fp8: 'fp8',
-  fp16: 'bf16 / fp16',
-  fp32: 'fp32',
+const QUANT_FLOOR_LABELS: Record<OpenRouterQuantFloor, { bits: string; quants: string }> = {
+  fp4: { bits: '4-bit', quants: 'fp4, int4, nvfp4, mxfp4' },
+  fp6: { bits: '6-bit', quants: 'fp6' },
+  fp8: { bits: '8-bit', quants: 'fp8, int8, mxfp8' },
+  fp16: { bits: '16-bit', quants: 'bf16, fp16' },
+  fp32: { bits: '32-bit', quants: 'fp32' },
 };
 
 const smallButtonClass =
@@ -107,9 +107,7 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
           : {
               ...host,
               available: false,
-              unavailableReason: host.quantization
-                ? `Below ${QUANT_FLOOR_LABELS[quantFloor]}`
-                : 'Unknown quant',
+              unavailableReason: `Below ${QUANT_FLOOR_LABELS[quantFloor].bits}`,
             }
       )
     : modelProviders;
@@ -506,6 +504,44 @@ ${preset.modelId ?? ''}`}
             </div>
           )}
 
+          {isOpenRouter && (
+            <div>
+              <label
+                htmlFor="openrouter-min-quant"
+                className="flex items-center gap-2 text-sm font-semibold text-fg mb-2"
+              >
+                <span className="p-1.5 rounded-md bg-muted text-fg-muted">
+                  <Cpu className="w-4 h-4" />
+                </span>
+                Minimum quantization
+              </label>
+              <select
+                id="openrouter-min-quant"
+                value={localAIConfig.openRouter?.minQuantization ?? ''}
+                onChange={(e) => {
+                  const minQuantization = OPENROUTER_QUANT_FLOORS.find(
+                    (value) => value === e.target.value
+                  );
+                  setDraft((prev) => ({
+                    ...prev,
+                    ai: { ...prev.ai, openRouter: { ...prev.ai.openRouter, minQuantization } },
+                  }));
+                }}
+                className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
+              >
+                <option value="">Any (default)</option>
+                {OPENROUTER_QUANT_FLOORS.map((floor) => (
+                  <option key={floor} value={floor}>
+                    {QUANT_FLOOR_LABELS[floor].bits} or higher ({QUANT_FLOOR_LABELS[floor].quants})
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1.5 text-xs text-fg-muted">
+                Skips hosts below this precision. Hosts with unknown quantization still count.
+              </p>
+            </div>
+          )}
+
           {openRouterPin && (
             <SettingsToggle
               stacked
@@ -591,41 +627,6 @@ ${preset.modelId ?? ''}`}
               <p className="mt-2 text-xs text-fg-muted">
                 Which hosts OpenRouter tries first. A model with a pinned host uses the pin instead.
                 Any choice but Balanced also turns off Auto Exacto for Agent tool calls.
-              </p>
-            </div>
-            <div>
-              <label
-                htmlFor="openrouter-min-quant"
-                className="flex items-center gap-2 text-sm font-medium text-fg-muted mb-2"
-              >
-                <span className="p-1.5 rounded-md bg-muted text-fg-muted">
-                  <Cpu className="w-4 h-4" />
-                </span>
-                Minimum quantization
-              </label>
-              <select
-                id="openrouter-min-quant"
-                value={localAIConfig.openRouter?.minQuantization ?? ''}
-                onChange={(e) => {
-                  const minQuantization = OPENROUTER_QUANT_FLOORS.find(
-                    (value) => value === e.target.value
-                  );
-                  setDraft((prev) => ({
-                    ...prev,
-                    ai: { ...prev.ai, openRouter: { ...prev.ai.openRouter, minQuantization } },
-                  }));
-                }}
-                className="w-full px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
-              >
-                <option value="">Any (default)</option>
-                {OPENROUTER_QUANT_FLOORS.map((floor) => (
-                  <option key={floor} value={floor}>
-                    {QUANT_FLOOR_LABELS[floor]} or higher
-                  </option>
-                ))}
-              </select>
-              <p className="mt-2 text-xs text-fg-muted">
-                Skips hosts below this precision or with unknown quantization.
               </p>
             </div>
             <SettingsToggle

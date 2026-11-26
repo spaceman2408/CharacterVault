@@ -374,18 +374,19 @@ describe('OpenRouter provider routing', () => {
     ).toBeUndefined();
   });
 
-  it('lists every quantization at or above the floor, never unknown', () => {
+  it('lists every quantization at or above the floor, plus unknown', () => {
     expect(openRouterQuantizationsAtOrAbove('fp4')).toEqual([
       'int4', 'fp4', 'mxfp4', 'nvfp4', 'fp6', 'int8', 'fp8', 'mxfp8', 'fp16', 'bf16', 'fp32',
+      'unknown',
     ]);
     expect(openRouterQuantizationsAtOrAbove('fp6')).toEqual([
-      'fp6', 'int8', 'fp8', 'mxfp8', 'fp16', 'bf16', 'fp32',
+      'fp6', 'int8', 'fp8', 'mxfp8', 'fp16', 'bf16', 'fp32', 'unknown',
     ]);
     expect(openRouterQuantizationsAtOrAbove('fp8')).toEqual([
-      'int8', 'fp8', 'mxfp8', 'fp16', 'bf16', 'fp32',
+      'int8', 'fp8', 'mxfp8', 'fp16', 'bf16', 'fp32', 'unknown',
     ]);
-    expect(openRouterQuantizationsAtOrAbove('fp16')).toEqual(['fp16', 'bf16', 'fp32']);
-    expect(openRouterQuantizationsAtOrAbove('fp32')).toEqual(['fp32']);
+    expect(openRouterQuantizationsAtOrAbove('fp16')).toEqual(['fp16', 'bf16', 'fp32', 'unknown']);
+    expect(openRouterQuantizationsAtOrAbove('fp32')).toEqual(['fp32', 'unknown']);
   });
 
   it('checks a host quantization against the floor', () => {
@@ -393,16 +394,19 @@ describe('OpenRouter provider routing', () => {
     expect(meetsOpenRouterQuantFloor('fp4', undefined)).toBe(true);
     expect(meetsOpenRouterQuantFloor('fp8', 'fp8')).toBe(true);
     expect(meetsOpenRouterQuantFloor('BF16', 'fp8')).toBe(true);
+    expect(meetsOpenRouterQuantFloor('int4', 'fp4')).toBe(true);
+    expect(meetsOpenRouterQuantFloor('nvfp4', 'fp4')).toBe(true);
+    expect(meetsOpenRouterQuantFloor('int4', 'fp8')).toBe(false);
     expect(meetsOpenRouterQuantFloor('fp4', 'fp8')).toBe(false);
     expect(meetsOpenRouterQuantFloor('fp8', 'fp16')).toBe(false);
-    expect(meetsOpenRouterQuantFloor(undefined, 'fp4')).toBe(false);
-    expect(meetsOpenRouterQuantFloor('unknown', 'fp4')).toBe(false);
+    expect(meetsOpenRouterQuantFloor(undefined, 'fp32')).toBe(true);
+    expect(meetsOpenRouterQuantFloor('unknown', 'fp32')).toBe(true);
   });
 
   it('sends the quantization floor with or without a pinned host', () => {
     expect(
       buildOpenRouterProviderPrefs(openRouterConfig({ openRouter: { minQuantization: 'fp16' } }))
-    ).toEqual({ quantizations: ['fp16', 'bf16', 'fp32'] });
+    ).toEqual({ quantizations: ['fp16', 'bf16', 'fp32', 'unknown'] });
     expect(
       buildOpenRouterProviderPrefs(
         openRouterConfig({
@@ -413,7 +417,7 @@ describe('OpenRouter provider routing', () => {
         }),
         { exacto: true }
       )
-    ).toEqual({ order: ['groq'], quantizations: ['fp32'] });
+    ).toEqual({ order: ['groq'], quantizations: ['fp32', 'unknown'] });
   });
 
   it('hints at the quantization floor on quantization routing errors', () => {

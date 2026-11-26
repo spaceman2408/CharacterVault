@@ -783,7 +783,7 @@ export interface OpenRouterOptions {
   denyDataCollection?: boolean;
   /** Only route to Zero Data Retention endpoints. */
   zdrOnly?: boolean;
-  /** Skip hosts below this precision; `fp16` also allows bf16. Unset allows any. */
+  /** Skip hosts below this bit width (`fp8` also allows int8/mxfp8, …); unknown hosts still pass. */
   minQuantization?: OpenRouterQuantFloor;
   /** Show only $0 models in OpenRouter model lists (requests are unchanged). */
   freeModelsOnly?: boolean;
