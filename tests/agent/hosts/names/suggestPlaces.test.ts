@@ -4,7 +4,7 @@ import { createLorebookHost } from '../../../../src/agent/hosts/lorebook/createH
 import places from '../../../../src/agent/hosts/names/geonamesPlaces.json';
 import { isFantasyCompound, OVERUSED_PLACES } from '../../../../src/agent/hosts/names/overusedPlaces';
 import { MAX_NAME_COUNT, NAME_ORIGINS } from '../../../../src/agent/hosts/names/suggestNames';
-import { suggestPlaces } from '../../../../src/agent/hosts/names/suggestPlaces';
+import { SUGGEST_PLACES_TOOL_SPEC, suggestPlaces } from '../../../../src/agent/hosts/names/suggestPlaces';
 import { isFantasyTavernWord, OVERUSED_TAVERNS } from '../../../../src/agent/hosts/names/taverns';
 import type { CharacterBook, CharacterSpec } from '../../../../src/db/characterTypes';
 import { createEmptyCharacterBook } from '../../../../src/db/characterTypes';
@@ -110,6 +110,17 @@ describe('suggestPlaces invented', () => {
     }
   });
 
+  it('never invents a name shorter than five letters', async () => {
+    for (let run = 0; run < 10; run += 1) {
+      const result = await suggestPlaces(action({ origin: 'japanese', kind: 'region', invented: 'true', count: '30' }), []);
+      for (const name of namesIn(result.message)) expect(name.replace(/[^\p{L}]/gu, '').length).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it('tells the model to blend few origins', () => {
+    expect(JSON.stringify(SUGGEST_PLACES_TOOL_SPEC.parameters)).toContain('at most two origins');
+  });
+
   it('invents regions from the settlement chain', async () => {
     const result = await suggestPlaces(action({ origin: 'japanese', kind: 'region', invented: 'true' }), []);
     expect(result.ok).toBe(true);
@@ -134,11 +145,18 @@ describe('suggestPlaces natural features', () => {
       expect(result.ok).toBe(true);
       expect(result.message.split('\n')[0]).toMatch(new RegExp(`^suggest_places: \\d+ invented ${kind}s?, british, german$`));
       for (const name of namesIn(result.message)) {
-        expect(name).toMatch(/^\p{Lu}[\p{L}\p{M}]{2,8}$/u);
+        expect(name).toMatch(/^\p{Lu}[\p{L}\p{M}]{4,8}$/u);
         expect(name).not.toMatch(/(ton|ham|by|ford|field|dorf|burg|heim|hausen|stadt|ingen)$/);
         expect(realPlaces.has(name.toLowerCase())).toBe(false);
         expect(isFantasyCompound(name)).toBe(false);
       }
+    }
+  });
+
+  it('keeps Japanese town endings off natural features', async () => {
+    for (let run = 0; run < 10; run += 1) {
+      const result = await suggestPlaces(action({ origin: 'japanese', kind: 'lake', count: '30' }), []);
+      for (const name of namesIn(result.message)) expect(name).not.toMatch(/(cho|machi|mura)$/);
     }
   });
 
@@ -215,7 +233,19 @@ describe('suggestPlaces taverns', () => {
 
 describe('isFantasyCompound', () => {
   it('catches the AI place-name style', () => {
-    for (const name of ['Oakhaven', 'Shadowvale', 'Stormhold', 'Silverbrook', 'Ravenwood', 'Mistvale', 'New Ashspire']) {
+    for (const name of [
+      'Oakhaven',
+      'Shadowvale',
+      'Stormhold',
+      'Silverbrook',
+      'Ravenwood',
+      'Mistvale',
+      'New Ashspire',
+      'Frostholm',
+      'Veilharbor',
+      'Tidewell',
+      'Scalespire',
+    ]) {
       expect(isFantasyCompound(name)).toBe(true);
     }
   });

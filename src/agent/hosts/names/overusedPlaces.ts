@@ -34,9 +34,9 @@ export const OVERUSED_PLACES: ReadonlySet<string> = new Set([
 ]);
 
 const FANTASY_PREFIX =
-  'ash|black|bright|crystal|dawn|dusk|elder|ember|frost|ghost|gold|golden|grey|gray|iron|mist|moon|night|oak|raven|shadow|silver|star|storm|sun|thorn|whisper|willow|wolf';
+  'ash|black|bright|crystal|dawn|dusk|elder|ember|frost|ghost|gold|golden|grey|gray|iron|mist|moon|night|oak|raven|scale|shadow|silver|star|storm|sun|thorn|tide|veil|whisper|willow|wolf';
 const FANTASY_SUFFIX =
-  'brook|crest|dale|fall|falls|fell|fen|gate|glen|grove|guard|haven|heart|hold|hollow|keep|mere|mire|moor|peak|reach|ridge|rock|shire|spire|vale|watch|wood';
+  'brook|crest|dale|fall|falls|fell|fen|gate|glen|grove|guard|harbor|harbour|haven|heart|hold|hollow|holm|keep|mere|mire|moor|peak|reach|ridge|rock|shire|spine|spire|vale|watch|well|wood';
 // Endings no real place list needs; an invented name with one is the AI style the tool exists to avoid.
 const FANTASY_ENDING = /(haven|vale|spire|hold|reach|crest|keep|watch)$/;
 const FANTASY_COMPOUND = new RegExp(`^(${FANTASY_PREFIX})(${FANTASY_SUFFIX})$`);

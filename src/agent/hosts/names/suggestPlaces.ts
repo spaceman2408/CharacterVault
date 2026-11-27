@@ -14,9 +14,11 @@ type PlaceSize = (typeof PLACE_SIZES)[number];
 // No feature lists ship (size budget): these are always invented from the settlement chain, as bare names.
 const NATURAL_KINDS = new Set<PlaceKind>(['river', 'mountain', 'lake']);
 const NATURAL_MAX_LENGTH = 9;
+// Shorter invented names are mostly real words (Mura, Yama, Ishi).
+const INVENTED_MIN_LETTERS = 5;
 // Endings that mark a name as a settlement, which reads wrong on a river or a peak.
 const SETTLEMENT_ENDING =
-  /(ton|ham|by|ford|field|bury|borough|wick|ville|dorf|burg|heim|hausen|stadt|ingen|leben|pur|abad|grad|polis)$/;
+  /(ton|ham|by|ford|field|bury|borough|wick|ville|dorf|burg|heim|hausen|stadt|ingen|leben|pur|abad|grad|polis|cho|machi|mura)$/;
 
 export interface PlaceData {
   origins: Record<string, { settlements: Record<PlaceSize, string[]>; regions: string[] }>;
@@ -65,7 +67,7 @@ export const SUGGEST_PLACES_TOOL_SPEC: AgentToolSpec = {
       },
       invented: {
         type: 'boolean',
-        description: 'true for made-up places that sound like the chosen origins, for an invented world (several origins blend). Default false: real places.',
+        description: 'true for made-up places that sound like the chosen origins, for an invented world. Blend at most two origins that sound alike (norwegian, swedish); more turns to mush. Default false: real places.',
       },
     },
     required: [],
@@ -112,6 +114,7 @@ function placeModel(data: PlaceData, origins: string[]): PlaceModel | null {
 function inventPlace(model: PlaceModel, real: ReadonlySet<string>, natural: boolean): string | undefined {
   const name = inventName(model.chain, real);
   if (!name || model.fragments.has(name.toLowerCase())) return undefined;
+  if (name.replace(/[^\p{L}]/gu, '').length < INVENTED_MIN_LETTERS) return undefined;
   if (natural) {
     const lower = name.toLowerCase();
     return /^[\p{L}\p{M}]+$/u.test(name) && name.length <= NATURAL_MAX_LENGTH && !SETTLEMENT_ENDING.test(lower)

@@ -97,6 +97,10 @@ const SETTLEMENT_STRIP = [
   /-(shi|chō|cho|machi|mura|son)$/i,
 ];
 
+// Elsewhere these are GeoNames' English translations (Rishiri Town, Town of Komiža, Basel-City), not the local name.
+const ENGLISH_ORIGINS = new Set(['afrikaans', 'american', 'australian', 'british', 'ghanaian', 'indian', 'nigerian', 'south-african', 'yoruba', 'zulu']);
+const ENGLISH_GENERIC = [/^(town|city|village) of\s+/i, /[\s-]+(town|city|village)$/i];
+
 const REGION_STRIP = [
   /^(urban municipality of|municipality of|city of|city and borough of|borough of|county of|raionul|comuna|gmina|powiat|kabupaten|kota|distrito de|provincia di|provincia de|province de|province of|provincie|département de|département du|département des|landkreis|kreis|bezirk|regierungsbezirk|arrondissement de|arrondissement d’|arrondissement d'|huyện|quận|thành phố|thị xã|huyen|quan|thanh pho|thi xa)\s+/iu,
   /\s+(county|district|province|region|rayon|state|municipality|municipal|metropolitan|novads|rajons|shire|prefecture|oblast|governorate|department|municipio|kommune|kommun|regional unit|city|sub-province|borough|parish|division|ilçesi|İlçesi|ilcesi|tumani|shahri|shi|gun|ku)$/iu,
@@ -239,9 +243,12 @@ async function main() {
   const origins = {};
   for (const origin of ORIGINS) {
     const spelling = (row) => (origin.plain ? plain(row.name) : row.name);
+    const english = ENGLISH_ORIGINS.has(origin.id);
+    const settlementStrip = english ? SETTLEMENT_STRIP : [...SETTLEMENT_STRIP, ...ENGLISH_GENERIC];
+    const regionStrip = english ? REGION_STRIP : [...REGION_STRIP, ...ENGLISH_GENERIC];
     const settlementRows = cities
       .filter((row) => inArea(origin.areas, row.country, row.admin1))
-      .map((row) => ({ name: cleanName(spelling(row), SETTLEMENT_STRIP), population: row.population }))
+      .map((row) => ({ name: cleanName(spelling(row), settlementStrip), population: row.population }))
       .filter((row) => row.name);
     const settlements = pickSettlements(settlementRows);
     const settlementSet = new Set(Object.values(settlements).flat());
@@ -249,7 +256,7 @@ async function main() {
     const regionNames = new Set();
     for (const row of admins) {
       if (!inArea(origin.areas, row.country, row.admin1)) continue;
-      const name = cleanName(spelling(row), REGION_STRIP);
+      const name = cleanName(spelling(row), regionStrip);
       if (name && !settlementSet.has(name)) regionNames.add(name);
     }
     const regions = spread(regionNames, REGION_CAP).sort((a, b) => a.localeCompare(b));
