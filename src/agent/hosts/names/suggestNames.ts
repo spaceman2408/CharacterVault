@@ -88,23 +88,17 @@ export function loadNameData(): Promise<NameData> {
 export const SUGGEST_NAMES_TOOL_SPEC: AgentToolSpec = {
   name: 'suggest_names',
   description:
-    'Random real names from the chosen origins, or invented ones that sound like them, minus overused AI names and names already used in the open card or book. Use for any new character or NPC name the user did not give; pick one that fits instead of making one up yourself.',
+    'Names to pick from instead of making one up: real ones from the origins, or invented ones that sound like them. Use for any new character or NPC name the user did not give.',
   parameters: {
     type: 'object',
     properties: {
-      origin: {
-        type: 'string',
-        description: `One or more origins, comma-separated: ${NAME_ORIGINS.join(', ')}`,
-      },
-      gender: { type: 'string', description: 'female, male, or any (default any)' },
-      part: { type: 'string', description: 'first, last, or full (default full)' },
-      count: {
-        type: 'integer',
-        description: `How many names (default ${DEFAULT_NAME_COUNT}, max ${MAX_NAME_COUNT})`,
-      },
+      origin: { type: 'string', description: `Comma-separated: ${NAME_ORIGINS.join(', ')}` },
+      gender: { type: 'string', description: 'female, male, or any (default)' },
+      part: { type: 'string', description: 'first, last, or full (default)' },
+      count: { type: 'integer', description: `Default ${DEFAULT_NAME_COUNT}, max ${MAX_NAME_COUNT}` },
       invented: {
         type: 'boolean',
-        description: 'true for made-up names that sound like the chosen origins, for an invented culture (several origins blend). Default false: real names.',
+        description: 'true for an invented culture; blend at most two origins that sound alike',
       },
     },
     required: ['origin'],
