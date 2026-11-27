@@ -130,7 +130,8 @@ describe('suggestPlaces invented', () => {
 
   it('tells the model to blend few origins and to invent for fantasy worlds', () => {
     const params = JSON.stringify(SUGGEST_PLACES_TOOL_SPEC.parameters);
-    expect(params).toContain('at most two origins');
+    expect(params).toContain('At most two origins');
+    expect(params).toContain('from the suggest_names list');
     expect(params).toContain('any fantasy or made-up world');
   });
 

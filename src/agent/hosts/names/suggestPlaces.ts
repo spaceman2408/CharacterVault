@@ -3,7 +3,7 @@ import { parseBoolText } from '../boolText';
 import { buildNameModel, inventName, type NameModel } from './inventNames';
 import { isFantasyCompound, OVERUSED_PLACES } from './overusedPlaces';
 import { inventTavern, OVERUSED_TAVERNS, TAVERN_SETTINGS, type TavernSetting } from './taverns';
-import { DEFAULT_NAME_COUNT, MAX_NAME_COUNT, NAME_ORIGINS, parseCount, pick, resolveOrigins } from './suggestNames';
+import { DEFAULT_NAME_COUNT, MAX_NAME_COUNT, parseCount, pick, resolveOrigins } from './suggestNames';
 
 export const PLACE_KINDS = ['settlement', 'region', 'river', 'mountain', 'lake', 'tavern'] as const;
 export const PLACE_SIZES = ['village', 'town', 'city'] as const;
@@ -44,30 +44,21 @@ export function loadPlaceData(): Promise<PlaceData> {
 export const SUGGEST_PLACES_TOOL_SPEC: AgentToolSpec = {
   name: 'suggest_places',
   description:
-    'Random real place names from the chosen origins, or invented ones that sound like them, minus overused AI place names (Oakhaven, Shadowvale) and places already named in the open card or book. Use for any new town, village, city, region, river, mountain, or lake the user did not name; pick one that fits instead of making one up yourself. river, mountain, and lake are always invented and come back as bare names: add the word yourself (the Kemble, Mount Ardle, Lake Orrin). tavern gives English inn and tavern names (The Drowned Ox, The Mason\'s Arms) and needs no origin.',
+    'Place names to pick from instead of making one up: real ones from the origins, or invented ones that sound like them. Use for any new town, region, river, mountain, lake, or inn the user did not name. river, mountain, and lake are always invented bare names; add the word yourself (Mount Ardle). tavern gives English inn names and needs no origin.',
   parameters: {
     type: 'object',
     properties: {
       kind: { type: 'string', description: `${PLACE_KINDS.join(', ')} (default settlement)` },
       origin: {
         type: 'string',
-        description: `Required except for tavern. One or more origins, comma-separated: ${NAME_ORIGINS.join(', ')}`,
+        description: 'At most two origins that sound alike, comma-separated, from the suggest_names list',
       },
-      setting: {
-        type: 'string',
-        description: `Tavern only: ${TAVERN_SETTINGS.join(' or ')} (default grounded). fantasy mixes in creatures and magic trades.`,
-      },
-      size: {
-        type: 'string',
-        description: `Settlements only: ${PLACE_SIZES.join(', ')}, or any (default any)`,
-      },
-      count: {
-        type: 'integer',
-        description: `How many names (default ${DEFAULT_NAME_COUNT}, max ${MAX_NAME_COUNT})`,
-      },
+      setting: { type: 'string', description: `tavern: ${TAVERN_SETTINGS.join(' (default) or ')}` },
+      size: { type: 'string', description: `settlement: ${PLACE_SIZES.join(', ')}, or any (default)` },
+      count: { type: 'integer', description: `Default ${DEFAULT_NAME_COUNT}, max ${MAX_NAME_COUNT}` },
       invented: {
         type: 'boolean',
-        description: 'true for made-up places that sound like the chosen origins. Use it for any fantasy or made-up world: real places are real-world towns (Oslo, Bilbao) and read wrong there. Blend at most two origins that sound alike (norwegian, swedish); more turns to mush. Default false: real places.',
+        description: 'true for any fantasy or made-up world; false (default) gives real-world towns like Oslo',
       },
     },
     required: [],
