@@ -25,6 +25,8 @@ describe('formatToolEvent', () => {
       ['read_recursion', 'Recursion map — 1 entry, 0 edges', 'Read the recursion map'],
       ['test_keys', 'Key test — 1 of 1 entry activate', 'Tested keys'],
       ['suggest_names', 'suggest_names: 8 first names, any, british', 'Suggested 8 names'],
+      ['suggest_places', 'suggest_places: 12 invented towns, british', 'Suggested 12 places'],
+      ['suggest_places', 'suggest_places: 1 grounded tavern', 'Suggested 1 place'],
       ['read_skill', 'Skill: Greeting Writer', 'Used skill “Greeting Writer”'],
     ];
     for (const [tool, message, label] of lines) expect(formatToolEvent(event(tool, message))).toBe(label);

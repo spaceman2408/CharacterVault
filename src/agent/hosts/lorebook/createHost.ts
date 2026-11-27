@@ -3,6 +3,7 @@ import { formatCustomContextChunk } from '../../../services/CustomContextService
 import type { ActionResult, AgentHost, AgentToolSpec, ParsedAction } from '../../core/types';
 import type { LorebookReviewPayload } from '../../review/types';
 import { suggestNames } from '../names/suggestNames';
+import { suggestPlaces } from '../names/suggestPlaces';
 import { collectBookTargets, MAX_REPLACE_ACROSS_PER_RUN } from '../search';
 import { READ_SKILL_TOOL, READ_SKILL_TOOL_SPEC, readSkill, usableSkills } from '../skills';
 import { formatEntryCatalog } from './catalog';
@@ -179,6 +180,9 @@ export function createLorebookHost(io: LorebookHostIO): LorebookAgentHost {
       }
       if (action.name === 'suggest_names') {
         return suggestNames(action, collectBookTargets(book).map((target) => target.text));
+      }
+      if (action.name === 'suggest_places') {
+        return suggestPlaces(action, collectBookTargets(book).map((target) => target.text));
       }
       if (action.name === READ_SKILL_TOOL && skills.length > 0) {
         return readSkill(skills, action);

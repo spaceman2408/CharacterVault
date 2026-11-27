@@ -42,6 +42,7 @@ export const LOREBOOK_TOOL_NAMES = [
   'test_keys',
   'update_book_settings',
   'suggest_names',
+  'suggest_places',
 ] as const;
 export type LorebookToolName = (typeof LOREBOOK_TOOL_NAMES)[number];
 

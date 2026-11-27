@@ -46,6 +46,7 @@ export const CHARACTER_TOOL_NAMES = [
   'replace_across',
   'audit_card',
   'suggest_names',
+  'suggest_places',
 ] as const;
 
 export const CHARACTER_OVERRIDES_LOREBOOK_TOOLS = new Set([
@@ -53,6 +54,7 @@ export const CHARACTER_OVERRIDES_LOREBOOK_TOOLS = new Set([
   'replace_across',
   'audit_book',
   'suggest_names',
+  'suggest_places',
 ]);
 export type CharacterToolName = (typeof CHARACTER_TOOL_NAMES)[number];
 

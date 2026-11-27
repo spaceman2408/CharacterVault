@@ -16,6 +16,7 @@ const BUSY_LABELS: Record<string, string> = {
   read_recursion: 'Reading recursion',
   test_keys: 'Testing keys',
   suggest_names: 'Suggesting names',
+  suggest_places: 'Suggesting places',
   update_book_settings: 'Updating book settings',
 };
 

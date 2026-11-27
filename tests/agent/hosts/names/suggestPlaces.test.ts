@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { createCharacterHost } from '../../../../src/agent/hosts/character/createHost';
+import { createLorebookHost } from '../../../../src/agent/hosts/lorebook/createHost';
 import places from '../../../../src/agent/hosts/names/geonamesPlaces.json';
 import { isFantasyCompound, OVERUSED_PLACES } from '../../../../src/agent/hosts/names/overusedPlaces';
 import { MAX_NAME_COUNT, NAME_ORIGINS } from '../../../../src/agent/hosts/names/suggestNames';
 import { suggestPlaces } from '../../../../src/agent/hosts/names/suggestPlaces';
 import { isFantasyTavernWord, OVERUSED_TAVERNS } from '../../../../src/agent/hosts/names/taverns';
+import type { CharacterBook, CharacterSpec } from '../../../../src/db/characterTypes';
+import { createEmptyCharacterBook } from '../../../../src/db/characterTypes';
 
 const origins = places.origins as Record<string, { settlements: Record<string, string[]>; regions: string[] }>;
 
@@ -220,5 +224,58 @@ describe('isFantasyCompound', () => {
     for (const name of ['Halestoft', 'Buckleworton', 'Kimberton', 'Wallingham', 'Childford', 'Asenbrück']) {
       expect(isFantasyCompound(name)).toBe(false);
     }
+  });
+});
+
+describe('suggest_places in the hosts', () => {
+  function spec(overrides: Partial<CharacterSpec> = {}): CharacterSpec {
+    return {
+      name: 'Nadia',
+      description: 'A cartographer.',
+      personality: '',
+      scenario: '',
+      first_mes: 'Hello.',
+      mes_example: '',
+      system_prompt: '',
+      post_history_instructions: '',
+      alternate_greetings: [],
+      physical_description: '',
+      ...overrides,
+    };
+  }
+
+  it('skips places named on the card and in its lorebook', async () => {
+    const book: CharacterBook = {
+      ...createEmptyCharacterBook(),
+      entries: [{ id: 1, keys: ['Tiraspol'], name: 'Tiraspol', content: 'A river city.' }] as CharacterBook['entries'],
+    };
+    const host = createCharacterHost({
+      getSpec: () => spec({ description: 'Nadia grew up in Bălţi and studied in Chisinau.', scenario: 'Bender, at dawn.' }),
+      getBook: () => book,
+      persist: async () => {},
+      getCustomContext: async () => null,
+    });
+    const result = await host.execute(action({ origin: 'moldovan', size: 'city' }));
+    expect(result.ok).toBe(true);
+    expect(namesIn(result.message)).toEqual(['Rîbniţa']);
+  });
+
+  it('skips places named in a standalone lorebook', async () => {
+    let book: CharacterBook = {
+      ...createEmptyCharacterBook('Moldova'),
+      entries: [
+        { id: 1, keys: ['Bender'], name: 'Bender and Tiraspol', content: 'Across the river from Bălţi and Rîbniţa.' },
+      ] as CharacterBook['entries'],
+    };
+    const host = createLorebookHost({
+      getBook: () => book,
+      setBook: async (next) => {
+        book = next;
+      },
+      getCustomContext: async () => null,
+    });
+    const result = await host.execute(action({ origin: 'moldovan', size: 'city' }));
+    expect(result.ok).toBe(true);
+    expect(namesIn(result.message)).toEqual(['Chisinau']);
   });
 });

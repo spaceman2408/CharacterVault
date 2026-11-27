@@ -217,6 +217,10 @@ function lookupLabel(toolName: string, message: string): string | null {
       const match = /^suggest_names: (\d+) /.exec(message);
       return match ? `Suggested ${plural(match[1], 'name', 'names')}` : 'Suggested names';
     }
+    case 'suggest_places': {
+      const match = /^suggest_places: (\d+) /.exec(message);
+      return match ? `Suggested ${plural(match[1], 'place', 'places')}` : 'Suggested places';
+    }
     case 'read_skill': {
       const match = /^Skill: (.+)$/.exec(message);
       return match ? `Used skill “${match[1].trim()}”` : 'Used a skill';

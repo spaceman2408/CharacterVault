@@ -6,6 +6,7 @@ import { createLorebookHost } from '../lorebook/createHost';
 import { LOREBOOK_TOOL_SPECS } from '../lorebook/schemas';
 import { LOREBOOK_TOOL_NAMES } from '../lorebook/tools';
 import { suggestNames } from '../names/suggestNames';
+import { suggestPlaces } from '../names/suggestPlaces';
 import { collectBookTargets, MAX_REPLACE_ACROSS_PER_RUN } from '../search';
 import { READ_SKILL_TOOL, READ_SKILL_TOOL_SPEC, readSkill, usableSkills } from '../skills';
 import { formatFieldCatalog, formatFieldRead, formatGreetingRead } from './catalog';
@@ -144,9 +145,10 @@ export function createCharacterHost(io: CharacterHostIO): AgentHost {
       if (action.name === READ_SKILL_TOOL && skills.length > 0) {
         return readSkill(skills, action);
       }
-      if (action.name === 'suggest_names') {
+      if (action.name === 'suggest_names' || action.name === 'suggest_places') {
         const targets = [...collectCharacterTargets(spec), ...collectBookTargets(loreHost.peekBook())];
-        return suggestNames(action, targets.map((target) => target.text));
+        const texts = targets.map((target) => target.text);
+        return action.name === 'suggest_names' ? suggestNames(action, texts) : suggestPlaces(action, texts);
       }
       if (action.name === 'replace_across') {
         if (replaceAcrossThisRun >= MAX_REPLACE_ACROSS_PER_RUN) {

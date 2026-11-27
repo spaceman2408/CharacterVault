@@ -1,5 +1,6 @@
 import type { AgentToolSpec } from '../../core/types';
 import { SUGGEST_NAMES_TOOL_SPEC } from '../names/suggestNames';
+import { SUGGEST_PLACES_TOOL_SPEC } from '../names/suggestPlaces';
 
 export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
@@ -214,4 +215,5 @@ export const CHARACTER_TOOL_SPECS: readonly AgentToolSpec[] = [
     },
   },
   SUGGEST_NAMES_TOOL_SPEC,
+  SUGGEST_PLACES_TOOL_SPEC,
 ];
