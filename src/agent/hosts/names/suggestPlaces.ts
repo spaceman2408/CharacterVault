@@ -4,11 +4,18 @@ import { buildNameModel, inventName, type NameModel } from './inventNames';
 import { isFantasyCompound, OVERUSED_PLACES } from './overusedPlaces';
 import { DEFAULT_NAME_COUNT, MAX_NAME_COUNT, NAME_ORIGINS, parseCount, pick, resolveOrigins } from './suggestNames';
 
-export const PLACE_KINDS = ['settlement', 'region'] as const;
+export const PLACE_KINDS = ['settlement', 'region', 'river', 'mountain', 'lake'] as const;
 export const PLACE_SIZES = ['village', 'town', 'city'] as const;
 
 type PlaceKind = (typeof PLACE_KINDS)[number];
 type PlaceSize = (typeof PLACE_SIZES)[number];
+
+// No feature lists ship (size budget): these are always invented from the settlement chain, as bare names.
+const NATURAL_KINDS = new Set<PlaceKind>(['river', 'mountain', 'lake']);
+const NATURAL_MAX_LENGTH = 9;
+// Endings that mark a name as a settlement, which reads wrong on a river or a peak.
+const SETTLEMENT_ENDING =
+  /(ton|ham|by|ford|field|bury|borough|wick|ville|dorf|burg|heim|hausen|stadt|ingen|leben|pur|abad|grad|polis)$/;
 
 export interface PlaceData {
   origins: Record<string, { settlements: Record<PlaceSize, string[]>; regions: string[] }>;
@@ -22,6 +29,8 @@ interface PlaceModel {
   chain: NameModel;
   /** Words written lowercase inside real names (sur, la, am, upon), kept lowercase in invented ones. */
   particles: ReadonlySet<string>;
+  /** Single words of real multi-word names (Bridge, Common, Château), rejected as whole invented names. */
+  fragments: ReadonlySet<string>;
 }
 
 export function loadPlaceData(): Promise<PlaceData> {
@@ -32,7 +41,7 @@ export function loadPlaceData(): Promise<PlaceData> {
 export const SUGGEST_PLACES_TOOL_SPEC: AgentToolSpec = {
   name: 'suggest_places',
   description:
-    'Random real place names from the chosen origins, or invented ones that sound like them, minus overused AI place names (Oakhaven, Shadowvale) and places already named in the open card or book. Use for any new town, village, city, or region the user did not name; pick one that fits instead of making one up yourself.',
+    'Random real place names from the chosen origins, or invented ones that sound like them, minus overused AI place names (Oakhaven, Shadowvale) and places already named in the open card or book. Use for any new town, village, city, region, river, mountain, or lake the user did not name; pick one that fits instead of making one up yourself. river, mountain, and lake are always invented and come back as bare names: add the word yourself (the Kemble, Mount Ardle, Lake Orrin).',
   parameters: {
     type: 'object',
     properties: {
@@ -87,20 +96,23 @@ function placeModel(data: PlaceData, origins: string[]): PlaceModel | null {
   if (!modelCache.has(key)) {
     const lists = origins.map((origin) => PLACE_SIZES.flatMap((size) => data.origins[origin].settlements[size]));
     const chain = buildNameModel(lists);
-    const particles = new Set(
-      lists
-        .flat()
-        .flatMap((name) => name.split(/[\s-]+/).slice(1))
-        .filter((word) => /^\p{Ll}+$/u.test(word)),
-    );
-    modelCache.set(key, chain ? { chain, particles } : null);
+    const words = lists.flat().map((name) => name.split(/[\s-]+/)).filter((parts) => parts.length > 1);
+    const particles = new Set(words.flatMap((parts) => parts.slice(1)).filter((word) => /^\p{Ll}+$/u.test(word)));
+    const fragments = new Set(words.flat().map((word) => word.toLowerCase()));
+    modelCache.set(key, chain ? { chain, particles, fragments } : null);
   }
   return modelCache.get(key) ?? null;
 }
 
-function inventPlace(model: PlaceModel, real: ReadonlySet<string>): string | undefined {
+function inventPlace(model: PlaceModel, real: ReadonlySet<string>, natural: boolean): string | undefined {
   const name = inventName(model.chain, real);
-  if (!name) return undefined;
+  if (!name || model.fragments.has(name.toLowerCase())) return undefined;
+  if (natural) {
+    const lower = name.toLowerCase();
+    return /^[\p{L}\p{M}]+$/u.test(name) && name.length <= NATURAL_MAX_LENGTH && !SETTLEMENT_ENDING.test(lower)
+      ? name
+      : undefined;
+  }
   let first = true;
   return name.replace(/[\p{L}\p{M}']+/gu, (word) => {
     const lower = word.toLowerCase();
@@ -119,7 +131,7 @@ function usedIn(text: string, name: string): boolean {
 }
 
 function label(kind: PlaceKind, size: PlaceSize | 'any', plural: boolean): string {
-  const noun = kind === 'region' ? 'region' : size === 'any' ? 'settlement' : size;
+  const noun = kind !== 'settlement' ? kind : size === 'any' ? 'settlement' : size;
   if (!plural) return noun;
   return noun === 'city' ? 'cities' : `${noun}s`;
 }
@@ -142,7 +154,8 @@ export async function suggestPlaces(action: ParsedAction, usedTexts: readonly st
   }
   const size = sizeRaw as PlaceSize | 'any';
   const sizes: readonly PlaceSize[] = size === 'any' ? PLACE_SIZES : [size];
-  const invented = parseBoolText(action.headers.invented) === true;
+  const natural = NATURAL_KINDS.has(kind);
+  const invented = natural || parseBoolText(action.headers.invented) === true;
   const count = parseCount(action.headers.count);
 
   const data = await loadPlaceData();
@@ -153,8 +166,8 @@ export async function suggestPlaces(action: ParsedAction, usedTexts: readonly st
 
   const names: string[] = [];
   const seen = new Set<string>();
-  for (let attempt = 0; attempt < count * 25 && names.length < count; attempt += 1) {
-    const name = model ? inventPlace(model, real) : pick(pool);
+  for (let attempt = 0; attempt < count * 60 && names.length < count; attempt += 1) {
+    const name = model ? inventPlace(model, real, natural) : pick(pool);
     if (!name || seen.has(name)) continue;
     seen.add(name);
     if (OVERUSED_PLACES.has(name.toLowerCase())) continue;

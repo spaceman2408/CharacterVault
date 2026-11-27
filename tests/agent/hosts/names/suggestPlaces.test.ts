@@ -122,6 +122,43 @@ describe('suggestPlaces invented', () => {
   });
 });
 
+describe('suggestPlaces natural features', () => {
+  it('invents bare one-word names for rivers, mountains, and lakes', async () => {
+    for (const kind of ['river', 'mountain', 'lake']) {
+      const result = await suggestPlaces(action({ origin: 'british, german', kind, count: '30' }), []);
+      expect(result.ok).toBe(true);
+      expect(result.message.split('\n')[0]).toMatch(new RegExp(`^suggest_places: \\d+ invented ${kind}s?, british, german$`));
+      for (const name of namesIn(result.message)) {
+        expect(name).toMatch(/^\p{Lu}[\p{L}\p{M}]{2,8}$/u);
+        expect(name).not.toMatch(/(ton|ham|by|ford|field|dorf|burg|heim|hausen|stadt|ingen)$/);
+        expect(realPlaces.has(name.toLowerCase())).toBe(false);
+        expect(isFantasyCompound(name)).toBe(false);
+      }
+    }
+  });
+
+  it('invents them even when invented is false', async () => {
+    const result = await suggestPlaces(action({ origin: 'finnish', kind: 'lake', invented: 'false' }), []);
+    expect(result.ok).toBe(true);
+    expect(result.message.split('\n')[0]).toContain('invented lake');
+    for (const name of namesIn(result.message)) expect(realPlaces.has(name.toLowerCase())).toBe(false);
+  });
+
+  it('never returns a word lifted from a real multi-word name', async () => {
+    const fragments = new Set(
+      Object.values(origins.british.settlements)
+        .flat()
+        .filter((name) => /[\s-]/.test(name))
+        .flatMap((name) => name.split(/[\s-]+/))
+        .map((word) => word.toLowerCase()),
+    );
+    for (let run = 0; run < 10; run += 1) {
+      const result = await suggestPlaces(action({ origin: 'british', kind: 'river', count: '30' }), []);
+      for (const name of namesIn(result.message)) expect(fragments.has(name.toLowerCase())).toBe(false);
+    }
+  });
+});
+
 describe('isFantasyCompound', () => {
   it('catches the AI place-name style', () => {
     for (const name of ['Oakhaven', 'Shadowvale', 'Stormhold', 'Silverbrook', 'Ravenwood', 'Mistvale', 'New Ashspire']) {
