@@ -3,6 +3,7 @@ import places from '../../../../src/agent/hosts/names/geonamesPlaces.json';
 import { isFantasyCompound, OVERUSED_PLACES } from '../../../../src/agent/hosts/names/overusedPlaces';
 import { MAX_NAME_COUNT, NAME_ORIGINS } from '../../../../src/agent/hosts/names/suggestNames';
 import { suggestPlaces } from '../../../../src/agent/hosts/names/suggestPlaces';
+import { isFantasyTavernWord, OVERUSED_TAVERNS } from '../../../../src/agent/hosts/names/taverns';
 
 const origins = places.origins as Record<string, { settlements: Record<string, string[]>; regions: string[] }>;
 
@@ -156,6 +157,55 @@ describe('suggestPlaces natural features', () => {
       const result = await suggestPlaces(action({ origin: 'british', kind: 'river', count: '30' }), []);
       for (const name of namesIn(result.message)) expect(fragments.has(name.toLowerCase())).toBe(false);
     }
+  });
+});
+
+describe('suggestPlaces taverns', () => {
+  const TAVERN_PATTERN = /^The [A-Z][\w'-]*( [A-Za-z][\w'-]*){0,3}$/;
+
+  it('needs no origin and defaults to grounded', async () => {
+    const result = await suggestPlaces(action({ kind: 'tavern', count: '30' }), []);
+    expect(result.ok).toBe(true);
+    expect(result.message.split('\n')[0]).toBe('suggest_places: 30 grounded taverns');
+    for (const name of namesIn(result.message)) {
+      expect(name).toMatch(TAVERN_PATTERN);
+      for (const word of name.split(/[\s']+/)) expect(isFantasyTavernWord(word)).toBe(false);
+    }
+  });
+
+  it('mixes fantasy words in for the fantasy setting', async () => {
+    const names: string[] = [];
+    for (let run = 0; run < 5; run += 1) {
+      const result = await suggestPlaces(action({ kind: 'tavern', setting: 'fantasy', count: '30' }), []);
+      expect(result.message.split('\n')[0]).toBe('suggest_places: 30 fantasy taverns');
+      names.push(...namesIn(result.message));
+    }
+    const withFantasy = names.filter((name) => name.split(/[\s']+/).some(isFantasyTavernWord));
+    expect(withFantasy.length).toBeGreaterThan(names.length / 4);
+  });
+
+  it('reads inn as tavern and ignores origin', async () => {
+    const result = await suggestPlaces(action({ kind: 'inn', origin: 'japanese' }), []);
+    expect(result.ok).toBe(true);
+    expect(result.message.split('\n')[0]).toBe('suggest_places: 12 grounded taverns');
+  });
+
+  it('never suggests overused taverns or ones already in the text', async () => {
+    for (let run = 0; run < 10; run += 1) {
+      const result = await suggestPlaces(
+        action({ kind: 'tavern', setting: 'fantasy', count: '30' }),
+        ['They drank at the King\'s Head and the Old Ox.'],
+      );
+      for (const name of namesIn(result.message)) {
+        expect(OVERUSED_TAVERNS.has(name.toLowerCase())).toBe(false);
+        expect(name).not.toBe("The King's Head");
+        expect(name).not.toBe('The Old Ox');
+      }
+    }
+  });
+
+  it('rejects an unknown setting', async () => {
+    expect((await suggestPlaces(action({ kind: 'tavern', setting: 'cyberpunk' }), [])).ok).toBe(false);
   });
 });
 

@@ -2,9 +2,10 @@ import type { ActionResult, AgentToolSpec, ParsedAction } from '../../core/types
 import { parseBoolText } from '../boolText';
 import { buildNameModel, inventName, type NameModel } from './inventNames';
 import { isFantasyCompound, OVERUSED_PLACES } from './overusedPlaces';
+import { inventTavern, OVERUSED_TAVERNS, TAVERN_SETTINGS, type TavernSetting } from './taverns';
 import { DEFAULT_NAME_COUNT, MAX_NAME_COUNT, NAME_ORIGINS, parseCount, pick, resolveOrigins } from './suggestNames';
 
-export const PLACE_KINDS = ['settlement', 'region', 'river', 'mountain', 'lake'] as const;
+export const PLACE_KINDS = ['settlement', 'region', 'river', 'mountain', 'lake', 'tavern'] as const;
 export const PLACE_SIZES = ['village', 'town', 'city'] as const;
 
 type PlaceKind = (typeof PLACE_KINDS)[number];
@@ -41,14 +42,18 @@ export function loadPlaceData(): Promise<PlaceData> {
 export const SUGGEST_PLACES_TOOL_SPEC: AgentToolSpec = {
   name: 'suggest_places',
   description:
-    'Random real place names from the chosen origins, or invented ones that sound like them, minus overused AI place names (Oakhaven, Shadowvale) and places already named in the open card or book. Use for any new town, village, city, region, river, mountain, or lake the user did not name; pick one that fits instead of making one up yourself. river, mountain, and lake are always invented and come back as bare names: add the word yourself (the Kemble, Mount Ardle, Lake Orrin).',
+    'Random real place names from the chosen origins, or invented ones that sound like them, minus overused AI place names (Oakhaven, Shadowvale) and places already named in the open card or book. Use for any new town, village, city, region, river, mountain, or lake the user did not name; pick one that fits instead of making one up yourself. river, mountain, and lake are always invented and come back as bare names: add the word yourself (the Kemble, Mount Ardle, Lake Orrin). tavern gives English inn and tavern names (The Drowned Ox, The Mason\'s Arms) and needs no origin.',
   parameters: {
     type: 'object',
     properties: {
       kind: { type: 'string', description: `${PLACE_KINDS.join(', ')} (default settlement)` },
       origin: {
         type: 'string',
-        description: `One or more origins, comma-separated: ${NAME_ORIGINS.join(', ')}`,
+        description: `Required except for tavern. One or more origins, comma-separated: ${NAME_ORIGINS.join(', ')}`,
+      },
+      setting: {
+        type: 'string',
+        description: `Tavern only: ${TAVERN_SETTINGS.join(' or ')} (default grounded). fantasy mixes in creatures and magic trades.`,
       },
       size: {
         type: 'string',
@@ -63,7 +68,7 @@ export const SUGGEST_PLACES_TOOL_SPEC: AgentToolSpec = {
         description: 'true for made-up places that sound like the chosen origins, for an invented world (several origins blend). Default false: real places.',
       },
     },
-    required: ['origin'],
+    required: [],
   },
 };
 
@@ -136,13 +141,37 @@ function label(kind: PlaceKind, size: PlaceSize | 'any', plural: boolean): strin
   return noun === 'city' ? 'cities' : `${noun}s`;
 }
 
+function suggestTaverns(action: ParsedAction, usedTexts: readonly string[]): ActionResult {
+  const settingRaw = (action.headers.setting ?? '').trim().toLowerCase() || 'grounded';
+  if (!(TAVERN_SETTINGS as readonly string[]).includes(settingRaw)) {
+    return fail(`setting must be ${TAVERN_SETTINGS.join(' or ')}`);
+  }
+  const setting = settingRaw as TavernSetting;
+  const count = parseCount(action.headers.count);
+  const usedText = usedTexts.join('\n');
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (let attempt = 0; attempt < count * 60 && names.length < count; attempt += 1) {
+    const name = inventTavern(setting);
+    if (seen.has(name)) continue;
+    seen.add(name);
+    if (OVERUSED_TAVERNS.has(name.toLowerCase())) continue;
+    if (usedIn(usedText, name.replace(/^The /, ''))) continue;
+    names.push(name);
+  }
+  const header = `suggest_places: ${names.length} ${setting} tavern${names.length === 1 ? '' : 's'}`;
+  return { ok: true, toolName: 'suggest_places', message: `${header}\n${names.join('\n')}` };
+}
+
 /** usedTexts: the card and/or book text. A place already named there is skipped. */
 export async function suggestPlaces(action: ParsedAction, usedTexts: readonly string[]): Promise<ActionResult> {
-  const kindRaw = (action.headers.kind ?? '').trim().toLowerCase() || 'settlement';
+  const kindInput = (action.headers.kind ?? '').trim().toLowerCase() || 'settlement';
+  const kindRaw = kindInput === 'inn' ? 'tavern' : kindInput;
   if (!(PLACE_KINDS as readonly string[]).includes(kindRaw)) {
     return fail(`kind must be one of ${PLACE_KINDS.join(', ')}`);
   }
   const kind = kindRaw as PlaceKind;
+  if (kind === 'tavern') return suggestTaverns(action, usedTexts);
 
   const resolved = resolveOrigins(action.headers.origin);
   if ('error' in resolved) return fail(resolved.error);
