@@ -67,7 +67,7 @@ export const SUGGEST_PLACES_TOOL_SPEC: AgentToolSpec = {
       },
       invented: {
         type: 'boolean',
-        description: 'true for made-up places that sound like the chosen origins, for an invented world. Blend at most two origins that sound alike (norwegian, swedish); more turns to mush. Default false: real places.',
+        description: 'true for made-up places that sound like the chosen origins. Use it for any fantasy or made-up world: real places are real-world towns (Oslo, Bilbao) and read wrong there. Blend at most two origins that sound alike (norwegian, swedish); more turns to mush. Default false: real places.',
       },
     },
     required: [],
@@ -209,7 +209,9 @@ export async function suggestPlaces(action: ParsedAction, usedTexts: readonly st
   }
   if (names.length === 0) return fail('no unused places left for that origin; try another origin or size');
 
-  const header = `suggest_places: ${names.length} ${invented ? 'invented ' : ''}${label(kind, size, names.length !== 1)}, ${origins.join(', ')}`;
+  // The model reads results closely; this stops it putting Oslo in a fantasy world when it forgot invented.
+  const realNote = invented ? '' : ' — real-world places; for a fantasy or made-up world, call again with invented true';
+  const header = `suggest_places: ${names.length} ${invented ? 'invented ' : ''}${label(kind, size, names.length !== 1)}, ${origins.join(', ')}${realNote}`;
   const skipped = unknown.length > 0 ? `\nUnknown origin skipped: ${unknown.join(', ')}` : '';
   return { ok: true, toolName: 'suggest_places', message: `${header}${skipped}\n${names.join('\n')}` };
 }

@@ -17,6 +17,8 @@ const realPlaces = new Set(
     .map((name) => name.toLowerCase()),
 );
 
+const REAL_NOTE = ' — real-world places; for a fantasy or made-up world, call again with invented true';
+
 function action(headers: Record<string, string>) {
   return { name: 'suggest_places', headers, body: '' };
 }
@@ -36,13 +38,13 @@ describe('suggestPlaces', () => {
   it('returns real settlements of the chosen size', async () => {
     const result = await suggestPlaces(action({ origin: 'italian', size: 'city' }), []);
     expect(result.ok).toBe(true);
-    expect(result.message.split('\n')[0]).toBe('suggest_places: 12 cities, italian');
+    expect(result.message.split('\n')[0]).toBe(`suggest_places: 12 cities, italian${REAL_NOTE}`);
     for (const name of namesIn(result.message)) expect(origins.italian.settlements.city).toContain(name);
   });
 
   it('mixes sizes by default', async () => {
     const result = await suggestPlaces(action({ origin: 'british', count: '30' }), []);
-    expect(result.message.split('\n')[0]).toBe('suggest_places: 30 settlements, british');
+    expect(result.message.split('\n')[0]).toBe(`suggest_places: 30 settlements, british${REAL_NOTE}`);
     const all = Object.values(origins.british.settlements).flat();
     for (const name of namesIn(result.message)) expect(all).toContain(name);
   });
@@ -50,7 +52,7 @@ describe('suggestPlaces', () => {
   it('returns real regions and ignores size for them', async () => {
     const result = await suggestPlaces(action({ origin: 'french', kind: 'region', size: 'city' }), []);
     expect(result.ok).toBe(true);
-    expect(result.message.split('\n')[0]).toBe('suggest_places: 12 regions, french');
+    expect(result.message.split('\n')[0]).toBe(`suggest_places: 12 regions, french${REAL_NOTE}`);
     for (const name of namesIn(result.message)) expect(origins.french.regions).toContain(name);
   });
 
@@ -117,8 +119,15 @@ describe('suggestPlaces invented', () => {
     }
   });
 
-  it('tells the model to blend few origins', () => {
-    expect(JSON.stringify(SUGGEST_PLACES_TOOL_SPEC.parameters)).toContain('at most two origins');
+  it('tells the model to blend few origins and to invent for fantasy worlds', () => {
+    const params = JSON.stringify(SUGGEST_PLACES_TOOL_SPEC.parameters);
+    expect(params).toContain('at most two origins');
+    expect(params).toContain('any fantasy or made-up world');
+  });
+
+  it('leaves the real-world note off invented results', async () => {
+    const result = await suggestPlaces(action({ origin: 'german', invented: 'true' }), []);
+    expect(result.message.split('\n')[0]).not.toContain('real-world');
   });
 
   it('invents regions from the settlement chain', async () => {
