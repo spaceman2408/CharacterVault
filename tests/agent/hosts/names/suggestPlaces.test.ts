@@ -49,6 +49,15 @@ describe('suggestPlaces', () => {
     for (const name of namesIn(result.message)) expect(all).toContain(name);
   });
 
+  it('reads a size given as the kind', async () => {
+    const result = await suggestPlaces(action({ origin: 'italian', kind: 'City', size: 'village' }), []);
+    expect(result.ok).toBe(true);
+    expect(result.message.split('\n')[0]).toBe(`suggest_places: 12 cities, italian${REAL_NOTE}`);
+    for (const name of namesIn(result.message)) expect(origins.italian.settlements.city).toContain(name);
+    const towns = await suggestPlaces(action({ origin: 'german', kind: 'town', invented: 'true' }), []);
+    expect(towns.message.split('\n')[0]).toMatch(/^suggest_places: \d+ invented towns?, german$/);
+  });
+
   it('returns real regions and ignores size for them', async () => {
     const result = await suggestPlaces(action({ origin: 'french', kind: 'region', size: 'city' }), []);
     expect(result.ok).toBe(true);

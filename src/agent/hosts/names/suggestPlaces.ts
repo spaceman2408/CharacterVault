@@ -169,7 +169,9 @@ function suggestTaverns(action: ParsedAction, usedTexts: readonly string[]): Act
 /** usedTexts: the card and/or book text. A place already named there is skipped. */
 export async function suggestPlaces(action: ParsedAction, usedTexts: readonly string[]): Promise<ActionResult> {
   const kindInput = (action.headers.kind ?? '').trim().toLowerCase() || 'settlement';
-  const kindRaw = kindInput === 'inn' ? 'tavern' : kindInput;
+  // Models often pass the size as the kind (kind: city).
+  const sizeAsKind = (PLACE_SIZES as readonly string[]).includes(kindInput) ? kindInput : null;
+  const kindRaw = kindInput === 'inn' ? 'tavern' : sizeAsKind ? 'settlement' : kindInput;
   if (!(PLACE_KINDS as readonly string[]).includes(kindRaw)) {
     return fail(`kind must be one of ${PLACE_KINDS.join(', ')}`);
   }
@@ -180,7 +182,8 @@ export async function suggestPlaces(action: ParsedAction, usedTexts: readonly st
   if ('error' in resolved) return fail(resolved.error);
   const { origins, unknown } = resolved;
 
-  const sizeRaw = kind === 'settlement' ? (action.headers.size ?? '').trim().toLowerCase() || 'any' : 'any';
+  const sizeRaw =
+    sizeAsKind ?? (kind === 'settlement' ? (action.headers.size ?? '').trim().toLowerCase() || 'any' : 'any');
   if (sizeRaw !== 'any' && !(PLACE_SIZES as readonly string[]).includes(sizeRaw)) {
     return fail(`size must be ${PLACE_SIZES.join(', ')}, or any`);
   }
