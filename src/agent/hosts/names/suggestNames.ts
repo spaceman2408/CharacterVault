@@ -123,7 +123,7 @@ function nameTokens(text: string): string[] {
   return text.normalize('NFC').match(/\p{Lu}[\p{L}\p{M}]+/gu) ?? [];
 }
 
-function pick<T>(items: readonly T[]): T | undefined {
+export function pick<T>(items: readonly T[]): T | undefined {
   return items[Math.floor(Math.random() * items.length)];
 }
 
@@ -181,23 +181,34 @@ function inventedName(data: NameData, origins: string[], gender: Gender, part: N
   });
 }
 
-/** usedTexts: the card and/or book text. A name sharing a capitalized word with it is skipped. */
-export async function suggestNames(action: ParsedAction, usedTexts: readonly string[]): Promise<ActionResult> {
-  const requested = parseCommaList(action.headers.origin);
-  if (requested.length === 0) return fail(`origin is required. Origins: ${NAME_ORIGINS.join(', ')}`);
+/** Known origin ids in the order given, or an error message for the caller's tool. */
+export function resolveOrigins(raw: string | undefined): { origins: string[]; unknown: string[] } | { error: string } {
+  const requested = parseCommaList(raw);
+  if (requested.length === 0) return { error: `origin is required. Origins: ${NAME_ORIGINS.join(', ')}` };
   const origins: string[] = [];
   const unknown: string[] = [];
-  for (const raw of requested) {
-    const id = normalizeOrigin(raw);
+  for (const item of requested) {
+    const id = normalizeOrigin(item);
     if (ORIGIN_SET.has(id)) {
       if (!origins.includes(id)) origins.push(id);
     } else {
-      unknown.push(raw);
+      unknown.push(item);
     }
   }
-  if (origins.length === 0) {
-    return fail(`unknown origin ${unknown.join(', ')}. Origins: ${NAME_ORIGINS.join(', ')}`);
-  }
+  if (origins.length === 0) return { error: `unknown origin ${unknown.join(', ')}. Origins: ${NAME_ORIGINS.join(', ')}` };
+  return { origins, unknown };
+}
+
+export function parseCount(raw: string | undefined): number {
+  const parsed = Number.parseInt(raw ?? '', 10);
+  return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), MAX_NAME_COUNT) : DEFAULT_NAME_COUNT;
+}
+
+/** usedTexts: the card and/or book text. A name sharing a capitalized word with it is skipped. */
+export async function suggestNames(action: ParsedAction, usedTexts: readonly string[]): Promise<ActionResult> {
+  const resolved = resolveOrigins(action.headers.origin);
+  if ('error' in resolved) return fail(resolved.error);
+  const { origins, unknown } = resolved;
 
   const genderRaw = (action.headers.gender ?? '').trim().toLowerCase() || 'any';
   if (genderRaw !== 'female' && genderRaw !== 'male' && genderRaw !== 'any') {
@@ -209,10 +220,7 @@ export async function suggestNames(action: ParsedAction, usedTexts: readonly str
   }
   const part: NamePart = partRaw;
   const invented = parseBoolText(action.headers.invented) === true;
-  const parsedCount = Number.parseInt(action.headers.count ?? '', 10);
-  const count = Number.isFinite(parsedCount)
-    ? Math.min(Math.max(parsedCount, 1), MAX_NAME_COUNT)
-    : DEFAULT_NAME_COUNT;
+  const count = parseCount(action.headers.count);
 
   const data = await loadNameData();
   const used = new Set(usedTexts.flatMap(nameTokens));
