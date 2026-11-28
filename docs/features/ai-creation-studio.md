@@ -31,7 +31,7 @@ Type a free-form description of the character. The AI uses that text as the conc
 
 ### Tags Mode
 
-Select tags across categories. **Generation** (perspective and tense) is always first.
+Select tags across categories. **Generation Style** (perspective and tense) is a collapsible section above Identity.
 
 | Category | Purpose | Examples |
 | :--- | :--- | :--- |
@@ -46,13 +46,13 @@ Select tags across categories. **Generation** (perspective and tense) is always 
 | **Kink & Fetish** | Adult tags (NSFW) | Hidden when **Hide NSFW tags** is on |
 
 **Tag selection:**
-- Click a tag to select or deselect it
+- Click a tag's name to select or deselect it, and the star inside the chip to favorite it
 - Multiple tags per category (except one perspective and one tense)
 - Select at least one character tag (not just the generation style) before **Generate Character** turns on, or use **I'm Feeling Lucky**
-- Tags convert to a readable concept (`female` + `knight` → "Female, Knight")
+- Tags convert to a concept grouped by category (`Identity: Female; Role: Knight; Tone: Dark`). Switch to Write to see it
 - Conflicting tags are excluded (for example, selecting "female" disables "male")
-- **Star** a tag to pin it in **Favorites**. Recently used tags appear under **Recent**.
-- **Add your own tag** at the bottom of a category (not Generation). Custom tags save in settings. A slug that already exists in another category is rejected. Custom tags are drawn by Feeling Lucky and follow the same gender gray-out rules as built-ins.
+- **Star** a tag to pin it in **Favorites**; unstar it there to remove it. **Selected** lists your picks, each with **×** to remove. Recently used tags appear under **Recent**.
+- **Add your own tag** at the bottom of a category (not Generation). Custom tags save in settings. Delete one with the trash icon inside its chip: the icon turns into a red check, and a second click deletes it and removes it from Favorites. A slug that already exists in another category is rejected. Custom tags are drawn by Feeling Lucky and follow the same gender gray-out rules as built-ins.
 
 ::: tip Switching Modes
 Switching from Tags to Write replaces the concept text with your selected tags so you can edit them as prose.
@@ -68,6 +68,10 @@ Every character needs a generation style before the AI can start. Choose:
 - **Tense** — present tense or past tense
 
 Only one perspective and one tense at a time.
+
+Click the star inside a perspective or tense chip to make it your default. It is already selected when you open the Studio and after **Create Another**. One default per row; starring another replaces it, and clicking the star again clears it.
+
+The default prompts give the description a **Speech** section, keep the first message and examples from acting or speaking for `{{user}}`, and have examples say `{{char}}` instead of the name. With second person, "you" is limited to what `{{user}}` perceives.
 
 Descriptions are written as character-card reference material. First-person picks stay first person (the 'you' option writes `{{user}}` instead of "you"); second- and third-person picks both write the description in third person. First messages and example dialogue follow the style you selected.
 
@@ -134,11 +138,18 @@ The right panel shows a live preview as fields generate.
 | :--- | :--- | :--- |
 | **Retry** | The field failed | Re-generate the field |
 | **Regenerate** | The field is done | Generate completely new content for this field |
+| **Note** (next to Regenerate) | The field is done | Regenerate this field with a short change you type |
 | **Generate** | The field was not written yet (for example after **Stop**) | Write that field now |
 
 ::: tip
 **Retry** is for fixing errors. **Regenerate** is for a fresh take on a field you do not like.
 :::
+
+### Regenerate with a note {#regenerate-with-a-note}
+
+Click the note button next to **Regenerate**, type a short change such as *make them older*, and press **Enter** or **Regenerate**. **Escape** closes it. Only that field is rewritten; the rest of it stays as it was unless the note asks otherwise.
+
+When you edit or regenerate the **Description**, **First Message** and **Examples** show **Description changed** until you regenerate them, since they were written for the old one.
 
 ## Saving to Vault
 
@@ -170,7 +181,7 @@ Name and Description always run. Turn **First Message** and **Examples** off to 
 
 ### Generation Prompts
 
-Each field has an editable template. The chips under a prompt list the variables it can use. Click a chip to insert its variable at the cursor (or at the end if you haven't clicked into the prompt). If the prompt already uses it, the chip selects it instead; click again to step through each use. Hover a chip to see what it holds. Chips are green when used, red when a required one is missing, and show **+** when optional.
+Each field has an editable template. Prompts you never edited update to new defaults on their own; edited ones are kept. The chips under a prompt list the variables it can use. Click a chip to insert its variable at the cursor (or at the end if you haven't clicked into the prompt). If the prompt already uses it, the chip selects it instead; click again to step through each use. Hover a chip to see what it holds. Chips are green when used, red when a required one is missing, and show **+** when optional.
 
 | Chip | Variable | Where it is required | What it expands to |
 | :--- | :--- | :--- | :--- |
@@ -222,9 +233,9 @@ Generation can consume significant tokens depending on your model and sampler. M
 
 ## Troubleshooting
 
-**"AI Provider Not Configured"**
+**"AI not configured" in the header**
 - Set up a provider first
-- Click **Configure AI** in the warning banner
+- Click **AI not configured** (**Set up AI** on phones) to open AI settings
 - See [AI Setup](/configuration/ai-setup)
 
 **Generation fails or returns empty content**

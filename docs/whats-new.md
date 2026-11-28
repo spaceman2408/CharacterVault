@@ -6,6 +6,17 @@ Quick overview of recent updates to CharacterVault.
 
 ## November 2026
 
+### 1.11.0
+
+CharacterVault 1.11.0 reworks the AI Creation Studio with shorter prompts, a note on Regenerate, and a default perspective and tense, lets the Agent pick place names and share skills as files, and adds favorite characters and a check for common mistakes before export, plus a minimum quantization filter for OpenRouter.
+
+- **Creation Studio rework**: shorter default prompts, a note button next to **Regenerate**, **Description changed** on outdated fields, and a starred default perspective and tense
+- **Agent place names and skill files**: both Agents call `suggest_places` for new places, and **Settings → Agent Skills → Import / Export all** moves skills as files
+- **Favorites and export check**: the star on a library card pins it to the top, and exporting lists likely mistakes first (**Settings → Character Workspace → Export**)
+- **OpenRouter minimum quantization**: **Settings → AI Config → Provider** skips hosts below a chosen precision
+
+[Release 1.11.0 →](/releases/v1.11.0) · [AI Creation Studio →](/features/ai-creation-studio) · [Import & Export →](/features/import-export#check-before-export)
+
 ### 1.10.0
 
 CharacterVault 1.10.0 adds Find & Replace across a whole character or lorebook, with a grouped preview, a snapshot before every replace, and Undo. The AI Creation Studio shows each field's thinking while it writes and works with endpoints that need no API key, plus fixes for editing, Stop, and Regenerate during generation and for V3 card fields lost on import.
@@ -49,18 +60,6 @@ CharacterVault 1.9.0 lets you save an endpoint and model as a named preset and s
 - **Agent recursion flags**: flags the Agent turns off stay off, **Review agent edits** lists each changed entry setting, and the recursion map and key test explain blocked links and entries that can never activate
 
 [Release 1.9.0 →](/releases/v1.9.0) · [AI Setup →](/configuration/ai-setup#saved-presets) · [AI Agent →](/features/ai-agent#what-it-can-check)
-
-## October 2026
-
-### 1.8.5
-
-CharacterVault 1.8.5 warns before you leave a running Agent and marks runs that leaving cut short, adds an option for the Agent to remember exactly what it wrote earlier in the chat, and has it pick real names that fit the setting, plus em dash matching that leaves hyphens alone and a large round of Agent and chat fixes.
-
-- **Leave warning for Agent runs**: refreshing or closing the tab during an Agent run or with a review waiting asks first; leave anyway and that run's edits are lost, with its writes shown as **Not saved**
-- **Remember earlier edits**: **Settings → Character Workspace → Agent edits → Remember earlier edits in the chat**, off by default, shows the Agent exactly what it wrote in earlier runs
-- **Real names**: asked for a rename or new NPCs without names, the Agent picks real names that fit the setting and never reuses one already on the card or in its lorebook
-
-[Release 1.8.5 →](/releases/v1.8.5) · [AI Agent →](/features/ai-agent#leaving-mid-run)
 
 ---
 

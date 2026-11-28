@@ -328,11 +328,12 @@ Workspace UI preferences (this used to share a **Studio** tab with Creation Stud
 - **Chat panel:** default Ask AI chat when you open a character or lorebook: **Orion** (talks, does not write the card) or **Agent** (writes the open card or book). You can still switch in the chat header. See [AI Agent](/features/ai-agent).
 - **Agent edits:** **Review agent edits before applying** stages Agent writes into a diff modal instead of applying them when the run finishes. See [AI Agent → Review edits](/features/ai-agent#review-edits). **Remember earlier edits in the chat** (off by default) shows the Agent exactly what it wrote in earlier runs. See [AI Agent → Remember earlier edits](/features/ai-agent#remember-earlier-edits).
 - **Creator Notes:** **Warn about remote content in Creator Notes preview** (on by default) says when the notes load images, fonts, or styles from another site. See [Creator Notes → Sandboxed Rendering](/features/creator-notes#sandboxed-rendering).
+- **Export:** **Check cards before export** (on by default) lists likely mistakes before a card downloads. See [Import & Export → Check before export](/features/import-export#check-before-export).
 - **Editor links** and **Spellcheck:** covered under [Editor](/features/editor).
 
 ## Agent Skills Tab
 
-Instructions the [Agent](/features/ai-agent) loads for a kind of task, such as writing greetings. Turn skills on or off, edit the three that come with the app, or add your own. **Agent tools glossary** at the bottom lists every tool the Agent can call; click a name to copy it into a skill. See [AI Agent → Skills](/features/ai-agent#skills).
+Instructions the [Agent](/features/ai-agent) loads for a kind of task, such as writing greetings. Turn skills on or off, edit the three that come with the app, add your own, or move them as files with **Import**, **Export all**, and **Select**. **Agent tools glossary** at the bottom lists every tool the Agent can call; click a name to copy it into a skill. See [AI Agent → Skills](/features/ai-agent#skills).
 
 ## Creation Studio Tab
 

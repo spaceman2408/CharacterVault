@@ -1,7 +1,7 @@
-::: tip CharacterVault 1.10.0
-Find & Replace across a whole character or lorebook with a preview and Undo, plus live thinking in the Creation Studio.
+::: tip CharacterVault 1.11.0
+A reworked Creation Studio, Agent place names, favorite characters, and a check for common mistakes before export.
 
-[Try it](https://vault.charactervault.app) · [Find & Replace](/features/editor#find-replace) · [Lorebook Vault](/features/lorebook-vault#find-replace)
+[Try it](https://vault.charactervault.app) · [AI Creation Studio](/features/ai-creation-studio#regenerate-with-a-note) · [Check before export](/features/import-export#check-before-export)
 :::
 
 # CharacterVault

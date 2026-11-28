@@ -79,6 +79,16 @@ Ask for a rename or new characters without giving names, for example *add her tw
 
 Both the character Agent and the lorebook Agent do this. Give the names yourself if you already have them.
 
+### Place names {#place-names}
+
+Ask for a new town, village, city, region, river, mountain, lake, or inn, or to rename a placeholder like *Oakhaven*, and the Agent calls `suggest_places` (**Suggested N places** in the chat) and picks from that list instead of making one up.
+
+- Fantasy and invented worlds get invented names; real-world settings get real towns and regions for that country.
+- Rivers, mountains, and lakes come as bare names.
+- It never suggests a place already named on the card or in its lorebook.
+
+Both the character Agent and the lorebook Agent do this.
+
 ### What it can check
 
 Ask it to check the card or book and it runs read-only reports. Nothing is written.
@@ -132,6 +142,12 @@ Open **Settings → Agent Skills**.
 - Click a row to edit its name, when-to-use line, and instructions. The token count is what the instructions cost when the Agent loads them.
 - **New** adds a skill at the top. A new skill you close without typing anything is dropped.
 - An edited default skill gets **Reset to default**. If you delete a default, **Add back** restores it.
+
+### Import and export {#skill-files}
+
+- **Export all** saves every named skill to one `.json` file. **Select** lets you tick skills (**All**, **Custom**, or **None**) and export just those. An open skill has its own **Export**.
+- **Import** takes those `.json` files and Markdown skill files: a `SKILL.md` with `name` and `description` frontmatter, or a `#` heading for the name. Pick several files at once.
+- A name that already exists asks **Replace** (updates the skill in place and keeps it on or off) or **Keep both** (adds a numbered copy).
 
 ### Writing a skill
 
