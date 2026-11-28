@@ -27,6 +27,7 @@ export function CharacterSelectionView({
     openCharacter,
     deleteCharacter,
     duplicateCharacter,
+    setCharacterFavorite,
     refreshCharacters,
   } = useCharacterContext();
   const { lorebookListItems, createLorebook, importLorebookFile, refreshLorebooks } =
@@ -331,6 +332,7 @@ export function CharacterSelectionView({
               onDelete={(id, name) => setDeleteConfirm({ id, name })}
               onExport={io.handleCardExport}
               onTagClick={library.setSearchQuery}
+              onToggleFavorite={(id, favorite) => void setCharacterFavorite(id, favorite).catch(() => undefined)}
               exportingCardId={io.exportingCardId}
               onImportClick={io.openFilePicker}
             />

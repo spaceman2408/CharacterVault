@@ -10,6 +10,7 @@ import {
   Info,
   Loader2,
   Pencil,
+  Star,
   Trash2,
   User,
 } from 'lucide-react';
@@ -39,6 +40,7 @@ export interface CharacterCardProps {
   onDelete: (id: string, name: string) => void;
   onExport: (id: string, format: CardExportFormat) => Promise<void>;
   onTagClick: (tag: string) => void;
+  onToggleFavorite: (id: string, favorite: boolean) => void;
   isExporting?: boolean;
 }
 
@@ -49,6 +51,7 @@ export function CharacterCard({
   onDelete,
   onExport,
   onTagClick,
+  onToggleFavorite,
   isExporting = false,
 }: CharacterCardProps): React.ReactElement {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -58,6 +61,7 @@ export function CharacterCard({
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const hasImage = Boolean(character.thumbnailData);
+  const isFavorite = character.favorite === true;
   const tags = character.tags ?? [];
   const visibleTags = tags.slice(0, TAG_CHIP_LIMIT);
   const overflowTagCount = Math.max(0, tags.length - TAG_CHIP_LIMIT);
@@ -156,6 +160,24 @@ export function CharacterCard({
         )}
 
         <div className="absolute inset-0 bg-linear-to-t from-vault-950/60 via-transparent to-vault-950/15 sm:from-vault-950/70 sm:to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(character.id, !isFavorite);
+          }}
+          className={`absolute top-1.5 left-1.5 sm:top-2 sm:left-2 ${cardActionBtnBase} ${
+            isFavorite
+              ? 'text-warning hover:bg-accent-soft'
+              : 'text-fg-muted hover:bg-accent-soft hover:text-warning sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100'
+          }`}
+          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          aria-label={isFavorite ? `Remove ${character.name} from favorites` : `Add ${character.name} to favorites`}
+          aria-pressed={isFavorite}
+        >
+          <Star className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
+        </button>
 
         <div
           className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex flex-row gap-1 transition-all duration-200 opacity-100 translate-y-0 sm:opacity-0 sm:-translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 sm:group-focus-within:opacity-100 sm:group-focus-within:translate-y-0"

@@ -19,6 +19,7 @@ export interface VaultGridProps {
   onDelete: (id: string, name: string) => void;
   onExport: (id: string, format: CardExportFormat) => Promise<void>;
   onTagClick: (tag: string) => void;
+  onToggleFavorite: (id: string, favorite: boolean) => void;
   exportingCardId: string | null;
   onImportClick: () => void;
 }
@@ -37,6 +38,7 @@ export function VaultGrid({
   onDelete,
   onExport,
   onTagClick,
+  onToggleFavorite,
   exportingCardId,
   onImportClick,
 }: VaultGridProps): React.ReactElement {
@@ -153,6 +155,7 @@ export function VaultGrid({
             onDelete={onDelete}
             onExport={onExport}
             onTagClick={onTagClick}
+            onToggleFavorite={onToggleFavorite}
             isExporting={exportingCardId === char.id}
           />
         ))}

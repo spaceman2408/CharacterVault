@@ -212,6 +212,7 @@ export interface Character {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   lastOpenedAt?: Timestamp;
+  favorite?: boolean;
 }
 
 export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback' | 'replace';
@@ -376,6 +377,7 @@ export interface CharacterListItem {
   name: string;
   thumbnailData: string;
   lastOpenedAt?: Timestamp;
+  favorite?: boolean;
   updatedAt: Timestamp;
   createdAt: Timestamp;
   /** Tokens sent with every chat message (core definition fields) */

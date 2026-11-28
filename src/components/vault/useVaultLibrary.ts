@@ -47,20 +47,21 @@ export function useVaultLibrary(characterListItems: CharacterListItem[]) {
 
   const sortedCharacters = useMemo(() => {
     const list = [...filteredCharacters];
+    let compare: (a: CharacterListItem, b: CharacterListItem) => number;
     if (sortMode === 'recent') {
-      return list.sort((a, b) => {
+      compare = (a, b) => {
         const dateA = a.lastOpenedAt ? new Date(a.lastOpenedAt).getTime() : 0;
         const dateB = b.lastOpenedAt ? new Date(b.lastOpenedAt).getTime() : 0;
         if (dateB !== dateA) return dateB - dateA;
         return b.updatedAt.localeCompare(a.updatedAt);
-      });
+      };
+    } else if (sortMode === 'created') {
+      compare = (a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '');
+    } else {
+      compare = (a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
     }
-    if (sortMode === 'created') {
-      return list.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
-    }
-    return list.sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
-    );
+    return list.sort((a, b) => Number(b.favorite === true) - Number(a.favorite === true) || compare(a, b));
   }, [filteredCharacters, sortMode]);
 
   const lastActive = useMemo(() => {

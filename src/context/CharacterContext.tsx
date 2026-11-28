@@ -28,6 +28,7 @@ interface CharacterContextValue {
   deleteCharacter: (characterId: string) => Promise<void>;
   updateCharacter: (characterId: string, input: UpdateCharacterInput) => Promise<Character>;
   duplicateCharacter: (characterId: string, newName: string) => Promise<Character>;
+  setCharacterFavorite: (characterId: string, favorite: boolean) => Promise<void>;
   updateSpecField: (characterId: string, field: keyof Character['data']['spec'], value: string | string[]) => Promise<Character>;
 
   // Character lists
@@ -75,6 +76,7 @@ export function CharacterProvider({ children }: CharacterProviderProps): React.R
     deleteCharacter: operations.deleteCharacter,
     updateCharacter: operations.updateCharacter,
     duplicateCharacter: operations.duplicateCharacter,
+    setCharacterFavorite: operations.setCharacterFavorite,
     updateSpecField: operations.updateSpecField,
     characters: result.characters,
     characterListItems: result.characterListItems,
