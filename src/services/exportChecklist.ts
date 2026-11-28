@@ -29,8 +29,33 @@ const AI_JUNK =
 
 const MACRO_LIKE = /\{+\s*(?:char|user)\s*\}+/gi;
 
+const NAMED_MACRO = /\{\{\s*([a-z_]+)\s*\}\}/gi;
+
+const CORE_MACROS = ['char', 'user'];
+
 function fieldLabel(id: string): string {
   return CHARACTER_SECTIONS.find((section) => section.id === id)?.label ?? id;
+}
+
+function editDistance(a: string, b: string): number {
+  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost);
+    }
+    previous = current;
+  }
+  return previous[b.length];
+}
+
+// Other SillyTavern macros ({{time}}, {{random}}, …) are valid, so only names a typo or two
+// away from char/user are treated as misspellings.
+function isMisspelledCoreMacro(name: string): boolean {
+  const lower = name.toLowerCase();
+  if (CORE_MACROS.includes(lower)) return false;
+  return CORE_MACROS.some((macro) => editDistance(lower, macro) <= 2);
 }
 
 function findBrokenMacro(text: string): string | null {
@@ -38,6 +63,9 @@ function findBrokenMacro(text: string): string | null {
     const open = match[0].match(/^\{+/)?.[0].length ?? 0;
     const close = match[0].match(/\}+$/)?.[0].length ?? 0;
     if (open !== 2 || close !== 2) return match[0];
+  }
+  for (const match of text.matchAll(NAMED_MACRO)) {
+    if (isMisspelledCoreMacro(match[1])) return match[0];
   }
   return null;
 }

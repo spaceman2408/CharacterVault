@@ -62,6 +62,28 @@ describe('checkCardForExport', () => {
     ]);
   });
 
+  it('flags misspelled char and user macros', () => {
+    const findings = checkCardForExport(
+      spec({
+        description: '{{char}} will NEVER speak for {{use}}',
+        personality: 'Talks to {{USR}}.',
+        scenario: 'Meet {{chr}}.',
+      }),
+      undefined,
+    );
+    expect(findings.map((f) => f.message)).toEqual([
+      'Broken macro {{use}} in Description',
+      'Broken macro {{USR}} in Personality',
+      'Broken macro {{chr}} in Scenario',
+    ]);
+  });
+
+  it('leaves other SillyTavern macros alone', () => {
+    const description =
+      '{{User}} {{CHAR}} {{time}} {{date}} {{random}} {{roll}} {{bias}} {{trim}} {{noop}} {{input}} {{persona}} {{group}} {{charVersion}} {{getvar::mood}}';
+    expect(checkCardForExport(spec({ description }), undefined)).toEqual([]);
+  });
+
   it('flags leftover AI text in the name, greetings, and lorebook entries', () => {
     const findings = checkCardForExport(
       spec({ name: 'Emrys</arg_value>', alternate_greetings: ['<think>plan</think>Hello'] }),
