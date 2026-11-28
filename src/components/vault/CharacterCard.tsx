@@ -167,7 +167,7 @@ export function CharacterCard({
             e.stopPropagation();
             onToggleFavorite(character.id, !isFavorite);
           }}
-          className={`absolute top-1.5 left-1.5 sm:top-2 sm:left-2 ${cardActionBtnBase} ${
+          className={`absolute bottom-1.5 right-1.5 sm:bottom-auto sm:right-auto sm:top-2 sm:left-2 ${cardActionBtnBase} ${
             isFavorite
               ? 'text-warning hover:bg-accent-soft'
               : 'text-fg-muted hover:bg-accent-soft hover:text-warning sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100'
