@@ -7,6 +7,16 @@ export default defineConfig({
   srcDir: '.',
   outDir: '../dist/docs',
   cleanUrls: true,
+  markdown: {
+    // Vue would read {{char}} / {{user}} in inline code as template interpolation and render it empty.
+    config(md) {
+      const renderCodeInline = md.renderer.rules.code_inline!
+      md.renderer.rules.code_inline = (tokens, idx, options, env, self) => {
+        tokens[idx].attrSet('v-pre', '')
+        return renderCodeInline(tokens, idx, options, env, self)
+      }
+    },
+  },
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/docs/CharacterVaultFavicon.svg' }],
   ],

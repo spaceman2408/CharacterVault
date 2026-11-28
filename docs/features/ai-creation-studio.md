@@ -64,7 +64,7 @@ Hide categories or NSFW tags under [Creation Studio settings](#creation-studio-s
 
 Every character needs a generation style before the AI can start. Choose:
 
-- **Perspective** — first person, second person, third person, or **1st person (refer to {{user}} as 'you')**
+- **Perspective** — first person, second person, third person, or **1st person (refer to `{{user}}` as 'you')**
 - **Tense** — present tense or past tense
 
 Only one perspective and one tense at a time.
