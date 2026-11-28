@@ -10,6 +10,7 @@ import {
 } from './SettingsBackupService';
 import { normalizeMacroHighlight, normalizeRoleplayHighlight } from '../db/characterTypes';
 import { isDefaultAgentSkills } from './agentSkills';
+import { characterDb } from '../db/CharacterDatabase';
 import { notifyFavoritesChanged, setFavoriteTags } from '../pages/ai-creation-studio/tags/tagData';
 
 export interface RestorePreview {
@@ -77,6 +78,9 @@ function parseManifest(input: unknown): FullBackupManifest {
       characters: typeof counts.characters === 'number' ? counts.characters : 0,
       lorebooks: typeof counts.lorebooks === 'number' ? counts.lorebooks : 0,
     },
+    ...(Array.isArray(raw.favorites)
+      ? { favorites: raw.favorites.filter((path): path is string => typeof path === 'string').map(cleanZipPath) }
+      : {}),
   };
 }
 
@@ -156,6 +160,7 @@ export class VaultRestoreService {
     let lorebooksImported = 0;
     let lorebooksFailed = 0;
 
+    const favorites = new Set(preview.manifest?.favorites ?? []);
     const total = preview.characterPaths.length + preview.lorebookPaths.length;
     let done = 0;
     const tick = () => {
@@ -172,6 +177,9 @@ export class VaultRestoreService {
         const result = await characterImportService.importFromFile(file);
         if (result.success) {
           charactersImported += 1;
+          if (result.character && favorites.has(path)) {
+            await characterDb.setFavorite(result.character.id, true).catch(() => undefined);
+          }
         } else {
           charactersFailed += 1;
           errors.push({ path, error: result.error || 'Import failed.' });

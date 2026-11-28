@@ -25,7 +25,7 @@ On desktop, each card shows the character's portrait thumbnail, name, tag chips,
 
 ### Favorites {#favorites}
 
-Click the star in the top-left corner of a card to make it a favorite (on desktop it shows on hover until starred). Favorites stay at the top of the grid in every sort and search, in that sort's order. Click the star again to remove it. Favorites are saved on the character in this browser; a vault backup does not carry them.
+Click the star in the top-left corner of a card to make it a favorite (on desktop it shows on hover until starred). Favorites stay at the top of the grid in every sort and search, in that sort's order. Click the star again to remove it. [Vault backups](/features/import-export#vault-backup) keep favorites, and restoring one stars those characters again. Exported cards do not carry the star.
 
 ## Search
 

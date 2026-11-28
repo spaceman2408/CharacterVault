@@ -39,7 +39,7 @@ From the library header, click **Backup** to download a ZIP of the whole vault:
 | `characters/` | Cards **with** an image as PNG (embedded data); cards **without** one as JSON (V3). |
 | `lorebooks/` | Standalone vault lorebooks as SillyTavern-oriented JSON |
 | `settings.json` | App settings (AI config, sampler, prompts, studio including favorite tags, workspace, layout) |
-| `manifest.json` | Backup kind, date, counts, and whether API keys were included |
+| `manifest.json` | Backup kind, date, counts, favorite characters, and whether API keys were included |
 
 **Include API keys** is off by default. Turn it on only when you are moving your own setup between browsers. Anyone with that file can spend your AI quota.
 
