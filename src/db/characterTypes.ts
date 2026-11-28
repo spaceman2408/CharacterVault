@@ -538,6 +538,8 @@ export interface CharacterVaultSettings {
     agentSkillsEnabled?: boolean;
     /** Warn when a Creator Notes preview loads remote resources. Missing = on. */
     creatorNotesRemoteWarning?: boolean;
+    /** Check cards for common mistakes before export. Missing = on. */
+    exportChecklist?: boolean;
     spellcheck?: SpellcheckSettings;
     /** Missing = highlighting on with built-in default colors. */
     roleplayHighlight?: RoleplayHighlightSettings;
@@ -671,6 +673,8 @@ export interface AgentSkill {
 export { DEFAULT_AGENT_SKILLS } from './defaultAgentSkills';
 
 export const DEFAULT_CREATOR_NOTES_REMOTE_WARNING = true;
+
+export const DEFAULT_EXPORT_CHECKLIST = true;
 
 export function normalizeDefaultChatPanel(value: unknown): DefaultChatPanel {
   return value === 'agent' ? 'agent' : 'orion';

@@ -3,6 +3,7 @@ import { Book, Coffee, Upload, User, X } from 'lucide-react';
 import { useCharacterContext, useLorebookContext } from '../../context';
 import { PromoBanner } from '../PromoBanner';
 import { showEphemeralToast } from '../../utils/ephemeralToast';
+import { DEFAULT_EXPORT_CHECKLIST } from '../../db/characterTypes';
 import type { ConfirmTarget, VaultTab } from './types';
 import { useVaultLibrary } from './useVaultLibrary';
 import { useVaultIO } from './useVaultIO';
@@ -12,6 +13,7 @@ import { VaultGrid } from './VaultGrid';
 import { VaultModals } from './VaultModals';
 import { LorebookVaultView } from './LorebookVaultView';
 import { CharacterSettingsPanel } from '../settings/CharacterSettingsPanel';
+import { ExportChecklistDialog } from '../ui/ExportChecklistDialog';
 
 const VAULT_TAB_KEY = 'characterVaultActiveTab';
 
@@ -29,6 +31,7 @@ export function CharacterSelectionView({
     duplicateCharacter,
     setCharacterFavorite,
     refreshCharacters,
+    settings,
   } = useCharacterContext();
   const { lorebookListItems, createLorebook, importLorebookFile, refreshLorebooks } =
     useLorebookContext();
@@ -83,6 +86,7 @@ export function CharacterSelectionView({
     refreshCharacters,
     refreshLorebooks,
     importLorebookFile,
+    checkBeforeExport: settings?.ui.exportChecklist ?? DEFAULT_EXPORT_CHECKLIST,
   });
 
   const handlePromoDismiss = () => {
@@ -273,6 +277,20 @@ export function CharacterSelectionView({
           onRestoreDismiss={io.dismissRestoreResult}
         />
 
+        {io.cardExportCheck && (
+          <ExportChecklistDialog
+            characterName={io.cardExportCheck.name}
+            findings={io.cardExportCheck.findings}
+            onCancel={io.cancelCardExport}
+            onExport={io.confirmCardExport}
+            onOpenCard={() => {
+              const { id } = io.cardExportCheck!;
+              io.cancelCardExport();
+              void handleOpenCharacter(id);
+            }}
+          />
+        )}
+
         {vaultTab === 'characters' ? (
           <>
             <div className="mb-6 flex items-start gap-2 rounded-xl border border-border bg-surface/60 px-3 py-2.5 text-xs text-fg-muted sm:items-center">
@@ -330,7 +348,7 @@ export function CharacterSelectionView({
               onOpen={(id) => void handleOpenCharacter(id)}
               onDuplicate={(id, name) => setCopyConfirm({ id, name })}
               onDelete={(id, name) => setDeleteConfirm({ id, name })}
-              onExport={io.handleCardExport}
+              onExport={(id, format) => io.handleCardExport(id, format)}
               onTagClick={library.setSearchQuery}
               onToggleFavorite={(id, favorite) => void setCharacterFavorite(id, favorite).catch(() => undefined)}
               exportingCardId={io.exportingCardId}

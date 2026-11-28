@@ -254,6 +254,7 @@ export class VaultRestoreService {
         agentKeepEdits: data.ui.agentKeepEdits ?? false,
         agentSkillsEnabled: data.ui.agentSkillsEnabled ?? true,
         creatorNotesRemoteWarning: data.ui.creatorNotesRemoteWarning ?? true,
+        exportChecklist: data.ui.exportChecklist ?? true,
         roleplayHighlight: normalizeRoleplayHighlight(data.ui.roleplayHighlight),
         macroHighlight: normalizeMacroHighlight(data.ui.macroHighlight),
         macroAutoConvert: data.ui.macroAutoConvert ?? true,

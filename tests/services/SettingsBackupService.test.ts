@@ -61,6 +61,7 @@ function makeDraft(): BackupDraftTarget {
     agentSkillsEnabled: true,
     agentSkills: [],
     creatorNotesRemoteWarning: true,
+    exportChecklist: true,
     roleplayHighlight: { ...DEFAULT_ROLEPLAY_HIGHLIGHT_SETTINGS },
     macroHighlight: { ...DEFAULT_MACRO_HIGHLIGHT_SETTINGS },
     macroAutoConvert: true,

@@ -20,6 +20,7 @@ import {
   DEFAULT_AGENT_SKILLS_ENABLED,
   DEFAULT_CHARACTER_VAULT_SETTINGS,
   DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
+  DEFAULT_EXPORT_CHECKLIST,
   DEFAULT_MACRO_AUTO_CONVERT,
   DEFAULT_SECTION_ORDER,
   DEFAULT_SETTINGS,
@@ -249,6 +250,7 @@ function normalizeBackupUi(value: unknown): CharacterVaultSettings['ui'] {
       raw.creatorNotesRemoteWarning,
       DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
     ),
+    exportChecklist: asBoolean(raw.exportChecklist, DEFAULT_EXPORT_CHECKLIST),
     roleplayHighlight: normalizeRoleplayHighlight(
       isRecord(raw.roleplayHighlight) ? raw.roleplayHighlight : undefined,
     ),
@@ -379,6 +381,7 @@ export interface BackupDraftTarget {
   agentSkillsEnabled: boolean;
   agentSkills: AgentSkill[];
   creatorNotesRemoteWarning: boolean;
+  exportChecklist: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
   macroAutoConvert: boolean;
@@ -430,6 +433,7 @@ export function applyBackupToDraft<T extends BackupDraftTarget>(
       : prev.agentSkills,
     creatorNotesRemoteWarning:
       settings.ui.creatorNotesRemoteWarning ?? DEFAULT_CREATOR_NOTES_REMOTE_WARNING,
+    exportChecklist: settings.ui.exportChecklist ?? DEFAULT_EXPORT_CHECKLIST,
     roleplayHighlight: normalizeRoleplayHighlight(settings.ui.roleplayHighlight),
     macroHighlight: normalizeMacroHighlight(settings.ui.macroHighlight),
     macroAutoConvert: settings.ui.macroAutoConvert ?? DEFAULT_MACRO_AUTO_CONVERT,
