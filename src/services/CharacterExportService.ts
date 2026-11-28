@@ -30,6 +30,8 @@ export interface FullBackupManifest {
     characters: number;
     lorebooks: number;
   };
+  /** Zip paths of favorite characters. Older backups omit it. */
+  favorites?: string[];
 }
 
 /**
@@ -216,11 +218,14 @@ export class CharacterExportService {
       let charactersExported = 0;
       let lorebooksExported = 0;
       const failures: string[] = [];
+      const favorites: string[] = [];
 
       for await (const character of characters) {
         characterTotal += 1;
-        if (await this.addCharacterToZip(zip, character, 'characters/', usedNames, failures)) {
+        const path = await this.addCharacterToZip(zip, character, 'characters/', usedNames, failures);
+        if (path) {
           charactersExported += 1;
+          if (character.favorite) favorites.push(path);
         }
       }
 
@@ -239,6 +244,7 @@ export class CharacterExportService {
         exportedAt: settings.exportedAt,
         includeKeys: settings.includeKeys,
         counts: { characters: charactersExported, lorebooks: lorebooksExported },
+        ...(favorites.length > 0 ? { favorites } : {}),
       };
       zip.file('manifest.json', JSON.stringify(manifest, null, 2));
 
@@ -270,7 +276,7 @@ export class CharacterExportService {
     prefix: string,
     usedNames: Map<string, number>,
     failures: string[],
-  ): Promise<boolean> {
+  ): Promise<string | null> {
     const hasImage = Boolean(character.imageData);
     const result = hasImage
       ? await this.exportAsPNG(character)
@@ -285,14 +291,12 @@ export class CharacterExportService {
 
     if (!finalResult.success || !finalResult.blob || !finalResult.filename) {
       failures.push(character.name);
-      return false;
+      return null;
     }
 
-    zip.file(
-      this.uniqueZipFilename(`${prefix}${finalResult.filename}`, usedNames),
-      await finalResult.blob.arrayBuffer(),
-    );
-    return true;
+    const path = this.uniqueZipFilename(`${prefix}${finalResult.filename}`, usedNames);
+    zip.file(path, await finalResult.blob.arrayBuffer());
+    return path;
   }
 
   private async addLorebookToZip(

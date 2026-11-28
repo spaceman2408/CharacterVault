@@ -7,6 +7,7 @@ import React from 'react';
 import {
   AlertCircle,
   Brain,
+  Cpu,
   CreditCard,
   Gauge,
   Bookmark,
@@ -37,10 +38,27 @@ import { ProviderSelect } from '../components/ProviderSelect';
 import { SettingsCard } from '../components/SettingsCard';
 import { PASSWORD_MANAGER_IGNORE_PROPS, SecretInput } from '../components/SecretInput';
 import { SettingsToggle } from '../components/SettingsToggle';
-import { OPENROUTER_SORTS, type ReasoningEffort } from '../../../db/characterTypes';
-import { getOpenRouterPinnedHost, isOpenRouterBaseUrl } from '../../../services/providers';
+import {
+  OPENROUTER_QUANT_FLOORS,
+  OPENROUTER_SORTS,
+  type OpenRouterQuantFloor,
+  type ReasoningEffort,
+} from '../../../db/characterTypes';
+import {
+  getOpenRouterPinnedHost,
+  isOpenRouterBaseUrl,
+  meetsOpenRouterQuantFilter,
+} from '../../../services/providers';
 import { getHiddenChainOfThoughtNote } from '../../../services/reasoning/hiddenChainOfThought';
 import type { SettingsTabProps } from '../types';
+
+const QUANT_FLOOR_LABELS: Record<OpenRouterQuantFloor, { bits: string; quants: string }> = {
+  fp4: { bits: '4-bit', quants: 'fp4, int4, nvfp4, mxfp4' },
+  fp6: { bits: '6-bit', quants: 'fp6' },
+  fp8: { bits: '8-bit', quants: 'fp8, int8, mxfp8' },
+  fp16: { bits: '16-bit', quants: 'bf16, fp16' },
+  fp32: { bits: '32-bit', quants: 'fp32' },
+};
 
 const smallButtonClass =
   'inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent/50';
@@ -81,6 +99,20 @@ export const AIConfigTab: React.FC<SettingsTabProps> = ({ draft, setDraft, helpe
   const hiddenCotNote = getHiddenChainOfThoughtNote(localAIConfig.modelId);
   const isOpenRouter = isOpenRouterBaseUrl(localAIConfig.baseUrl);
   const openRouterPin = isOpenRouter ? getOpenRouterPinnedHost(localAIConfig) : undefined;
+  const quantOptions = isOpenRouter ? localAIConfig.openRouter : undefined;
+  const quantFloor = quantOptions?.minQuantization;
+  const hostOptions = modelProviders.map((host) =>
+    meetsOpenRouterQuantFilter(host.quantization, quantOptions)
+      ? host
+      : {
+          ...host,
+          available: false,
+          unavailableReason:
+            quantFloor && host.quantization
+              ? `Below ${QUANT_FLOOR_LABELS[quantFloor].bits}`
+              : 'Unknown quant',
+        }
+  );
   const savedPresets = localAIConfig.customBaseUrlPresets ?? [];
   const currentUrl = normalizeBaseUrl(localAIConfig.baseUrl);
   const currentModel = localAIConfig.modelId;
@@ -457,7 +489,7 @@ ${preset.modelId ?? ''}`}
           {localAIConfig.modelId && supportsProviderSelection && (
             <div className="relative">
               <ProviderSelect
-                providers={modelProviders}
+                providers={hostOptions}
                 selectedProvider={
                   isOpenRouter ? (openRouterPin ?? '') : (localAIConfig.selectedProvider ?? '')
                 }
@@ -471,6 +503,62 @@ ${preset.modelId ?? ''}`}
                   block. A blocked host is skipped, and a reply&apos;s info shows which host answered.
                 </p>
               )}
+            </div>
+          )}
+
+          {isOpenRouter && (
+            <div>
+              <label
+                htmlFor="openrouter-min-quant"
+                className="flex items-center gap-2 text-sm font-semibold text-fg mb-2"
+              >
+                <span className="p-1.5 rounded-md bg-muted text-fg-muted">
+                  <Cpu className="w-4 h-4" />
+                </span>
+                Minimum quantization
+              </label>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <select
+                  id="openrouter-min-quant"
+                  value={localAIConfig.openRouter?.minQuantization ?? ''}
+                  onChange={(e) => {
+                    const minQuantization = OPENROUTER_QUANT_FLOORS.find(
+                      (value) => value === e.target.value
+                    );
+                    setDraft((prev) => ({
+                      ...prev,
+                      ai: { ...prev.ai, openRouter: { ...prev.ai.openRouter, minQuantization } },
+                    }));
+                  }}
+                  className="w-full min-w-0 sm:flex-1 px-3 py-2.5 border border-border-strong rounded-lg bg-surface text-fg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-200"
+                >
+                  <option value="">Any (default)</option>
+                  {OPENROUTER_QUANT_FLOORS.map((floor) => (
+                    <option key={floor} value={floor}>
+                      {QUANT_FLOOR_LABELS[floor].bits} or higher ({QUANT_FLOOR_LABELS[floor].quants})
+                    </option>
+                  ))}
+                </select>
+                <div className="shrink-0">
+                  <SettingsToggle
+                    checked={localAIConfig.openRouter?.hideUnknownQuant ?? false}
+                    onChange={(checked) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        ai: {
+                          ...prev.ai,
+                          openRouter: { ...prev.ai.openRouter, hideUnknownQuant: checked },
+                        },
+                      }))
+                    }
+                    label="Hide unknown"
+                  />
+                </div>
+              </div>
+              <p className="mt-1.5 text-xs text-fg-muted">
+                Skips hosts below this precision. Hide unknown also skips hosts that don&apos;t
+                list theirs.
+              </p>
             </div>
           )}
 

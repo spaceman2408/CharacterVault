@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Bot, Braces, ExternalLink, Languages, MessageSquare, Quote, ShieldCheck } from 'lucide-react';
+import { Bot, Braces, ExternalLink, FileCheck, Languages, MessageSquare, Quote, ShieldCheck } from 'lucide-react';
 import type {
   DefaultChatPanel,
   MacroHighlightSettings,
@@ -292,6 +292,20 @@ export const WorkspaceTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) =>
             }
           />
         </div>
+      </SettingsCard>
+
+      <SettingsCard>
+        <h3 className="text-xs font-bold text-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+          <FileCheck className="w-4 h-4" />
+          Export
+        </h3>
+        <SettingsToggle
+          stacked
+          checked={draft.exportChecklist}
+          onChange={(checked) => setDraft((prev) => ({ ...prev, exportChecklist: checked }))}
+          label="Check cards before export"
+          description="Lists likely mistakes, like an empty first message or a broken macro, before the card downloads."
+        />
       </SettingsCard>
 
       <SettingsCard>

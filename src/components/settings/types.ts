@@ -48,6 +48,7 @@ export interface SettingsDraft {
   agentSkillsEnabled: boolean;
   agentSkills: AgentSkill[];
   creatorNotesRemoteWarning: boolean;
+  exportChecklist: boolean;
   roleplayHighlight: RoleplayHighlightSettings;
   macroHighlight: MacroHighlightSettings;
   macroAutoConvert: boolean;

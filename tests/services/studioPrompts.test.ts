@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_STUDIO_PROMPTS, normalizeStudioSettings } from '../../src/db/characterTypes';
+import { LEGACY_STUDIO_PROMPTS } from '../../src/db/legacyStudioPrompts';
 import {
+  buildRevisionBlock,
+  replaceNameWithCharMacro,
   renderStudioTemplate,
   validateStudioPrompts,
 } from '../../src/pages/ai-creation-studio/generationPrompts';
@@ -62,5 +65,64 @@ describe('normalizeStudioSettings', () => {
   it('falls back to defaults for empty prompt strings', () => {
     const normalized = normalizeStudioSettings({ prompts: { system: '' } });
     expect(normalized.prompts.system).toBe(DEFAULT_STUDIO_PROMPTS.system);
+  });
+
+  it('upgrades saved copies of old built-in defaults and keeps edited prompts', () => {
+    const legacy = LEGACY_STUDIO_PROMPTS[0];
+    const edited = `${legacy.first_mes}
+Keep it short.`;
+    const normalized = normalizeStudioSettings({
+      prompts: { ...legacy, first_mes: edited },
+    });
+    expect(normalized.prompts.description).toBe(DEFAULT_STUDIO_PROMPTS.description);
+    expect(normalized.prompts.mes_example).toBe(DEFAULT_STUDIO_PROMPTS.mes_example);
+    expect(normalized.prompts.first_mes).toBe(edited);
+  });
+
+  it('keeps old defaults distinct from current ones', () => {
+    for (const legacy of LEGACY_STUDIO_PROMPTS) {
+      for (const key of Object.keys(DEFAULT_STUDIO_PROMPTS) as Array<keyof typeof DEFAULT_STUDIO_PROMPTS>) {
+        expect(legacy[key]).not.toBe(DEFAULT_STUDIO_PROMPTS[key]);
+      }
+    }
+  });
+});
+
+describe('buildRevisionBlock', () => {
+  it('includes the previous version and the note', () => {
+    const block = buildRevisionBlock('  Maren Odell ', '  more Welsh ');
+    expect(block).toContain('Previous version:\nMaren Odell\n');
+    expect(block).toContain('follows this note: more Welsh\n');
+  });
+
+  it('omits the previous version when there is none', () => {
+    expect(buildRevisionBlock(undefined, 'older')).not.toContain('Previous version');
+  });
+});
+
+describe('replaceNameWithCharMacro', () => {
+  it('replaces the full name and capitalized name parts as whole words', () => {
+    const text = "{{user}}: Isolda Merrick? *Isolda's knife stops. Merrick rhymes with nothing; Isoldane is a town.*";
+    expect(replaceNameWithCharMacro(text, 'Isolda Merrick')).toBe(
+      "{{user}}: {{char}}? *{{char}}'s knife stops. {{char}} rhymes with nothing; Isoldane is a town.*"
+    );
+  });
+
+  it('leaves lowercase connecting words alone', () => {
+    expect(replaceNameWithCharMacro('Aldric of the Vale went to the vale.', 'Aldric of the Vale')).toBe(
+      '{{char}} went to the vale.'
+    );
+  });
+
+  it('returns text unchanged for an empty name', () => {
+    expect(replaceNameWithCharMacro('Hello', '  ')).toBe('Hello');
+  });
+});
+
+describe('legacy studio prompts', () => {
+  it('upgrades a saved copy of every earlier default to the current one', () => {
+    for (const legacy of LEGACY_STUDIO_PROMPTS) {
+      expect(normalizeStudioSettings({ prompts: legacy }).prompts).toEqual(DEFAULT_STUDIO_PROMPTS);
+    }
   });
 });

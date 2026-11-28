@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom';
 import { CharacterAgentChat, type AgentToolTarget } from '../../agent';
 import { useCharacterContext, CharacterEditorProvider, useCharacterEditorContext } from '../../context';
 import type { Character, CharacterBook, CharacterSection, CharacterSpec, SectionMeta } from '../../db/characterTypes';
-import { createEmptyCharacterBook } from '../../db/characterTypes';
+import { createEmptyCharacterBook, DEFAULT_EXPORT_CHECKLIST } from '../../db/characterTypes';
 import { useChatPanelMode } from '../../hooks/useChatPanelMode';
 import { generateThumbnail } from '../../utils/thumbnail';
 import { SectionEditor } from '../editor/SectionEditor';
@@ -28,6 +28,8 @@ import { estimateCharacterCardTokens, formatTokenEstimate } from '../../services
 import { characterExportService } from '../../services/CharacterExportService';
 import { characterSnapshotService } from '../../services/CharacterSnapshotService';
 import { customContextService } from '../../services/CustomContextService';
+import { checkCardForExport, type ExportCheckFinding } from '../../services/exportChecklist';
+import { ExportChecklistDialog } from '../ui/ExportChecklistDialog';
 import { showEphemeralToast } from '../../utils/ephemeralToast';
 import {
   ArrowLeft,
@@ -472,7 +474,10 @@ interface CharacterHeaderProps {
   onToggleChat: () => void;
   isMobile: boolean;
   agentRunning?: boolean;
+  onOpenTarget: (target: AgentToolTarget) => void;
 }
+
+type ExportFormat = 'json' | 'png';
 
 function CharacterHeader({
   onClose,
@@ -486,13 +491,20 @@ function CharacterHeader({
   onToggleChat,
   isMobile,
   agentRunning = false,
+  onOpenTarget,
 }: CharacterHeaderProps): React.ReactElement {
-  const { currentCharacter } = useCharacterContext();
+  const { currentCharacter, settings } = useCharacterContext();
+  const checkBeforeExport = settings?.ui.exportChecklist ?? DEFAULT_EXPORT_CHECKLIST;
   const { saveStatus, isDirty, flushPendingSaves } = useCharacterEditorContext();
   const cardTokens = React.useMemo(
     () => (currentCharacter ? estimateCharacterCardTokens(currentCharacter.data, currentCharacter.name) : null),
     [currentCharacter],
   );
+  const [exportCheck, setExportCheck] = useState<{
+    format: ExportFormat;
+    name: string;
+    findings: ExportCheckFinding[];
+  } | null>(null);
 
   if (!currentCharacter) return <></>;
 
@@ -514,17 +526,19 @@ function CharacterHeader({
     return (await flushPendingSaves()) ?? currentCharacter;
   };
 
-  const handleExportJSON = async () => {
-    if (!currentCharacter) return;
+  const runExport = async (format: ExportFormat) => {
     const character = await latestForExport();
     if (!character) return;
 
-    const result = await characterExportService.exportAsJSON(character);
+    const result =
+      format === 'png'
+        ? await characterExportService.exportAsPNG(character)
+        : await characterExportService.exportAsJSON(character);
     if (result.success && result.blob) {
       const url = URL.createObjectURL(result.blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = result.filename || `${character.name}.json`;
+      a.download = result.filename || `${character.name}.${format}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -534,24 +548,17 @@ function CharacterHeader({
     }
   };
 
-  const handleExportPNG = async () => {
-    if (!currentCharacter) return;
+  const handleExport = async (format: ExportFormat) => {
     const character = await latestForExport();
     if (!character) return;
-
-    const result = await characterExportService.exportAsPNG(character);
-    if (result.success && result.blob) {
-      const url = URL.createObjectURL(result.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename || `${character.name}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } else {
-      showEphemeralToast({ type: 'error', title: 'Export failed', message: result.error || 'Failed to export character.' });
+    const findings = checkBeforeExport
+      ? checkCardForExport(character.data.spec, character.data.characterBook)
+      : [];
+    if (findings.length > 0) {
+      setExportCheck({ format, name: character.name, findings });
+      return;
     }
+    await runExport(format);
   };
 
   return (
@@ -713,10 +720,27 @@ function CharacterHeader({
         
         {/* Export Dropdown */}
         <ExportDropdown 
-          onExportJSON={handleExportJSON}
-          onExportPNG={handleExportPNG}
+          onExportJSON={() => void handleExport('json')}
+          onExportPNG={() => void handleExport('png')}
         />
       </div>
+
+      {exportCheck && (
+        <ExportChecklistDialog
+          characterName={exportCheck.name}
+          findings={exportCheck.findings}
+          onCancel={() => setExportCheck(null)}
+          onExport={() => {
+            const { format } = exportCheck;
+            setExportCheck(null);
+            void runExport(format);
+          }}
+          onGoTo={(target) => {
+            setExportCheck(null);
+            onOpenTarget(target);
+          }}
+        />
+      )}
     </header>
   );
 }
@@ -1216,6 +1240,7 @@ function CharacterWorkspaceInner({
         onToggleChat={toggleChat}
         isMobile={isMobile}
         agentRunning={agentRunning}
+        onOpenTarget={openAgentTarget}
       />
       
       {/* Mobile Backdrop */}

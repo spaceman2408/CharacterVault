@@ -164,7 +164,11 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
                     handleSelect(provider.provider);
                   }}
                   disabled={isUnavailable}
-                  title={isUnavailable ? 'This provider is currently unavailable' : undefined}
+                  title={
+                    isUnavailable && !provider.unavailableReason
+                      ? 'This provider is currently unavailable'
+                      : undefined
+                  }
                   className={`w-full min-h-12 px-3.5 py-3 rounded-xl border text-left transition-all touch-manipulation ${optionClass(
                     selected,
                     isUnavailable
@@ -190,7 +194,7 @@ export const ProviderSelect: React.FC<ProviderSelectProps> = ({
                         <span className="flex items-center gap-1.5 shrink-0">
                           {isUnavailable ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-warning-soft text-warning-soft-fg border border-amber-500/20">
-                              Unavailable
+                              {provider.unavailableReason ?? 'Unavailable'}
                             </span>
                           ) : selected ? (
                             <Check className="w-4 h-4 text-accent" aria-hidden />

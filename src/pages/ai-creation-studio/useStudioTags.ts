@@ -13,6 +13,7 @@ import {
   getRecentTags,
   getVisibleCategories,
   isCustomTag,
+  isFavoriteTag,
   mergeCustomTags,
   pushRecentTags,
   resolveNewCustomTag,
@@ -132,6 +133,7 @@ export function useStudioTags(): UseStudioTagsResult {
       tags: { ...studio.tags, customTags: next },
     });
     setCustomTags(next);
+    if (isFavoriteTag(categoryKey, tag)) setFavorites(toggleFavoriteTag(categoryKey, tag));
   }, []);
 
   const toggleFavorite = useCallback((category: string, tag: string) => {

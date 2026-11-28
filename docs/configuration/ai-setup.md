@@ -148,8 +148,24 @@ The list comes from the model's endpoints, so one host can appear more than once
 
 - **Only use this host** appears once a host is pinned. Off (default), OpenRouter falls back to another host when the pinned one is down or busy. On, the request fails instead.
 - The list shows every host, including ones your OpenRouter account, key, or the [privacy options](#openrouter-options) block. A blocked host is skipped, or the request fails when **Only use this host** is on.
+- Hosts that [Minimum quantization](#minimum-quantization) rules out are greyed out at the bottom of the list, marked **Below 8-bit** (or whichever floor you picked) or **Unknown quant**.
 - Agent requests that call tools also skip hosts without tool support, whatever you pinned.
 - To see which host actually answered, open a reply's stats info. **Provider** shows the host OpenRouter reports.
+
+#### Minimum quantization {#minimum-quantization}
+
+Below **Provider**, OpenRouter shows **Minimum quantization** and a **Hide unknown** switch. Lower-precision hosts are cheaper but can write worse output; these skip them.
+
+| Option | Default | What it does |
+| :--- | :--- | :--- |
+| **Minimum quantization** | Any | Skips hosts below the chosen precision. Each level counts every quant of that size: **4-bit** (fp4, int4, nvfp4, mxfp4), **6-bit** (fp6), **8-bit** (fp8, int8, mxfp8), **16-bit** (bf16, fp16), and **32-bit** (fp32). Hosts that don't report a quantization still count. |
+| **Hide unknown** | Off | Also skips hosts that don't report a quantization. Works with **Any** too. |
+
+Both apply to every request, including models with a pinned host: a pinned host below the floor is skipped, or the request fails when **Only use this host** is on. If no host is left, the error says **Minimum quantization** or **Hide unknown** is on.
+
+::: tip Native int4 models
+Some models, such as Kimi K2.5, are trained to run at int4, so their int4 hosts are full quality. An **8-bit** floor skips those hosts. Use **4-bit** for these models.
+:::
 
 ### NanoGPT Account overview
 
@@ -312,11 +328,12 @@ Workspace UI preferences (this used to share a **Studio** tab with Creation Stud
 - **Chat panel:** default Ask AI chat when you open a character or lorebook: **Orion** (talks, does not write the card) or **Agent** (writes the open card or book). You can still switch in the chat header. See [AI Agent](/features/ai-agent).
 - **Agent edits:** **Review agent edits before applying** stages Agent writes into a diff modal instead of applying them when the run finishes. See [AI Agent → Review edits](/features/ai-agent#review-edits). **Remember earlier edits in the chat** (off by default) shows the Agent exactly what it wrote in earlier runs. See [AI Agent → Remember earlier edits](/features/ai-agent#remember-earlier-edits).
 - **Creator Notes:** **Warn about remote content in Creator Notes preview** (on by default) says when the notes load images, fonts, or styles from another site. See [Creator Notes → Sandboxed Rendering](/features/creator-notes#sandboxed-rendering).
+- **Export:** **Check cards before export** (on by default) lists likely mistakes before a card downloads. See [Import & Export → Check before export](/features/import-export#check-before-export).
 - **Editor links** and **Spellcheck:** covered under [Editor](/features/editor).
 
 ## Agent Skills Tab
 
-Instructions the [Agent](/features/ai-agent) loads for a kind of task, such as writing greetings. Turn skills on or off, edit the three that come with the app, or add your own. **Agent tools glossary** at the bottom lists every tool the Agent can call; click a name to copy it into a skill. See [AI Agent → Skills](/features/ai-agent#skills).
+Instructions the [Agent](/features/ai-agent) loads for a kind of task, such as writing greetings. Turn skills on or off, edit the three that come with the app, add your own, or move them as files with **Import**, **Export all**, and **Select**. **Agent tools glossary** at the bottom lists every tool the Agent can call; click a name to copy it into a skill. See [AI Agent → Skills](/features/ai-agent#skills).
 
 ## Creation Studio Tab
 

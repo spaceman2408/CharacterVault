@@ -4,8 +4,9 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SkillsTab } from '../../../src/components/settings/tabs/SkillsTab';
 import { createDefaultDraft } from '../../../src/components/settings/hooks/useSettingsDraft';
-import type { SettingsDraft } from '../../../src/components/settings/types';
+import type { AddToast, SettingsDraft } from '../../../src/components/settings/types';
 import { DEFAULT_AGENT_SKILLS } from '../../../src/db/characterTypes';
+import * as skillTransfer from '../../../src/services/agentSkillTransfer';
 
 const drafts: SettingsDraft[] = [];
 const latest = () => drafts[drafts.length - 1];
@@ -13,9 +14,16 @@ const latest = () => drafts[drafts.length - 1];
 afterEach(() => {
   cleanup();
   drafts.length = 0;
+  vi.restoreAllMocks();
 });
 
-function Harness({ initial }: { initial?: (draft: SettingsDraft) => SettingsDraft }) {
+function Harness({
+  initial,
+  addToast,
+}: {
+  initial?: (draft: SettingsDraft) => SettingsDraft;
+  addToast?: AddToast;
+}) {
   const [value, setValue] = useState<SettingsDraft>(() => {
     const draft = createDefaultDraft();
     return initial ? initial(draft) : draft;
@@ -23,7 +31,13 @@ function Harness({ initial }: { initial?: (draft: SettingsDraft) => SettingsDraf
   useEffect(() => {
     drafts.push(value);
   }, [value]);
-  return <SkillsTab draft={value} setDraft={setValue} />;
+  return <SkillsTab draft={value} setDraft={setValue} addToast={addToast} />;
+}
+
+function makeFile(name: string, content: string, type = 'application/json'): File {
+  const file = new File([content], name, { type });
+  Object.defineProperty(file, 'text', { value: () => Promise.resolve(content) });
+  return file;
 }
 
 const open = (name: string) => fireEvent.click(screen.getByText(name));
@@ -149,5 +163,159 @@ describe('SkillsTab', () => {
     fireEvent.click(button);
     expect(writeText).toHaveBeenCalledWith('read_field');
     await waitFor(() => expect(button.querySelector('.lucide-check')).not.toBeNull());
+  });
+
+  it('exports a single skill from its open editor', () => {
+    const downloadSpy = vi.spyOn(skillTransfer, 'downloadSkillExport').mockImplementation(() => {});
+    const addToast = vi.fn();
+    render(<Harness addToast={addToast} />);
+
+    open('Greeting Writer');
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    expect(downloadSpy).toHaveBeenCalledTimes(1);
+    const [file, filename] = downloadSpy.mock.calls[0];
+    expect(file.kind).toBe(skillTransfer.SKILL_EXPORT_KIND);
+    expect(file.skills).toEqual([
+      {
+        name: DEFAULT_AGENT_SKILLS[0].name,
+        description: DEFAULT_AGENT_SKILLS[0].description,
+        content: DEFAULT_AGENT_SKILLS[0].content,
+      },
+    ]);
+    expect(filename).toBe('charactervault-skill-greeting-writer.json');
+    expect(addToast).toHaveBeenCalledWith('success', 'Exported "Greeting Writer".');
+  });
+
+  it('exports all skills in one click and disables export buttons when empty', () => {
+    const downloadSpy = vi.spyOn(skillTransfer, 'downloadSkillExport').mockImplementation(() => {});
+    const addToast = vi.fn();
+    render(<Harness addToast={addToast} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export all' }));
+    expect(downloadSpy).toHaveBeenCalledTimes(1);
+    const [file, filename] = downloadSpy.mock.calls[0];
+    expect(file.skills).toHaveLength(DEFAULT_AGENT_SKILLS.length);
+    expect(filename).toMatch(/^charactervault-skills-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(addToast).toHaveBeenCalledWith('success', 'Exported 3 skills.');
+
+    cleanup();
+    render(<Harness initial={(draft) => ({ ...draft, agentSkills: [] })} />);
+    expect((screen.getByRole('button', { name: 'Export all' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Select to export' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('supports selecting a subset of skills to export, starting with none selected', () => {
+    const downloadSpy = vi.spyOn(skillTransfer, 'downloadSkillExport').mockImplementation(() => {});
+    const customSkill = {
+      id: 'skill-custom',
+      name: 'Character to Image',
+      description: 'Image prompts.',
+      content: 'Read description.',
+    };
+    render(
+      <Harness
+        initial={(draft) => ({
+          ...draft,
+          agentSkills: [customSkill, ...draft.agentSkills],
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select to export' }));
+    expect(screen.getByText('0 selected')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Export (0)' }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    expect(screen.getByText('4 selected')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }));
+    expect(screen.getByText('1 selected')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Cut AI Slop for export' }));
+    expect(screen.getByText('2 selected')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export (2)' }));
+    expect(downloadSpy).toHaveBeenCalledTimes(1);
+    expect(downloadSpy.mock.calls[0][0].skills.map((s) => s.name)).toEqual([
+      'Character to Image',
+      'Cut AI Slop',
+    ]);
+    expect(screen.queryByText('2 selected')).toBeNull();
+  });
+
+  it('imports a new skill immediately and opens it', async () => {
+    const addToast = vi.fn();
+    render(<Harness addToast={addToast} />);
+
+    const payload = skillTransfer.buildSkillExportFile([
+      {
+        id: 'tmp',
+        name: 'Character to Image',
+        description: 'Build image prompts.',
+        content: 'Read description.',
+      },
+    ]);
+    const input = screen.getByLabelText('Import agent skills') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [makeFile('c2i.json', JSON.stringify(payload))] },
+    });
+
+    await waitFor(() => {
+      expect(latest().agentSkills[0].name).toBe('Character to Image');
+    });
+    expect((screen.getByLabelText('Skill name') as HTMLInputElement).value).toBe('Character to Image');
+    expect(addToast).toHaveBeenCalledWith('success', 'Imported "Character to Image".');
+  });
+
+  it('asks whether to replace or keep both on name conflicts', async () => {
+    const addToast = vi.fn();
+    render(<Harness addToast={addToast} />);
+
+    const incoming = skillTransfer.buildSkillExportFile([
+      {
+        id: 'tmp',
+        name: 'Greeting Writer',
+        description: 'Updated desc.',
+        content: 'Updated body.',
+      },
+    ]);
+    const input = screen.getByLabelText('Import agent skills') as HTMLInputElement;
+
+    fireEvent.change(input, {
+      target: { files: [makeFile('greeting.json', JSON.stringify(incoming))] },
+    });
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog.textContent).toContain('Greeting Writer');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep both' }));
+    expect(latest().agentSkills.map((s) => s.name)).toContain('Greeting Writer (2)');
+    expect(latest().agentSkills.find((s) => s.id === 'default-greeting-writer')?.content).toBe(
+      DEFAULT_AGENT_SKILLS[0].content,
+    );
+
+    fireEvent.change(input, {
+      target: { files: [makeFile('greeting.json', JSON.stringify(incoming))] },
+    });
+    const replaceDialog = await screen.findByRole('alertdialog');
+    fireEvent.click(within(replaceDialog).getByRole('button', { name: 'Replace' }));
+    expect(latest().agentSkills.find((s) => s.id === 'default-greeting-writer')?.content).toBe(
+      'Updated body.',
+    );
+    expect(addToast).toHaveBeenLastCalledWith('success', 'Replaced "Greeting Writer".');
+  });
+
+  it('shows an inline error and toast when an uploaded skill file is invalid', async () => {
+    const addToast = vi.fn();
+    render(<Harness addToast={addToast} />);
+
+    const input = screen.getByLabelText('Import agent skills') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [makeFile('broken.json', '{not valid')] },
+    });
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Could not parse that file as JSON.');
+    expect(addToast).toHaveBeenCalledWith('error', 'Could not parse that file as JSON.');
   });
 });

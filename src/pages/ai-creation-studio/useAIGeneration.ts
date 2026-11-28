@@ -13,10 +13,17 @@ import type { GenerationField, GenerationState } from './types';
 import type { GenerationStyleTags } from './tags/tagData';
 import {
   buildDescriptionStyleInstructions,
+  buildRevisionBlock,
+  replaceNameWithCharMacro,
   buildGenerationStyleInstructions,
   buildNarrationFormatInstruction,
   renderStudioTemplate,
 } from './generationPrompts';
+
+interface Revision {
+  previous?: string;
+  note: string;
+}
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -38,6 +45,7 @@ const INITIAL_STATE: GenerationState = {
   completedFields: [],
   generatedData: {},
   generatedReasoning: {},
+  descriptionBasis: {},
   error: null,
   failedField: null,
 };
@@ -67,7 +75,7 @@ export interface UseAIGenerationResult {
   start: (concept: string, tags: GenerationStyleTags) => Promise<void>;
   abort: () => void;
   retryField: (field: GenerationField) => Promise<void>;
-  regenerateField: (field: GenerationField) => Promise<void>;
+  regenerateField: (field: GenerationField, note?: string) => Promise<void>;
   continueGeneration: () => Promise<void>;
   reloadConfig: () => Promise<void>;
   updateGeneratedField: (field: GenerationField, value: string) => void;
@@ -175,7 +183,12 @@ export function useAIGeneration(): UseAIGenerationResult {
   }, [loadConfig, abortCurrent]);
 
   const buildMessages = useCallback(
-    (field: GenerationField, concept: string, data: Partial<CharacterSpec>): ChatMessage[] => {
+    (
+      field: GenerationField,
+      concept: string,
+      data: Partial<CharacterSpec>,
+      revision?: Revision
+    ): ChatMessage[] => {
       const prompts = studioPromptsRef.current;
       const systemPrompt: ChatMessage = { role: 'system', content: prompts.system };
       const { perspective, tense } = generationTagsRef.current;
@@ -205,11 +218,17 @@ export function useAIGeneration(): UseAIGenerationResult {
             description,
             styleBlock,
             narrationRule,
+            firstMessageBlock:
+              field === 'mes_example' && data.first_mes
+                ? `\nOpening message:\n${data.first_mes}`
+                : '',
           });
           break;
         default:
           userPrompt = '';
       }
+
+      if (revision) userPrompt += buildRevisionBlock(revision.previous, revision.note);
 
       return [systemPrompt, { role: 'user', content: userPrompt }];
     },
@@ -220,12 +239,13 @@ export function useAIGeneration(): UseAIGenerationResult {
     async (
       field: GenerationField,
       concept: string,
-      currentData: Partial<CharacterSpec>
+      currentData: Partial<CharacterSpec>,
+      revision?: Revision
     ): Promise<string> => {
       const service = aiServiceRef.current;
       if (!service) throw new Error('AI service not initialized');
 
-      const messages = buildMessages(field, concept, currentData);
+      const messages = buildMessages(field, concept, currentData, revision);
 
       let accumulatedContent = '';
       let accumulatedReasoning = '';
@@ -261,12 +281,24 @@ export function useAIGeneration(): UseAIGenerationResult {
           throw new AIError('Request was cancelled', 'unknown');
         }
 
-        const content = response.content || '';
+        let content = response.content || '';
         if (!content.trim()) {
           throw new AIError(
             `Generation returned empty content for "${field}". The model may have errored during generation.`,
             'unknown'
           );
+        }
+
+        if (field === 'mes_example' && currentData.name) {
+          content = replaceNameWithCharMacro(content, currentData.name);
+        }
+
+        if (field === 'first_mes' || field === 'mes_example') {
+          const basis = currentData.description ?? '';
+          setState((prev) => ({
+            ...prev,
+            descriptionBasis: { ...prev.descriptionBasis, [field]: basis },
+          }));
         }
 
         return content;
@@ -537,7 +569,7 @@ export function useAIGeneration(): UseAIGenerationResult {
   );
 
   const regenerateField = useCallback(
-    async (field: GenerationField) => {
+    async (field: GenerationField, note?: string) => {
       // Cancel any in-flight request before starting a new one
       abortCurrent();
 
@@ -558,6 +590,9 @@ export function useAIGeneration(): UseAIGenerationResult {
       isAbortedRef.current = false;
       setIsLoading(true);
       currentFieldRef.current = field;
+      const revision = note?.trim()
+        ? { previous: stateRef.current.generatedData[field], note }
+        : undefined;
       regenerateBackupRef.current = {
         field,
         value: stateRef.current.generatedData[field],
@@ -578,7 +613,7 @@ export function useAIGeneration(): UseAIGenerationResult {
         const currentData = stateRef.current.generatedData;
         const effectiveConcept = concept || currentData.name || 'Character';
         const contextData = { ...currentData, [field]: undefined };
-        const result = await generateField(field, effectiveConcept, contextData);
+        const result = await generateField(field, effectiveConcept, contextData, revision);
 
         if (isAbortedRef.current) return;
         if (!isEnabledField(enabledFieldsRef.current, field)) {

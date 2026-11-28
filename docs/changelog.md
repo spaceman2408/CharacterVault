@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.11.0 (2026-11-28)
+
+CharacterVault 1.11.0 reworks the AI Creation Studio with shorter prompts, a note on Regenerate, and a default perspective and tense, lets the Agent pick place names and share skills as files, and adds favorite characters and a check for common mistakes before export, plus a minimum quantization filter for OpenRouter. Full notes: [v1.11.0 release notes](/releases/v1.11.0).
+
+### Highlights
+
+- **Creation Studio rework** — shorter default prompts, a note button next to **Regenerate**, **Description changed** on fields written for an older description, a starred default perspective and tense, category-grouped concepts, and one chip style across **Tags**
+- **Agent place names and skill files** — both Agents call `suggest_places` for towns, regions, rivers, mountains, lakes, and inns, and **Settings → Agent Skills → Import / Export all / Select** moves skills as `.json` or `SKILL.md` files
+- **Favorites and export check** — the star on a library card pins it to the top, and exporting lists likely mistakes first (**Settings → Character Workspace → Export**, on by default)
+- **OpenRouter minimum quantization** — **Settings → AI Config → Provider** skips hosts below a chosen precision, with **Hide unknown** for hosts that do not report one
+- Shorter Agent tool descriptions, so every request sends less context
+
+Details: [AI Creation Studio](/features/ai-creation-studio) · [AI Agent](/features/ai-agent#place-names) · [Import & Export](/features/import-export#check-before-export) · [What's New](/whats-new)
+
+---
+
 ## 1.10.0 (2026-11-22)
 
 CharacterVault 1.10.0 adds Find & Replace across a whole character or lorebook, with a grouped preview, a snapshot before every replace, and Undo. The AI Creation Studio shows each field's thinking while it writes and works with endpoints that need no API key, plus fixes for editing, Stop, and Regenerate during generation and for V3 card fields lost on import. Full notes: [v1.10.0 release notes](/releases/v1.10.0).

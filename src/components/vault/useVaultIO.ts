@@ -10,6 +10,7 @@ import {
 } from '../../services/VaultRestoreService';
 import { getFavoriteTags } from '../../pages/ai-creation-studio/tags/tagData';
 import { characterDb } from '../../db/CharacterDatabase';
+import { checkCardForExport, type ExportCheckFinding } from '../../services/exportChecklist';
 import type { CardExportFormat, VaultTab } from './types';
 import { downloadBlob } from './utils';
 
@@ -20,6 +21,7 @@ interface UseVaultIOOptions {
   refreshCharacters: () => Promise<void>;
   refreshLorebooks: () => Promise<void>;
   importLorebookFile: (file: File) => Promise<unknown>;
+  checkBeforeExport: boolean;
 }
 
 function isZipFile(file: File): boolean {
@@ -49,10 +51,17 @@ export function useVaultIO({
   refreshCharacters,
   refreshLorebooks,
   importLorebookFile,
+  checkBeforeExport,
 }: UseVaultIOOptions) {
   const [isImporting, setIsImporting] = useState(false);
   const [isExportingVault, setIsExportingVault] = useState(false);
   const [exportingCardId, setExportingCardId] = useState<string | null>(null);
+  const [cardExportCheck, setCardExportCheck] = useState<{
+    id: string;
+    name: string;
+    format: CardExportFormat;
+    findings: ExportCheckFinding[];
+  } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [backupConfirmOpen, setBackupConfirmOpen] = useState(false);
@@ -302,7 +311,7 @@ export function useVaultIO({
   };
 
   const handleCardExport = useCallback(
-    async (id: string, format: CardExportFormat) => {
+    async (id: string, format: CardExportFormat, skipCheck = false) => {
       if (exportingCardId) return;
       setExportingCardId(id);
       try {
@@ -310,6 +319,14 @@ export function useVaultIO({
         if (!character) {
           showStatus('Character not found.');
           return;
+        }
+
+        if (checkBeforeExport && !skipCheck) {
+          const findings = checkCardForExport(character.data.spec, character.data.characterBook);
+          if (findings.length > 0) {
+            setCardExportCheck({ id, name: character.name, format, findings });
+            return;
+          }
         }
 
         const result =
@@ -339,8 +356,15 @@ export function useVaultIO({
         setExportingCardId(null);
       }
     },
-    [exportingCardId, showStatus]
+    [exportingCardId, showStatus, checkBeforeExport]
   );
+
+  const confirmCardExport = () => {
+    if (!cardExportCheck) return;
+    const { id, format } = cardExportCheck;
+    setCardExportCheck(null);
+    void handleCardExport(id, format, true);
+  };
 
   const isImportableDrag = (e: React.DragEvent) => {
     if (!e.dataTransfer.types.includes('Files')) return false;
@@ -429,6 +453,9 @@ export function useVaultIO({
     cancelRestore,
     dismissRestoreResult,
     handleCardExport,
+    cardExportCheck,
+    confirmCardExport,
+    cancelCardExport: () => setCardExportCheck(null),
     handleDragEnter,
     handleDragLeave,
     handleDragOver,

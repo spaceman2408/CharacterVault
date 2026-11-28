@@ -6,24 +6,16 @@
 import React from 'react';
 import {
   Sparkles,
-  AlertCircle,
-  Settings2,
   Loader2,
   X,
   PenLine,
   Tag,
 } from 'lucide-react';
 import { TagSelector } from './TagSelector';
+import { GenerationStyleSelector } from './GenerationStyle';
 import type { InputMode } from './types';
 import type { TagCategory, TaggedRef } from './tags/tagData';
-import {
-  formatTag,
-  getGenerationTags,
-  hasRequiredGenerationTags,
-  PERSPECTIVE_TAGS,
-  TENSE_TAGS,
-  toggleGenerationTagSelection,
-} from './tags/tagData';
+import { hasRequiredGenerationTags } from './tags/tagData';
 
 interface ConceptInputProps {
   /* Write mode state */
@@ -53,85 +45,6 @@ interface ConceptInputProps {
 }
 
 const WORD_COUNT_MIN = 3;
-
-interface GenerationStyleSelectorProps {
-  selections: Record<string, string[]>;
-  onSelectionsChange: (s: Record<string, string[]>) => void;
-  isGenerating: boolean;
-}
-
-const GenerationStyleSelector: React.FC<GenerationStyleSelectorProps> = ({
-  selections,
-  onSelectionsChange,
-  isGenerating,
-}) => {
-  const generationSelections = selections.generation ?? [];
-  const generationTags = getGenerationTags(selections);
-
-  const toggleTag = (tag: string) => {
-    onSelectionsChange({
-      ...selections,
-      generation: toggleGenerationTagSelection(generationSelections, tag),
-    });
-  };
-
-  const renderTagButton = (tag: string) => {
-    const isSelected = generationSelections.includes(tag);
-    return (
-      <button
-        key={tag}
-        type="button"
-        onClick={() => toggleTag(tag)}
-        disabled={isGenerating}
-        className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-          isSelected
-            ? 'bg-accent-soft text-accent border-accent ring-1 ring-accent'
-            : 'border-border text-fg-muted hover:border-accent/40 hover:bg-accent-soft hover:text-accent'
-        }`}
-      >
-        {formatTag(tag)}
-      </button>
-    );
-  };
-
-  return (
-    <div className="space-y-3 p-4 bg-bg/50 border border-border rounded-xl">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold text-fg-muted uppercase tracking-wider">
-          Generation Style
-        </span>
-        <span className="font-bold px-1.5 py-0.5 rounded-full bg-warning-soft text-warning-soft-fg">
-          Required
-        </span>
-      </div>
-
-      <div className="space-y-2">
-        <div>
-          <p className="font-medium text-fg-muted mb-1.5">
-            Perspective
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {PERSPECTIVE_TAGS.map(renderTagButton)}
-          </div>
-        </div>
-        <div>
-          <p className="font-medium text-fg-muted mb-1.5">
-            Tense
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {TENSE_TAGS.map(renderTagButton)}
-          </div>
-        </div>
-      </div>
-
-      {(!generationTags.perspective || !generationTags.tense) && (
-        <p className="text-xs text-warning">
-          Choose one perspective and one tense before generating.
-        </p>
-      )}
-    </div>
-  );
-};
 
 export const ConceptInput: React.FC<ConceptInputProps> = ({
   concept,
@@ -196,6 +109,8 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
             selections={tagSelections}
             onSelectionsChange={onTagSelectionsChange}
             isGenerating={isGenerating}
+            favorites={favorites}
+            onToggleFavorite={onToggleFavorite}
           />
 
           {/* Header */}
@@ -231,30 +146,6 @@ export const ConceptInput: React.FC<ConceptInputProps> = ({
               )}
             </div>
           </div>
-
-          {/* Not Configured State */}
-          {!isConfigured && (
-            <div className="flex flex-col items-center text-center gap-3 p-5 bg-warning-soft/60 border border-warning/30 rounded-xl">
-              <div className="w-10 h-10 rounded-full bg-warning-soft flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-warning-soft-fg">
-                  AI Provider Not Configured
-                </p>
-                <p className="text-xs text-warning-soft-fg mt-0.5">
-                  Configure your AI provider and choose a model to start generating characters.
-                </p>
-              </div>
-              <button
-                onClick={onOpenSettings}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-warning-soft-fg bg-warning-soft hover:opacity-90 rounded-lg transition-colors"
-              >
-                <Settings2 className="w-4 h-4" />
-                Configure AI
-              </button>
-            </div>
-          )}
 
           {/* API call cost notice */}
           <p className="text-xs text-fg-subtle text-center">

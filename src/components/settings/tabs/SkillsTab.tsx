@@ -1,5 +1,16 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Plus, RotateCcw, ScrollText, Trash2 } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  ListChecks,
+  Plus,
+  RotateCcw,
+  ScrollText,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import type { AgentSkill } from '../../../db/characterTypes';
 import { DEFAULT_AGENT_SKILLS } from '../../../db/characterTypes';
 import {
@@ -7,6 +18,17 @@ import {
   findDefaultAgentSkill,
   isEditedDefaultSkill,
 } from '../../../services/agentSkills';
+import {
+  buildSkillExportFile,
+  buildSkillExportFilename,
+  downloadSkillExport,
+  exportableAgentSkills,
+  findImportConflicts,
+  mergeImportedSkills,
+  parseSkillFiles,
+  type PortableAgentSkill,
+  type SkillImportConflictStrategy,
+} from '../../../services/agentSkillTransfer';
 import { estimateTokens } from '../../../services/AIService';
 import { ConfirmDialog } from '../../ui/ConfirmDialog';
 import { AgentToolGlossary } from '../components/AgentToolGlossary';
@@ -100,12 +122,49 @@ function GrowingTextarea({
   );
 }
 
-export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
+const ACTION_BTN_CLASS =
+  'inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg disabled:cursor-not-allowed disabled:opacity-50';
+
+function formatImportToast(added: readonly AgentSkill[], replaced: readonly AgentSkill[]): string {
+  if (added.length === 1 && replaced.length === 0) return `Imported "${added[0].name}".`;
+  if (replaced.length === 1 && added.length === 0) return `Replaced "${replaced[0].name}".`;
+  if (replaced.length === 0) return `Imported ${added.length} skills.`;
+  if (added.length === 0) return `Replaced ${replaced.length} skills.`;
+  return `Imported ${added.length + replaced.length} skills (${replaced.length} replaced).`;
+}
+
+function formatConflictMessage(conflicts: readonly string[]): string {
+  if (conflicts.length === 1) {
+    return 'Replace updates the existing skill in place. Keep both adds a copy with a new name.';
+  }
+  const preview = conflicts
+    .slice(0, 3)
+    .map((name) => `"${name}"`)
+    .join(', ');
+  const tail = conflicts.length > 3 ? `, and ${conflicts.length - 3} more` : '';
+  return `Matches: ${preview}${tail}. Replace updates existing skills in place. Keep both adds copies with new names.`;
+}
+
+export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft, addToast }) => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingResetId, setPendingResetId] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [importError, setImportError] = useState<string | null>(null);
+  const [pendingImport, setPendingImport] = useState<{
+    skills: PortableAgentSkill[];
+    conflicts: string[];
+  } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const skills = draft.agentSkills;
   const skillsOn = draft.agentSkillsEnabled;
+
+  const exportable = exportableAgentSkills(skills);
+  const customExportable = exportable.filter(
+    (skill) => !findDefaultAgentSkill(skill.id) || isEditedDefaultSkill(skill),
+  );
+  const selectedExportable = exportable.filter((skill) => selectedIds.has(skill.id));
 
   /** Switches the open editor, dropping the one being left if nothing was typed into it. */
   const openSkill = (id: string | null) => {
@@ -143,6 +202,8 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
   };
 
   const addSkill = () => {
+    setSelectMode(false);
+    setImportError(null);
     const id = createAgentSkillId();
     setDraft((prev) => ({
       ...prev,
@@ -160,6 +221,74 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
     const builtin = findDefaultAgentSkill(id);
     if (!builtin) return;
     patchSkill(id, { name: builtin.name, description: builtin.description, content: builtin.content });
+  };
+
+  const exportSkills = (targets: readonly AgentSkill[]) => {
+    try {
+      const file = buildSkillExportFile(targets);
+      const filename = buildSkillExportFilename(file.skills);
+      downloadSkillExport(file, filename);
+      addToast?.(
+        'success',
+        file.skills.length === 1
+          ? `Exported "${file.skills[0].name}".`
+          : `Exported ${file.skills.length} skills.`,
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to export skills.';
+      addToast?.('error', message);
+    }
+  };
+
+  const enterSelectMode = () => {
+    openSkill(null);
+    setImportError(null);
+    setSelectedIds(new Set());
+    setSelectMode(true);
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const applyImport = (incoming: readonly PortableAgentSkill[], strategy: SkillImportConflictStrategy) => {
+    const result = mergeImportedSkills(skills, incoming, strategy);
+    setDraft((prev) => ({ ...prev, agentSkills: result.skills }));
+    setSelectMode(false);
+    setImportError(null);
+    if (result.added.length === 1 && result.replaced.length === 0) {
+      setOpenId(result.added[0].id);
+    } else if (result.replaced.length === 1 && result.added.length === 0) {
+      setOpenId(result.replaced[0].id);
+    }
+    addToast?.('success', formatImportToast(result.added, result.replaced));
+  };
+
+  const handleImportFiles = async (fileList: FileList) => {
+    setImportError(null);
+    try {
+      const entries = await Promise.all(
+        Array.from(fileList).map(async (file) => ({ name: file.name, text: await file.text() })),
+      );
+      const incoming = parseSkillFiles(entries);
+      const conflicts = findImportConflicts(skills, incoming);
+      if (conflicts.length > 0) {
+        setPendingImport({ skills: incoming, conflicts });
+      } else {
+        applyImport(incoming, 'keep-both');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not read that skill file.';
+      setImportError(message);
+      addToast?.('error', message);
+    } finally {
+      if (fileRef.current) fileRef.current.value = '';
+    }
   };
 
   const takenNames = new Set(skills.map((skill) => skill.name.trim().toLowerCase()));
@@ -183,25 +312,125 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
       <SettingsCard>
         <div className="mb-1 flex items-center gap-2">
           <ScrollText className="h-4 w-4 text-fg-muted" aria-hidden />
-          <h3 className="flex-1 text-sm font-semibold text-fg">Agent skills</h3>
+          <h3 className="text-sm font-semibold text-fg">Agent skills</h3>
           <SkillSwitch
             on={skillsOn}
             label="Use skills"
             onToggle={() => setDraft((prev) => ({ ...prev, agentSkillsEnabled: !prev.agentSkillsEnabled }))}
           />
-          <button
-            type="button"
-            onClick={addSkill}
-            className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg"
-          >
+          <button type="button" onClick={addSkill} className={`ml-auto ${ACTION_BTN_CLASS}`}>
             <Plus className="h-3.5 w-3.5" aria-hidden />
             New
           </button>
         </div>
-        <p className="mb-4 text-xs text-fg-muted">
+        <p className="mb-3 text-xs text-fg-muted">
           The Agent loads a skill when your request matches its &quot;when to use&quot; line. Type @
           and a skill name in the Agent chat to use one directly.
         </p>
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".json,.md,application/json,text/markdown"
+          multiple
+          className="hidden"
+          aria-label="Import agent skills"
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) {
+              void handleImportFiles(e.target.files);
+            }
+          }}
+        />
+
+        {selectMode ? (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+            <span className="text-xs font-medium text-fg">
+              {selectedExportable.length} selected
+            </span>
+            <span className="text-xs text-fg-subtle" aria-hidden>
+              ·
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set(exportable.map((skill) => skill.id)))}
+              className="text-xs font-medium text-fg-muted hover:text-fg"
+            >
+              All
+            </button>
+            {customExportable.length > 0 && customExportable.length < exportable.length && (
+              <button
+                type="button"
+                onClick={() => setSelectedIds(new Set(customExportable.map((skill) => skill.id)))}
+                className="text-xs font-medium text-fg-muted hover:text-fg"
+              >
+                Custom
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs font-medium text-fg-muted hover:text-fg"
+            >
+              None
+            </button>
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => setSelectMode(false)}
+              className={ACTION_BTN_CLASS}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={selectedExportable.length === 0}
+              onClick={() => {
+                exportSkills(selectedExportable);
+                setSelectMode(false);
+              }}
+              className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-accent-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden />
+              Export ({selectedExportable.length})
+            </button>
+          </div>
+        ) : (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className={ACTION_BTN_CLASS}
+            >
+              <Upload className="h-3.5 w-3.5" aria-hidden />
+              Import
+            </button>
+            <button
+              type="button"
+              disabled={exportable.length === 0}
+              onClick={() => exportSkills(exportable)}
+              className={ACTION_BTN_CLASS}
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden />
+              Export all
+            </button>
+            <button
+              type="button"
+              disabled={exportable.length === 0}
+              onClick={enterSelectMode}
+              className={ACTION_BTN_CLASS}
+            >
+              <ListChecks className="h-3.5 w-3.5" aria-hidden />
+              Select to export
+            </button>
+          </div>
+        )}
+
+        {importError && (
+          <p role="alert" className="mb-3 flex items-start gap-2 text-xs leading-relaxed text-danger">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+            {importError}
+          </p>
+        )}
 
         <div className={skillsOn ? '' : 'opacity-50'}>
           {skills.length === 0 ? (
@@ -212,11 +441,47 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             <ul className="divide-y divide-border rounded-lg border border-border">
               {skills.map((skill) => {
                 const on = skill.enabled !== false;
-                const isOpen = openId === skill.id;
+                const isOpen = !selectMode && openId === skill.id;
                 const tokens = estimateTokens(skill.content);
                 const builtin = findDefaultAgentSkill(skill.id);
                 const edited = isEditedDefaultSkill(skill);
+                const canExport = skill.name.trim().length > 0;
                 const toggleOpen = () => openSkill(isOpen ? null : skill.id);
+
+                if (selectMode) {
+                  const checked = canExport && selectedIds.has(skill.id);
+                  return (
+                    <li key={skill.id} className="px-3 py-2.5">
+                      <label
+                        className={`flex items-center gap-3 ${
+                          canExport ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!canExport}
+                          onChange={() => toggleSelected(skill.id)}
+                          aria-label={`Select ${skillLabel(skill)} for export`}
+                          className="h-4 w-4 shrink-0 rounded border-border-strong accent-accent"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-fg">
+                            {skillLabel(skill)}
+                          </span>
+                          <span className="block truncate text-xs text-fg-subtle">
+                            {canExport
+                              ? skill.description.trim() || 'No "when to use" line'
+                              : 'Name this skill to export it'}
+                          </span>
+                        </span>
+                        {tokens > 0 && (
+                          <span className="shrink-0 text-[11px] text-fg-subtle">~{tokens} tok</span>
+                        )}
+                      </label>
+                    </li>
+                  );
+                }
 
                 if (!isOpen) {
                   return (
@@ -299,11 +564,20 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
                         <span className="flex-1 text-xs text-fg-subtle">
                           {builtin ? (edited ? 'Default skill · edited' : 'Default skill') : ''}
                         </span>
+                        <button
+                          type="button"
+                          disabled={!canExport}
+                          onClick={() => exportSkills([skill])}
+                          className={ACTION_BTN_CLASS}
+                        >
+                          <Download className="h-3.5 w-3.5" aria-hidden />
+                          Export
+                        </button>
                         {edited && (
                           <button
                             type="button"
                             onClick={() => setPendingResetId(skill.id)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-fg-muted transition-colors hover:bg-hover hover:text-fg"
+                            className={ACTION_BTN_CLASS}
                           >
                             <RotateCcw className="h-3.5 w-3.5" aria-hidden />
                             Reset to default
@@ -371,6 +645,29 @@ export const SkillsTab: React.FC<SettingsTabProps> = ({ draft, setDraft }) => {
             setPendingResetId(null);
           }}
           onCancel={() => setPendingResetId(null)}
+        />
+      )}
+
+      {pendingImport && (
+        <ConfirmDialog
+          open
+          title={
+            pendingImport.conflicts.length === 1
+              ? `Skill "${pendingImport.conflicts[0]}" already exists`
+              : `${pendingImport.conflicts.length} skills already exist`
+          }
+          message={formatConflictMessage(pendingImport.conflicts)}
+          confirmLabel="Replace"
+          secondaryLabel="Keep both"
+          onConfirm={() => {
+            applyImport(pendingImport.skills, 'replace');
+            setPendingImport(null);
+          }}
+          onSecondary={() => {
+            applyImport(pendingImport.skills, 'keep-both');
+            setPendingImport(null);
+          }}
+          onCancel={() => setPendingImport(null)}
         />
       )}
     </div>

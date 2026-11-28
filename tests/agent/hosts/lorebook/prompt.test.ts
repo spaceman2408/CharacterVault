@@ -19,6 +19,7 @@ const TOOL_NAMES = [
   'update_book_settings',
   'insertion_order',
   'suggest_names',
+  'suggest_places',
 ] as const;
 
 describe('buildLorebookAgentSystemPrompt', () => {

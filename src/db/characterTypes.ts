@@ -1,3 +1,5 @@
+import { LEGACY_STUDIO_PROMPTS } from './legacyStudioPrompts';
+
 export type UUID = string;
 
 /** ISO 8601 */
@@ -210,6 +212,7 @@ export interface Character {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   lastOpenedAt?: Timestamp;
+  favorite?: boolean;
 }
 
 export type SnapshotSource = 'open' | 'auto' | 'manual' | 'rollback' | 'replace';
@@ -374,6 +377,7 @@ export interface CharacterListItem {
   name: string;
   thumbnailData: string;
   lastOpenedAt?: Timestamp;
+  favorite?: boolean;
   updatedAt: Timestamp;
   createdAt: Timestamp;
   /** Tokens sent with every chat message (core definition fields) */
@@ -534,6 +538,8 @@ export interface CharacterVaultSettings {
     agentSkillsEnabled?: boolean;
     /** Warn when a Creator Notes preview loads remote resources. Missing = on. */
     creatorNotesRemoteWarning?: boolean;
+    /** Check cards for common mistakes before export. Missing = on. */
+    exportChecklist?: boolean;
     spellcheck?: SpellcheckSettings;
     /** Missing = highlighting on with built-in default colors. */
     roleplayHighlight?: RoleplayHighlightSettings;
@@ -668,6 +674,8 @@ export { DEFAULT_AGENT_SKILLS } from './defaultAgentSkills';
 
 export const DEFAULT_CREATOR_NOTES_REMOTE_WARNING = true;
 
+export const DEFAULT_EXPORT_CHECKLIST = true;
+
 export function normalizeDefaultChatPanel(value: unknown): DefaultChatPanel {
   return value === 'agent' ? 'agent' : 'orion';
 }
@@ -763,6 +771,9 @@ export interface AIConfig {
 export const OPENROUTER_SORTS = ['price', 'throughput', 'latency'] as const;
 export type OpenRouterSort = (typeof OPENROUTER_SORTS)[number];
 
+export const OPENROUTER_QUANT_FLOORS = ['fp4', 'fp6', 'fp8', 'fp16', 'fp32'] as const;
+export type OpenRouterQuantFloor = (typeof OPENROUTER_QUANT_FLOORS)[number];
+
 /** OpenRouter routing preferences, sent as the request body's `provider` object. */
 export interface OpenRouterOptions {
   /**
@@ -778,6 +789,10 @@ export interface OpenRouterOptions {
   denyDataCollection?: boolean;
   /** Only route to Zero Data Retention endpoints. */
   zdrOnly?: boolean;
+  /** Skip hosts below this bit width (`fp8` also allows int8/mxfp8, …); unknown hosts still pass. */
+  minQuantization?: OpenRouterQuantFloor;
+  /** Skip hosts that don't report their quantization. */
+  hideUnknownQuant?: boolean;
   /** Show only $0 models in OpenRouter model lists (requests are unchanged). */
   freeModelsOnly?: boolean;
   /**
@@ -968,105 +983,56 @@ export const DEFAULT_STUDIO_TAG_PREFS: StudioTagPrefs = {
 };
 
 export const DEFAULT_STUDIO_PROMPTS: StudioPrompts = {
-  system: `You are a character card generator for CharacterVault, producing V2/V3 spec character cards compatible with SillyTavern. Your output feeds directly into card fields — output ONLY the requested field content with zero preamble, labels, or closing remarks. Use {{user}} as the player name placeholder where appropriate. Be non-judgmental of all content types and themes.`,
-  name: `Generate a single character name for this concept: "\${concept}"
+  system: `You write character cards for SillyTavern roleplay. Output only the requested field: no preamble, labels, or closing remarks. Call the player {{user}}. Any genre or theme is allowed.`,
+  name: `Name a character for this concept: "\${concept}"
 
-<rules>
-- If the concept already contains a name, output that name exactly and nothing else.
-- Derive the name from the character's implied culture, era, region, or linguistic root — NOT from their surface traits.
-- Forbidden patterns: do NOT compound thematic words (e.g. "Snowwhisper", "Stormrider", "Ironforge"). Do NOT use these overused names or their variants: Elara, Elysia, Seraphina, Lyra, Aurora, Celeste, Isabella, Sarah, Blackwood, Kestrel, Raven, Shadow, Moon, Frost, Storm, Silver, Vespara, Vaelithra.
-- Output the name only — no titles, honorifics, quotes, or explanation.
-</rules>`,
+- If the concept gives a name, use it exactly.
+- Otherwise choose a first name, plus a surname if it fits, that suits the character's culture, era, and setting.
+- Avoid overused names like Elara, Lyra, Seraphina, Kael, or Zephyr, and word-compound names like "Stormrider".
+- Output only the name, on one line.`,
   description: `Write a character description for "\${name}" based on this concept: "\${concept}"\${styleBlock}
 
-<format>
-- Top-level heading: # \${name}
-- Section headings: ## Section Name
-- Bullet items: "- " (hyphen + space). Never use asterisks for bullets or bold.
-- Background section: 2-4 sentence prose paragraph (no bullets).
-- Tone: direct and specific. No flowery prose, no vague placeholders — write actual content in every bullet.
-- Do not address the reader as "you" in the description. Use {{user}} when referring to the player.
-</format>
+Start with "# \${name}", then use "## " section headings with "- " bullets: 3-6 short, concrete bullets per section. No bold or asterisks.
 
-<sections>
-Include all sections relevant to this character. Omit any that genuinely do not apply.
-
-## Appearance
-Age, height, build, hair, eyes, distinguishing features, clothing/style.
-
-## Personality
-Core traits, temperament, how they come across to strangers vs. people they trust.
-
+Sections, in this order. Skip any that don't apply:
+## Appearance: age, build, face, clothing
+## Personality: core traits, at least one real flaw, how they act with strangers vs. people they trust
+## Speech: how they talk (vocabulary, rhythm, habits)
 ## Likes
-Genuine interests, passions, comforts — specific to this character, not generic.
-
 ## Dislikes
-Pet peeves, fears, things they actively avoid.
-
 ## Skills
-Abilities and expertise — what they are known for or unusually good at.
-
 ## Goals
-What drives them. Short-term wants and deeper motivations.
+## Relationship with {{user}}: only if the concept names one
+## Sexual Kinks: only if the concept is explicitly sexual, and then the character must be an adult with a stated age of 18 or older
+## Background: one short prose paragraph
 
-## Sexual Kinks
-Include ONLY if the concept explicitly implies an adult or sexual character. Omit entirely otherwise.
+Be specific, not generic, and keep details consistent. Don't invent a role or history for {{user}}.`,
+  first_mes: `Write \${name}'s opening roleplay message to {{user}}.
 
-## Background
-Prose paragraph: origin, formative events, and how they arrived at where they are now.
-</sections>
-
-Begin output with "# \${name}". No preamble or closing remarks.`,
-  first_mes: `Write the opening roleplay message from "\${name}" to {{user}}.
-
-<context>
 Concept: "\${concept}"
 Description:
-\${description}
-</context>\${styleBlock}
+\${description}\${styleBlock}
 
-<format>
 - \${narrationRule}
-- Blend *actions/emotes* (asterisks) with "spoken dialogue" (quotes).
-- Naturally address or acknowledge {{user}} by name at least once.
-- 3-5 sentences. Hook the reader without overwhelming them.
-</format>
+- Actions in *asterisks*, dialogue in "quotes".
+- 2-4 paragraphs: set the scene, show who \${name} is through what they do and say, and end on something {{user}} can respond to.
+- Never write {{user}}'s actions, words, thoughts, or feelings, and don't assume their gender or appearance.`,
+  mes_example: `Write 3 example exchanges that show how \${name} talks and acts.
 
-<content>
-- Establish a clear scene: location, what \${name} is doing, and the atmosphere.
-- Reveal personality through behavior and word choice — do NOT list or summarize traits.
-- Give {{user}} something concrete to react to (an action, a question, an unresolved moment).
-- Voice, vocabulary, and mood must match the description above.
-</content>
-
-Output only the message. No labels, headers, or commentary.`,
-  mes_example: `Write exactly 3 example dialogue exchanges for "\${name}".
-
-<context>
 Concept: "\${concept}"
 Description:
-\${description}
-</context>\${styleBlock}
+\${description}\${firstMessageBlock}\${styleBlock}
 
-<format>
-- Each exchange opens with <START> on its own line.
-- Two turns per exchange: one {{user}} line, then one {{char}} line.
+Format each exchange exactly like this:
+<START>
+{{user}}: [one line]
+{{char}}: [reply]
+
 - \${narrationRule}
-- Inline actions use *asterisks*. Spoken words use "quotes".
-- Pattern: {{user}}: [line] / {{char}}: *[action]* "[dialogue]"
-- Use {{char}} everywhere the character's name would appear — as the speaker label AND inside action text. Never write the character's actual name anywhere in the output.
-</format>
-
-<content>
-Cover these three distinct beats, one per exchange:
-1. A casual or everyday moment.
-2. An emotionally charged or tense moment.
-3. A moment that spotlights a specific personality trait, quirk, or skill.
-
-Match \${name}'s voice precisely to the description: their vocabulary, speech rhythm, emotional register, and mannerisms must be consistent across all three exchanges.
-</content>
-
-Output only the 3 exchanges. No commentary, headers, or explanation.`,
+- Actions in *asterisks*, dialogue in "quotes". Each {{char}} reply is 1-2 paragraphs in the same style as the opening message.
+- Show three different moments: everyday, tense or emotional, and one that shows a quirk or skill. Don't repeat the opening message or reuse catchphrases.
+- Write {{char}} instead of the character's name.
+- Never write {{user}}'s actions, words, thoughts, or feelings, and don't assume their gender or appearance.`,
 };
 
 export const DEFAULT_STUDIO_SETTINGS: StudioSettings = {
@@ -1083,6 +1049,13 @@ export const DEFAULT_STUDIO_SETTINGS: StudioSettings = {
     customTags: {},
   },
 };
+
+function currentStudioPrompt(key: keyof StudioPrompts, value: string | undefined): string {
+  if (!value || LEGACY_STUDIO_PROMPTS.some((legacy) => legacy[key] === value)) {
+    return DEFAULT_STUDIO_PROMPTS[key];
+  }
+  return value;
+}
 
 export function normalizeStudioSettings(value: unknown): StudioSettings {
   const raw = (value ?? {}) as Partial<StudioSettings>;
@@ -1104,11 +1077,11 @@ export function normalizeStudioSettings(value: unknown): StudioSettings {
       mes_example: enabled.mes_example ?? true,
     },
     prompts: {
-      system: prompts.system || DEFAULT_STUDIO_PROMPTS.system,
-      name: prompts.name || DEFAULT_STUDIO_PROMPTS.name,
-      description: prompts.description || DEFAULT_STUDIO_PROMPTS.description,
-      first_mes: prompts.first_mes || DEFAULT_STUDIO_PROMPTS.first_mes,
-      mes_example: prompts.mes_example || DEFAULT_STUDIO_PROMPTS.mes_example,
+      system: currentStudioPrompt('system', prompts.system),
+      name: currentStudioPrompt('name', prompts.name),
+      description: currentStudioPrompt('description', prompts.description),
+      first_mes: currentStudioPrompt('first_mes', prompts.first_mes),
+      mes_example: currentStudioPrompt('mes_example', prompts.mes_example),
     },
     tags: {
       hideNsfw: tags.hideNsfw ?? false,

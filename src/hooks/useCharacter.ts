@@ -48,6 +48,7 @@ interface CharacterOperations {
   deleteCharacter: (characterId: string) => Promise<void>;
   updateCharacter: (characterId: string, input: UpdateCharacterInput) => Promise<Character>;
   duplicateCharacter: (characterId: string, newName: string) => Promise<Character>;
+  setCharacterFavorite: (characterId: string, favorite: boolean) => Promise<void>;
   refreshCharacters: () => Promise<void>;
   updateSpecField: (characterId: string, field: keyof Character['data']['spec'], value: string | string[]) => Promise<Character>;
   updateSettings: (updates: Partial<Omit<CharacterVaultSettings, 'id'>>) => Promise<void>;
@@ -299,6 +300,24 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     }
   }, []);
 
+  const setCharacterFavorite = useCallback(async (
+    characterId: string,
+    favorite: boolean
+  ): Promise<void> => {
+    try {
+      await characterDb.setFavorite(characterId, favorite);
+      setCharacterListItems((prev) =>
+        prev.map((item) => (item.id === characterId ? { ...item, favorite } : item))
+      );
+      setCharacters((prev) =>
+        prev.map((c) => (c.id === characterId ? { ...c, favorite } : c))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to update favorite'));
+      throw err;
+    }
+  }, []);
+
   /**
    * Update settings
    */
@@ -340,6 +359,7 @@ export function useCharacter(): [CharacterResult, CharacterOperations] {
     deleteCharacter,
     updateCharacter,
     duplicateCharacter,
+    setCharacterFavorite,
     refreshCharacters,
     updateSpecField,
     updateSettings,

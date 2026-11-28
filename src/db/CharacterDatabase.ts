@@ -143,6 +143,7 @@ export function toCharacterListItem(character: Character): CharacterListItem {
     name: character.name,
     thumbnailData: character.thumbnailData,
     lastOpenedAt: character.lastOpenedAt,
+    favorite: character.favorite,
     updatedAt: character.updatedAt,
     createdAt: character.createdAt,
     activeTokens: tokens.active,
@@ -826,6 +827,7 @@ export class CharacterDatabase extends Dexie {
       createdAt: timestamp,
       updatedAt: timestamp,
       lastOpenedAt: undefined,
+      favorite: undefined,
     };
 
     await this.transaction(
@@ -865,6 +867,16 @@ export class CharacterDatabase extends Dexie {
       }
     });
     return timestamp;
+  }
+
+  async setFavorite(id: string, favorite: boolean): Promise<void> {
+    await this.transaction('rw', this.characters, this.characterListIndex, async () => {
+      await this.characters.update(id, { favorite });
+      const existing = await this.characterListIndex.get(id);
+      if (existing) {
+        await this.characterListIndex.put({ ...existing, favorite });
+      }
+    });
   }
 
   // ============================================================================

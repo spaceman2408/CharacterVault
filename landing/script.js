@@ -2,492 +2,721 @@ document.documentElement.classList.add('js');
 
 const yearEl = document.getElementById('year');
 if (yearEl) {
-  yearEl.textContent = new Date().getFullYear();
-}
-
-const header = document.querySelector('.site-header');
-if (header) {
-  const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 8);
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
-}
-
-const toggle = document.querySelector('.nav-toggle');
-const navLinks = document.getElementById('nav-links');
-
-if (toggle && navLinks) {
-  toggle.addEventListener('click', () => {
-    const open = navLinks.classList.toggle('open');
-    toggle.setAttribute('aria-expanded', String(open));
-  });
-
-  navLinks.addEventListener('click', (event) => {
-    if (event.target instanceof HTMLAnchorElement) {
-      navLinks.classList.remove('open');
-      toggle.setAttribute('aria-expanded', 'false');
-    }
-  });
+  yearEl.textContent = String(new Date().getFullYear());
 }
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const revealEls = document.querySelectorAll('.reveal');
-if (!reducedMotion) {
-  document.querySelectorAll('.assurances').forEach((grid) => {
-    grid.querySelectorAll('.reveal').forEach((el, i) => {
-      el.style.transitionDelay = `${i * 80}ms`;
-    });
+/* ---------- Theme Toggle ---------- */
+
+const THEME_KEY = 'cv-landing-theme';
+const themeToggle = document.getElementById('theme-toggle');
+const themeColorMeta = document.getElementById('theme-color-meta');
+
+const applyTheme = (theme, persist) => {
+  document.documentElement.setAttribute('data-theme', theme);
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute('content', theme === 'dark' ? '#0b0c12' : '#fcfbfe');
+  }
+  if (themeToggle) {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    themeToggle.setAttribute('aria-label', `Switch to ${next} theme`);
+    themeToggle.setAttribute('title', `Switch to ${next} mode`);
+  }
+  if (persist) {
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Storage may be blocked in private contexts.
+    }
+  }
+};
+
+applyTheme(document.documentElement.getAttribute('data-theme') || 'dark', false);
+
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    applyTheme(current === 'dark' ? 'light' : 'dark', true);
   });
 }
 
-if ('IntersectionObserver' in window && revealEls.length > 0) {
-  const observer = new IntersectionObserver(
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
+    try {
+      if (localStorage.getItem(THEME_KEY)) return;
+    } catch {
+      return;
+    }
+    applyTheme(event.matches ? 'dark' : 'light', false);
+  });
+}
+
+/* ---------- Header Scroll, Progress & Active Nav ---------- */
+
+const header = document.getElementById('site-header');
+const menuToggle = document.getElementById('menu-toggle');
+const mobileMenu = document.getElementById('mobile-menu');
+const scrollProgressBar = document.getElementById('scroll-progress');
+const heroStage = document.getElementById('hero-stage');
+
+const navLinks = Array.from(document.querySelectorAll('.nav-desktop a[href^="#"]'));
+const trackedSections = navLinks
+  .map((link) => ({ link, section: document.querySelector(link.getAttribute('href')) }))
+  .filter((item) => item.section);
+
+let scrollRaf = 0;
+const updateScrollEffects = () => {
+  scrollRaf = 0;
+  const y = window.scrollY;
+  if (header) {
+    header.classList.toggle('scrolled', y > 10);
+  }
+  if (y < 140) {
+    for (const { link } of trackedSections) link.classList.remove('is-active');
+  }
+  if (scrollProgressBar) {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+    scrollProgressBar.style.transform = `scaleX(${ratio.toFixed(4)})`;
+  }
+  if (heroStage && !reducedMotion && window.innerWidth > 1024) {
+    const shift = Math.min(16, y * 0.04);
+    heroStage.style.setProperty('--hero-shift', `${(-shift).toFixed(1)}px`);
+  }
+};
+
+window.addEventListener(
+  'scroll',
+  () => {
+    if (!scrollRaf) scrollRaf = requestAnimationFrame(updateScrollEffects);
+  },
+  { passive: true }
+);
+window.addEventListener('resize', updateScrollEffects, { passive: true });
+updateScrollEffects();
+
+if ('IntersectionObserver' in window && trackedSections.length > 0) {
+  const activeObserver = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
+          for (const { link, section } of trackedSections) {
+            link.classList.toggle('is-active', section === entry.target);
+          }
         }
       }
     },
-    { threshold: 0.12 }
+    { rootMargin: '-28% 0px -56% 0px', threshold: 0 }
   );
-  revealEls.forEach((el) => observer.observe(el));
-} else {
-  revealEls.forEach((el) => el.classList.add('visible'));
+  trackedSections.forEach(({ section }) => activeObserver.observe(section));
 }
 
-/* ---------- AI tabs ---------- */
+const setMenuOpen = (open) => {
+  if (!menuToggle || !mobileMenu || !header) return;
+  mobileMenu.hidden = !open;
+  menuToggle.setAttribute('aria-expanded', String(open));
+  menuToggle.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+  header.classList.toggle('menu-open', open);
+};
 
-const tabList = document.querySelector('.tab-list');
-
-if (tabList) {
-  const tabs = Array.from(tabList.querySelectorAll('[role="tab"]'));
-
-  const selectTab = (tab, focus) => {
-    for (const t of tabs) {
-      const selected = t === tab;
-      t.setAttribute('aria-selected', String(selected));
-      t.tabIndex = selected ? 0 : -1;
-      document.getElementById(t.getAttribute('aria-controls')).hidden = !selected;
-    }
-    if (focus) tab.focus();
-  };
-
-  tabList.addEventListener('click', (event) => {
-    const tab = event.target.closest('[role="tab"]');
-    if (tab) selectTab(tab, false);
+if (menuToggle && mobileMenu) {
+  menuToggle.addEventListener('click', () => {
+    const isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
+    setMenuOpen(!isOpen);
   });
 
-  tabList.addEventListener('keydown', (event) => {
-    const index = tabs.indexOf(document.activeElement);
-    if (index < 0) return;
+  mobileMenu.addEventListener('click', (event) => {
+    if (event.target.closest('a')) setMenuOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !mobileMenu.hidden) {
+      setMenuOpen(false);
+      menuToggle.focus();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 860 && !mobileMenu.hidden) setMenuOpen(false);
+  });
+}
+
+/* ---------- Choreographed Scroll Reveals ---------- */
+
+const revealEls = Array.from(document.querySelectorAll('.reveal'));
+
+for (const el of revealEls) {
+  const step = Number(el.dataset.stagger);
+  if (step > 0) {
+    const children = el.querySelectorAll('.reveal-child');
+    children.forEach((child, idx) => {
+      child.style.setProperty('--reveal-delay', `${idx * step}ms`);
+    });
+  }
+}
+
+const revealAboveFold = () => {
+  const cutoff = window.innerHeight * 0.92;
+  for (const el of revealEls) {
+    if (!el.classList.contains('is-visible') && el.getBoundingClientRect().top < cutoff) {
+      el.classList.add('is-visible');
+    }
+  }
+};
+
+if (!reducedMotion && 'IntersectionObserver' in window && revealEls.length > 0) {
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          revealObserver.unobserve(entry.target);
+        }
+      }
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+  );
+  revealEls.forEach((el) => revealObserver.observe(el));
+  revealAboveFold();
+  window.addEventListener('hashchange', () => setTimeout(revealAboveFold, 60));
+} else {
+  revealEls.forEach((el) => el.classList.add('is-visible'));
+}
+
+/* ---------- Accessible Tablist Helper ---------- */
+
+const bindTablist = (tablist, onSelect) => {
+  if (!tablist) return;
+  const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+
+  const select = (tab, moveFocus) => {
+    for (const t of tabs) {
+      const active = t === tab;
+      t.setAttribute('aria-selected', String(active));
+      t.tabIndex = active ? 0 : -1;
+      const panel = document.getElementById(t.getAttribute('aria-controls'));
+      if (panel) panel.hidden = !active;
+    }
+    if (moveFocus) tab.focus();
+    if (onSelect) onSelect(tab);
+  };
+
+  tablist.addEventListener('click', (event) => {
+    const tab = event.target.closest('[role="tab"]');
+    if (tab) select(tab, false);
+  });
+
+  tablist.addEventListener('keydown', (event) => {
+    const idx = tabs.indexOf(document.activeElement);
+    if (idx < 0) return;
     let next = -1;
-    if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
-    else if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+    if (event.key === 'ArrowRight') next = (idx + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') next = (idx - 1 + tabs.length) % tabs.length;
     else if (event.key === 'Home') next = 0;
     else if (event.key === 'End') next = tabs.length - 1;
     if (next < 0) return;
     event.preventDefault();
-    selectTab(tabs[next], true);
+    select(tabs[next], true);
+  });
+};
+
+const stageUrlEl = document.getElementById('stage-url');
+bindTablist(document.querySelector('.stage-tabs'), (tab) => {
+  const panel = document.getElementById(tab.getAttribute('aria-controls'));
+  if (panel && stageUrlEl && panel.dataset.url) {
+    stageUrlEl.textContent = panel.dataset.url;
+  }
+});
+
+const loreUrlEl = document.getElementById('lore-url');
+bindTablist(document.querySelector('.lore-view-switch'), (tab) => {
+  const panel = document.getElementById(tab.getAttribute('aria-controls'));
+  if (panel && loreUrlEl && panel.dataset.url) {
+    loreUrlEl.textContent = panel.dataset.url;
+  }
+});
+
+let startAgentDemo = null;
+bindTablist(document.querySelector('.ai-tablist'), (tab) => {
+  if (tab.id === 'tab-agent' && startAgentDemo) {
+    startAgentDemo();
+  }
+});
+
+const copyCodeBtn = document.getElementById('copy-code-btn');
+bindTablist(document.querySelector('.code-tabs'), () => {
+  if (copyCodeBtn) copyCodeBtn.textContent = 'Copy';
+});
+
+/* ---------- Copy Self-Host Snippet ---------- */
+
+if (copyCodeBtn) {
+  copyCodeBtn.addEventListener('click', async () => {
+    const activePanel = document.querySelector('.code-pre:not([hidden])');
+    if (!activePanel) return;
+    const text = activePanel.textContent.trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      copyCodeBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyCodeBtn.textContent = 'Copy';
+      }, 1800);
+    } catch {
+      copyCodeBtn.textContent = 'Select text';
+      setTimeout(() => {
+        copyCodeBtn.textContent = 'Copy';
+      }, 1800);
+    }
   });
 }
 
-/* ---------- AI ghost preview demo ---------- */
+/* ---------- Inline Ghost Preview Demo ---------- */
 
-const aiDemo = document.getElementById('ai-demo-editor');
+const ghostDemo = document.getElementById('ghost-demo');
+if (ghostDemo) {
+  const beforeEl = document.getElementById('ghost-before');
+  const targetEl = document.getElementById('ghost-target');
+  const afterEl = document.getElementById('ghost-after');
+  const opPills = Array.from(ghostDemo.querySelectorAll('.gt-pill[data-op]'));
+  const instrEl = document.getElementById('ghost-instr');
+  const statusEl = document.getElementById('ghost-status');
+  const actionsEl = document.getElementById('ghost-actions');
+  const acceptEl = document.getElementById('ghost-accept');
+  const nextBtn = document.getElementById('ghost-next');
 
-if (aiDemo) {
-  const beforeEl = aiDemo.querySelector('.ai-before');
-  const targetEl = aiDemo.querySelector('.ai-target');
-  const afterEl = aiDemo.querySelector('.ai-after');
-  const toolbar = aiDemo.querySelector('.ai-toolbar-mock');
-  const instructionEl = aiDemo.querySelector('.ai-instruction');
-  const actions = aiDemo.querySelector('.ai-actions');
-  const acceptBtn = aiDemo.querySelector('.ai-accept');
+  const setActiveOp = (opName) => {
+    for (const pill of opPills) {
+      pill.classList.toggle('gt-active', pill.dataset.op === opName);
+    }
+  };
 
   const examples = [
     {
-      before: 'Aria Voss charts dead star systems for whoever pays. ',
-      target: 'She is tall and has a scar.',
-      after: ' She drinks her coffee black and her promises rare.',
-      instruction: 'Make it more vivid',
-      rewrite: 'A thin scar splits her left brow, pale against skin that has outlived three suns.',
+      op: 'Vivid',
+      instr: 'Make it more vivid',
+      before: 'Nadia checks the airlock seal before every shift. ',
+      original: 'She looks tired and has grease on her hands.',
+      rewrite: 'Dark circles sit under her eyes, and hydraulic grease stains the knuckles of her work gloves.',
+      after: ' She keeps a spare wrench clipped to her belt.',
     },
     {
-      before: 'The archive hums at night. ',
-      target: 'Kael is grumpy but nice.',
-      after: ' Nobody asks what he was before the war.',
-      instruction: "Show, don't tell",
-      rewrite: "Kael's scowl arrives before he does, but he still leaves the porch light on for strays.",
+      op: 'Custom',
+      instr: 'Make it more specific',
+      before: 'Tomas runs the corner repair shop off Fourth Street. ',
+      original: 'He is quiet and careful with machines.',
+      rewrite: 'He barely speaks while working, sorting every stripped screw into labeled tin trays.',
+      after: ' Most regulars leave their radios on the counter and come back Tuesday.',
     },
     {
-      before: 'Mira runs the last greenhouse on Europa. ',
-      target: 'She likes plants.',
-      after: ' The domes frost over when the relays fail.',
-      instruction: 'Add sensory detail',
-      rewrite: 'She names every seedling and hums to the tomatoes when the heaters stutter.',
+      op: 'Enhance',
+      instr: 'Add a concrete detail',
+      before: 'Hannah keeps a small herb garden on the apartment roof. ',
+      original: 'She checks on the plants every morning.',
+      rewrite: 'She climbs up before sunrise with a dented watering can, checking the rosemary pots for frost.',
+      after: ' The stairwell door sticks when the air turns damp.',
     },
   ];
 
-  const resetDemo = (example) => {
-    beforeEl.textContent = example.before;
-    afterEl.textContent = example.after;
-    targetEl.className = 'ai-target';
-    targetEl.textContent = example.target;
-    toolbar.classList.remove('show');
-    actions.classList.remove('show');
-    acceptBtn.classList.remove('pressed');
+  let idx = 0;
+  let token = 0;
+  let active = false;
+  const timers = new Set();
+
+  const clearTimers = () => {
+    for (const id of timers) clearTimeout(id);
+    timers.clear();
   };
 
-  if (reducedMotion) {
-    const example = examples[0];
-    resetDemo(example);
-    targetEl.textContent = example.rewrite;
-  } else {
-    let running = false;
-    let index = 0;
-    const timers = new Set();
+  const wait = (ms) =>
+    new Promise((resolve) => {
+      const id = setTimeout(() => {
+        timers.delete(id);
+        resolve();
+      }, ms);
+      timers.add(id);
+    });
 
-    const wait = (ms) =>
-      new Promise((resolve) => {
-        const id = setTimeout(() => {
-          timers.delete(id);
-          resolve();
-        }, ms);
-        timers.add(id);
-      });
+  const renderStatic = (ex) => {
+    setActiveOp(ex.op);
+    instrEl.textContent = ex.instr;
+    beforeEl.textContent = ex.before;
+    targetEl.className = 'ghost-target is-accepted';
+    targetEl.textContent = ex.rewrite;
+    afterEl.textContent = ex.after;
+    statusEl.textContent = 'Accepted into undo history';
+    actionsEl.classList.add('is-shown');
+  };
 
-    const stopDemo = () => {
-      running = false;
-      for (const id of timers) clearTimeout(id);
-      timers.clear();
-    };
+  const playExample = async (myToken) => {
+    while (active && myToken === token) {
+      const ex = examples[idx];
+      setActiveOp(ex.op);
+      instrEl.textContent = ex.instr;
+      beforeEl.textContent = ex.before;
+      afterEl.textContent = ex.after;
+      targetEl.className = 'ghost-target';
+      targetEl.textContent = ex.original;
+      statusEl.textContent = 'Text selected in editor';
+      actionsEl.classList.remove('is-shown');
+      acceptEl.classList.remove('is-pressed');
 
-    const runDemo = async () => {
-      if (running) return;
-      running = true;
+      await wait(950);
+      if (!active || myToken !== token) return;
 
-      while (running) {
-        const example = examples[index];
-        index = (index + 1) % examples.length;
+      targetEl.classList.add('is-selected');
+      statusEl.textContent = `Running ${ex.op}…`;
+      await wait(750);
+      if (!active || myToken !== token) return;
 
-        resetDemo(example);
-        await wait(1400);
-        if (!running) break;
-
-        targetEl.classList.add('ai-selected');
-        instructionEl.textContent = example.instruction;
-        toolbar.classList.add('show');
-        await wait(1100);
-        if (!running) break;
-
-        targetEl.className = 'ai-target ai-ghost';
-        targetEl.textContent = '';
-        for (const ch of example.rewrite) {
-          if (!running) break;
-          targetEl.textContent += ch;
-          await wait(ch === ' ' ? 45 : 22);
-        }
-        if (!running) break;
-
-        targetEl.classList.add('ai-ghost--complete');
-        actions.classList.add('show');
-        await wait(2100);
-        if (!running) break;
-
-        acceptBtn.classList.add('pressed');
-        targetEl.className = 'ai-target ai-accepted';
-        await wait(900);
-        if (!running) break;
-
-        toolbar.classList.remove('show');
-        actions.classList.remove('show');
-        await wait(2200);
+      targetEl.className = 'ghost-target is-streaming';
+      targetEl.textContent = '';
+      for (const ch of ex.rewrite) {
+        if (!active || myToken !== token) return;
+        targetEl.textContent += ch;
+        await wait(ch === ' ' ? 36 : 18);
       }
-    };
 
+      targetEl.className = 'ghost-target is-ready';
+      statusEl.textContent = 'Ghost preview ready';
+      actionsEl.classList.add('is-shown');
+      await wait(1900);
+      if (!active || myToken !== token) return;
+
+      acceptEl.classList.add('is-pressed');
+      targetEl.className = 'ghost-target is-accepted';
+      statusEl.textContent = 'Edit accepted · Ctrl+Z to undo';
+      await wait(1800);
+      if (!active || myToken !== token) return;
+
+      idx = (idx + 1) % examples.length;
+    }
+  };
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      idx = (idx + 1) % examples.length;
+      if (reducedMotion) {
+        renderStatic(examples[idx]);
+      } else {
+        token += 1;
+        clearTimers();
+        active = true;
+        playExample(token);
+      }
+    });
+  }
+
+  if (reducedMotion) {
+    renderStatic(examples[0]);
+  } else if ('IntersectionObserver' in window) {
     new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            runDemo();
+            if (!active) {
+              active = true;
+              token += 1;
+              playExample(token);
+            }
           } else {
-            stopDemo();
+            active = false;
+            clearTimers();
           }
         }
       },
-      { threshold: 0.3 }
-    ).observe(aiDemo);
+      { threshold: 0.2 }
+    ).observe(ghostDemo);
+  } else {
+    renderStatic(examples[0]);
   }
 }
 
-/* ---------- Agent demo ---------- */
+/* ---------- Agent Run Demo ---------- */
 
 const agentDemo = document.getElementById('agent-demo');
-
 if (agentDemo) {
-  const thread = document.getElementById('agentThread');
-  const banner = document.getElementById('agentBanner');
-  const thinking = document.getElementById('agentThinking');
-  const tokensEl = document.getElementById('agentTokens');
+  const stepsHost = document.getElementById('agent-steps');
+  const stateEl = document.getElementById('agent-state');
+  const tokensEl = document.getElementById('agent-tokens');
+  const replayBtn = document.getElementById('agent-replay');
 
   const steps = [
-    { type: 'tool', cls: 'is-list', tag: 'list', text: 'lorebook entries · 14 found' },
-    { type: 'tool', cls: 'is-read', tag: 'read', text: 'entry #7 “old keep”' },
-    { type: 'tool', cls: 'is-write', tag: 'write', text: 'rekey #7 → “The Old Keep”' },
-    { type: 'tool', cls: 'is-write', tag: 'write', text: 'rekey #3 → “Meridian Compact”' },
-    { type: 'tool', cls: 'is-delete', tag: 'delete', text: '#11 empty content' },
-    { type: 'prose', text: 'Rekeyed two entries to proper nouns and removed the one empty stub. The book scans clean.' },
-    { type: 'wrote', text: 'Wrote 3 changes · snapshot taken' },
+    { kind: 'tool', cls: 'step-list', tag: 'audit', text: 'lorebook · 14 entries scanned' },
+    { kind: 'tool', cls: 'step-read', tag: 'read', text: 'entry #7 “yard 4”, entry #3 “thruster”' },
+    { kind: 'tool', cls: 'step-write', tag: 'write', text: 'rekey #7 → “Orbital Yard 4”' },
+    { kind: 'tool', cls: 'step-write', tag: 'write', text: 'rekey #3 → “Thruster Log”' },
+    { kind: 'tool', cls: 'step-delete', tag: 'delete', text: 'remove #11 (empty stub)' },
+    { kind: 'summary', text: 'Rekeyed two entries to proper nouns and removed the empty stub. No broken recursion links found.' },
+    { kind: 'done', text: '3 changes applied · Agentic auto save point created' },
   ];
 
-  const buildEl = (step) => {
-    if (step.type === 'tool') {
-      const el = document.createElement('span');
-      el.className = `agent-tool ${step.cls}`;
-      el.innerHTML = `<span class="agent-tool-tag">${step.tag}</span><span class="agent-tool-text">${step.text}</span>`;
-      return el;
+  const stepNodes = steps.map((step) => {
+    if (step.kind === 'tool') {
+      const row = document.createElement('div');
+      row.className = `agent-step ${step.cls}`;
+      row.innerHTML = `<span class="step-tag">${step.tag}</span><span>${step.text}</span>`;
+      return row;
     }
-    if (step.type === 'prose') {
-      const el = document.createElement('p');
-      el.className = 'agent-prose';
-      el.textContent = step.text;
-      return el;
+    if (step.kind === 'summary') {
+      const p = document.createElement('p');
+      p.className = 'agent-summary';
+      p.textContent = step.text;
+      return p;
     }
-    const el = document.createElement('span');
-    el.className = 'agent-wrote';
-    el.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5 5 9.5 10 2.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> ${step.text}`;
-    return el;
+    const done = document.createElement('span');
+    done.className = 'agent-done';
+    done.textContent = `✓ ${step.text}`;
+    return done;
+  });
+
+  stepNodes.forEach((node) => stepsHost.appendChild(node));
+
+  let runId = 0;
+  const timers = new Set();
+
+  const stop = () => {
+    for (const id of timers) clearTimeout(id);
+    timers.clear();
   };
 
-  const renderStatic = () => {
-    banner.classList.add('show');
-    for (const el of stepEls) el.classList.add('show');
-    thinking.classList.remove('show');
-    tokensEl.textContent = '1.4k';
+  const wait = (ms) =>
+    new Promise((resolve) => {
+      const id = setTimeout(() => {
+        timers.delete(id);
+        resolve();
+      }, ms);
+      timers.add(id);
+    });
+
+  const showStatic = () => {
+    stepNodes.forEach((n) => n.classList.add('is-shown'));
+    stateEl.textContent = 'Completed';
+    tokensEl.textContent = '1.9k';
   };
 
-  const stepEls = steps.map(buildEl);
-  for (const el of stepEls) thread.appendChild(el);
+  const run = async () => {
+    if (reducedMotion) {
+      showStatic();
+      return;
+    }
+    stop();
+    const currentRun = ++runId;
+    stepNodes.forEach((n) => n.classList.remove('is-shown'));
+    stateEl.textContent = 'Working…';
+    tokensEl.textContent = '1.2k';
+    await wait(320);
 
-  if (reducedMotion) {
-    renderStatic();
-  } else {
-    let running = false;
-    const timers = new Set();
-
-    const wait = (ms) =>
-      new Promise((resolve) => {
-        const id = setTimeout(() => {
-          timers.delete(id);
-          resolve();
-        }, ms);
-        timers.add(id);
-      });
-
-    const stopDemo = () => {
-      running = false;
-      for (const id of timers) clearTimeout(id);
-      timers.clear();
-    };
-
-    const runDemo = async () => {
-      if (running) return;
-      running = true;
-
-      while (running) {
-        for (const el of stepEls) el.classList.remove('show');
-        banner.classList.remove('show');
-        thinking.classList.remove('show');
-        tokensEl.textContent = '1.2k';
-        await wait(900);
-        if (!running) break;
-
-        banner.classList.add('show');
-        thinking.classList.add('show');
-        await wait(700);
-        if (!running) break;
-
-        for (let i = 0; i < stepEls.length; i++) {
-          if (!running) break;
-          stepEls[i].classList.add('show');
-          tokensEl.textContent = `${(1.2 + i * 0.12).toFixed(1)}k`;
-          if (steps[i].type === 'wrote') {
-            thinking.classList.remove('show');
-            await wait(2600);
-          } else if (steps[i].type === 'prose') {
-            await wait(1300);
-          } else {
-            await wait(820);
-          }
-        }
-        if (!running) break;
-
-        await wait(2600);
+    for (let i = 0; i < stepNodes.length; i++) {
+      if (currentRun !== runId) return;
+      stepNodes[i].classList.add('is-shown');
+      tokensEl.textContent = `${(1.2 + (i + 1) * 0.1).toFixed(1)}k`;
+      if (steps[i].kind === 'done') {
+        stateEl.textContent = 'Completed';
+      } else {
+        await wait(steps[i].kind === 'summary' ? 650 : 480);
       }
-    };
+    }
+  };
 
-    new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            runDemo();
-          } else {
-            stopDemo();
-          }
-        }
-      },
-      { threshold: 0.3 }
-    ).observe(agentDemo);
-  }
+  startAgentDemo = run;
+  if (replayBtn) replayBtn.addEventListener('click', run);
+  if (reducedMotion) showStatic();
 }
 
-/* ---------- Context panel demo ---------- */
+/* ---------- AI Context Interactive Demo ---------- */
 
 const ctxDemo = document.getElementById('ctx-demo');
-
 if (ctxDemo) {
-  const CTX_LIMIT = 8192;
-  const ctxItems = Array.from(ctxDemo.querySelectorAll('.ctx-item'));
-  const ctxTokens = document.getElementById('ctxTokens');
-  const ctxBar = document.getElementById('ctxBar');
-  const ctxCount = document.getElementById('ctxCount');
-  const ctxChips = document.getElementById('ctxChips');
+  const LIMIT = 8192;
+  const rows = Array.from(ctxDemo.querySelectorAll('.ctx-row'));
+  const tokensEl = document.getElementById('ctx-tokens');
+  const barEl = document.getElementById('ctx-bar');
+  const countEl = document.getElementById('ctx-count');
+  const chipsEl = document.getElementById('ctx-chips');
 
-  const renderCtx = () => {
+  const updateCtx = () => {
     let total = 0;
     const selected = [];
-
-    for (const item of ctxItems) {
-      if (item.classList.contains('on')) {
-        total += Number(item.dataset.tokens) || 0;
-        selected.push({ label: item.dataset.label, clear: () => item.classList.remove('on') });
+    for (const row of rows) {
+      const on = row.classList.contains('is-on');
+      row.setAttribute('aria-pressed', String(on));
+      if (on) {
+        total += Number(row.dataset.tokens) || 0;
+        selected.push(row);
       }
     }
 
-    const pct = Math.min(100, (total / CTX_LIMIT) * 100);
-    const status = pct > 80 ? 'danger' : pct > 50 ? 'warning' : 'good';
+    const pct = Math.min(100, (total / LIMIT) * 100);
+    const status = pct > 75 ? 'danger' : pct > 30 ? 'warning' : 'good';
 
-    ctxTokens.textContent = `${total.toLocaleString()} / ${CTX_LIMIT.toLocaleString()}`;
-    ctxTokens.dataset.status = status;
-    ctxBar.style.width = `${pct}%`;
-    ctxBar.dataset.status = status;
-    ctxCount.textContent = String(selected.length);
-    ctxCount.style.display = selected.length > 0 ? '' : 'none';
+    tokensEl.textContent = `${total.toLocaleString()} / ${LIMIT.toLocaleString()} tok`;
+    tokensEl.dataset.status = status;
+    barEl.style.width = `${Math.max(pct, total > 0 ? 3 : 0)}%`;
+    barEl.dataset.status = status;
+    countEl.textContent = String(selected.length);
 
-    ctxChips.innerHTML = '';
+    chipsEl.innerHTML = '';
     if (selected.length === 0) {
       const empty = document.createElement('span');
       empty.className = 'ctx-empty';
-      empty.textContent = 'Nothing selected. Orion works with an empty slate.';
-      ctxChips.appendChild(empty);
-    } else {
-      for (const { label, clear } of selected) {
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'ctx-chip';
-        chip.title = `Remove ${label}`;
-        chip.innerHTML = `${label} <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
-        chip.addEventListener('click', () => {
-          clear();
-          renderCtx();
-        });
-        ctxChips.appendChild(chip);
-      }
+      empty.textContent = 'No sections pinned. Orion starts with a blank slate.';
+      chipsEl.appendChild(empty);
+      return;
+    }
+
+    for (const row of selected) {
+      const label = row.dataset.label || '';
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ctx-chip';
+      chip.textContent = `${label} ×`;
+      chip.setAttribute('aria-label', `Remove ${label} from AI context`);
+      chip.addEventListener('click', () => {
+        row.classList.remove('is-on');
+        updateCtx();
+      });
+      chipsEl.appendChild(chip);
     }
   };
 
-  for (const item of ctxItems) {
-    item.addEventListener('click', () => {
-      item.classList.toggle('on');
-      renderCtx();
+  rows.forEach((row) => {
+    row.addEventListener('click', () => {
+      row.classList.toggle('is-on');
+      updateCtx();
     });
-  }
+  });
 
-  renderCtx();
+  updateCtx();
 }
 
-/* ---------- Lorebook entry demo ---------- */
+const loreEyeCard = document.getElementById('lore-eye-card');
+const loreEyeBtn = document.getElementById('lore-eye-btn');
+const loreEyeBadge = document.getElementById('lore-eye-badge');
 
-const loreEntryDemo = document.getElementById('loreEntryDemo');
-const loreEye = document.getElementById('loreEye');
-
-if (loreEntryDemo && loreEye) {
-  loreEye.addEventListener('click', () => {
-    const hidden = loreEntryDemo.classList.toggle('hidden');
-    loreEye.setAttribute('aria-pressed', String(!hidden));
+if (loreEyeCard && loreEyeBtn && loreEyeBadge) {
+  loreEyeBtn.addEventListener('click', () => {
+    const isHidden = loreEyeCard.classList.toggle('is-hidden-entry');
+    loreEyeBtn.setAttribute('aria-pressed', String(!isHidden));
+    loreEyeBadge.textContent = isHidden ? 'Hidden from AI' : 'Included';
   });
 }
 
-/* ---------- Screenshot lightbox ---------- */
+/* ---------- Screenshot Lightbox ---------- */
 
 const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+const lightboxCaption = document.getElementById('lightbox-caption');
+const lightboxClose = document.getElementById('lightbox-close');
+const stageZoomBtn = document.getElementById('stage-zoom-btn');
+const loreZoomBtn = document.getElementById('lore-zoom-btn');
+const showcaseZoomBtn = document.getElementById('showcase-zoom-btn');
 
-if (lightbox) {
-  const lightboxImg = lightbox.querySelector('img');
+if (lightbox && lightboxImg && lightboxClose) {
+  let lastTrigger = null;
 
-  const openLightbox = (img) => {
-    lightboxImg.src = img.src;
+  const openLightbox = (img, trigger) => {
+    if (!img) return;
+    lastTrigger = trigger || img;
+    lightboxImg.src = img.currentSrc || img.src;
     lightboxImg.alt = img.alt;
+    if (lightboxCaption) lightboxCaption.textContent = img.alt;
     lightbox.hidden = false;
-    requestAnimationFrame(() => lightbox.classList.add('open'));
+    requestAnimationFrame(() => lightbox.classList.add('is-open'));
     document.body.style.overflow = 'hidden';
+    lightboxClose.focus();
   };
 
   const closeLightbox = () => {
-    lightbox.classList.remove('open');
+    lightbox.classList.remove('is-open');
     document.body.style.overflow = '';
     setTimeout(() => {
       lightbox.hidden = true;
-      lightboxImg.src = '';
-    }, 200);
+      lightboxImg.removeAttribute('src');
+      if (lastTrigger && typeof lastTrigger.focus === 'function') {
+        lastTrigger.focus();
+      }
+    }, 180);
   };
 
   document.querySelectorAll('img.zoomable').forEach((img) => {
-    img.addEventListener('click', () => openLightbox(img));
+    img.addEventListener('click', () => openLightbox(img, img));
   });
 
+  if (stageZoomBtn) {
+    stageZoomBtn.addEventListener('click', () => {
+      const visibleImg = document.querySelector('.stage-panel:not([hidden]) img');
+      openLightbox(visibleImg, stageZoomBtn);
+    });
+  }
+
+  if (loreZoomBtn) {
+    loreZoomBtn.addEventListener('click', () => {
+      const visibleImg = document.querySelector('.lore-panel:not([hidden]) img');
+      openLightbox(visibleImg, loreZoomBtn);
+    });
+  }
+
+  if (showcaseZoomBtn) {
+    showcaseZoomBtn.addEventListener('click', () => {
+      const img = document.querySelector('#editor-showcase .showcase-stage img');
+      openLightbox(img, showcaseZoomBtn);
+    });
+  }
+
+  lightboxClose.addEventListener('click', closeLightbox);
+
   lightbox.addEventListener('click', (event) => {
-    if (event.target === lightbox || event.target.closest('.lightbox-close')) {
-      closeLightbox();
-    }
+    if (event.target === lightbox) closeLightbox();
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !lightbox.hidden) {
-      closeLightbox();
-    }
+    if (event.key === 'Escape' && !lightbox.hidden) closeLightbox();
   });
 }
 
-const showcase = document.querySelector('.showcase');
+/* ---------- Card Editor Hotspot Tour ---------- */
 
-if (showcase) {
-  const spots = showcase.querySelectorAll('.hs');
-  const caption = showcase.querySelector('.showcase-caption');
-  const captionDetail = caption.querySelector('.cap-detail');
+const editorShowcase = document.getElementById('editor-showcase');
+if (editorShowcase) {
+  const spots = Array.from(editorShowcase.querySelectorAll('.hs'));
+  const caption = editorShowcase.querySelector('.showcase-caption');
+  const captionDetail = caption ? caption.querySelector('.cap-detail') : null;
 
-  const setOpen = (spot) => {
-    spots.forEach((s) => s.classList.toggle('open', s === spot));
-    captionDetail.innerHTML = spot ? spot.querySelector('.hs-tip').innerHTML : '';
-    caption.classList.toggle('has-detail', Boolean(spot));
+  const setOpenSpot = (spot) => {
+    for (const s of spots) {
+      const active = s === spot;
+      s.classList.toggle('open', active);
+      s.setAttribute('aria-expanded', String(active));
+    }
+    if (caption && captionDetail) {
+      captionDetail.innerHTML = spot ? spot.querySelector('.hs-tip').innerHTML : '';
+      caption.classList.toggle('has-detail', Boolean(spot));
+    }
   };
 
-  spots.forEach((spot) => {
-    spot.addEventListener('click', () => {
-      setOpen(spot.classList.contains('open') ? null : spot);
+  for (const spot of spots) {
+    spot.addEventListener('click', (event) => {
+      event.stopPropagation();
+      setOpenSpot(spot.classList.contains('open') ? null : spot);
     });
     spot.addEventListener('pointerenter', (event) => {
-      if (event.pointerType === 'mouse' && !spot.classList.contains('open')) setOpen(null);
+      if (event.pointerType === 'mouse' && !spot.classList.contains('open')) {
+        setOpenSpot(null);
+      }
     });
-  });
+  }
 
   document.addEventListener('click', (event) => {
-    if (!event.target.closest('.hs')) setOpen(null);
+    if (!event.target.closest('.hs')) setOpenSpot(null);
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') setOpen(null);
+    if (event.key === 'Escape') {
+      setOpenSpot(null);
+      if (document.activeElement && document.activeElement.classList.contains('hs')) {
+        document.activeElement.blur();
+      }
+    }
   });
 }

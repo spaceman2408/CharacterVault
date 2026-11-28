@@ -15,6 +15,8 @@ export interface GenerationState {
   completedFields: GenerationField[];
   generatedData: Partial<Pick<CharacterSpec, GenerationField>>;
   generatedReasoning: Partial<Record<GenerationField, string>>;
+  /** Description each later field was generated from, to flag it once the description changes. */
+  descriptionBasis: Partial<Record<GenerationField, string>>;
   error: string | null;
   failedField: GenerationField | null;
 }

@@ -16,6 +16,7 @@ export const LOREBOOK_LOOKUP_TOOLS = new Set([
   'read_recursion',
   'test_keys',
   'suggest_names',
+  'suggest_places',
   'read_skill',
 ]);
 export const LOREBOOK_WRITE_TOOLS = new Set([
@@ -54,6 +55,7 @@ export const CHARACTER_LOOKUP_TOOLS = new Set([
   'read_recursion',
   'test_keys',
   'suggest_names',
+  'suggest_places',
   'read_skill',
 ]);
 

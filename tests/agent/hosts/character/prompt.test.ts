@@ -26,6 +26,7 @@ const SHARED_EXPECTATIONS = [
   'read_recursion',
   'test_keys',
   'suggest_names',
+  'suggest_places',
   'excludeRecursion',
   'insertion_order',
   'personality and physical_description may stay empty',

@@ -39,7 +39,7 @@ From the library header, click **Backup** to download a ZIP of the whole vault:
 | `characters/` | Cards **with** an image as PNG (embedded data); cards **without** one as JSON (V3). |
 | `lorebooks/` | Standalone vault lorebooks as SillyTavern-oriented JSON |
 | `settings.json` | App settings (AI config, sampler, prompts, studio including favorite tags, workspace, layout) |
-| `manifest.json` | Backup kind, date, counts, and whether API keys were included |
+| `manifest.json` | Backup kind, date, counts, favorite characters, and whether API keys were included |
 
 **Include API keys** is off by default. Turn it on only when you are moving your own setup between browsers. Anyone with that file can spend your AI quota.
 
@@ -66,6 +66,20 @@ PNG export needs a character image. JPEG, WebP, and other formats are converted 
 ### JSON
 
 Exports a JSON file in the V3 wrapper (`chara_card_v3`) with V2 fields. Includes name, description, personality, scenario, greetings, lorebook, creator information, tags, and notes. V3-only fields (group-only greetings, nickname, assets, and so on) aren't kept.
+
+### Check before export {#check-before-export}
+
+Before the file downloads, CharacterVault checks the card and lists likely mistakes:
+
+- Empty name or first message, or blank alternate greetings
+- Broken or misspelled macros, such as `{char}}` or `{{ussr}}`
+- Leftover AI text, such as `<think>` or tool-call tags
+- Example dialogue with no `<START>` line
+- Enabled lorebook entries with no keys (they never fire), unless they are constant or vectorized
+
+**Go to** opens the field in the editor (from the library, **Open card** opens the character). **Export anyway** downloads it as it is, and **Cancel** stops. A card with nothing to flag downloads straight away.
+
+The check is on by default. Turn it off in **Settings → Character Workspace → Export → Check cards before export**.
 
 ## What Each Format Includes
 

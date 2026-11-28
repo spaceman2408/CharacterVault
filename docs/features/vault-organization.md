@@ -23,6 +23,10 @@ All characters are displayed as portrait-style cards in a responsive grid that a
 
 On desktop, each card shows the character's portrait thumbnail, name, tag chips, **Opened …** / **Edited …** lines, and a compact **active / total** token chip. On mobile, cards show only the image and name. Sort the grid by name, recent activity, or date created (see below).
 
+### Favorites {#favorites}
+
+Click the star in the top-left corner of a card to make it a favorite (on desktop it shows on hover until starred). Favorites stay at the top of the grid in every sort and search, in that sort's order. Click the star again to remove it. [Vault backups](/features/import-export#vault-backup) keep favorites, and restoring one stars those characters again. Exported cards do not carry the star.
+
 ## Search
 
 Use the search bar (in the header on desktop, below the header on mobile) to filter characters. The grid updates in real-time as you type.

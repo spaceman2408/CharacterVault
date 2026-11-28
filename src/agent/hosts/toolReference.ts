@@ -60,6 +60,10 @@ const NOTES: Record<
   read_recursion: { group: 'Search and checks', summary: 'Show which entries can trigger which.' },
   test_keys: { group: 'Search and checks', summary: 'Show which entries some sample chat text would trigger.' },
   suggest_names: { group: 'Helpers', summary: 'Suggest names by origin, skipping overused AI names.' },
+  suggest_places: {
+    group: 'Helpers',
+    summary: 'Suggest towns, regions, rivers, mountains, lakes, or taverns, skipping overused AI place names.',
+  },
   read_skill: { group: 'Helpers', summary: "Load a skill's instructions." },
 };
 

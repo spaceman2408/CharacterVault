@@ -1611,17 +1611,6 @@ Provide only the generated text without any additional commentary.`;
   ): Promise<AIResponse> {
     return this.chatCompletion(messages, customSampler, onChunk, options);
   }
-
-  /**
-   * Check if the service is configured and ready
-   */
-  isReady(): boolean {
-    return !!(
-      this.config.apiKey &&
-      this.config.baseUrl &&
-      this.config.modelId
-    );
-  }
 }
 
 /**

@@ -1,250 +1,136 @@
 import type { AgentToolSpec } from '../../core/types';
 import { SUGGEST_NAMES_TOOL_SPEC } from '../names/suggestNames';
+import { SUGGEST_PLACES_TOOL_SPEC } from '../names/suggestPlaces';
+
+const ENTRY_ID = { type: 'integer', description: 'Entry id' };
+
+const ACTIVATION_PROPERTIES = {
+  name: { type: 'string' },
+  keys: { type: 'string', description: 'Comma-separated' },
+  constant: { type: 'boolean' },
+  enabled: { type: 'boolean', description: 'false: never activates (default true)' },
+  position: {
+    type: 'string',
+    description: 'before_char (default), after_char, before_example, after_example, or at_depth',
+  },
+  depth: { type: 'integer', description: 'Chat depth for at_depth (default 4)' },
+  insertion_order: { type: 'integer', description: 'Higher inserts later and usually weighs more' },
+  secondary_keys: { type: 'string', description: 'Comma-separated filter keys; sets selective' },
+  selective: { type: 'boolean' },
+  probability: { type: 'integer', description: '0–100 chance to insert once activated' },
+  excludeRecursion: { type: 'boolean', description: 'Other entries cannot unlock this one' },
+  preventRecursion: { type: 'boolean', description: 'This entry does not unlock others' },
+  delayUntilRecursion: { type: 'boolean', description: 'Activates only on recursive passes' },
+};
+
+const REPLACE_PROPERTIES = {
+  new: { type: 'string', description: 'Replacement; empty deletes' },
+  replace_all: { type: 'boolean', description: 'Replace every match instead of failing when old is not unique' },
+};
 
 export const LOREBOOK_TOOL_SPECS: readonly AgentToolSpec[] = [
   {
     name: 'list_entries',
-    description:
-      'Return id, name, keys, token size, and notable flags for every entry, plus book settings. Skip if the catalog in context is enough.',
-    parameters: {
-      type: 'object',
-      properties: {},
-    },
+    description: 'Id, name, keys, tokens, and flags of every entry, plus book settings. Skip if the catalog in context is enough.',
+    parameters: { type: 'object', properties: {} },
   },
   {
     name: 'read_entry',
-    description:
-      "Return one entry's name, keys, common activation fields, and content. Use before update_entry.",
-    parameters: {
-      type: 'object',
-      properties: {
-        id: { type: 'integer', description: 'Entry id' },
-      },
-      required: ['id'],
-    },
+    description: "One entry's name, keys, activation fields, and content. Read before editing it.",
+    parameters: { type: 'object', properties: { id: ENTRY_ID }, required: ['id'] },
   },
   {
     name: 'add_entry',
-    description:
-      'Append a new world-info entry. One add_entry per name. Non-constant entries need at least one key. Optional activation: enabled, position, depth, insertion_order, secondary_keys, selective, probability, excludeRecursion, preventRecursion, delayUntilRecursion.',
+    description: 'Add a world-info entry, one per name. Non-constant entries need keys.',
     parameters: {
       type: 'object',
-      properties: {
-        name: { type: 'string' },
-        keys: {
-          type: 'string',
-          description: 'Comma-separated keys',
-        },
-        constant: { type: 'boolean' },
-        enabled: { type: 'boolean', description: 'When false, the entry never activates. Default true.' },
-        position: {
-          type: 'string',
-          description:
-            'before_char, after_char, before_example, after_example, or at_depth. Default before_char.',
-        },
-        depth: {
-          type: 'integer',
-          description: 'Chat depth when position is at_depth. Default 4.',
-        },
-        insertion_order: {
-          type: 'integer',
-          description: 'Higher numbers insert later and usually weigh more.',
-        },
-        secondary_keys: {
-          type: 'string',
-          description: 'Comma-separated optional filter keys. Sets selective true if omitted.',
-        },
-        selective: {
-          type: 'boolean',
-          description: 'Require secondary_keys logic. Default true when secondary_keys is set.',
-        },
-        probability: {
-          type: 'integer',
-          description: '0–100 chance the entry inserts after it would activate.',
-        },
-        excludeRecursion: {
-          type: 'boolean',
-          description: 'Non-recursable: other entries cannot unlock this one by naming its keys.',
-        },
-        preventRecursion: {
-          type: 'boolean',
-          description: 'Once this entry activates, it will not unlock further entries.',
-        },
-        delayUntilRecursion: {
-          type: 'boolean',
-          description: 'Only activates on recursive passes, not the initial chat scan.',
-        },
-        content: { type: 'string', description: 'Entry body' },
-      },
+      properties: { ...ACTIVATION_PROPERTIES, content: { type: 'string', description: 'Entry body' } },
       required: ['content'],
     },
   },
   {
     name: 'update_entry',
-    description:
-      'Replace fields on an existing entry. Omit a field to leave it unchanged. Body in content is the full new content. Optional activation: enabled, position, depth, insertion_order, secondary_keys, selective, probability, excludeRecursion, preventRecursion, delayUntilRecursion.',
+    description: 'Change an entry. Omitted fields stay as they are; content replaces the whole body.',
     parameters: {
       type: 'object',
-      properties: {
-        id: { type: 'integer', description: 'Entry id' },
-        name: { type: 'string' },
-        keys: { type: 'string', description: 'Comma-separated keys' },
-        constant: { type: 'boolean' },
-        enabled: { type: 'boolean' },
-        position: {
-          type: 'string',
-          description: 'before_char, after_char, before_example, after_example, or at_depth',
-        },
-        depth: { type: 'integer', description: 'Chat depth when position is at_depth' },
-        insertion_order: { type: 'integer' },
-        secondary_keys: { type: 'string', description: 'Comma-separated optional filter keys' },
-        selective: { type: 'boolean' },
-        probability: { type: 'integer', description: '0–100' },
-        excludeRecursion: {
-          type: 'boolean',
-          description: 'Non-recursable: other entries cannot unlock this one by naming its keys.',
-        },
-        preventRecursion: {
-          type: 'boolean',
-          description: 'Once this entry activates, it will not unlock further entries.',
-        },
-        delayUntilRecursion: {
-          type: 'boolean',
-          description: 'Only activates on recursive passes, not the initial chat scan.',
-        },
-        content: { type: 'string', description: 'Full new entry body' },
-      },
+      properties: { id: ENTRY_ID, ...ACTIVATION_PROPERTIES, content: { type: 'string', description: 'Full new body' } },
       required: ['id'],
     },
   },
   {
     name: 'replace_in_entry',
     description:
-      'Replace a unique snippet in one entry body. Quotes and dashes are matched flexibly. For a section delete, old can be the first line through the last unique line; empty new deletes that span. After a replace, read_entry before another. Prefer update_entry if a large delete fails. Copy old from the latest read.',
+      'Replace a unique snippet in one entry body, copied from your latest read_entry (quotes and dashes match loosely). To delete a section, old can run from its first line to its last unique line. read_entry again before another replace; if a large delete fails, use update_entry.',
     parameters: {
       type: 'object',
-      properties: {
-        id: { type: 'integer', description: 'Entry id' },
-        old: {
-          type: 'string',
-          description:
-            'Unique snippet to find. For a section delete, first line through last unique line is enough.',
-        },
-        new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
-        content: {
-          type: 'string',
-          description: 'Replacement text if new is omitted.',
-        },
-        replace_all: {
-          type: 'boolean',
-          description: 'Replace every match. Default false (fail if old is not unique).',
-        },
-      },
+      properties: { id: ENTRY_ID, old: { type: 'string', description: 'Unique snippet' }, ...REPLACE_PROPERTIES },
       required: ['id', 'old'],
     },
   },
   {
     name: 'delete_entry',
-    description: 'Remove an entry by id. No need to read it first unless unsure.',
-    parameters: {
-      type: 'object',
-      properties: {
-        id: { type: 'integer', description: 'Entry id' },
-      },
-      required: ['id'],
-    },
+    description: 'Remove an entry. No need to read it first.',
+    parameters: { type: 'object', properties: { id: ENTRY_ID }, required: ['id'] },
   },
   {
     name: 'search',
-    description:
-      'Find text in entry names, keys, filters, and content. Case-insensitive. Returns locations and short snippets, not full bodies.',
+    description: 'Case-insensitive search of entry names, keys, filters, and content. Returns places and short snippets.',
     parameters: {
       type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Text to find' },
-      },
+      properties: { query: { type: 'string' } },
       required: ['query'],
     },
   },
   {
     name: 'replace_across',
     description:
-      'Replace a snippet in every matching entry name, keys, filters, and content (and book name/description). Same unique-match rules as replace_in_entry. Fail if any one place matches more than once unless replace_all is true. Copy old from a search or read.',
+      'Replace a snippet in every entry name, keys, filters, and content, and the book name and description. Fails if any one place matches more than once, unless replace_all.',
     parameters: {
       type: 'object',
       properties: {
-        old: { type: 'string', description: 'Snippet to find. Quotes and dashes need not match exactly.' },
-        new: { type: 'string', description: 'Replacement text. Empty deletes the snippet.' },
-        content: {
-          type: 'string',
-          description: 'Replacement text if new is omitted.',
-        },
-        replace_all: {
-          type: 'boolean',
-          description: 'Replace every match in each place. Default false (fail if a place is not unique).',
-        },
+        old: { type: 'string', description: 'Copied from a search or read; quotes and dashes match loosely' },
+        ...REPLACE_PROPERTIES,
       },
       required: ['old'],
     },
   },
   {
     name: 'audit_book',
-    description:
-      'Read-only report: entry counts, token size, duplicate keys, empty entries, and recursion edges/cycles. No bodies.',
-    parameters: {
-      type: 'object',
-      properties: {},
-    },
+    description: 'Read-only report: entry counts, tokens, duplicate keys, empty entries, and recursion edges and cycles.',
+    parameters: { type: 'object', properties: {} },
   },
   {
     name: 'read_recursion',
-    description:
-      'Return the lorebook recursion map (who can unlock whom via primary keys). Same graph as the editor. Optional id focuses on one entry’s incoming and outgoing edges. No bodies.',
+    description: 'Recursion map: which entries can unlock which through primary keys, as in the editor. id narrows it to one entry.',
     parameters: {
       type: 'object',
-      properties: {
-        id: {
-          type: 'integer',
-          description: 'Optional entry id. Omit for the whole-book map.',
-        },
-      },
+      properties: { id: { type: 'integer', description: 'Optional entry id' } },
     },
   },
   {
     name: 'test_keys',
     description:
-      'Read-only. Given sample chat text, list which entries would activate and the key that matched: constants, secondary-key logic, and recursive passes when recursive_scanning is on. Also lists key hits that stay inactive (disabled, secondary keys, delay). No bodies.',
+      'Which entries some sample chat text would activate and the key that matched, including constants, secondary keys, and recursive passes when recursive_scanning is on. Also lists key hits that stay inactive and why.',
     parameters: {
       type: 'object',
-      properties: {
-        text: { type: 'string', description: 'Sample chat text, such as a message or two a user might write' },
-      },
+      properties: { text: { type: 'string', description: 'A message or two a user might write' } },
       required: ['text'],
     },
   },
   {
     name: 'update_book_settings',
-    description:
-      'Update lorebook scan_depth, token_budget, recursive_scanning, name, or description. Omit a field to leave it unchanged.',
+    description: 'Change the book name, description, scan_depth, token_budget, or recursive_scanning. Omitted fields stay.',
     parameters: {
       type: 'object',
       properties: {
         name: { type: 'string' },
         description: { type: 'string' },
-        scan_depth: {
-          type: 'integer',
-          description: 'How many recent chat messages are scanned for keys. 0 = recursion / Author’s Note only.',
-        },
-        token_budget: {
-          type: 'integer',
-          description: 'Max tokens World Info may consume at once.',
-        },
-        recursive_scanning: {
-          type: 'boolean',
-          description: 'When true, activated entries can unlock others by naming their keys.',
-        },
+        scan_depth: { type: 'integer', description: 'Recent messages scanned for keys; 0 = recursion and Author’s Note only' },
+        token_budget: { type: 'integer', description: 'Max tokens World Info may use at once' },
+        recursive_scanning: { type: 'boolean', description: 'Activated entries can unlock others by naming their keys' },
       },
     },
   },
   SUGGEST_NAMES_TOOL_SPEC,
+  SUGGEST_PLACES_TOOL_SPEC,
 ];
